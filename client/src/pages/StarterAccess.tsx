@@ -104,12 +104,22 @@ export default function StarterAccess() {
                   This page requires a valid payment session. Purchase the Starter Kit to access these tools.
                 </p>
                 
-                <Button
-                  onClick={() => setLocation("/")}
-                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                >
-                  Return to Home
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button
+                    onClick={() => setLocation("/pricing")}
+                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                  >
+                    Register & Pay Now
+                  </Button>
+                  
+                  <Button
+                    onClick={() => setLocation("/")}
+                    variant="outline"
+                    className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
+                  >
+                    Return to Home
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
