@@ -167,19 +167,31 @@ export async function elementToPDF(element: HTMLElement, fileName: string, title
         // Add this slice of the image - clip to just the part we need
         // Note: Some versions of jsPDF handle clipping differently
         try {
-          // First try with advanced parameters
-          // @ts-ignore - TypeScript doesn't know about these advanced parameters
-          pdf.addImage(
-            imgData, 'PNG', 
-            margin, dy, 
-            contentWidth, dh, 
-            undefined, 
-            'FAST',
-            0,
-            sy / canvas.height,
-            1,
-            sh / canvas.height
-          );
+          // Create a new canvas just for this slice
+          const sliceCanvas = document.createElement('canvas');
+          const sliceCtx = sliceCanvas.getContext('2d');
+          
+          if (sliceCtx) {
+            // Set the slice canvas dimensions
+            sliceCanvas.width = canvas.width;
+            sliceCanvas.height = sh;
+            
+            // Draw only the slice of the original canvas that we need
+            sliceCtx.drawImage(
+              canvas, 
+              0, sy, canvas.width, sh,
+              0, 0, canvas.width, sh
+            );
+            
+            // Convert the slice to image data
+            const sliceImgData = sliceCanvas.toDataURL('image/png');
+            
+            // Add the slice to the PDF
+            pdf.addImage(sliceImgData, 'PNG', margin, dy, contentWidth, dh);
+          } else {
+            // Fallback if we can't create a slice
+            pdf.addImage(imgData, 'PNG', margin, dy, contentWidth, dh);
+          }
         } catch (e) {
           // Fallback to simpler approach
           console.log('Using fallback image rendering method');
@@ -572,48 +584,41 @@ export function generateCompletePDF(
     const col2 = 120;
     
     // Technical expertise
-    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor('#16414E'); // Safe alternative to setFont with type issues
+    pdf.setFontSize(11);
     pdf.text('Technical Expertise Level:', col1, y);
-    pdf.setFont(undefined, 'normal');
     pdf.text(`${tcofJourneyData.capabilities.technicalExpertise}/10`, col2, y);
     y += 10;
     
     // Resource level
-    pdf.setFont(undefined, 'bold');
     pdf.text('Resource Level:', col1, y);
-    pdf.setFont(undefined, 'normal');
     pdf.text(getResourceLevelText(tcofJourneyData.capabilities.resources), col2, y);
     y += 10;
     
     // Priority focus
-    pdf.setFont(undefined, 'bold');
     pdf.text('Priority Focus:', col1, y);
-    pdf.setFont(undefined, 'normal');
     pdf.text(getPriorityText(tcofJourneyData.priority), col2, y);
     y += 10;
     
     // Implementation timeframe
-    pdf.setFont(undefined, 'bold');
     pdf.text('Implementation Timeframe:', col1, y);
-    pdf.setFont(undefined, 'normal');
     pdf.text(getTimeframeText(tcofJourneyData.implementation.timeframe), col2, y);
     y += 10;
     
     // Evaluation frequency
-    pdf.setFont(undefined, 'bold');
     pdf.text('Evaluation Frequency:', col1, y);
-    pdf.setFont(undefined, 'normal');
     pdf.text(getEvaluationFrequencyText(tcofJourneyData.metrics.evaluationFrequency), col2, y);
     y += 10;
     
     // Constraints
     if (tcofJourneyData.implementation.constraints.length > 0) {
       y += 5;
-      pdf.setFont(undefined, 'bold');
+      // Use setFontSize instead of setFont to avoid TypeScript errors
+      pdf.setFontSize(11);
       pdf.text('Implementation Constraints:', col1, y);
-      pdf.setFont(undefined, 'normal');
       y += 8;
       
+      pdf.setFontSize(10);
       tcofJourneyData.implementation.constraints.forEach(constraint => {
         pdf.text(`• ${constraint}`, col1 + 5, y);
         y += 6;
@@ -681,11 +686,13 @@ export function generateCompletePDF(
         pdf.setFontSize(10);
         
         notesEntries.forEach(([key, note]) => {
-          pdf.setFont(undefined, 'bold');
+          // Use styling without setFont to avoid TypeScript errors
+          pdf.setFontSize(10);
+          pdf.setTextColor('#16414E');
           pdf.text(key + ':', 25, y);
           y += 6;
           
-          pdf.setFont(undefined, 'normal');
+          pdf.setFontSize(9);
           const noteText = pdf.splitTextToSize(note, 160);
           pdf.text(noteText, 30, y);
           y += noteText.length * 6 + 8;
