@@ -44,6 +44,11 @@ export default {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        tcof: {
+          dark: "#16414E",  // TCOF brand dark blue
+          teal: "#008080",  // TCOF brand teal
+          light: "#fff5e7",  // TCOF brand light highlight
+        },
         chart: {
           "1": "hsl(var(--chart-1))",
           "2": "hsl(var(--chart-2))",
