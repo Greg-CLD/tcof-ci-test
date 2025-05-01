@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "wouter";
 
 export default function Footer() {
   return (
@@ -9,20 +10,23 @@ export default function Footer() {
             <h3 className="text-lg font-bold mb-1">Starter Kit Access</h3>
             <p className="text-gray-400 text-sm">Strategic planning tools for your journey</p>
           </div>
-          <div className="flex space-x-4">
-            <a href="#" className="text-gray-400 hover:text-white transition">
-              <i className="ri-file-text-line text-xl"></i>
+          <div className="flex space-x-6">
+            <Link href="/pricing" className="text-gray-400 hover:text-white transition flex items-center">
+              <i className="ri-price-tag-3-line text-xl mr-1"></i>
+              <span>Pricing</span>
+            </Link>
+            <a href="#" className="text-gray-400 hover:text-white transition flex items-center">
+              <i className="ri-question-line text-xl mr-1"></i>
+              <span>Help</span>
             </a>
-            <a href="#" className="text-gray-400 hover:text-white transition">
-              <i className="ri-question-line text-xl"></i>
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition">
-              <i className="ri-feedback-line text-xl"></i>
-            </a>
+            <Link href="/pro-tools" className="text-gray-400 hover:text-white transition flex items-center">
+              <i className="ri-lock-line text-xl mr-1"></i>
+              <span>Pro Tools</span>
+            </Link>
           </div>
         </div>
         <div className="mt-6 text-center text-gray-400 text-sm">
-          <p>Data is stored locally on your device. No information is sent to external servers.</p>
+          <p>Free tools store data locally on your device. Premium features may require account creation.</p>
         </div>
       </div>
     </footer>
