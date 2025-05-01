@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import ProTools from "@/pages/ProTools";
 import StarterAccess from "@/pages/StarterAccess";
 import Pricing from "@/pages/Pricing";
+import { AuthProtectionProvider } from "@/hooks/use-auth-protection";
 
 function Router() {
   return (
@@ -23,8 +24,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProtectionProvider>
+        <Router />
+        <Toaster />
+      </AuthProtectionProvider>
     </QueryClientProvider>
   );
 }

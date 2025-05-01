@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuthProtection } from "@/hooks/use-auth-protection";
+import PasswordProtection from "@/components/PasswordProtection";
 
 export default function StarterAccess() {
   const [, setLocation] = useLocation();
   const [sessionVerified, setSessionVerified] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { isAuthenticated } = useAuthProtection();
   
   // Parse the session_id from the URL if present
   useEffect(() => {
@@ -37,7 +40,19 @@ export default function StarterAccess() {
     );
   }
   
-  if (!sessionVerified) {
+  // If the user is not authenticated, show the password protection screen
+  if (!isAuthenticated('starter-access') && !sessionVerified) {
+    return (
+      <PasswordProtection 
+        pageName="starter-access"
+        pageTitle="TCOF Starter Kit Access"
+        pageDescription="Enter your password to access the TCOF Starter Kit tools"
+      />
+    );
+  }
+  
+  // For users who haven't purchased yet (no session and not authenticated)
+  if (!sessionVerified && !isAuthenticated('starter-access')) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
         <header className="bg-white border-b border-gray-200">

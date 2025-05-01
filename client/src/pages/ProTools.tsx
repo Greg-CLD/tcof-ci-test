@@ -2,8 +2,22 @@ import React from "react";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuthProtection } from "@/hooks/use-auth-protection";
+import PasswordProtection from "@/components/PasswordProtection";
 
 export default function ProTools() {
+  const { isAuthenticated } = useAuthProtection();
+  
+  // If not authenticated, show password protection screen
+  if (!isAuthenticated('pro-tools')) {
+    return (
+      <PasswordProtection 
+        pageName="pro-tools"
+        pageTitle="TCOF Pro Tools Access"
+        pageDescription="Enter your password to access premium TCOF tools"
+      />
+    );
+  }
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <header className="bg-white border-b border-gray-200">
