@@ -1,22 +1,20 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
-import { FileDown, Clock, Edit, Trash2, MapPin, ArrowLeft } from "lucide-react";
+import { Loader2, MapPin, Calendar, Clock, ArrowLeft, User, FileDown, Edit, Trash2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/pdf-utils";
 import { 
   GoalMap, 
@@ -61,12 +59,13 @@ export default function UserHistory() {
   const loadEntry = (type: string, id: number) => {
     // This would be implemented to load the entry into the corresponding tool
     console.log(`Loading ${type} with ID ${id}`);
-  };
-
-  // Function to delete an entry
-  const deleteEntry = (type: string, id: number) => {
-    // This would be implemented to delete the entry
-    console.log(`Deleting ${type} with ID ${id}`);
+    if (type === 'goal-map') {
+      setLocation("/tools/goal-mapping");
+    } else if (type === 'cynefin-selection') {
+      setLocation("/tools/cynefin-orientation");
+    } else if (type === 'tcof-journey') {
+      setLocation("/tools/tcof-journey");
+    }
   };
 
   // Function to export an entry as PDF
@@ -109,15 +108,12 @@ export default function UserHistory() {
             >
               <ArrowLeft className="h-4 w-4 mr-2" /> Back
             </Button>
-            <h1 className="text-3xl font-bold text-tcof-dark">Your History</h1>
+            <h1 className="text-3xl font-bold text-tcof-dark">Your Saved Work</h1>
           </div>
 
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle>Saved Projects</CardTitle>
-              <CardDescription>
-                View and manage your saved work across all TCOF tools
-              </CardDescription>
+              <CardTitle>History</CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs
@@ -128,279 +124,235 @@ export default function UserHistory() {
               >
                 <TabsList className="grid grid-cols-3 mb-6">
                   <TabsTrigger value="goal-maps">Goal Maps</TabsTrigger>
-                  <TabsTrigger value="cynefin-selections">
-                    Cynefin Selections
-                  </TabsTrigger>
+                  <TabsTrigger value="cynefin-selections">Cynefin Selections</TabsTrigger>
                   <TabsTrigger value="tcof-journeys">TCOF Journeys</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="goal-maps">
-                  {goalMapsLoading ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center space-x-4">
-                          <Skeleton className="h-12 w-12 rounded-full" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-[250px]" />
-                            <Skeleton className="h-4 w-[200px]" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : goalMapsError ? (
-                    <div className="p-6 text-center text-red-500">
-                      Error loading your goal maps. Please try again.
-                    </div>
-                  ) : goalMaps?.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
-                      You don't have any saved goal maps yet.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {goalMaps?.map((map) => (
-                        <Card key={map.id} className="overflow-hidden">
-                          <CardContent className="p-0">
-                            <div className="flex flex-col md:flex-row items-stretch">
-                              <div className="bg-tcof-light/50 p-6 flex items-center justify-center md:w-1/5">
-                                <MapPin className="h-10 w-10 text-tcof-teal" />
-                              </div>
-                              <div className="p-6 flex-grow">
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                                  <div>
-                                    <h3 className="font-bold text-lg text-tcof-dark">
-                                      {map.name}
-                                    </h3>
-                                    <p className="text-gray-500 flex items-center text-sm">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      Last updated: {formatDate(new Date(map.lastUpdated))}
-                                    </p>
+                  <div className="space-y-4">
+                    {goalMapsLoading ? (
+                      <div className="p-12 rounded-md bg-gray-50 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-tcof-teal" />
+                        <p className="text-gray-500">Loading your goal maps...</p>
+                      </div>
+                    ) : goalMapsError ? (
+                      <div className="p-8 rounded-md bg-red-50 text-center">
+                        <p className="text-red-500">Error loading your goal maps.</p>
+                      </div>
+                    ) : !goalMaps || goalMaps.length === 0 ? (
+                      <div className="p-12 rounded-md bg-gray-50 text-center">
+                        <p className="text-gray-500 mb-4">You don't have any saved goal maps yet.</p>
+                        <Button 
+                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                          onClick={() => setLocation("/tools/goal-mapping")}
+                        >
+                          Create Goal Map
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {goalMaps.map((map) => (
+                          <Card key={map.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                            <CardContent className="p-0">
+                              <div className="flex flex-col md:flex-row items-stretch">
+                                <div className="bg-blue-50 p-6 flex items-center justify-center md:w-1/4">
+                                  <div className="text-center">
+                                    <MapPin className="h-8 w-8 text-tcof-teal mx-auto mb-2" />
+                                    <div className="text-sm font-medium text-tcof-dark">Goal Map</div>
                                   </div>
-                                  <div className="flex mt-4 md:mt-0 space-x-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => loadEntry("goal-map", map.id)}
-                                      className="text-tcof-dark border-tcof-dark hover:bg-tcof-light"
-                                    >
-                                      <Edit className="h-3 w-3 mr-1" /> Edit
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => exportEntry("goal-map", map.id)}
-                                      className="text-tcof-teal border-tcof-teal hover:bg-tcof-light"
-                                    >
-                                      <FileDown className="h-3 w-3 mr-1" /> Export
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => deleteEntry("goal-map", map.id)}
-                                      className="text-red-500 border-red-500 hover:bg-red-50"
-                                    >
-                                      <Trash2 className="h-3 w-3 mr-1" /> Delete
-                                    </Button>
+                                </div>
+                                <div className="p-6 flex-grow">
+                                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
+                                      <h3 className="text-lg font-medium text-tcof-dark mb-1">
+                                        {map.name}
+                                      </h3>
+                                      <div className="flex items-center text-sm text-gray-500 mb-2">
+                                        <Clock className="h-4 w-4 mr-1" />
+                                        <span>Created: {formatDate(new Date(map.createdAt))}</span>
+                                      </div>
+                                      <div className="flex items-center text-sm text-gray-500">
+                                        <Calendar className="h-4 w-4 mr-1" />
+                                        <span>Last updated: {formatDate(new Date(map.lastUpdated))}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => loadEntry("goal-map", map.id)}
+                                        className="text-tcof-dark border-tcof-dark hover:bg-tcof-light"
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" /> View & Edit
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => exportEntry("goal-map", map.id)}
+                                        className="text-tcof-teal border-tcof-teal hover:bg-tcof-light"
+                                      >
+                                        <FileDown className="h-4 w-4 mr-2" /> Export
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="cynefin-selections">
-                  {cynefinSelectionsLoading ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center space-x-4">
-                          <Skeleton className="h-12 w-12 rounded-full" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-[250px]" />
-                            <Skeleton className="h-4 w-[200px]" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : cynefinSelectionsError ? (
-                    <div className="p-6 text-center text-red-500">
-                      Error loading your Cynefin selections. Please try again.
-                    </div>
-                  ) : cynefinSelections?.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
-                      You don't have any saved Cynefin selections yet.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {cynefinSelections?.map((selection) => (
-                        <Card key={selection.id} className="overflow-hidden">
-                          <CardContent className="p-0">
-                            <div className="flex flex-col md:flex-row items-stretch">
-                              <div className="bg-tcof-light/50 p-6 flex items-center justify-center md:w-1/5">
-                                <MapPin className="h-10 w-10 text-tcof-teal" />
-                              </div>
-                              <div className="p-6 flex-grow">
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                                  <div>
-                                    <h3 className="font-bold text-lg text-tcof-dark">
-                                      {selection.name}
-                                    </h3>
-                                    <p className="text-gray-500 flex items-center text-sm">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      Last updated: {formatDate(new Date(selection.lastUpdated))}
-                                    </p>
+                  <div className="space-y-4">
+                    {cynefinSelectionsLoading ? (
+                      <div className="p-12 rounded-md bg-gray-50 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-tcof-teal" />
+                        <p className="text-gray-500">Loading your Cynefin selections...</p>
+                      </div>
+                    ) : cynefinSelectionsError ? (
+                      <div className="p-8 rounded-md bg-red-50 text-center">
+                        <p className="text-red-500">Error loading your Cynefin selections.</p>
+                      </div>
+                    ) : !cynefinSelections || cynefinSelections.length === 0 ? (
+                      <div className="p-12 rounded-md bg-gray-50 text-center">
+                        <p className="text-gray-500 mb-4">You don't have any saved Cynefin selections yet.</p>
+                        <Button 
+                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                          onClick={() => setLocation("/tools/cynefin-orientation")}
+                        >
+                          Create Cynefin Selection
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {cynefinSelections.map((selection) => (
+                          <Card key={selection.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                            <CardContent className="p-0">
+                              <div className="flex flex-col md:flex-row items-stretch">
+                                <div className="bg-green-50 p-6 flex items-center justify-center md:w-1/4">
+                                  <div className="text-center">
+                                    <MapPin className="h-8 w-8 text-tcof-teal mx-auto mb-2" />
+                                    <div className="text-sm font-medium text-tcof-dark">Cynefin Selection</div>
                                   </div>
-                                  <div className="flex mt-4 md:mt-0 space-x-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => loadEntry("cynefin-selection", selection.id)}
-                                      className="text-tcof-dark border-tcof-dark hover:bg-tcof-light"
-                                    >
-                                      <Edit className="h-3 w-3 mr-1" /> Edit
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => exportEntry("cynefin-selection", selection.id)}
-                                      className="text-tcof-teal border-tcof-teal hover:bg-tcof-light"
-                                    >
-                                      <FileDown className="h-3 w-3 mr-1" /> Export
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => deleteEntry("cynefin-selection", selection.id)}
-                                      className="text-red-500 border-red-500 hover:bg-red-50"
-                                    >
-                                      <Trash2 className="h-3 w-3 mr-1" /> Delete
-                                    </Button>
+                                </div>
+                                <div className="p-6 flex-grow">
+                                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
+                                      <h3 className="text-lg font-medium text-tcof-dark mb-1">
+                                        {selection.name}
+                                      </h3>
+                                      <div className="flex items-center text-sm text-gray-500 mb-2">
+                                        <Clock className="h-4 w-4 mr-1" />
+                                        <span>Created: {formatDate(new Date(selection.createdAt))}</span>
+                                      </div>
+                                      <div className="flex items-center text-sm text-gray-500">
+                                        <Calendar className="h-4 w-4 mr-1" />
+                                        <span>Last updated: {formatDate(new Date(selection.lastUpdated))}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => loadEntry("cynefin-selection", selection.id)}
+                                        className="text-tcof-dark border-tcof-dark hover:bg-tcof-light"
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" /> View & Edit
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => exportEntry("cynefin-selection", selection.id)}
+                                        className="text-tcof-teal border-tcof-teal hover:bg-tcof-light"
+                                      >
+                                        <FileDown className="h-4 w-4 mr-2" /> Export
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="tcof-journeys">
-                  {tcofJourneysLoading ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center space-x-4">
-                          <Skeleton className="h-12 w-12 rounded-full" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-[250px]" />
-                            <Skeleton className="h-4 w-[200px]" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : tcofJourneysError ? (
-                    <div className="p-6 text-center text-red-500">
-                      Error loading your TCOF journeys. Please try again.
-                    </div>
-                  ) : tcofJourneys?.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
-                      You don't have any saved TCOF journeys yet.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {tcofJourneys?.map((journey) => (
-                        <Card key={journey.id} className="overflow-hidden">
-                          <CardContent className="p-0">
-                            <div className="flex flex-col md:flex-row items-stretch">
-                              <div className="bg-tcof-light/50 p-6 flex items-center justify-center md:w-1/5">
-                                <MapPin className="h-10 w-10 text-tcof-teal" />
-                              </div>
-                              <div className="p-6 flex-grow">
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                                  <div>
-                                    <h3 className="font-bold text-lg text-tcof-dark">
-                                      {journey.name}
-                                    </h3>
-                                    <p className="text-gray-500 flex items-center text-sm">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      Last updated: {formatDate(new Date(journey.lastUpdated))}
-                                    </p>
+                  <div className="space-y-4">
+                    {tcofJourneysLoading ? (
+                      <div className="p-12 rounded-md bg-gray-50 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-tcof-teal" />
+                        <p className="text-gray-500">Loading your TCOF journeys...</p>
+                      </div>
+                    ) : tcofJourneysError ? (
+                      <div className="p-8 rounded-md bg-red-50 text-center">
+                        <p className="text-red-500">Error loading your TCOF journeys.</p>
+                      </div>
+                    ) : !tcofJourneys || tcofJourneys.length === 0 ? (
+                      <div className="p-12 rounded-md bg-gray-50 text-center">
+                        <p className="text-gray-500 mb-4">You don't have any saved TCOF journeys yet.</p>
+                        <Button 
+                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                          onClick={() => setLocation("/tools/tcof-journey")}
+                        >
+                          Create TCOF Journey
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {tcofJourneys.map((journey) => (
+                          <Card key={journey.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                            <CardContent className="p-0">
+                              <div className="flex flex-col md:flex-row items-stretch">
+                                <div className="bg-purple-50 p-6 flex items-center justify-center md:w-1/4">
+                                  <div className="text-center">
+                                    <MapPin className="h-8 w-8 text-tcof-teal mx-auto mb-2" />
+                                    <div className="text-sm font-medium text-tcof-dark">TCOF Journey</div>
                                   </div>
-                                  <div className="flex mt-4 md:mt-0 space-x-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => loadEntry("tcof-journey", journey.id)}
-                                      className="text-tcof-dark border-tcof-dark hover:bg-tcof-light"
-                                    >
-                                      <Edit className="h-3 w-3 mr-1" /> Edit
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => exportEntry("tcof-journey", journey.id)}
-                                      className="text-tcof-teal border-tcof-teal hover:bg-tcof-light"
-                                    >
-                                      <FileDown className="h-3 w-3 mr-1" /> Export
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => deleteEntry("tcof-journey", journey.id)}
-                                      className="text-red-500 border-red-500 hover:bg-red-50"
-                                    >
-                                      <Trash2 className="h-3 w-3 mr-1" /> Delete
-                                    </Button>
+                                </div>
+                                <div className="p-6 flex-grow">
+                                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
+                                      <h3 className="text-lg font-medium text-tcof-dark mb-1">
+                                        {journey.name}
+                                      </h3>
+                                      <div className="flex items-center text-sm text-gray-500 mb-2">
+                                        <Clock className="h-4 w-4 mr-1" />
+                                        <span>Created: {formatDate(new Date(journey.createdAt))}</span>
+                                      </div>
+                                      <div className="flex items-center text-sm text-gray-500">
+                                        <Calendar className="h-4 w-4 mr-1" />
+                                        <span>Last updated: {formatDate(new Date(journey.lastUpdated))}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => loadEntry("tcof-journey", journey.id)}
+                                        className="text-tcof-dark border-tcof-dark hover:bg-tcof-light"
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" /> View & Edit
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => exportEntry("tcof-journey", journey.id)}
+                                        className="text-tcof-teal border-tcof-teal hover:bg-tcof-light"
+                                      >
+                                        <FileDown className="h-4 w-4 mr-2" /> Export
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
               </Tabs>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Data Synchronization</CardTitle>
-              <CardDescription>
-                Your data is now saved securely in our cloud and synchronized across all your devices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-tcof-light/50 p-4 rounded-lg">
-                  <h3 className="font-medium text-tcof-dark mb-2">Automatic Syncing</h3>
-                  <p className="text-gray-600">
-                    When you're signed in, your work is automatically saved to the cloud. You can
-                    access it from any device by signing in with the same account.
-                  </p>
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="bg-tcof-light/50 p-4 rounded-lg flex-1">
-                    <h3 className="font-medium text-tcof-dark mb-2">Version History</h3>
-                    <p className="text-gray-600">
-                      We keep multiple versions of your work so you can always revert to a previous
-                      state if needed.
-                    </p>
-                  </div>
-                  <div className="bg-tcof-light/50 p-4 rounded-lg flex-1">
-                    <h3 className="font-medium text-tcof-dark mb-2">Export Options</h3>
-                    <p className="text-gray-600">
-                      You can export any of your saved work as a PDF for sharing or printing.
-                    </p>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>

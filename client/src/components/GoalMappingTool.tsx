@@ -239,9 +239,17 @@ export default function GoalMappingTool() {
   return (
     <section>
       <ToolNavigation currentTool="goal-mapping" />
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">🎯 Goal-Mapping Tool</h2>
-        <p className="text-gray-600">Create your Success Map to identify and connect your strategic goals.</p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">🎯 Goal-Mapping Tool</h2>
+          <p className="text-gray-600">Create your Success Map to identify and connect your strategic goals.</p>
+        </div>
+        <Link href="/history">
+          <Button variant="outline" size="sm" className="flex items-center gap-1 text-tcof-teal border-tcof-teal">
+            <History className="h-4 w-4" />
+            <span>View History</span>
+          </Button>
+        </Link>
       </div>
       
       {showIntro && (
@@ -420,16 +428,23 @@ export default function GoalMappingTool() {
                   style={{ top: node.y, left: node.x }}
                   data-id={node.id}
                 >
+                  <button 
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteNode(node.id);
+                      toast({
+                        title: "Goal deleted",
+                        description: "The goal has been removed from your map."
+                      });
+                    }}
+                  >
+                    ×
+                  </button>
                   <div className="text-sm font-medium">{node.text}</div>
                   {node.timeframe && (
                     <div className="text-xs text-gray-500">{node.timeframe}</div>
                   )}
-                  <button 
-                    className="absolute top-1 right-1 text-gray-400 hover:text-red-500"
-                    onClick={() => deleteNode(node.id)}
-                  >
-                    <i className="ri-close-line"></i>
-                  </button>
                 </div>
               ))}
             </div>
@@ -442,7 +457,6 @@ export default function GoalMappingTool() {
                   <ul className="list-disc pl-5 mb-4 text-sm">
                     <li>Choose a success level, enter your goal, and click "Add Goal"</li>
                     <li>Drag goals to reposition them on the canvas</li>
-                    <li>Connect related goals by dragging from one goal to another</li>
                     <li>Click the X on a goal to delete it</li>
                     <li>Save your map to keep track of your strategic goals</li>
                   </ul>
