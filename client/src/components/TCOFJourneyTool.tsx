@@ -44,7 +44,7 @@ const decisionTree: Record<string, Question> = {
   "q4": {
     id: "q4",
     text: "Am I testing the option, either in a small scale, or virtually and do I have a clear delivery plan and funding in place?",
-    yesLeadsTo: "delivery",
+    yesLeadsTo: "q5",
     noLeadsTo: "definition"
   },
   "q5": {
