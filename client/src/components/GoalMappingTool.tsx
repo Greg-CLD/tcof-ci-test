@@ -12,6 +12,8 @@ import {
   loadFromLocalStorage,
   saveToLocalStorage
 } from "@/lib/storage";
+import { elementToPDF } from "@/lib/pdf-utils";
+import { FileDown } from "lucide-react";
 
 // Success Map Level types
 type SuccessMapLevel = "strategic" | "business" | "product" | "custom";
