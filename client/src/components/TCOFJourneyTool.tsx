@@ -55,6 +55,16 @@ const decisionTree: Record<string, Question> = {
   }
 };
 
+// Question numbers and total questions for display
+const questionNumbers: Record<string, number> = {
+  "q1": 1,
+  "q2": 2,
+  "q3": 3,
+  "q4": 4,
+  "q5": 5
+};
+const totalQuestions = Object.keys(questionNumbers).length;
+
 // Phase descriptions
 const phaseDescriptions: Record<ImplementationStage, {
   title: string;
@@ -288,7 +298,12 @@ export default function TCOFJourneyTool() {
               <h3 className="font-bold text-lg mb-4">Step 3: Plot Your Position</h3>
               
               <div className="current-question p-4 border border-gray-200 rounded-lg mb-6">
-                <p className="font-medium text-lg mb-4">{decisionTree[currentQuestion].text}</p>
+                <div className="flex items-center mb-3">
+                  <span className="bg-gray-700 text-white text-xs font-medium px-2 py-1 rounded-full mr-2">
+                    Q{questionNumbers[currentQuestion]} of {totalQuestions}
+                  </span>
+                  <h4 className="font-medium text-lg">{decisionTree[currentQuestion].text}</h4>
+                </div>
                 
                 <div className="mb-4">
                   <Label htmlFor={`notes-${currentQuestion}`} className="block text-sm font-medium mb-2">
