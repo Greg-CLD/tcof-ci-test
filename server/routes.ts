@@ -2,6 +2,17 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import session from "express-session";
+import { z } from "zod";
+import { 
+  insertUserSchema, 
+  insertGoalMapSchema, 
+  insertCynefinSelectionSchema, 
+  insertTcofJourneySchema, 
+  insertProjectSchema 
+} from "@shared/schema";
 
 // Initialize Stripe with your secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -10,7 +21,141 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
+// Set up authentication middleware
+function setupAuth(app: Express) {
+  if (!process.env.SESSION_SECRET) {
+    process.env.SESSION_SECRET = "tcof-dev-secret-key-change-in-production";
+    console.warn("SESSION_SECRET not set, using default value. Set this in production!");
+  }
+
+  const sessionSettings: session.SessionOptions = {
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: storage.sessionStore,
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    }
+  };
+
+  app.use(session(sessionSettings));
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  passport.use(
+    new LocalStrategy(async (username, password, done) => {
+      try {
+        const user = await storage.getUserByUsername(username);
+        if (!user) {
+          return done(null, false, { message: "Incorrect username." });
+        }
+        
+        const isPasswordValid = await storage.comparePasswords(password, user.password);
+        if (!isPasswordValid) {
+          return done(null, false, { message: "Incorrect password." });
+        }
+        
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
+    })
+  );
+
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
+  });
+
+  // Authentication routes
+  app.post("/api/register", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      // Create the user - ensure email is a string or undefined, not null
+      const user = await storage.createUser({
+        username: userData.username,
+        password: userData.password,
+        email: userData.email || undefined
+      });
+      
+      // Log the user in
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Error during login" });
+        }
+        return res.status(201).json(user);
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Registration error:", error);
+      return res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ message: info.message || "Authentication failed" });
+      }
+      req.login(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json(user);
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.status(200).json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get("/api/user", (req, res) => {
+    if (req.isAuthenticated()) {
+      res.json(req.user);
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
+    }
+  });
+}
+
+// Check if user is authenticated middleware
+function isAuthenticated(req: Request, res: Response, next: any) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Authentication required" });
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+
   // Setup basic health check endpoint
   app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
@@ -70,6 +215,329 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Webhook error:", error);
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Goal Map API endpoints
+  app.get("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const goalMaps = await storage.getGoalMaps(userId);
+      res.json(goalMaps);
+    } catch (error: any) {
+      console.error("Error fetching goal maps:", error);
+      res.status(500).json({ message: "Error fetching goal maps" });
+    }
+  });
+
+  app.get("/api/goal-maps/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const goalMapId = parseInt(req.params.id);
+      const goalMap = await storage.getGoalMap(goalMapId);
+      
+      if (!goalMap) {
+        return res.status(404).json({ message: "Goal map not found" });
+      }
+      
+      // Ensure user owns this goal map
+      if (goalMap.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      res.json(goalMap);
+    } catch (error: any) {
+      console.error("Error fetching goal map:", error);
+      res.status(500).json({ message: "Error fetching goal map" });
+    }
+  });
+
+  app.post("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const { name, data } = req.body;
+      
+      if (!name || !data) {
+        return res.status(400).json({ message: "Name and data are required" });
+      }
+      
+      const goalMap = await storage.saveGoalMap(userId, name, data);
+      res.status(201).json(goalMap);
+    } catch (error: any) {
+      console.error("Error saving goal map:", error);
+      res.status(500).json({ message: "Error saving goal map" });
+    }
+  });
+
+  app.put("/api/goal-maps/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const goalMapId = parseInt(req.params.id);
+      const { name, data } = req.body;
+      
+      if (!data) {
+        return res.status(400).json({ message: "Data is required" });
+      }
+      
+      // Get the goal map to verify ownership
+      const existingMap = await storage.getGoalMap(goalMapId);
+      if (!existingMap) {
+        return res.status(404).json({ message: "Goal map not found" });
+      }
+      
+      // Ensure user owns this goal map
+      if (existingMap.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      const updatedMap = await storage.updateGoalMap(goalMapId, data, name);
+      res.json(updatedMap);
+    } catch (error: any) {
+      console.error("Error updating goal map:", error);
+      res.status(500).json({ message: "Error updating goal map" });
+    }
+  });
+
+  // Cynefin Selection API endpoints
+  app.get("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const selections = await storage.getCynefinSelections(userId);
+      res.json(selections);
+    } catch (error: any) {
+      console.error("Error fetching cynefin selections:", error);
+      res.status(500).json({ message: "Error fetching cynefin selections" });
+    }
+  });
+
+  app.get("/api/cynefin-selections/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const selectionId = parseInt(req.params.id);
+      const selection = await storage.getCynefinSelection(selectionId);
+      
+      if (!selection) {
+        return res.status(404).json({ message: "Cynefin selection not found" });
+      }
+      
+      // Ensure user owns this selection
+      if (selection.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      res.json(selection);
+    } catch (error: any) {
+      console.error("Error fetching cynefin selection:", error);
+      res.status(500).json({ message: "Error fetching cynefin selection" });
+    }
+  });
+
+  app.post("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const { name, data } = req.body;
+      
+      if (!name || !data) {
+        return res.status(400).json({ message: "Name and data are required" });
+      }
+      
+      const selection = await storage.saveCynefinSelection(userId, name, data);
+      res.status(201).json(selection);
+    } catch (error: any) {
+      console.error("Error saving cynefin selection:", error);
+      res.status(500).json({ message: "Error saving cynefin selection" });
+    }
+  });
+
+  app.put("/api/cynefin-selections/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const selectionId = parseInt(req.params.id);
+      const { name, data } = req.body;
+      
+      if (!data) {
+        return res.status(400).json({ message: "Data is required" });
+      }
+      
+      // Get the selection to verify ownership
+      const existingSelection = await storage.getCynefinSelection(selectionId);
+      if (!existingSelection) {
+        return res.status(404).json({ message: "Cynefin selection not found" });
+      }
+      
+      // Ensure user owns this selection
+      if (existingSelection.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      const updatedSelection = await storage.updateCynefinSelection(selectionId, data, name);
+      res.json(updatedSelection);
+    } catch (error: any) {
+      console.error("Error updating cynefin selection:", error);
+      res.status(500).json({ message: "Error updating cynefin selection" });
+    }
+  });
+
+  // TCOF Journey API endpoints
+  app.get("/api/tcof-journeys", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const journeys = await storage.getTCOFJourneys(userId);
+      res.json(journeys);
+    } catch (error: any) {
+      console.error("Error fetching TCOF journeys:", error);
+      res.status(500).json({ message: "Error fetching TCOF journeys" });
+    }
+  });
+
+  app.get("/api/tcof-journeys/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const journeyId = parseInt(req.params.id);
+      const journey = await storage.getTCOFJourney(journeyId);
+      
+      if (!journey) {
+        return res.status(404).json({ message: "TCOF journey not found" });
+      }
+      
+      // Ensure user owns this journey
+      if (journey.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      res.json(journey);
+    } catch (error: any) {
+      console.error("Error fetching TCOF journey:", error);
+      res.status(500).json({ message: "Error fetching TCOF journey" });
+    }
+  });
+
+  app.post("/api/tcof-journeys", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const { name, data } = req.body;
+      
+      if (!name || !data) {
+        return res.status(400).json({ message: "Name and data are required" });
+      }
+      
+      const journey = await storage.saveTCOFJourney(userId, name, data);
+      res.status(201).json(journey);
+    } catch (error: any) {
+      console.error("Error saving TCOF journey:", error);
+      res.status(500).json({ message: "Error saving TCOF journey" });
+    }
+  });
+
+  app.put("/api/tcof-journeys/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const journeyId = parseInt(req.params.id);
+      const { name, data } = req.body;
+      
+      if (!data) {
+        return res.status(400).json({ message: "Data is required" });
+      }
+      
+      // Get the journey to verify ownership
+      const existingJourney = await storage.getTCOFJourney(journeyId);
+      if (!existingJourney) {
+        return res.status(404).json({ message: "TCOF journey not found" });
+      }
+      
+      // Ensure user owns this journey
+      if (existingJourney.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      const updatedJourney = await storage.updateTCOFJourney(journeyId, data, name);
+      res.json(updatedJourney);
+    } catch (error: any) {
+      console.error("Error updating TCOF journey:", error);
+      res.status(500).json({ message: "Error updating TCOF journey" });
+    }
+  });
+
+  // Project API endpoints
+  app.get("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const projects = await storage.getProjects(userId);
+      res.json(projects);
+    } catch (error: any) {
+      console.error("Error fetching projects:", error);
+      res.status(500).json({ message: "Error fetching projects" });
+    }
+  });
+
+  app.get("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Ensure user owns this project
+      if (project.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      res.json(project);
+    } catch (error: any) {
+      console.error("Error fetching project:", error);
+      res.status(500).json({ message: "Error fetching project" });
+    }
+  });
+
+  app.post("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const { name, description, goalMapId, cynefinSelectionId, tcofJourneyId } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Project name is required" });
+      }
+      
+      const project = await storage.createProject(
+        userId, 
+        name, 
+        description || null, 
+        goalMapId || null, 
+        cynefinSelectionId || null, 
+        tcofJourneyId || null
+      );
+      
+      res.status(201).json(project);
+    } catch (error: any) {
+      console.error("Error creating project:", error);
+      res.status(500).json({ message: "Error creating project" });
+    }
+  });
+
+  app.put("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const { name, description, goalMapId, cynefinSelectionId, tcofJourneyId } = req.body;
+      
+      // Get the project to verify ownership
+      const existingProject = await storage.getProject(projectId);
+      if (!existingProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Ensure user owns this project
+      if (existingProject.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (description !== undefined) updateData.description = description;
+      if (goalMapId !== undefined) updateData.goalMapId = goalMapId;
+      if (cynefinSelectionId !== undefined) updateData.cynefinSelectionId = cynefinSelectionId;
+      if (tcofJourneyId !== undefined) updateData.tcofJourneyId = tcofJourneyId;
+      
+      const updatedProject = await storage.updateProject(projectId, updateData);
+      res.json(updatedProject);
+    } catch (error: any) {
+      console.error("Error updating project:", error);
+      res.status(500).json({ message: "Error updating project" });
     }
   });
 

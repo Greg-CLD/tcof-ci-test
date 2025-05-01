@@ -5,23 +5,50 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { 
+  ChevronDown, 
+  User, 
+  History, 
+  LogOut,
+  Settings,
+  Key,
+  Save
+} from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
+import { useAuth } from "@/hooks/use-auth";
 import logoImage from "../assets/logo.png";
 
 export default function SiteHeader() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { isAuthenticated, clearAuth } = useAuthProtection();
+  const { user, logoutMutation } = useAuth();
   
-  // Check if user is authenticated for either of the protected pages
-  const isLoggedIn = isAuthenticated('starter-access') || isAuthenticated('pro-tools');
+  // Check if user is authenticated using either method
+  const isLoggedInWithPassword = isAuthenticated('starter-access') || isAuthenticated('pro-tools');
+  const isLoggedIn = !!user || isLoggedInWithPassword;
   
-  // Handle sign out
-  const handleSignOut = () => {
+  // Handle sign out for password-based auth
+  const handlePasswordSignOut = () => {
     clearAuth('starter-access');
     clearAuth('pro-tools');
+  };
+  
+  // Handle sign out for database auth
+  const handleDatabaseSignOut = () => {
+    logoutMutation.mutate();
+  };
+  
+  // Combined sign out
+  const handleSignOut = () => {
+    if (user) {
+      handleDatabaseSignOut();
+    }
+    if (isLoggedInWithPassword) {
+      handlePasswordSignOut();
+    }
   };
   
   return (
@@ -85,22 +112,66 @@ export default function SiteHeader() {
           </nav>
           
           {isLoggedIn ? (
-            <Button 
-              variant="outline" 
-              className="border-tcof-teal text-tcof-teal hover:bg-tcof-teal/10"
-              onClick={handleSignOut}
-            >
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2">
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex gap-2 items-center">
+                      <User className="h-4 w-4" />
+                      <span className="hidden sm:inline">{user.username}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
+                      Account
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setLocation("/history")}>
+                      <Save className="mr-2 h-4 w-4" />
+                      <span>Saved Projects</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation("/history")}>
+                      <History className="mr-2 h-4 w-4" />
+                      <span>History</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation("/pricing")}>
+                      <Key className="mr-2 h-4 w-4" />
+                      <span>Upgrade Plan</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign Out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {!user && (
+                <Button 
+                  variant="outline" 
+                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-teal/10"
+                  onClick={handleSignOut}
+                >
+                  Sign Out
+                </Button>
+              )}
+            </div>
           ) : (
-            <Link href="/tools/starter-access">
-              <Button 
-                variant="outline" 
-                className="border-tcof-teal text-tcof-teal hover:bg-tcof-teal/10"
-              >
-                Sign In
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/auth">
+                <Button 
+                  variant="outline" 
+                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
+                >
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/auth" className="hidden sm:block">
+                <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
+                  Register
+                </Button>
+              </Link>
+            </div>
           )}
         </div>
       </div>
