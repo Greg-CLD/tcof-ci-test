@@ -1,107 +1,177 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   STORAGE_KEYS,
   TCOFJourneyData,
   ImplementationStage,
-  ResourceLevel,
-  Priority,
-  Timeframe,
-  EvaluationFrequency,
   initialTCOFJourneyData,
   loadFromLocalStorage,
   saveToLocalStorage
 } from "@/lib/storage";
 
+// Decision tree question type
+type Question = {
+  id: string;
+  text: string;
+  yesLeadsTo: string | ImplementationStage;
+  noLeadsTo: string | ImplementationStage;
+};
+
+// Decision tree data structure
+const decisionTree: Record<string, Question> = {
+  "q1": {
+    id: "q1",
+    text: "Do I have a clear goal or problem to solve?",
+    yesLeadsTo: "q2",
+    noLeadsTo: "identification"
+  },
+  "q2": {
+    id: "q2",
+    text: "Am I still exploring different options or ideas?",
+    yesLeadsTo: "identification",
+    noLeadsTo: "q3"
+  },
+  "q3": {
+    id: "q3",
+    text: "Have I chosen an option to move forward with?",
+    yesLeadsTo: "q4",
+    noLeadsTo: "definition"
+  },
+  "q4": {
+    id: "q4",
+    text: "Am I testing the option, either in a small scale, or virtually and do I have a clear delivery plan and funding in place?",
+    yesLeadsTo: "delivery",
+    noLeadsTo: "definition"
+  },
+  "q5": {
+    id: "q5",
+    text: "Has the product or solution been delivered and adopted?",
+    yesLeadsTo: "closure",
+    noLeadsTo: "delivery"
+  }
+};
+
+// Phase descriptions
+const phaseDescriptions: Record<ImplementationStage, {
+  title: string;
+  description: string;
+  keyActivities: string[];
+  bgClass: string;
+  borderClass: string;
+}> = {
+  "identification": {
+    title: "Phase 1: Identification",
+    description: "In this early phase, you're exploring and identifying the problem space, potential solutions, and setting initial goals.",
+    keyActivities: [
+      "Define the problem or opportunity clearly",
+      "Conduct research to understand the landscape",
+      "Explore different potential solutions",
+      "Gather initial requirements and constraints"
+    ],
+    bgClass: "bg-blue-50",
+    borderClass: "border-blue-200"
+  },
+  "definition": {
+    title: "Phase 2: Definition",
+    description: "You've selected an approach and are now defining the details of your solution, planning the implementation.",
+    keyActivities: [
+      "Detail the chosen solution approach",
+      "Create implementation plans and timelines",
+      "Secure necessary resources and funding",
+      "Define success metrics and evaluation criteria"
+    ],
+    bgClass: "bg-green-50",
+    borderClass: "border-green-200"
+  },
+  "delivery": {
+    title: "Phase 3: Delivery",
+    description: "You're actively implementing and testing your solution, making adjustments as needed based on feedback.",
+    keyActivities: [
+      "Execute the implementation plan",
+      "Track progress against key milestones",
+      "Manage scope, budget, and timeline",
+      "Collect feedback and make necessary adjustments"
+    ],
+    bgClass: "bg-purple-50",
+    borderClass: "border-purple-200"
+  },
+  "closure": {
+    title: "Phase 4: Closure",
+    description: "Your solution has been delivered and adopted. You're now evaluating results and capturing lessons learned.",
+    keyActivities: [
+      "Evaluate success against defined metrics",
+      "Document lessons learned and best practices",
+      "Transition to ongoing operations or maintenance",
+      "Plan for future enhancements or related initiatives"
+    ],
+    bgClass: "bg-amber-50",
+    borderClass: "border-amber-200"
+  }
+};
+
 export default function TCOFJourneyTool() {
   // Load existing data from local storage
   const storedData = loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY) || initialTCOFJourneyData;
-  
-  // Setup state for each step with initial values from storage
-  const [currentStep, setCurrentStep] = useState<number>(1);
+
+  // Decision tree states
+  const [currentQuestion, setCurrentQuestion] = useState<string>("q1");
+  const [determined, setDetermined] = useState<boolean>(!!storedData.stage);
   const [stage, setStage] = useState<ImplementationStage | null>(storedData.stage);
-  const [technicalExpertise, setTechnicalExpertise] = useState<number>(storedData.capabilities.technicalExpertise);
-  const [resources, setResources] = useState<ResourceLevel | null>(storedData.capabilities.resources);
-  const [priority, setPriority] = useState<Priority | null>(storedData.priority);
-  const [timeframe, setTimeframe] = useState<Timeframe | null>(storedData.implementation.timeframe);
-  const [constraints, setConstraints] = useState<string[]>(storedData.implementation.constraints);
-  const [metrics, setMetrics] = useState<string[]>(storedData.metrics.primary);
-  const [newMetric, setNewMetric] = useState<string>("");
-  const [evaluationFrequency, setEvaluationFrequency] = useState<EvaluationFrequency | null>(
-    storedData.metrics.evaluationFrequency
-  );
-  const [showResults, setShowResults] = useState<boolean>(false);
+  const [notes, setNotes] = useState<Record<string, string>>(storedData.notes || {});
+  const [showIntro, setShowIntro] = useState<boolean>(true);
   
   const { toast } = useToast();
-  const totalSteps = 5;
 
-  // Calculate progress percentage
-  const progressPercentage = (currentStep / totalSteps) * 100;
-
-  // Handle navigation between steps
-  const goToNextStep = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+  // Handle answering a question
+  const handleAnswer = (questionId: string, answer: boolean) => {
+    const question = decisionTree[questionId];
+    const nextStep = answer ? question.yesLeadsTo : question.noLeadsTo;
+    
+    // Check if we've reached a conclusion (stage) or another question
+    if (typeof nextStep === "string" && Object.keys(decisionTree).includes(nextStep)) {
+      // Move to next question
+      setCurrentQuestion(nextStep);
     } else {
-      // Save data and show results
-      handleSaveData();
-      setShowResults(true);
+      // Set the determined stage
+      setStage(nextStep as ImplementationStage);
+      setDetermined(true);
     }
   };
 
-  const goToPrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+  // Handle note input for questions
+  const handleNoteChange = (questionId: string, noteText: string) => {
+    setNotes(prev => ({
+      ...prev,
+      [questionId]: noteText
+    }));
+  };
+
+  // Go back to questions
+  const handleReset = () => {
+    setCurrentQuestion("q1");
+    setDetermined(false);
+    setStage(null);
+  };
+
+  // Save journey data
+  const handleSave = () => {
+    if (!stage) {
+      toast({
+        title: "No phase determined",
+        description: "Please complete the decision tree to determine your phase.",
+        variant: "destructive"
+      });
+      return;
     }
-  };
 
-  // Handle adding a new metric
-  const handleAddMetric = () => {
-    if (newMetric.trim() !== "") {
-      setMetrics([...metrics, newMetric.trim()]);
-      setNewMetric("");
-    }
-  };
-
-  // Handle removing a metric
-  const handleRemoveMetric = (index: number) => {
-    setMetrics(metrics.filter((_, i) => i !== index));
-  };
-
-  // Handle constraint toggles
-  const handleConstraintToggle = (value: string) => {
-    setConstraints(prev => 
-      prev.includes(value)
-        ? prev.filter(item => item !== value)
-        : [...prev, value]
-    );
-  };
-
-  // Save all journey data
-  const handleSaveData = () => {
     const journeyData: TCOFJourneyData = {
+      ...storedData,
       stage,
-      capabilities: {
-        technicalExpertise,
-        resources
-      },
-      priority,
-      implementation: {
-        timeframe,
-        constraints
-      },
-      metrics: {
-        primary: metrics,
-        evaluationFrequency
-      },
+      notes,
       lastUpdated: Date.now()
     };
     
@@ -110,7 +180,7 @@ export default function TCOFJourneyTool() {
     if (success) {
       toast({
         title: "Journey data saved",
-        description: "Your TCOF journey information has been saved successfully."
+        description: "Your delivery phase and notes have been saved successfully."
       });
     } else {
       toast({
@@ -121,25 +191,36 @@ export default function TCOFJourneyTool() {
     }
   };
 
-  // Handle export of recommendations
-  const handleExportRecommendations = () => {
+  // Export decision tree answers and results
+  const handleExport = () => {
     try {
       // Create text content
-      let content = `TCOF Journey Recommendations\n`;
-      content += `=============================\n\n`;
-      content += `Implementation Stage: ${stage ? formatStage(stage) : 'Not specified'}\n`;
-      content += `Technical Expertise Level: ${technicalExpertise}/5\n`;
-      content += `Available Resources: ${resources ? formatResource(resources) : 'Not specified'}\n`;
-      content += `Primary Driver: ${priority ? formatPriority(priority) : 'Not specified'}\n\n`;
+      let content = `TCOF Journey - Delivery Phase Assessment\n`;
+      content += `========================================\n\n`;
       
-      content += `Timeframe: ${timeframe ? formatTimeframe(timeframe) : 'Not specified'}\n`;
-      content += `Constraints: ${constraints.length > 0 ? constraints.join(', ') : 'None specified'}\n\n`;
+      // Add timestamp
+      content += `Date: ${new Date().toLocaleDateString()}\n\n`;
       
-      content += `Primary Metrics: ${metrics.length > 0 ? metrics.join(', ') : 'None specified'}\n`;
-      content += `Evaluation Frequency: ${evaluationFrequency ? formatFrequency(evaluationFrequency) : 'Not specified'}\n\n`;
+      // Add questions and answers
+      content += `Decision Tree Responses:\n`;
+      Object.keys(decisionTree).forEach(qId => {
+        const q = decisionTree[qId];
+        content += `\nQ: ${q.text}\n`;
+        if (notes[qId]) {
+          content += `Notes: ${notes[qId]}\n`;
+        }
+      });
       
-      content += `Recommended Next Steps:\n`;
-      content += `- ${getRecommendation()}\n`;
+      content += `\n----------------------------------------\n\n`;
+      content += `Determined Phase: ${stage ? phaseDescriptions[stage].title : 'Not yet determined'}\n\n`;
+      
+      if (stage) {
+        content += `Description: ${phaseDescriptions[stage].description}\n\n`;
+        content += `Key Activities for this Phase:\n`;
+        phaseDescriptions[stage].keyActivities.forEach((activity, index) => {
+          content += `${index + 1}. ${activity}\n`;
+        });
+      }
       
       // Create a downloadable text file
       const blob = new Blob([content], { type: 'text/plain' });
@@ -147,448 +228,148 @@ export default function TCOFJourneyTool() {
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `tcof-recommendations-${new Date().toISOString().slice(0, 10)}.txt`;
+      link.download = `tcof-journey-phase-${new Date().toISOString().slice(0, 10)}.txt`;
       link.click();
       
       toast({
-        title: "Recommendations exported",
-        description: "Your TCOF recommendations have been exported as a text file."
+        title: "Results exported",
+        description: "Your journey phase assessment has been exported as a text file."
       });
     } catch (error) {
       toast({
         title: "Export failed",
-        description: "There was a problem exporting your recommendations.",
+        description: "There was a problem exporting your results.",
         variant: "destructive"
       });
     }
-  };
-
-  // Helper function to get a sample recommendation based on the selected stage
-  const getRecommendation = () => {
-    if (!stage) return "Complete all steps to receive personalized recommendations.";
-    
-    switch (stage) {
-      case "exploration":
-        return "Research different approaches and methodologies that align with your resources and capabilities.";
-      case "planning":
-        return "Develop a detailed implementation roadmap with key milestones and stakeholder communication plan.";
-      case "execution":
-        return "Establish regular check-ins and progress tracking to ensure alignment with strategic goals.";
-      case "evaluation":
-        return "Create a comprehensive feedback loop to capture learnings and adjust future implementations.";
-      default:
-        return "Complete all steps to receive personalized recommendations.";
-    }
-  };
-
-  // Format helper functions
-  const formatStage = (s: ImplementationStage): string => {
-    const formats: Record<ImplementationStage, string> = {
-      exploration: "Exploration",
-      planning: "Planning",
-      execution: "Execution",
-      evaluation: "Evaluation"
-    };
-    return formats[s];
-  };
-
-  const formatResource = (r: ResourceLevel): string => {
-    const formats: Record<ResourceLevel, string> = {
-      minimal: "Minimal (Limited budget/staff)",
-      adequate: "Adequate (Standard resources)",
-      abundant: "Abundant (Well-resourced)"
-    };
-    return formats[r];
-  };
-
-  const formatPriority = (p: Priority): string => {
-    const formats: Record<Priority, string> = {
-      efficiency: "Operational Efficiency",
-      innovation: "Innovation",
-      experience: "Customer Experience",
-      cost: "Cost Reduction"
-    };
-    return formats[p];
-  };
-
-  const formatTimeframe = (t: Timeframe): string => {
-    const formats: Record<Timeframe, string> = {
-      immediate: "Immediate (< 3 months)",
-      short: "Short-term (3-6 months)",
-      medium: "Medium-term (6-12 months)",
-      long: "Long-term (> 12 months)"
-    };
-    return formats[t];
-  };
-
-  const formatFrequency = (f: EvaluationFrequency): string => {
-    const formats: Record<EvaluationFrequency, string> = {
-      weekly: "Weekly",
-      monthly: "Monthly",
-      quarterly: "Quarterly",
-      annually: "Annually"
-    };
-    return formats[f];
   };
 
   return (
     <section>
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">🧪 TCOF Journey Decision Tree</h2>
-        <p className="text-gray-600">Identify your current journey stage and get tailored recommendations.</p>
+        <p className="text-gray-600">Figure out where you are in the delivery journey.</p>
       </div>
+      
+      {showIntro && (
+        <Card className="mb-6">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-bold">Why determine your position?</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowIntro(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <i className="ri-close-line text-lg"></i>
+              </Button>
+            </div>
+            
+            <div className="prose prose-sm max-w-none">
+              <p>Knowing your stage helps you focus. It shows you where to start with the Connected Outcomes Framework.</p>
+              
+              <h4 className="font-bold mt-4 mb-2">How to use this tool:</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Answer the questions about your current situation</li>
+                <li>Add notes to record your thoughts for each question</li>
+                <li>The tool will determine which phase of the delivery journey you're in</li>
+                <li>Save your results for future reference</li>
+              </ol>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <Card>
         <CardContent className="p-4 md:p-6">
-          <div className="flex items-center mb-6">
-            <Progress value={progressPercentage} className="h-2" />
-            <span className="ml-3 text-sm font-medium">
-              Step {currentStep}/{totalSteps}
-            </span>
-          </div>
-          
-          {/* Step 1: Implementation Stage */}
-          {currentStep === 1 && (
-            <div className="tree-node">
-              <h3 className="font-bold text-lg mb-3">1. Current Implementation Stage</h3>
-              <p className="mb-4 text-gray-600">Where are you in your implementation journey?</p>
+          {!determined ? (
+            <div className="decision-tree">
+              <h3 className="font-bold text-lg mb-4">Step 3: Plot Your Position</h3>
               
-              <RadioGroup
-                value={stage || ""}
-                onValueChange={(value) => setStage(value as ImplementationStage)}
-                className="space-y-3 mb-6"
-              >
-                <div className="flex items-start">
-                  <RadioGroupItem value="exploration" id="stage-exploration" className="mt-1 mr-3" />
-                  <Label htmlFor="stage-exploration" className="cursor-pointer">
-                    <div className="font-medium">Exploration</div>
-                    <div className="text-sm text-gray-600">Researching options and possibilities</div>
-                  </Label>
-                </div>
-                <div className="flex items-start">
-                  <RadioGroupItem value="planning" id="stage-planning" className="mt-1 mr-3" />
-                  <Label htmlFor="stage-planning" className="cursor-pointer">
-                    <div className="font-medium">Planning</div>
-                    <div className="text-sm text-gray-600">Developing strategy and roadmap</div>
-                  </Label>
-                </div>
-                <div className="flex items-start">
-                  <RadioGroupItem value="execution" id="stage-execution" className="mt-1 mr-3" />
-                  <Label htmlFor="stage-execution" className="cursor-pointer">
-                    <div className="font-medium">Execution</div>
-                    <div className="text-sm text-gray-600">Actively implementing initiatives</div>
-                  </Label>
-                </div>
-                <div className="flex items-start">
-                  <RadioGroupItem value="evaluation" id="stage-evaluation" className="mt-1 mr-3" />
-                  <Label htmlFor="stage-evaluation" className="cursor-pointer">
-                    <div className="font-medium">Evaluation</div>
-                    <div className="text-sm text-gray-600">Assessing outcomes and results</div>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-          
-          {/* Step 2: Team Capabilities */}
-          {currentStep === 2 && (
-            <div className="tree-node">
-              <h3 className="font-bold text-lg mb-3">2. Team Capabilities</h3>
-              <p className="mb-4 text-gray-600">Rate your team's current capabilities in implementing this approach:</p>
-              
-              <div className="mb-4">
-                <Label htmlFor="capability-slider" className="block text-sm font-medium mb-2">
-                  Technical Expertise
-                </Label>
-                <Slider
-                  id="capability-slider"
-                  min={1}
-                  max={5}
-                  step={1}
-                  value={[technicalExpertise]}
-                  onValueChange={(value) => setTechnicalExpertise(value[0])}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-gray-500 px-1 mt-1">
-                  <span>Novice</span>
-                  <span>Expert</span>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <Label htmlFor="resources" className="block text-sm font-medium mb-2">
-                  Available Resources
-                </Label>
-                <Select value={resources || ""} onValueChange={(value) => setResources(value as ResourceLevel)}>
-                  <SelectTrigger id="resources">
-                    <SelectValue placeholder="Select resource level..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minimal">Minimal (Limited budget/staff)</SelectItem>
-                    <SelectItem value="adequate">Adequate (Standard resources)</SelectItem>
-                    <SelectItem value="abundant">Abundant (Well-resourced)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          
-          {/* Step 3: Organizational Priorities */}
-          {currentStep === 3 && (
-            <div className="tree-node">
-              <h3 className="font-bold text-lg mb-3">3. Organizational Priorities</h3>
-              <p className="mb-4 text-gray-600">What is the primary driver for this initiative?</p>
-              
-              <RadioGroup
-                value={priority || ""}
-                onValueChange={(value) => setPriority(value as Priority)}
-                className="space-y-3 mb-6"
-              >
-                <div className="flex items-start">
-                  <RadioGroupItem value="efficiency" id="priority-efficiency" className="mt-1 mr-3" />
-                  <Label htmlFor="priority-efficiency" className="cursor-pointer">
-                    <div className="font-medium">Operational Efficiency</div>
-                    <div className="text-sm text-gray-600">Improving internal processes and productivity</div>
-                  </Label>
-                </div>
-                <div className="flex items-start">
-                  <RadioGroupItem value="innovation" id="priority-innovation" className="mt-1 mr-3" />
-                  <Label htmlFor="priority-innovation" className="cursor-pointer">
-                    <div className="font-medium">Innovation</div>
-                    <div className="text-sm text-gray-600">Creating new products or services</div>
-                  </Label>
-                </div>
-                <div className="flex items-start">
-                  <RadioGroupItem value="experience" id="priority-experience" className="mt-1 mr-3" />
-                  <Label htmlFor="priority-experience" className="cursor-pointer">
-                    <div className="font-medium">Customer Experience</div>
-                    <div className="text-sm text-gray-600">Enhancing customer satisfaction and engagement</div>
-                  </Label>
-                </div>
-                <div className="flex items-start">
-                  <RadioGroupItem value="cost" id="priority-cost" className="mt-1 mr-3" />
-                  <Label htmlFor="priority-cost" className="cursor-pointer">
-                    <div className="font-medium">Cost Reduction</div>
-                    <div className="text-sm text-gray-600">Decreasing expenses and optimizing resources</div>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-          
-          {/* Step 4: Implementation Timeframe */}
-          {currentStep === 4 && (
-            <div className="tree-node">
-              <h3 className="font-bold text-lg mb-3">4. Implementation Timeframe</h3>
-              <p className="mb-4 text-gray-600">What is your expected implementation timeline?</p>
-              
-              <div className="mb-6">
-                <Select value={timeframe || ""} onValueChange={(value) => setTimeframe(value as Timeframe)}>
-                  <SelectTrigger id="timeframe">
-                    <SelectValue placeholder="Select timeframe..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="immediate">Immediate ({"<"} 3 months)</SelectItem>
-                    <SelectItem value="short">Short-term (3-6 months)</SelectItem>
-                    <SelectItem value="medium">Medium-term (6-12 months)</SelectItem>
-                    <SelectItem value="long">Long-term ({">"}12 months)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="mb-6">
-                <Label className="block text-sm font-medium mb-2">
-                  Major Constraints (Select all that apply)
-                </Label>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <Checkbox 
-                      id="constraint-budget" 
-                      checked={constraints.includes("Budget limitations")}
-                      onCheckedChange={() => handleConstraintToggle("Budget limitations")}
-                      className="mr-2" 
-                    />
-                    <Label htmlFor="constraint-budget">Budget limitations</Label>
-                  </div>
-                  <div className="flex items-center">
-                    <Checkbox 
-                      id="constraint-expertise" 
-                      checked={constraints.includes("Technical expertise")}
-                      onCheckedChange={() => handleConstraintToggle("Technical expertise")}
-                      className="mr-2" 
-                    />
-                    <Label htmlFor="constraint-expertise">Technical expertise</Label>
-                  </div>
-                  <div className="flex items-center">
-                    <Checkbox 
-                      id="constraint-stakeholders" 
-                      checked={constraints.includes("Stakeholder alignment")}
-                      onCheckedChange={() => handleConstraintToggle("Stakeholder alignment")}
-                      className="mr-2" 
-                    />
-                    <Label htmlFor="constraint-stakeholders">Stakeholder alignment</Label>
-                  </div>
-                  <div className="flex items-center">
-                    <Checkbox 
-                      id="constraint-integration" 
-                      checked={constraints.includes("Integration with existing systems")}
-                      onCheckedChange={() => handleConstraintToggle("Integration with existing systems")}
-                      className="mr-2" 
-                    />
-                    <Label htmlFor="constraint-integration">Integration with existing systems</Label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Step 5: Success Metrics */}
-          {currentStep === 5 && (
-            <div className="tree-node">
-              <h3 className="font-bold text-lg mb-3">5. Success Metrics</h3>
-              <p className="mb-4 text-gray-600">How will you measure success?</p>
-              
-              <div className="mb-6">
-                <Label className="block text-sm font-medium mb-2">
-                  Primary Success Metrics
-                </Label>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {metrics.map((metric, index) => (
-                    <div key={index} className="bg-gray-100 px-3 py-1 rounded-full text-sm inline-flex items-center">
-                      {metric}
-                      <button 
-                        className="ml-2 text-gray-500 hover:text-gray-700"
-                        onClick={() => handleRemoveMetric(index)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newMetric}
-                      onChange={(e) => setNewMetric(e.target.value)}
-                      className="border border-gray-300 rounded-l-full px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Add metric..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddMetric();
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={handleAddMetric}
-                      className="border border-dashed border-gray-300 px-3 py-1 rounded-r-full text-sm text-gray-500 hover:text-gray-700 hover:border-gray-400"
-                    >
-                      + Add
-                    </button>
-                  </div>
-                </div>
+              <div className="current-question p-4 border border-gray-200 rounded-lg mb-6">
+                <p className="font-medium text-lg mb-4">{decisionTree[currentQuestion].text}</p>
                 
                 <div className="mb-4">
-                  <Label htmlFor="evaluation-frequency" className="block text-sm font-medium mb-2">
-                    Evaluation Frequency
+                  <Label htmlFor={`notes-${currentQuestion}`} className="block text-sm font-medium mb-2">
+                    Your Notes (Optional)
                   </Label>
-                  <Select 
-                    value={evaluationFrequency || ""} 
-                    onValueChange={(value) => setEvaluationFrequency(value as EvaluationFrequency)}
+                  <Textarea
+                    id={`notes-${currentQuestion}`}
+                    value={notes[currentQuestion] || ""}
+                    onChange={(e) => handleNoteChange(currentQuestion, e.target.value)}
+                    placeholder="Add your thoughts or context here..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+                
+                <div className="flex gap-4 justify-center">
+                  <Button 
+                    onClick={() => handleAnswer(currentQuestion, true)}
+                    variant="secondary"
+                    className="min-w-[100px]"
                   >
-                    <SelectTrigger id="evaluation-frequency">
-                      <SelectValue placeholder="Select frequency..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="annually">Annually</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Results */}
-          {showResults && (
-            <div className="tree-node">
-              <div className="p-6 bg-primary bg-opacity-10 rounded-lg border border-primary border-opacity-20">
-                <h3 className="font-bold text-lg text-primary mb-2">Your TCOF Journey Recommendations</h3>
-                <div className="mb-4">
-                  <p className="text-gray-700">
-                    Based on your responses, you're at the{' '}
-                    <span className="font-medium">{stage ? formatStage(stage) : 'Unspecified'}</span> stage
-                    {priority && (
-                      <> focused on <span className="font-medium">{formatPriority(priority)}</span></>
-                    )}.
-                  </p>
-                </div>
-                
-                <div className="mb-4">
-                  <h4 className="font-medium mb-1">Recommended Next Steps:</h4>
-                  <ul className="list-disc pl-5 text-sm space-y-1">
-                    <li>{getRecommendation()}</li>
-                    {resources === 'minimal' && (
-                      <li>Consider prioritizing initiatives based on resource constraints and high-impact opportunities.</li>
-                    )}
-                    {technicalExpertise < 3 && (
-                      <li>Allocate time for team training and seek external expertise where necessary.</li>
-                    )}
-                    {constraints.includes("Stakeholder alignment") && (
-                      <li>Develop a stakeholder communication plan to ensure alignment and buy-in.</li>
-                    )}
-                    {metrics.length > 0 && (
-                      <li>Establish baseline metrics for: {metrics.join(', ')}.</li>
-                    )}
-                  </ul>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-1">Suggested Resources:</h4>
-                  <ul className="list-disc pl-5 text-sm space-y-1">
-                    <li>TCOF Planning Template</li>
-                    <li>Stakeholder Management Guide</li>
-                    <li>{priority === 'efficiency' ? 'Efficiency Metrics Framework' : 
-                         priority === 'innovation' ? 'Innovation Assessment Toolkit' :
-                         priority === 'experience' ? 'Customer Experience Measurement Guide' :
-                         priority === 'cost' ? 'Cost Reduction Strategy Playbook' : 
-                         'Strategic Planning Resources'}</li>
-                  </ul>
+                    Yes
+                  </Button>
+                  <Button 
+                    onClick={() => handleAnswer(currentQuestion, false)}
+                    variant="outline"
+                    className="min-w-[100px]"
+                  >
+                    No
+                  </Button>
                 </div>
               </div>
               
-              <div className="mt-6 text-center">
-                <Button onClick={handleExportRecommendations} variant="secondary" className="flex items-center gap-1 mx-auto">
-                  <i className="ri-download-line mr-1"></i> Export Recommendations
-                </Button>
+              <div className="text-sm text-gray-600 italic text-center">
+                Answer the questions to determine your current stage in the delivery journey.
               </div>
             </div>
-          )}
-          
-          {/* Navigation buttons */}
-          {!showResults && (
-            <div className="flex justify-between mt-6">
-              {currentStep > 1 && (
-                <Button
-                  variant="outline"
-                  onClick={goToPrevStep}
-                  className="flex items-center gap-1"
-                >
-                  <i className="ri-arrow-left-line"></i> Previous
-                </Button>
+          ) : (
+            <div className="result">
+              {stage && (
+                <div className={`p-5 ${phaseDescriptions[stage].bgClass} ${phaseDescriptions[stage].borderClass} border rounded-lg mb-6`}>
+                  <h3 className="font-bold text-lg mb-2">{phaseDescriptions[stage].title}</h3>
+                  <p className="mb-4">{phaseDescriptions[stage].description}</p>
+                  
+                  <h4 className="font-medium mb-2">Key Activities:</h4>
+                  <ul className="list-disc pl-5 space-y-1 mb-4">
+                    {phaseDescriptions[stage].keyActivities.map((activity, index) => (
+                      <li key={index}>{activity}</li>
+                    ))}
+                  </ul>
+                  
+                  <div className="bg-white rounded p-3 border border-gray-200">
+                    <p className="font-medium text-gray-800">You're here based on your answers to the decision tree.</p>
+                  </div>
+                </div>
               )}
-              {currentStep === 1 && <div></div>}
-              <Button
-                onClick={goToNextStep}
-                className="flex items-center gap-1"
-              >
-                {currentStep === totalSteps ? (
-                  <>Submit <i className="ri-check-line"></i></>
-                ) : (
-                  <>Next <i className="ri-arrow-right-line"></i></>
-                )}
-              </Button>
+              
+              <div className="flex justify-between">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleReset}
+                  className="text-gray-600 hover:text-gray-800 text-sm font-medium transition flex items-center"
+                >
+                  <i className="ri-refresh-line mr-1"></i> Start Over
+                </Button>
+                <div className="space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleExport}
+                    className="flex items-center gap-1"
+                  >
+                    <i className="ri-download-line mr-1"></i> Export Results
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleSave}
+                    className="flex items-center gap-1"
+                  >
+                    <i className="ri-save-line mr-1"></i> Save Results
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

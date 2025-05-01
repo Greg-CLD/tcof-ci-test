@@ -35,7 +35,7 @@ export interface CynefinSelection {
 }
 
 // TCOF Journey types
-export type ImplementationStage = 'exploration' | 'planning' | 'execution' | 'evaluation';
+export type ImplementationStage = 'identification' | 'definition' | 'delivery' | 'closure';
 export type ResourceLevel = 'minimal' | 'adequate' | 'abundant';
 export type Priority = 'efficiency' | 'innovation' | 'experience' | 'cost';
 export type Timeframe = 'immediate' | 'short' | 'medium' | 'long';
@@ -56,6 +56,7 @@ export interface TCOFJourneyData {
     primary: string[];
     evaluationFrequency: EvaluationFrequency | null;
   };
+  notes: Record<string, string>;
   lastUpdated: number;
 }
 
@@ -107,5 +108,6 @@ export const initialTCOFJourneyData: TCOFJourneyData = {
     primary: [],
     evaluationFrequency: null
   },
+  notes: {},
   lastUpdated: Date.now()
 };
