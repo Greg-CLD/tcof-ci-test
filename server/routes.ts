@@ -40,6 +40,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cancel_url: `${req.headers.origin}/`,
       });
 
+      // Log the URL for debugging
+      console.log("Stripe checkout URL:", session.url);
+      
       res.status(200).json({ id: session.id, url: session.url });
     } catch (error: any) {
       console.error("Error creating checkout session:", error);

@@ -15,11 +15,23 @@ export default function Pricing() {
     setIsLoading(true);
     try {
       const response = await apiRequest("POST", "/api/checkout-starter", {});
-      const { url } = await response.json();
+      const data = await response.json();
+      console.log("Checkout response:", data);
       
-      if (url) {
-        // Redirect to Stripe Checkout
-        window.location.href = url;
+      if (data.url) {
+        // Redirect to Stripe Checkout using a link click instead of window.location
+        const link = document.createElement('a');
+        link.href = data.url;
+        link.target = "_blank"; // Open in new tab
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Redirecting to Checkout",
+          description: "If the checkout page doesn't open, please check your pop-up blocker settings."
+        });
       } else {
         throw new Error("Invalid response from checkout API");
       }
