@@ -11,6 +11,8 @@ import { AuthProtectionProvider } from "@/hooks/use-auth-protection";
 import GoalMappingTool from "@/components/GoalMappingTool";
 import CynefinOrientationTool from "@/components/CynefinOrientationTool";
 import TCOFJourneyTool from "@/components/TCOFJourneyTool";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 function Router() {
   return (

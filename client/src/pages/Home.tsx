@@ -84,7 +84,7 @@ export default function Home() {
                 <h3 className="text-xl font-bold mb-2 text-tcof-dark">Goal-Mapping Tool</h3>
                 <p className="text-gray-700 mb-4">Map your strategic, business, and product goals using the Success Map framework</p>
                 <div className="mt-auto">
-                  <Link href="/">
+                  <Link href="/tools/goal-mapping">
                     <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-teal/10">
                       Explore Tool
                     </Button>
@@ -105,7 +105,7 @@ export default function Home() {
                 <h3 className="text-xl font-bold mb-2 text-tcof-dark">Cynefin Orientation Tool</h3>
                 <p className="text-gray-700 mb-4">Determine whether your domain is Clear, Complicated, Complex, or Chaotic</p>
                 <div className="mt-auto">
-                  <Link href="/">
+                  <Link href="/tools/cynefin-orientation">
                     <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-teal/10">
                       Explore Tool
                     </Button>
@@ -125,7 +125,7 @@ export default function Home() {
                 <h3 className="text-xl font-bold mb-2 text-tcof-dark">TCOF Journey Decision Tree</h3>
                 <p className="text-gray-700 mb-4">Navigate through the delivery process and determine your current journey stage</p>
                 <div className="mt-auto">
-                  <Link href="/">
+                  <Link href="/tools/tcof-journey">
                     <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-teal/10">
                       Explore Tool
                     </Button>
@@ -211,6 +211,23 @@ export default function Home() {
               Pro Tools Coming Soon
             </Button>
           </Link>
+        </div>
+      </section>
+      
+      {/* How These Tools Fit Into the Framework */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 text-tcof-dark">
+              <span className="mr-2">📘</span> How These Tools Fit Into the Framework
+            </h2>
+            <div className="h-1 w-24 bg-tcof-teal mx-auto mb-10"></div>
+            <div className="bg-tcof-light p-8 rounded-xl">
+              <p className="text-lg text-tcof-dark leading-relaxed">
+                These Starter Kit tools are designed to help you take the very first step in using the Connected Outcomes Framework, Make a Plan. They support the activities described in Part B of the TCOF guide, where you'll set your direction, assess your situation, and find your starting point. Use them alongside the guidebook to make things real, practical, and immediately useful.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
