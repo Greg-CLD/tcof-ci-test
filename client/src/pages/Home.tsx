@@ -6,7 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { useToast } from "@/hooks/use-toast";
-import { FileDown } from "lucide-react";
+import { useAuthProtection } from "@/hooks/use-auth-protection";
+import { FileDown, Lock } from "lucide-react";
 import { 
   STORAGE_KEYS, 
   loadFromLocalStorage, 
@@ -19,6 +20,8 @@ import vitruvianMan from "../assets/vitruvian-man.png";
 
 export default function Home() {
   const { toast } = useToast();
+  const { isAuthenticated } = useAuthProtection();
+  const isAuthorized = isAuthenticated('starter-access');
   
   // Handle generating a complete Part B Plan PDF with all tool data
   const handleGenerateCompletePDF = () => {
@@ -111,19 +114,39 @@ export default function Home() {
             <Card className="border border-tcof-teal/30 bg-tcof-light/50 shadow-md">
               <CardContent className="p-6 text-center">
                 <div className="flex items-center justify-center">
-                  <FileDown className="h-6 w-6 text-tcof-teal mr-2" />
+                  {isAuthorized ? (
+                    <FileDown className="h-6 w-6 text-tcof-teal mr-2" />
+                  ) : (
+                    <Lock className="h-6 w-6 text-tcof-teal mr-2" />
+                  )}
                   <h3 className="font-bold text-xl text-tcof-dark">Complete Part B Plan</h3>
                 </div>
                 <p className="text-gray-600 mb-4 mt-2">
                   After using all three tools, generate a complete Part B Plan PDF that combines all your inputs.
                 </p>
-                <Button 
-                  onClick={handleGenerateCompletePDF}
-                  variant="outline" 
-                  className="bg-white hover:bg-tcof-light text-tcof-dark border-tcof-teal flex items-center mx-auto"
-                >
-                  <FileDown className="h-4 w-4 mr-2" /> Generate Complete Part B Plan
-                </Button>
+                
+                {isAuthorized ? (
+                  <Button 
+                    onClick={handleGenerateCompletePDF}
+                    variant="outline" 
+                    className="bg-white hover:bg-tcof-light text-tcof-dark border-tcof-teal flex items-center mx-auto"
+                  >
+                    <FileDown className="h-4 w-4 mr-2" /> Generate Complete Part B Plan
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="inline-block bg-amber-100 text-amber-800 px-4 py-2 rounded-md text-sm">
+                      Log in to access PDF export features
+                    </div>
+                    <div>
+                      <Link href="/tools/starter-access">
+                        <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-teal/10">
+                          <Lock className="h-4 w-4 mr-2" /> Unlock PDF Features
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
