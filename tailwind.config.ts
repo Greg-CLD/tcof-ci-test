@@ -48,6 +48,7 @@ export default {
           dark: "#16414E",  // TCOF brand dark blue
           teal: "#008080",  // TCOF brand teal
           light: "#fff5e7",  // TCOF brand light highlight
+          bg: "#fff5e7",     // TCOF brand background
         },
         chart: {
           "1": "hsl(var(--chart-1))",

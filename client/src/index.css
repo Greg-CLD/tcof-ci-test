@@ -8,43 +8,49 @@
   }
 
   body {
-    @apply font-sans antialiased bg-gray-50 text-gray-800;
+    @apply font-sans antialiased bg-white text-gray-800;
   }
 
   :root {
+    /* TCOF Brand Colors */
+    --tcof-dark: 191 55% 20%; /* #16414E - main text */
+    --tcof-teal: 180 100% 25%; /* #008080 - accent */
+    --tcof-bg: 39 100% 96%; /* #fff5e7 - background */
+    
+    /* Original theme colors */
     --background: 0 0% 100%;
     --foreground: 220 9% 25%;
     --card: 0 0% 100%;
     --card-foreground: 220 9% 25%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 9% 25%;
-    --primary: 213 89% 48%;
+    --primary: 180 100% 25%; /* Updated to TCOF teal */
     --primary-foreground: 0 0% 100%;
     --secondary: 156 68% 40%;
     --secondary-foreground: 0 0% 100%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 262 83% 64%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 39 100% 96%; /* Updated to TCOF bg */
+    --accent-foreground: 191 55% 20%; /* TCOF dark */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 213 89% 48%;
+    --ring: 180 100% 25%; /* Updated to TCOF teal */
     --radius: 0.5rem;
-    --chart-1: 262 83% 64%;
-    --chart-2: 213 89% 48%;
-    --chart-3: 156 68% 40%;
+    --chart-1: 180 100% 25%; /* TCOF teal */
+    --chart-2: 191 55% 20%; /* TCOF dark */
+    --chart-3: 39 100% 96%; /* TCOF bg */
     --chart-4: 29 80% 50%;
     --chart-5: 0 84% 60%;
-    --sidebar-background: 212 100% 12%;
+    --sidebar-background: 191 55% 20%; /* TCOF dark */
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 213 89% 48%;
+    --sidebar-primary: 180 100% 25%; /* TCOF teal */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 156 68% 40%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 213 30% 20%;
-    --sidebar-ring: 213 89% 48%;
+    --sidebar-accent: 39 100% 96%; /* TCOF bg */
+    --sidebar-accent-foreground: 191 55% 20%; /* TCOF dark */
+    --sidebar-border: 191 30% 30%;
+    --sidebar-ring: 180 100% 25%; /* TCOF teal */
   }
 
   /* Canvas drawing styles */
