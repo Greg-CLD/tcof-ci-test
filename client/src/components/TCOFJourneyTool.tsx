@@ -25,31 +25,31 @@ type Question = {
 const decisionTree: Record<string, Question> = {
   "q1": {
     id: "q1",
-    text: "Do I have a clear goal or problem to solve?",
+    text: "Do you already know what outcome or problem you're trying to solve?",
     yesLeadsTo: "q2",
     noLeadsTo: "identification"
   },
   "q2": {
     id: "q2",
-    text: "Am I still exploring different options or ideas?",
+    text: "Are you still exploring different ideas or approaches?",
     yesLeadsTo: "identification",
     noLeadsTo: "q3"
   },
   "q3": {
     id: "q3",
-    text: "Have I chosen an option to move forward with?",
+    text: "Have you picked the option you're going to move forward with?",
     yesLeadsTo: "q4",
     noLeadsTo: "definition"
   },
   "q4": {
     id: "q4",
-    text: "Am I testing the option, either in a small scale, or virtually and do I have a clear delivery plan and funding in place?",
+    text: "Have you tested your idea in a small way, and do you have a delivery plan (with funding) ready?",
     yesLeadsTo: "q5",
     noLeadsTo: "definition"
   },
   "q5": {
     id: "q5",
-    text: "Has the product or solution been delivered and adopted?",
+    text: "Has your product or solution already been delivered and adopted by users?",
     yesLeadsTo: "closure",
     noLeadsTo: "delivery"
   }
