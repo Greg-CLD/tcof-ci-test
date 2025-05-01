@@ -4,6 +4,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function Pricing() {
   const [, setLocation] = useLocation();
@@ -49,14 +51,7 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <header className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center">
-            <span className="text-tcof-teal text-2xl mr-2">💳</span>
-            <h1 className="text-2xl font-bold text-tcof-dark">TCOF Tools Access</h1>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
       
       <main className="flex-grow container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto">
@@ -121,7 +116,7 @@ export default function Pricing() {
               </div>
               <CardHeader className="pb-2">
                 <CardTitle className="text-2xl font-bold text-gray-600">Pro Tools</CardTitle>
-                <div className="text-3xl font-bold mt-4 text-gray-600">£NIL</div>
+                <div className="text-3xl font-bold mt-4 text-gray-600">£47</div>
                 <p className="text-gray-500 text-sm">Price TBC</p>
               </CardHeader>
               <CardContent className="pt-2">
@@ -168,14 +163,7 @@ export default function Pricing() {
         </div>
       </main>
       
-      <footer className="bg-gray-50 border-t border-gray-200 py-8">
-        <div className="container mx-auto px-4">
-          <div className="text-center text-gray-600">
-            <p>© {new Date().getFullYear()} TCOF Tools. All rights reserved.</p>
-            <p className="text-sm mt-2">Secure payment processing by Stripe.</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

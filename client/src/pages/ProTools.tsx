@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import PasswordProtection from "@/components/PasswordProtection";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function ProTools() {
   const { isAuthenticated } = useAuthProtection();
@@ -20,19 +22,7 @@ export default function ProTools() {
   }
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <header className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-6 flex justify-between items-center">
-          <div className="flex items-center">
-            <span className="text-tcof-teal text-2xl mr-2">🔒</span>
-            <h1 className="text-2xl font-bold text-tcof-dark">TCOF Pro Tools Access</h1>
-          </div>
-          <Link href="/">
-            <Button variant="outline" className="text-tcof-dark">
-              Back to Starter Kit
-            </Button>
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
       
       <main className="flex-grow container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
@@ -106,14 +96,7 @@ export default function ProTools() {
         </div>
       </main>
       
-      <footer className="bg-gray-50 border-t border-gray-200 py-8">
-        <div className="container mx-auto px-4">
-          <div className="text-center text-gray-600">
-            <p>© {new Date().getFullYear()} TCOF Pro Tools. All rights reserved.</p>
-            <p className="text-sm mt-2">You're receiving access to these tools as part of your premium membership.</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

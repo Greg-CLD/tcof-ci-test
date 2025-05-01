@@ -57,14 +57,7 @@ export default function StarterAccess() {
   if (!sessionVerified && !isAuthenticated('starter-access')) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
-        <header className="bg-white border-b border-gray-200">
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center">
-              <span className="text-tcof-teal text-2xl mr-2">🔑</span>
-              <h1 className="text-2xl font-bold text-tcof-dark">TCOF Starter Kit Access</h1>
-            </div>
-          </div>
-        </header>
+        <SiteHeader />
         
         <main className="flex-grow container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto">
@@ -85,25 +78,15 @@ export default function StarterAccess() {
             </CardContent>
           </Card>
         </main>
+        
+        <SiteFooter />
       </div>
     );
   }
   
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <header className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-6 flex justify-between items-center">
-          <div className="flex items-center">
-            <span className="text-tcof-teal text-2xl mr-2">🔑</span>
-            <h1 className="text-2xl font-bold text-tcof-dark">TCOF Starter Kit Access</h1>
-          </div>
-          <Link href="/">
-            <Button variant="outline" className="text-tcof-dark">
-              Return to Home
-            </Button>
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
       
       <main className="flex-grow container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
@@ -165,16 +148,10 @@ export default function StarterAccess() {
               </Button>
             </Link>
           </div>
-          
-          <Separator className="my-8" />
-          
-          <div className="text-center text-gray-500 text-sm">
-            <p>
-              Need help? Contact us at support@tcofpro.com
-            </p>
-          </div>
         </div>
       </main>
+      
+      <SiteFooter />
     </div>
   );
 }
