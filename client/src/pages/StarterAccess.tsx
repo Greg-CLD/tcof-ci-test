@@ -6,6 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import PasswordProtection from "@/components/PasswordProtection";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function StarterAccess() {
   const [, setLocation] = useLocation();

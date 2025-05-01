@@ -3,15 +3,19 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-tcof-light text-tcof-dark">
+      <SiteHeader />
+      
       {/* Hero Section */}
       <header className="bg-gradient-to-b from-white to-tcof-light py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 bg-gradient-to-r from-tcof-dark to-tcof-teal inline-block text-transparent bg-clip-text">
-            Connected Outcomes Framework: 
+            The Connected Outcomes Framework: 
             <span className="block mt-2">Your Toolkit for Delivering Impactful Change</span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-700 max-w-3xl mx-auto mb-10">
@@ -20,13 +24,13 @@ export default function Home() {
           <div className="relative h-64 md:h-96 max-w-5xl mx-auto my-12 bg-tcof-dark/5 rounded-2xl overflow-hidden shadow-xl">
             <div className="absolute inset-0 bg-gradient-to-br from-tcof-teal/20 to-tcof-dark/20 z-10"></div>
             <div className="absolute inset-0 flex items-center justify-center z-20">
-              <div className="w-12 h-12 md:w-20 md:h-20 rounded-full bg-tcof-teal flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 md:h-10 md:w-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                </svg>
-              </div>
+              <img 
+                src="/vitruvian-man.png" 
+                alt="Vitruvian Man - TCOF" 
+                className="max-h-full object-contain"
+              />
             </div>
-            <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-tcof-dark/40 to-transparent text-white text-center z-20">
+            <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-tcof-dark/60 to-transparent text-white text-center z-20">
               <p className="font-medium">Inspired by research from Oxford University's SAID Business School</p>
             </div>
           </div>
@@ -210,21 +214,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-white py-12 border-t border-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="text-center">
-            <h3 className="font-bold text-xl text-tcof-dark mb-4">Connected Outcomes Framework Toolkit</h3>
-            <p className="text-gray-600 mb-6">
-              Evidence-based tools for delivering complex change
-            </p>
-            <Separator className="my-6" />
-            <p className="text-gray-500 text-sm">
-              &copy; {new Date().getFullYear()} TCOF. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
