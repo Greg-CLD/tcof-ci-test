@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useCanvas } from "@/hooks/use-canvas";
 import {
@@ -12,10 +13,15 @@ import {
   saveToLocalStorage
 } from "@/lib/storage";
 
+// Success Map Level types
+type SuccessMapLevel = "strategic" | "business" | "product" | "custom";
+
 export default function GoalMappingTool() {
   const [goalInput, setGoalInput] = useState("");
+  const [goalLevel, setGoalLevel] = useState<SuccessMapLevel>("strategic");
   const [timeframeInput, setTimeframeInput] = useState("");
   const [showHelp, setShowHelp] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -66,13 +72,33 @@ export default function GoalMappingTool() {
       const x = Math.random() * (rect.width - 200) + 50;
       const y = Math.random() * (rect.height - 100) + 50;
       
-      addNode(goalInput, timeframeInput, x, y);
+      // Add level prefix to goal timeframe
+      let levelPrefix = "";
+      switch (goalLevel) {
+        case "strategic":
+          levelPrefix = "Level 5: Strategic";
+          break;
+        case "business":
+          levelPrefix = "Level 4: Business";
+          break;
+        case "product":
+          levelPrefix = "Level 3: Product";
+          break;
+        default:
+          levelPrefix = "Custom";
+      }
+      
+      const formattedTimeframe = timeframeInput ? 
+        `${levelPrefix} - ${timeframeInput}` : 
+        levelPrefix;
+      
+      addNode(goalInput, formattedTimeframe, x, y);
       setGoalInput("");
       setTimeframeInput("");
       
       toast({
         title: "Goal added",
-        description: "Your goal has been added to the canvas."
+        description: "Your goal has been added to the success map."
       });
     }
   };
@@ -88,12 +114,12 @@ export default function GoalMappingTool() {
     if (success) {
       toast({
         title: "Map saved",
-        description: "Your goal map has been saved successfully.",
+        description: "Your success map has been saved successfully.",
       });
     } else {
       toast({
         title: "Error saving",
-        description: "There was a problem saving your goal map.",
+        description: "There was a problem saving your success map.",
         variant: "destructive"
       });
     }
@@ -106,7 +132,7 @@ export default function GoalMappingTool() {
       const dataStr = JSON.stringify({ nodes, connections });
       const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
       
-      const exportName = `goal-map-${new Date().toISOString().slice(0, 10)}`;
+      const exportName = `success-map-${new Date().toISOString().slice(0, 10)}`;
       
       const linkElement = document.createElement("a");
       linkElement.setAttribute("href", dataUri);
@@ -115,12 +141,12 @@ export default function GoalMappingTool() {
       
       toast({
         title: "Map exported",
-        description: "Your goal map has been exported as JSON."
+        description: "Your success map has been exported as JSON."
       });
     } catch (error) {
       toast({
         title: "Export failed",
-        description: "There was a problem exporting your goal map.",
+        description: "There was a problem exporting your success map.",
         variant: "destructive"
       });
     }
@@ -141,25 +167,103 @@ export default function GoalMappingTool() {
     <section>
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">🎯 Goal-Mapping Tool</h2>
-        <p className="text-gray-600">Map your strategic goals and organize your initiatives visually.</p>
+        <p className="text-gray-600">Create your Success Map to identify and connect your strategic goals.</p>
       </div>
+      
+      {showIntro && (
+        <Card className="mb-6">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-bold">Why identify goals?</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowIntro(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <i className="ri-close-line text-lg"></i>
+              </Button>
+            </div>
+            
+            <div className="prose prose-sm max-w-none">
+              <p>You need to know where you're going, before you can work out how to get there.</p>
+              
+              <h4 className="font-bold mt-4 mb-2">How to create your Success Map:</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Start with the Success Map, working top down</li>
+                <li>Focus on organisational Value Goals and outcomes (Levels 3-5) first. You can focus on Delivery Goals later (Levels 1-2)</li>
+                <li>Set one clear goal per level, or up to three if needed</li>
+                <li>Try to keep your total under 10. Fewer goals mean more focus, less stress, and better follow-through</li>
+              </ol>
+              
+              <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+                <p className="text-blue-800 font-medium">Key Tip: Don't overthink this exercise, it is best done as an individual or a very small group. We focus much more on this in Stage 1 and the first success factor.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <Card>
         <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="mb-6">
+            <h3 className="font-bold text-lg mb-3">Start Your Success Map</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
+                <h4 className="font-medium text-blue-800">Level 5. Strategic Success</h4>
+                <p className="text-sm text-gray-700">Big-picture impact, beyond the business.</p>
+                <p className="text-xs mt-2 text-blue-700 italic">Ask: What would 10x success look like?</p>
+                <p className="text-xs mt-1 text-gray-500">Example: Influence 100,000 project managers to adopt this approach.</p>
+              </div>
+              
+              <div className="p-4 border rounded-lg bg-green-50 border-green-200">
+                <h4 className="font-medium text-green-800">Level 4. Business Success</h4>
+                <p className="text-sm text-gray-700">Tangible value delivered to the organisation.</p>
+                <p className="text-xs mt-2 text-green-700 italic">Ask: What value will this project deliver?</p>
+                <p className="text-xs mt-1 text-gray-500">Example: Reduce operating costs by 10% in 12 months.</p>
+              </div>
+              
+              <div className="p-4 border rounded-lg bg-purple-50 border-purple-200">
+                <h4 className="font-medium text-purple-800">Level 3. Product Success</h4>
+                <p className="text-sm text-gray-700">Whether the solution works and meets user needs.</p>
+                <p className="text-xs mt-2 text-purple-700 italic">Ask: How will we know users are satisfied?</p>
+                <p className="text-xs mt-1 text-gray-500">Example: Net promoter score of 8 out of 10.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="md:w-1/4 space-y-2">
+              <label htmlFor="level-select" className="block text-sm font-medium text-gray-700">
+                Success Level
+              </label>
+              <Select value={goalLevel} onValueChange={(value) => setGoalLevel(value as SuccessMapLevel)}>
+                <SelectTrigger id="level-select">
+                  <SelectValue placeholder="Select level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="strategic">Level 5: Strategic Success</SelectItem>
+                  <SelectItem value="business">Level 4: Business Success</SelectItem>
+                  <SelectItem value="product">Level 3: Product Success</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
             <div className="flex-grow space-y-2">
               <label htmlFor="goal-input" className="block text-sm font-medium text-gray-700">
-                Add Strategic Goal
+                Add Goal
               </label>
               <Input
                 id="goal-input"
                 value={goalInput}
                 onChange={(e) => setGoalInput(e.target.value)}
-                placeholder="Enter your strategic goal..."
-                className="rounded-r-none"
+                placeholder="Enter your goal..."
               />
             </div>
-            <div className="md:w-1/4 space-y-2">
+            
+            <div className="md:w-1/5 space-y-2">
               <label htmlFor="timeframe-input" className="block text-sm font-medium text-gray-700">
                 Timeframe (Optional)
               </label>
@@ -167,12 +271,12 @@ export default function GoalMappingTool() {
                 id="timeframe-input"
                 value={timeframeInput}
                 onChange={(e) => setTimeframeInput(e.target.value)}
-                placeholder="e.g., Q2 2023"
-                className="rounded-none"
+                placeholder="e.g., 12 months"
               />
             </div>
+            
             <div className="flex items-end">
-              <Button onClick={handleAddGoal} className="rounded-l-none h-10">Add</Button>
+              <Button onClick={handleAddGoal} className="h-10">Add Goal</Button>
             </div>
           </div>
           
@@ -245,12 +349,13 @@ export default function GoalMappingTool() {
             {showHelp && (
               <div className="absolute inset-0 bg-gray-800 bg-opacity-70 flex items-center justify-center z-10">
                 <div className="bg-white p-6 rounded-lg max-w-md">
-                  <h3 className="text-lg font-bold mb-2">Goal-Mapping Instructions</h3>
+                  <h3 className="text-lg font-bold mb-2">Success Map Instructions</h3>
                   <ul className="list-disc pl-5 mb-4 text-sm">
-                    <li>Click "Add" to place a new goal on the canvas</li>
-                    <li>Drag goals to reposition them</li>
+                    <li>Choose a success level, enter your goal, and click "Add Goal"</li>
+                    <li>Drag goals to reposition them on the canvas</li>
                     <li>Connect related goals by dragging from one goal to another</li>
                     <li>Click the X on a goal to delete it</li>
+                    <li>Save your map to keep track of your strategic goals</li>
                   </ul>
                   <Button onClick={() => setShowHelp(false)}>Got it!</Button>
                 </div>
