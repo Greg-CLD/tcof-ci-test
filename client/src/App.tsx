@@ -9,6 +9,7 @@ import StarterAccess from "@/pages/StarterAccess";
 import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
 import UserHistory from "@/pages/UserHistory";
+import ProfilePage from "@/pages/ProfilePage";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -62,6 +63,7 @@ function Router() {
       <Route path="/tools/starter-access" component={StarterAccess} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/history" component={UserHistory} />
+      <Route path="/profile" component={ProfilePage} />
       
       {/* Protected routes with dual authentication (old password system + new database auth) */}
       <Route path="/tools/goal-mapping">

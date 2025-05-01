@@ -55,13 +55,13 @@ export default function SiteHeader() {
     <header className="bg-white border-b border-gray-200">
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
-          <Link href="/" className="flex items-center">
+          <a href="https://www.confluity.co.uk/TCOF" target="_blank" rel="noopener noreferrer" className="flex items-center">
             <img 
               src={logoImage} 
               alt="Confluity Logo" 
               className="h-12 md:h-16" 
             />
-          </Link>
+          </a>
           
           <nav className="hidden md:flex items-center space-x-8">
             <Link 
@@ -126,13 +126,13 @@ export default function SiteHeader() {
                       Account
                     </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setLocation("/history")}>
-                      <Save className="mr-2 h-4 w-4" />
-                      <span>Saved Projects</span>
+                    <DropdownMenuItem onClick={() => setLocation("/profile")}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>My Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setLocation("/history")}>
                       <History className="mr-2 h-4 w-4" />
-                      <span>History</span>
+                      <span>View History</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setLocation("/pricing")}>
                       <Key className="mr-2 h-4 w-4" />

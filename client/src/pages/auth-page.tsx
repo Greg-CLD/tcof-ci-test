@@ -1,21 +1,18 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -33,22 +30,10 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z.string().email("Invalid email address").optional(),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Confirm password is required"),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
 type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState<string>("login");
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
 
   const loginForm = useForm<LoginFormValues>({
@@ -59,28 +44,28 @@ export default function AuthPage() {
     },
   });
 
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      username: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
-
   const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
-  };
-
-  const onRegisterSubmit = (data: RegisterFormValues) => {
-    const { confirmPassword, ...userData } = data;
-    registerMutation.mutate(userData);
+    // First try to login
+    loginMutation.mutate(data, {
+      onError: () => {
+        // If login fails, try to register with the same credentials
+        registerMutation.mutate({
+          username: data.username,
+          password: data.password,
+        });
+      }
+    });
   };
 
   // Redirect if user is already authenticated
+  useEffect(() => {
+    if (user) {
+      // The useEffect prevents redirect during render
+      setLocation("/");
+    }
+  }, [user, setLocation]);
+
   if (user) {
-    setLocation("/");
     return null;
   }
 
@@ -94,182 +79,75 @@ export default function AuthPage() {
           <div className="flex flex-col justify-center">
             <div className="mx-auto w-full max-w-md">
               <h2 className="text-3xl font-bold text-tcof-dark text-center mb-6">
-                {activeTab === "login" ? "Sign In" : "Create Account"}
+                Sign In
               </h2>
 
-              <Tabs
-                defaultValue="login"
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login">Login</TabsTrigger>
-                  <TabsTrigger value="register">Register</TabsTrigger>
-                </TabsList>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Access your work</CardTitle>
+                  <CardDescription>
+                    Enter your credentials to access your tools
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...loginForm}>
+                    <form
+                      onSubmit={loginForm.handleSubmit(onLoginSubmit)}
+                      className="space-y-4"
+                    >
+                      <FormField
+                        control={loginForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter your username" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder="Enter your password"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                <TabsContent value="login">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Login to your account</CardTitle>
-                      <CardDescription>
-                        Enter your credentials to access your tools
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Form {...loginForm}>
-                        <form
-                          onSubmit={loginForm.handleSubmit(onLoginSubmit)}
-                          className="space-y-4"
-                        >
-                          <FormField
-                            control={loginForm.control}
-                            name="username"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Username</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Enter your username" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={loginForm.control}
-                            name="password"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Password</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="password"
-                                    placeholder="Enter your password"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <Button
-                            type="submit"
-                            className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                            disabled={loginMutation.isPending}
-                          >
-                            {loginMutation.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Signing in...
-                              </>
-                            ) : (
-                              "Sign In"
-                            )}
-                          </Button>
-                        </form>
-                      </Form>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                      <div className="text-sm text-gray-500 my-2">
+                        <p>If you're logging in for the first time, an account will be created automatically.</p>
+                      </div>
 
-                <TabsContent value="register">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Create an account</CardTitle>
-                      <CardDescription>
-                        Register to save your progress across devices
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Form {...registerForm}>
-                        <form
-                          onSubmit={registerForm.handleSubmit(onRegisterSubmit)}
-                          className="space-y-4"
-                        >
-                          <FormField
-                            control={registerForm.control}
-                            name="username"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Username</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Choose a username" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={registerForm.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email (optional)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={registerForm.control}
-                            name="password"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Password</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="password"
-                                    placeholder="Create a password"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={registerForm.control}
-                            name="confirmPassword"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Confirm Password</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="password"
-                                    placeholder="Confirm your password"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <Button
-                            type="submit"
-                            className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                            disabled={registerMutation.isPending}
-                          >
-                            {registerMutation.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Creating account...
-                              </>
-                            ) : (
-                              "Create Account"
-                            )}
-                          </Button>
-                        </form>
-                      </Form>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                      <Button
+                        type="submit"
+                        className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        disabled={loginMutation.isPending || registerMutation.isPending}
+                      >
+                        {loginMutation.isPending || registerMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {registerMutation.isPending ? "Creating account..." : "Signing in..."}
+                          </>
+                        ) : (
+                          "Sign In"
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
@@ -307,7 +185,7 @@ export default function AuthPage() {
                     Goal Mapping
                   </h3>
                   <p className="text-gray-600">
-                    Create visual maps of your strategic goals and their connections
+                    Create visual maps of your strategic goals
                   </p>
                 </div>
               </div>
@@ -368,8 +246,7 @@ export default function AuthPage() {
 
             <div className="mt-8 text-center">
               <p className="text-gray-700 italic">
-                "Create your account to save your work across multiple devices and
-                never lose your progress."
+                "Your work is saved across all your devices, so you can access it anytime, anywhere."
               </p>
             </div>
           </div>
