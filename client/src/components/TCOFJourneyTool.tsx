@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,8 @@ import {
   loadFromLocalStorage,
   saveToLocalStorage
 } from "@/lib/storage";
+import { elementToPDF } from "@/lib/pdf-utils";
+import { FileDown } from "lucide-react";
 
 // Decision tree question type
 type Question = {
@@ -254,8 +256,22 @@ export default function TCOFJourneyTool() {
     }
   };
 
+  // Add reference for PDF export
+  const toolRef = useRef<HTMLDivElement>(null);
+  
+  // Handle PDF export
+  const handleExportPDF = () => {
+    if (toolRef.current) {
+      elementToPDF(toolRef.current, 'tcof-journey-tool.pdf');
+      toast({
+        title: "PDF generated",
+        description: "Your TCOF journey assessment has been exported as PDF."
+      });
+    }
+  };
+
   return (
-    <section>
+    <section ref={toolRef}>
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">🧪 TCOF Journey Decision Tree</h2>
         <p className="text-gray-600">Figure out where you are in the delivery journey.</p>
@@ -374,7 +390,14 @@ export default function TCOFJourneyTool() {
                     onClick={handleExport}
                     className="flex items-center gap-1"
                   >
-                    <i className="ri-download-line mr-1"></i> Export Results
+                    <i className="ri-download-line mr-1"></i> Export Text
+                  </Button>
+                  <Button 
+                    onClick={handleExportPDF}
+                    variant="outline" 
+                    className="flex items-center gap-1 bg-tcof-light text-tcof-dark border-tcof-teal"
+                  >
+                    <FileDown className="h-4 w-4" /> Download as PDF
                   </Button>
                   <Button 
                     variant="secondary" 

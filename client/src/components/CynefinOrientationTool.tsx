@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -11,6 +11,8 @@ import {
   loadFromLocalStorage,
   saveToLocalStorage
 } from "@/lib/storage";
+import { elementToPDF } from "@/lib/pdf-utils";
+import { FileDown } from "lucide-react";
 
 // Quadrant data structure
 const quadrantData: Record<CynefinQuadrant, {
@@ -153,8 +155,22 @@ export default function CynefinOrientationTool() {
     }
   };
 
+  // Add reference for PDF export
+  const toolRef = useRef<HTMLDivElement>(null);
+  
+  // Handle PDF export
+  const handleExportPDF = () => {
+    if (toolRef.current) {
+      elementToPDF(toolRef.current, 'cynefin-orientation-tool.pdf');
+      toast({
+        title: "PDF generated",
+        description: "Your Cynefin assessment has been exported as PDF."
+      });
+    }
+  };
+
   return (
-    <section>
+    <section ref={toolRef}>
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">🧭 Cynefin Orientation Tool</h2>
         <p className="text-gray-600">Do a situation assessment to find your bearings and choose the right approach.</p>
@@ -236,13 +252,24 @@ export default function CynefinOrientationTool() {
             >
               <i className="ri-refresh-line mr-1"></i> Reset Selection
             </Button>
-            <Button 
-              variant="secondary" 
-              onClick={handleSave}
-              className="flex items-center gap-1"
-            >
-              <i className="ri-save-line mr-1"></i> Save Result
-            </Button>
+            <div className="flex space-x-2">
+              <Button 
+                variant="secondary" 
+                onClick={handleSave}
+                className="flex items-center gap-1"
+              >
+                <i className="ri-save-line mr-1"></i> Save Result
+              </Button>
+              {selectedQuadrant && (
+                <Button 
+                  onClick={handleExportPDF} 
+                  variant="outline" 
+                  className="flex items-center gap-1 bg-tcof-light text-tcof-dark border-tcof-teal"
+                >
+                  <FileDown className="h-4 w-4" /> Download as PDF
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

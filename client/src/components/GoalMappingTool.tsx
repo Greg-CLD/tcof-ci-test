@@ -287,7 +287,22 @@ export default function GoalMappingTool() {
               <i className="ri-save-line"></i> Save Map
             </Button>
             <Button onClick={handleExportMap} variant="outline" className="flex items-center gap-1">
-              <i className="ri-download-line"></i> Export
+              <i className="ri-download-line"></i> Export JSON
+            </Button>
+            <Button 
+              onClick={() => {
+                if (canvasRef.current) {
+                  elementToPDF(canvasRef.current, 'goal-mapping-tool.pdf');
+                  toast({
+                    title: "PDF generated",
+                    description: "Your success map has been exported as PDF."
+                  });
+                }
+              }} 
+              variant="outline" 
+              className="flex items-center gap-1 bg-tcof-light text-tcof-dark border-tcof-teal"
+            >
+              <FileDown className="h-4 w-4" /> Download as PDF
             </Button>
           </div>
 
