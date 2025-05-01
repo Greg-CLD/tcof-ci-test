@@ -1,6 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 
 export default function SiteHeader() {
@@ -35,12 +42,33 @@ export default function SiteHeader() {
             >
               Home
             </Link>
-            <Link 
-              href="/tools/starter-access" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/tools/starter-access' ? 'font-medium' : ''}`}
-            >
-              Starter Kit
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger className={`flex items-center gap-1 text-tcof-dark hover:text-tcof-teal transition-colors ${location.startsWith('/tools') ? 'font-medium' : ''}`}>
+                Starter Kit <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem>
+                  <Link href="/tools/starter-access" className="w-full">
+                    Starter Kit Access
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/tools/goal-mapping" className="w-full">
+                    Goal-Mapping Tool
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/tools/cynefin-orientation" className="w-full">
+                    Cynefin Orientation Tool
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/tools/tcof-journey" className="w-full">
+                    TCOF Journey Decision Tree
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link 
               href="/pro-tools" 
               className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/pro-tools' ? 'font-medium' : ''}`}
