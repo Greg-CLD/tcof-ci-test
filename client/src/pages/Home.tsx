@@ -5,9 +5,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import { useToast } from "@/hooks/use-toast";
+import { FileDown } from "lucide-react";
+import { 
+  STORAGE_KEYS, 
+  loadFromLocalStorage, 
+  GoalMapData, 
+  CynefinSelection, 
+  TCOFJourneyData 
+} from "@/lib/storage";
+import { generateCompletePDF } from "@/lib/pdf-utils";
 import vitruvianMan from "../assets/vitruvian-man.png";
 
 export default function Home() {
+  const { toast } = useToast();
+  
+  // Handle generating a complete Part B Plan PDF with all tool data
+  const handleGenerateCompletePDF = () => {
+    try {
+      // Load data from localStorage for each tool
+      const goalMapData = loadFromLocalStorage<GoalMapData>(STORAGE_KEYS.GOAL_MAP);
+      const cynefinSelection = loadFromLocalStorage<CynefinSelection>(STORAGE_KEYS.CYNEFIN_SELECTION);
+      const tcofJourneyData = loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY);
+      
+      // Generate the complete PDF with all tool data
+      generateCompletePDF(goalMapData, cynefinSelection, tcofJourneyData);
+      
+      toast({
+        title: "Complete PDF Generated",
+        description: "Your TCOF Part B Plan has been generated as a PDF."
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "PDF Generation Failed",
+        description: "There was a problem creating your PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
   return (
     <div className="min-h-screen flex flex-col bg-tcof-light text-tcof-dark">
       <SiteHeader />
@@ -69,6 +106,27 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 text-tcof-dark">Tools for Every Stage</h2>
           <div className="h-1 w-20 bg-tcof-teal mx-auto mb-12"></div>
+          
+          <div className="mb-10 max-w-5xl mx-auto">
+            <Card className="border border-tcof-teal/30 bg-tcof-light/50 shadow-md">
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center">
+                  <FileDown className="h-6 w-6 text-tcof-teal mr-2" />
+                  <h3 className="font-bold text-xl text-tcof-dark">Complete Part B Plan</h3>
+                </div>
+                <p className="text-gray-600 mb-4 mt-2">
+                  After using all three tools, generate a complete Part B Plan PDF that combines all your inputs.
+                </p>
+                <Button 
+                  onClick={handleGenerateCompletePDF}
+                  variant="outline" 
+                  className="bg-white hover:bg-tcof-light text-tcof-dark border-tcof-teal flex items-center mx-auto"
+                >
+                  <FileDown className="h-4 w-4 mr-2" /> Generate Complete Part B Plan
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {/* Goal-Mapping Tool */}

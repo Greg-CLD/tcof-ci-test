@@ -8,12 +8,48 @@ import { useAuthProtection } from "@/hooks/use-auth-protection";
 import PasswordProtection from "@/components/PasswordProtection";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import { useToast } from "@/hooks/use-toast";
+import { FileDown } from "lucide-react";
+import { 
+  STORAGE_KEYS, 
+  loadFromLocalStorage, 
+  GoalMapData, 
+  CynefinSelection, 
+  TCOFJourneyData 
+} from "@/lib/storage";
+import { generateCompletePDF } from "@/lib/pdf-utils";
 
 export default function StarterAccess() {
   const [, setLocation] = useLocation();
   const [sessionVerified, setSessionVerified] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { isAuthenticated } = useAuthProtection();
+  const { toast } = useToast();
+  
+  // Handle generating a complete Part B Plan PDF with all tool data
+  const handleGenerateCompletePDF = () => {
+    try {
+      // Load data from localStorage for each tool
+      const goalMapData = loadFromLocalStorage<GoalMapData>(STORAGE_KEYS.GOAL_MAP);
+      const cynefinSelection = loadFromLocalStorage<CynefinSelection>(STORAGE_KEYS.CYNEFIN_SELECTION);
+      const tcofJourneyData = loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY);
+      
+      // Generate the complete PDF with all tool data
+      generateCompletePDF(goalMapData, cynefinSelection, tcofJourneyData);
+      
+      toast({
+        title: "Complete PDF Generated",
+        description: "Your TCOF Part B Plan has been generated as a PDF."
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "PDF Generation Failed",
+        description: "There was a problem creating your PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
   
   // Parse the session_id from the URL if present
   useEffect(() => {
@@ -141,12 +177,30 @@ export default function StarterAccess() {
             </Card>
           </div>
           
-          <div className="text-center mb-8">
-            <Link href="/">
-              <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                Start Using Your Tools
-              </Button>
-            </Link>
+          <div className="mb-8">
+            <Card className="border border-tcof-teal/30 bg-tcof-light/50">
+              <CardContent className="p-6 text-center">
+                <h3 className="font-bold text-lg mb-2 text-tcof-dark">Complete Part B Plan</h3>
+                <p className="text-gray-600 mb-4">
+                  After using all three tools, generate a complete Part B Plan PDF that combines all your inputs.
+                </p>
+                <Button 
+                  onClick={handleGenerateCompletePDF}
+                  variant="outline" 
+                  className="bg-white hover:bg-tcof-light text-tcof-dark border-tcof-teal flex items-center mx-auto"
+                >
+                  <FileDown className="h-4 w-4 mr-2" /> Generate Complete Part B Plan
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <div className="text-center mt-6">
+              <Link href="/">
+                <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
+                  Start Using Your Tools
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </main>
