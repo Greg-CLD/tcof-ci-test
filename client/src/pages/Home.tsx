@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import vitruvianMan from "../assets/vitruvian-man.png";
 
 export default function Home() {
   return (
@@ -25,7 +26,7 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-br from-tcof-teal/20 to-tcof-dark/20 z-10"></div>
             <div className="absolute inset-0 flex items-center justify-center z-20">
               <img 
-                src="/vitruvian-man.png" 
+                src={vitruvianMan} 
                 alt="Vitruvian Man - TCOF" 
                 className="max-h-full object-contain"
               />

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
+import logoImage from "../assets/logo.png";
 
 export default function SiteHeader() {
   const [location] = useLocation();
@@ -29,7 +30,7 @@ export default function SiteHeader() {
         <div className="flex justify-between items-center">
           <Link href="/" className="flex items-center">
             <img 
-              src="/logo.png" 
+              src={logoImage} 
               alt="Confluity Logo" 
               className="h-12 md:h-16" 
             />
