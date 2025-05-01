@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-gray-50 text-gray-800;
+  }
+
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 9% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 9% 25%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 9% 25%;
+    --primary: 213 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 156 68% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 262 83% 64%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 213 89% 48%;
+    --radius: 0.5rem;
+    --chart-1: 262 83% 64%;
+    --chart-2: 213 89% 48%;
+    --chart-3: 156 68% 40%;
+    --chart-4: 29 80% 50%;
+    --chart-5: 0 84% 60%;
+    --sidebar-background: 212 100% 12%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 213 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 156 68% 40%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 213 30% 20%;
+    --sidebar-ring: 213 89% 48%;
+  }
+
+  /* Canvas drawing styles */
+  #goal-canvas {
+    cursor: crosshair;
+  }
+    
+  .text-node {
+    position: absolute;
+    background: white;
+    border: 2px solid hsl(var(--primary));
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    min-width: 150px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    cursor: move;
+  }
+    
+  /* Cynefin diagram styles */
+  .cynefin-quadrant {
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+    
+  .cynefin-quadrant:hover {
+    filter: brightness(1.1);
+    transform: scale(1.02);
+  }
+    
+  .cynefin-quadrant.selected {
+    filter: brightness(1.2);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Decision tree styles */
+  .tree-node {
+    transition: opacity 0.3s, transform 0.3s;
+  }
+}
