@@ -3,28 +3,79 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import styles from '@/lib/styles.module.css';
 import { quickStartPlan, hasExistingPlan } from '@/lib/planHelpers';
+import { listExistingPlans } from '@/lib/plan-db';
 import { Layers, FastForward, History, Settings } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MakeAPlanLanding() {
   const [hasPlan, setHasPlan] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [_, setLocation] = useLocation();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Check if there's an existing plan to enable/disable the "Continue" button
-    setHasPlan(hasExistingPlan());
+    const checkExistingPlans = async () => {
+      try {
+        // Check if there are any existing plans
+        const existingPlanIds = await listExistingPlans();
+        setHasPlan(existingPlanIds.length > 0);
+      } catch (error) {
+        console.error('Error checking for existing plans:', error);
+        setHasPlan(false);
+      }
+    };
+    
+    checkExistingPlans();
   }, []);
 
   const handleFullConfiguration = () => {
     setLocation('/make-a-plan/full/block-1');
   };
 
-  const handleQuickStart = () => {
-    const planId = quickStartPlan();
-    setLocation('/checklist');
+  const handleQuickStart = async () => {
+    try {
+      setIsLoading(true);
+      // Create a new plan with default values
+      const planId = await quickStartPlan();
+      setLocation('/checklist');
+    } catch (error) {
+      console.error('Error creating quick start plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create a quick start plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleContinue = () => {
-    setLocation('/checklist');
+  const handleContinue = async () => {
+    try {
+      setIsLoading(true);
+      // Verify we have a valid plan before navigating
+      const validPlan = await hasExistingPlan();
+      
+      if (validPlan) {
+        setLocation('/checklist');
+      } else {
+        toast({
+          title: "No saved plan found",
+          description: "We couldn't find a saved plan to continue. Please start a new plan.",
+          variant: "destructive"
+        });
+        setHasPlan(false);
+      }
+    } catch (error) {
+      console.error('Error continuing saved plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your saved plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAdminEditor = () => {
@@ -55,6 +106,7 @@ export default function MakeAPlanLanding() {
               <Button 
                 onClick={handleFullConfiguration}
                 className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                disabled={isLoading}
               >
                 Start Full
               </Button>
@@ -74,8 +126,9 @@ export default function MakeAPlanLanding() {
               <Button 
                 onClick={handleQuickStart}
                 className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                disabled={isLoading}
               >
-                Quick Start
+                {isLoading ? "Creating..." : "Quick Start"}
               </Button>
             </div>
           </article>
@@ -92,10 +145,10 @@ export default function MakeAPlanLanding() {
               </p>
               <Button 
                 onClick={handleContinue}
-                disabled={!hasPlan}
+                disabled={!hasPlan || isLoading}
                 className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continue
+                {isLoading ? "Loading..." : "Continue"}
               </Button>
             </div>
           </article>
@@ -113,6 +166,7 @@ export default function MakeAPlanLanding() {
               <Button 
                 onClick={handleAdminEditor}
                 className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                disabled={isLoading}
               >
                 Open Editor
               </Button>

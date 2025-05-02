@@ -1,4 +1,5 @@
-import { createEmptyPlan, savePlan, loadPlan, PlanRecord } from './plan-db';
+import { createEmptyPlan, savePlan, loadPlan, PlanRecord, listExistingPlans, planExists } from './plan-db';
+import { v4 as uuidv4 } from 'uuid';
 
 // Default heuristics and tasks
 // This would normally be loaded from a JSON file or API
@@ -77,12 +78,12 @@ const defaultHeuristics = {
  * Creates a plan with default heuristics and tasks
  * @returns The ID of the newly created plan
  */
-export function quickStartPlan(): string {
+export async function quickStartPlan(): Promise<string> {
   // Create a new empty plan
   const planId = createEmptyPlan();
   
   // Load the plan
-  const plan = loadPlan(planId);
+  const plan = await loadPlan(planId);
   
   if (!plan) {
     throw new Error('Failed to create and load plan');
@@ -98,7 +99,7 @@ export function quickStartPlan(): string {
   };
   
   // Save the updated plan
-  savePlan(planId, updatedPlan);
+  await savePlan(planId, updatedPlan);
   
   // Store this plan ID in localStorage as the most recent plan
   localStorage.setItem('tcof_most_recent_plan', planId);
@@ -118,7 +119,7 @@ export function getLatestPlanId(): string | null {
  * Checks if there's a valid most recent plan
  * @returns True if there's a valid plan, false otherwise
  */
-export function hasExistingPlan(): boolean {
+export async function hasExistingPlan(): Promise<boolean> {
   const planId = getLatestPlanId();
   
   if (!planId) {
@@ -126,6 +127,30 @@ export function hasExistingPlan(): boolean {
   }
   
   // Verify the plan exists
-  const plan = loadPlan(planId);
-  return !!plan;
+  return await planExists(planId);
+}
+
+/**
+ * Creates a new plan ID if none exists
+ * @returns The plan ID (either existing or newly created)
+ */
+export async function ensurePlanExists(): Promise<string> {
+  let currentPlanId = getLatestPlanId();
+  
+  if (!currentPlanId) {
+    // Generate a new UUID and create an empty plan
+    currentPlanId = uuidv4();
+    await quickStartPlan();
+    localStorage.setItem('tcof_most_recent_plan', currentPlanId);
+  }
+  
+  return currentPlanId;
+}
+
+/**
+ * Returns all saved plans
+ * @returns Array of plan IDs
+ */
+export async function getAllPlans(): Promise<string[]> {
+  return await listExistingPlans();
 }

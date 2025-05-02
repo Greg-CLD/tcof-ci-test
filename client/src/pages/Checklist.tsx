@@ -21,32 +21,36 @@ export default function Checklist() {
   
   // Load the plan data
   useEffect(() => {
-    try {
-      const id = getLatestPlanId();
-      if (!id) {
-        // No plan found, redirect to make-a-plan
-        setLocation('/make-a-plan');
-        return;
+    const loadPlanData = async () => {
+      try {
+        const id = getLatestPlanId();
+        if (!id) {
+          // No plan found, redirect to make-a-plan
+          setLocation('/make-a-plan');
+          return;
+        }
+        
+        const loadedPlan = await loadPlan(id);
+        if (!loadedPlan) {
+          // Plan ID exists but plan not found
+          setLocation('/make-a-plan');
+          return;
+        }
+        
+        setPlan(loadedPlan);
+      } catch (error) {
+        console.error('Error loading plan:', error);
+        toast({
+          title: 'Error loading plan',
+          description: 'There was a problem loading your plan. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      const loadedPlan = loadPlan(id);
-      if (!loadedPlan) {
-        // Plan ID exists but plan not found
-        setLocation('/make-a-plan');
-        return;
-      }
-      
-      setPlan(loadedPlan);
-    } catch (error) {
-      console.error('Error loading plan:', error);
-      toast({
-        title: 'Error loading plan',
-        description: 'There was a problem loading your plan. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    };
+    
+    loadPlanData();
   }, [setLocation, toast]);
   
   // Handle plan updates from child components
