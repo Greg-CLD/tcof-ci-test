@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   STORAGE_KEYS,
   CynefinQuadrant,
@@ -12,7 +16,7 @@ import {
   saveToLocalStorage
 } from "@/lib/storage";
 import { elementToPDF } from "@/lib/pdf-utils";
-import { FileDown } from "lucide-react";
+import { FileDown, Save } from "lucide-react";
 
 // Quadrant data structure
 const quadrantData: Record<CynefinQuadrant, {

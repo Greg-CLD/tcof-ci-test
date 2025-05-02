@@ -99,8 +99,35 @@ export default function GoalMappingTool() {
   const [timeframeInput, setTimeframeInput] = useState("");
   const [showHelp, setShowHelp] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  const [mapName, setMapName] = useState("My Success Map");
   const { toast } = useToast();
+  const { user } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Database save mutation
+  const saveMapMutation = useMutation({
+    mutationFn: async (data: { name: string, data: any }) => {
+      const response = await apiRequest("POST", "/api/goal-maps", data);
+      if (!response.ok) {
+        throw new Error("Failed to save map to database");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps"] });
+      toast({
+        title: "Map saved",
+        description: "Your success map has been saved to your account.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error saving",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
   
   // Load existing data from local storage
   const storedData = loadFromLocalStorage<GoalMapData>(STORAGE_KEYS.GOAL_MAP) || initialGoalMapData;
@@ -182,22 +209,34 @@ export default function GoalMappingTool() {
 
   // Handle saving the map
   const handleSaveMap = () => {
-    const success = saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, {
+    // First save to localStorage for offline use
+    const data = {
       nodes,
       connections,
       lastUpdated: Date.now()
-    });
+    };
     
-    if (success) {
+    const success = saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, data);
+    
+    if (!success) {
       toast({
-        title: "Map saved",
-        description: "Your success map has been saved successfully.",
+        title: "Error saving locally",
+        description: "There was a problem saving your success map to local storage.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Then save to database if user is logged in
+    if (user) {
+      saveMapMutation.mutate({
+        name: mapName,
+        data: data
       });
     } else {
       toast({
-        title: "Error saving",
-        description: "There was a problem saving your success map.",
-        variant: "destructive"
+        title: "Map saved locally",
+        description: "Your success map has been saved locally. Sign in to save it to your account.",
       });
     }
   };
@@ -366,28 +405,42 @@ export default function GoalMappingTool() {
             </div>
           </div>
           
-          <div className="flex justify-end space-x-2 mb-4">
-            <Button onClick={handleSaveMap} variant="secondary" className="flex items-center gap-1">
-              <i className="ri-save-line"></i> Save Map
-            </Button>
-            <Button onClick={handleExportMap} variant="outline" className="flex items-center gap-1">
-              <i className="ri-download-line"></i> Export JSON
-            </Button>
-            <Button 
-              onClick={() => {
-                if (canvasRef.current) {
-                  elementToPDF(canvasRef.current, 'goal-mapping-tool.pdf');
-                  toast({
-                    title: "PDF generated",
-                    description: "Your success map has been exported as PDF."
-                  });
-                }
-              }} 
-              variant="outline" 
-              className="flex items-center gap-1 bg-tcof-light text-tcof-dark border-tcof-teal"
-            >
-              <FileDown className="h-4 w-4" /> Download as PDF
-            </Button>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+            <div className="w-full md:w-1/3">
+              <label htmlFor="map-name" className="block text-sm font-medium text-gray-700 mb-1">
+                Map Name
+              </label>
+              <Input
+                id="map-name"
+                value={mapName}
+                onChange={(e) => setMapName(e.target.value)}
+                placeholder="Enter a name for your map"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Button onClick={handleSaveMap} variant="secondary" className="flex items-center gap-1">
+                <Save className="h-4 w-4" /> Save Map
+              </Button>
+              <Button onClick={handleExportMap} variant="outline" className="flex items-center gap-1">
+                <Download className="h-4 w-4" /> Export JSON
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (canvasRef.current) {
+                    elementToPDF(canvasRef.current, 'goal-mapping-tool.pdf');
+                    toast({
+                      title: "PDF generated",
+                      description: "Your success map has been exported as PDF."
+                    });
+                  }
+                }} 
+                variant="outline" 
+                className="flex items-center gap-1 bg-tcof-light text-tcof-dark border-tcof-teal"
+              >
+                <FileDown className="h-4 w-4" /> Download as PDF
+              </Button>
+            </div>
           </div>
 
           <div 
