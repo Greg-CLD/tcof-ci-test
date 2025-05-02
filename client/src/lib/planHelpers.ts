@@ -1,4 +1,4 @@
-import { createEmptyPlan, savePlan, loadPlan, PlanRecord, listExistingPlans, planExists } from './plan-db';
+import { createEmptyPlan, savePlan, loadPlan, PlanRecord, planExists } from './plan-db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Default heuristics and tasks
@@ -152,5 +152,7 @@ export async function ensurePlanExists(): Promise<string> {
  * @returns Array of plan IDs
  */
 export async function getAllPlans(): Promise<string[]> {
+  // Import the function here to avoid circular dependencies
+  const { listExistingPlans } = await import('./plan-db');
   return await listExistingPlans();
 }

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import styles from '@/lib/styles.module.css';
-import { quickStartPlan, hasExistingPlan } from '@/lib/planHelpers';
-import { listExistingPlans } from '@/lib/plan-db';
+import { quickStartPlan, hasExistingPlan, getAllPlans } from '@/lib/planHelpers';
 import { Layers, FastForward, History, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,7 +16,7 @@ export default function MakeAPlanLanding() {
     const checkExistingPlans = async () => {
       try {
         // Check if there are any existing plans
-        const existingPlanIds = await listExistingPlans();
+        const existingPlanIds = await getAllPlans();
         setHasPlan(existingPlanIds.length > 0);
       } catch (error) {
         console.error('Error checking for existing plans:', error);
