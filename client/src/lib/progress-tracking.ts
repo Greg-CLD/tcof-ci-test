@@ -15,7 +15,7 @@ export type ToolType =
   | 'checklist';      // Final checklist and summary in Make a Plan
 
 /**
- * Progress status for each tool
+ * Progress status for an individual tool
  */
 export interface ToolProgress {
   started: boolean;    // Whether the user has started using the tool
@@ -38,52 +38,24 @@ export interface UserProgress {
  */
 export const createEmptyProgress = (): UserProgress => {
   const now = new Date().toISOString();
+  const defaultToolProgress = {
+    started: false,
+    completed: false,
+    lastUpdated: now,
+    progress: 0
+  };
+  
   return {
     overallProgress: 0,
     lastUpdated: now,
     tools: {
-      'goal-mapping': {
-        started: false,
-        completed: false,
-        lastUpdated: now,
-        progress: 0
-      },
-      'cynefin': {
-        started: false,
-        completed: false,
-        lastUpdated: now,
-        progress: 0
-      },
-      'tcof-journey': {
-        started: false,
-        completed: false,
-        lastUpdated: now,
-        progress: 0
-      },
-      'plan-block1': {
-        started: false,
-        completed: false,
-        lastUpdated: now,
-        progress: 0
-      },
-      'plan-block2': {
-        started: false,
-        completed: false,
-        lastUpdated: now,
-        progress: 0
-      },
-      'plan-block3': {
-        started: false,
-        completed: false,
-        lastUpdated: now,
-        progress: 0
-      },
-      'checklist': {
-        started: false,
-        completed: false,
-        lastUpdated: now,
-        progress: 0
-      }
+      'goal-mapping': { ...defaultToolProgress },
+      'cynefin': { ...defaultToolProgress },
+      'tcof-journey': { ...defaultToolProgress },
+      'plan-block1': { ...defaultToolProgress },
+      'plan-block2': { ...defaultToolProgress },
+      'plan-block3': { ...defaultToolProgress },
+      'checklist': { ...defaultToolProgress }
     }
   };
 };
@@ -92,25 +64,26 @@ export const createEmptyProgress = (): UserProgress => {
  * Calculate overall progress based on individual tool progress
  */
 export const calculateOverallProgress = (tools: Record<ToolType, ToolProgress>): number => {
-  // Define weights for each tool
+  // Define weights for each tool to determine their contribution to the overall progress
   const weights: Record<ToolType, number> = {
-    'goal-mapping': 10,
-    'cynefin': 10,
-    'tcof-journey': 10,
-    'plan-block1': 20,
-    'plan-block2': 20,
-    'plan-block3': 20,
-    'checklist': 10
+    'goal-mapping': 15,  
+    'cynefin': 10,       
+    'tcof-journey': 10,  
+    'plan-block1': 20,   
+    'plan-block2': 20,   
+    'plan-block3': 20,   
+    'checklist': 5       
   };
   
-  // Calculate weighted average
-  let totalWeight = 0;
   let weightedSum = 0;
+  let totalWeight = 0;
   
-  for (const [tool, progress] of Object.entries(tools) as [ToolType, ToolProgress][]) {
-    weightedSum += progress.progress * weights[tool];
-    totalWeight += weights[tool];
-  }
+  Object.entries(tools).forEach(([tool, status]) => {
+    const toolType = tool as ToolType;
+    const weight = weights[toolType];
+    weightedSum += status.progress * weight;
+    totalWeight += weight;
+  });
   
   return Math.round(weightedSum / totalWeight);
 };
@@ -119,42 +92,42 @@ export const calculateOverallProgress = (tools: Record<ToolType, ToolProgress>):
  * Get tool name from type
  */
 export const getToolName = (toolType: ToolType): string => {
-  const toolNames: Record<ToolType, string> = {
-    'goal-mapping': 'Goal Mapping',
-    'cynefin': 'Cynefin Orientation',
-    'tcof-journey': 'TCOF Journey',
+  const nameMap: Record<ToolType, string> = {
+    'goal-mapping': 'Goal Mapping Tool',
+    'cynefin': 'Cynefin Orientation Tool',
+    'tcof-journey': 'TCOF Journey Tool',
     'plan-block1': 'Block 1: Discover',
     'plan-block2': 'Block 2: Design',
     'plan-block3': 'Block 3: Deliver',
-    'checklist': 'Project Checklist'
+    'checklist': 'Final Checklist'
   };
   
-  return toolNames[toolType];
+  return nameMap[toolType];
 };
 
 /**
  * Get route for a specific tool
  */
 export const getToolRoute = (toolType: ToolType): string => {
-  const toolRoutes: Record<ToolType, string> = {
-    'goal-mapping': '/tools/goal-mapping',
-    'cynefin': '/tools/cynefin-orientation',
-    'tcof-journey': '/tools/tcof-journey',
-    'plan-block1': '/make-a-plan/full/block-1',
-    'plan-block2': '/make-a-plan/full/block-2',
-    'plan-block3': '/make-a-plan/full/block-3',
-    'checklist': '/checklist'
+  const routeMap: Record<ToolType, string> = {
+    'goal-mapping': '/get-your-bearings?tool=goal-mapping',
+    'cynefin': '/get-your-bearings?tool=cynefin',
+    'tcof-journey': '/get-your-bearings?tool=tcof-journey',
+    'plan-block1': '/make-a-plan/block1',
+    'plan-block2': '/make-a-plan/block2',
+    'plan-block3': '/make-a-plan/block3',
+    'checklist': '/make-a-plan/checklist'
   };
   
-  return toolRoutes[toolType];
+  return routeMap[toolType];
 };
 
 /**
  * Get the next recommended tool based on current progress
  */
 export const getNextRecommendedTool = (progress: UserProgress): ToolType | null => {
-  // Order of tools as recommended path
-  const toolOrder: ToolType[] = [
+  // Define the recommended sequence
+  const recommendedSequence: ToolType[] = [
     'goal-mapping',
     'cynefin',
     'tcof-journey',
@@ -164,12 +137,15 @@ export const getNextRecommendedTool = (progress: UserProgress): ToolType | null 
     'checklist'
   ];
   
-  // Find first incomplete tool
-  for (const tool of toolOrder) {
-    if (!progress.tools[tool].completed) {
-      return tool;
+  // Find the first incomplete tool
+  for (const toolType of recommendedSequence) {
+    const toolProgress = progress.tools[toolType];
+    
+    if (!toolProgress.completed) {
+      return toolType;
     }
   }
   
-  return null; // All tools completed
+  // If all tools are completed, return null
+  return null;
 };

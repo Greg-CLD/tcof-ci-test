@@ -1,22 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'wouter';
-import { ChevronRight, ChevronDown, CheckCircle2, Circle, ArrowRight } from 'lucide-react';
-import { 
-  Collapsible, 
-  CollapsibleTrigger, 
-  CollapsibleContent 
-} from '@/components/ui/collapsible';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
-
+import { Badge } from '@/components/ui/badge';
+import { Check, Clock, AlertCircle } from 'lucide-react';
 import { useProgress } from '@/hooks/use-progress';
-import { ToolType, getToolName, getToolRoute } from '@/lib/progress-tracking';
+import { ToolType, getToolName } from '@/lib/progress-tracking';
 
 interface ProgressTrackerProps {
   showDetailed?: boolean;
@@ -25,107 +13,79 @@ interface ProgressTrackerProps {
 
 export default function ProgressTracker({ showDetailed = false, className = '' }: ProgressTrackerProps) {
   const { progress, isToolStarted, isToolCompleted } = useProgress();
-  const [isOpen, setIsOpen] = useState(showDetailed);
   
-  const toolTypes: ToolType[] = [
-    'goal-mapping',
-    'cynefin',
-    'tcof-journey',
-    'plan-block1',
-    'plan-block2',
-    'plan-block3',
-    'checklist'
-  ];
+  // Define tool types in the correct order for display
+  const bearingTools: ToolType[] = ['goal-mapping', 'cynefin', 'tcof-journey'];
+  const planTools: ToolType[] = ['plan-block1', 'plan-block2', 'plan-block3', 'checklist'];
+  
+  // Helper function to get status indicator icon
+  const getStatusIcon = (toolType: ToolType) => {
+    if (isToolCompleted(toolType)) {
+      return <Check className="h-4 w-4 text-green-500" />;
+    } else if (isToolStarted(toolType)) {
+      return <Clock className="h-4 w-4 text-amber-500" />;
+    } else {
+      return <AlertCircle className="h-4 w-4 text-gray-300" />;
+    }
+  };
   
   return (
-    <div className={`bg-white rounded-lg shadow p-4 ${className}`}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-tcof-dark">
-          Your Progress
-        </h3>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-2xl font-bold text-tcof-teal">
-                {progress.overallProgress}%
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Overall progress across all tools</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      
-      <Progress 
-        value={progress.overallProgress} 
-        className="h-2 mt-2"
-        aria-label="Progress across all tools"
-      />
-      
-      <Collapsible
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        className="mt-4"
-      >
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            {isOpen ? 'Hide details' : 'Show details'}
-          </p>
-          <CollapsibleTrigger asChild>
-            <button className="rounded-full p-1 hover:bg-gray-100">
-              {isOpen ? (
-                <ChevronDown className="h-4 w-4 text-gray-500" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-gray-500" />
-              )}
-            </button>
-          </CollapsibleTrigger>
+    <Card className={`shadow-md ${className}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-xl font-bold text-tcof-dark flex items-center justify-between">
+          <span>Overall Progress</span>
+          <Badge className="ml-2 bg-tcof-teal font-medium text-white">
+            {progress.overallProgress}%
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-6">
+          <Progress value={progress.overallProgress} className="h-2 bg-gray-100" />
         </div>
         
-        <CollapsibleContent className="mt-3 space-y-2">
-          {toolTypes.map((toolType) => {
-            const isStarted = isToolStarted(toolType);
-            const isCompleted = isToolCompleted(toolType);
-            
-            return (
-              <div 
-                key={toolType}
-                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-              >
-                <div className="flex items-center">
-                  {isCompleted ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
-                  ) : isStarted ? (
-                    <Circle className="h-5 w-5 text-amber-500 mr-2" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-300 mr-2" />
-                  )}
-                  
-                  <span className={`text-sm ${isStarted ? 'text-tcof-dark font-medium' : 'text-gray-500'}`}>
-                    {getToolName(toolType)}
-                  </span>
-                </div>
-                
-                <Link href={getToolRoute(toolType)}>
-                  <Button
-                    size="sm"
-                    variant={isCompleted ? "outline" : "default"}
-                    className={`text-xs ${
-                      isCompleted 
-                        ? 'border-green-500 text-green-600 hover:bg-green-50' 
-                        : 'bg-tcof-teal hover:bg-tcof-teal/90 text-white'
-                    }`}
-                  >
-                    {isCompleted ? 'Review' : isStarted ? 'Continue' : 'Start'}
-                    <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </Link>
+        {showDetailed && (
+          <div className="space-y-6">
+            {/* Get Your Bearings Tools Progress */}
+            <div>
+              <h4 className="font-medium text-tcof-dark mb-3">Get Your Bearings</h4>
+              <div className="space-y-3">
+                {bearingTools.map(tool => (
+                  <div key={tool} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      {getStatusIcon(tool)}
+                      <span className="ml-2 text-gray-700">{getToolName(tool)}</span>
+                    </div>
+                    <Progress 
+                      value={progress.tools[tool].progress} 
+                      className="h-1.5 w-24 bg-gray-100" 
+                    />
+                  </div>
+                ))}
               </div>
-            );
-          })}
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+            </div>
+            
+            {/* Make a Plan Tools Progress */}
+            <div>
+              <h4 className="font-medium text-tcof-dark mb-3">Make a Plan</h4>
+              <div className="space-y-3">
+                {planTools.map(tool => (
+                  <div key={tool} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      {getStatusIcon(tool)}
+                      <span className="ml-2 text-gray-700">{getToolName(tool)}</span>
+                    </div>
+                    <Progress 
+                      value={progress.tools[tool].progress} 
+                      className="h-1.5 w-24 bg-gray-100" 
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

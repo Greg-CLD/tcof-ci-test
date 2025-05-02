@@ -1,16 +1,16 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { 
   ToolType, 
   UserProgress, 
   ToolProgress, 
   createEmptyProgress, 
-  calculateOverallProgress,
+  calculateOverallProgress, 
   getToolRoute,
   getNextRecommendedTool
-} from '@/lib/progress-tracking';
+} from "@/lib/progress-tracking";
 
-// Local storage key for persisting progress data
-const PROGRESS_STORAGE_KEY = 'tcof-user-progress';
+// Local storage key for progress data
+const PROGRESS_STORAGE_KEY = 'tcof_user_progress';
 
 interface ProgressContextType {
   progress: UserProgress;
@@ -34,51 +34,40 @@ const ProgressContext = createContext<ProgressContextType | null>(null);
  */
 export function ProgressProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<UserProgress>(() => {
-    // Try to load from localStorage on initial mount
-    try {
-      const savedProgress = localStorage.getItem(PROGRESS_STORAGE_KEY);
-      return savedProgress ? JSON.parse(savedProgress) : createEmptyProgress();
-    } catch (error) {
-      console.error('Error loading progress from localStorage:', error);
-      return createEmptyProgress();
-    }
+    // Initialize from localStorage or create empty progress
+    const savedProgress = localStorage.getItem(PROGRESS_STORAGE_KEY);
+    return savedProgress ? JSON.parse(savedProgress) : createEmptyProgress();
   });
-
-  // Save to localStorage whenever progress changes
+  
+  // Save progress to localStorage whenever it changes
   useEffect(() => {
-    try {
-      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
-    } catch (error) {
-      console.error('Error saving progress to localStorage:', error);
-    }
+    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
   }, [progress]);
-
+  
   /**
    * Update a specific tool's progress
    */
   const updateTool = (toolType: ToolType, status: Partial<ToolProgress>) => {
-    const now = new Date().toISOString();
-    
-    setProgress(prev => {
-      // Create updated tool progress
-      const updatedToolProgress = {
-        ...prev.tools[toolType],
-        ...status,
-        lastUpdated: now
-      };
+    setProgress(prevProgress => {
+      const now = new Date().toISOString();
       
-      // Create updated tools object
+      // Update the specific tool
       const updatedTools = {
-        ...prev.tools,
-        [toolType]: updatedToolProgress
+        ...prevProgress.tools,
+        [toolType]: {
+          ...prevProgress.tools[toolType],
+          ...status,
+          lastUpdated: now
+        }
       };
       
-      // Calculate new overall progress
+      // Recalculate overall progress
       const overallProgress = calculateOverallProgress(updatedTools);
       
       return {
-        overallProgress,
+        ...prevProgress,
         tools: updatedTools,
+        overallProgress,
         lastUpdated: now
       };
     });
@@ -91,7 +80,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     if (!progress.tools[toolType].started) {
       updateTool(toolType, { 
         started: true,
-        progress: Math.max(progress.tools[toolType].progress, 10) // Set to at least 10% when started
+        progress: 10 // Start with 10% progress
       });
     }
   };
@@ -103,7 +92,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     updateTool(toolType, { 
       started: true,
       completed: true,
-      progress: 100 
+      progress: 100 // Set to 100% progress
     });
   };
   
@@ -111,12 +100,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
    * Reset progress for a specific tool
    */
   const resetTool = (toolType: ToolType) => {
-    const now = new Date().toISOString();
     updateTool(toolType, {
       started: false,
       completed: false,
-      progress: 0,
-      lastUpdated: now
+      progress: 0
     });
   };
   
@@ -132,7 +119,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
    */
   const getNextTool = () => {
     const nextToolType = getNextRecommendedTool(progress);
-    if (!nextToolType) return null;
+    
+    if (!nextToolType) {
+      return null;
+    }
     
     return {
       toolType: nextToolType,
@@ -180,7 +170,7 @@ export function useProgress() {
   const context = useContext(ProgressContext);
   
   if (!context) {
-    throw new Error('useProgress must be used within a ProgressProvider');
+    throw new Error("useProgress must be used within a ProgressProvider");
   }
   
   return context;
