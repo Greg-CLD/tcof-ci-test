@@ -1,0 +1,141 @@
+Replit Agent prompt #6 – /make-a-plan/checklist
+Context
+• Blocks 1-3 write all data into the plan object.
+• Quick-Start flow creates a plan that contains only the pre-ticked TCOF-factor tasks from tcofTasks.json; personalHeuristics and goodPractice arrays will be empty.
+• We need one checklist view that gracefully handles either case.
+
+1 Route & file
+Add route /make-a-plan/checklist.
+
+New page pages/ChecklistPage.jsx; import in router.
+
+2 Component tree
+php-template
+Copy
+Edit
+<h1>Your Project Checklist</h1>
+<SummaryBar />   // counts + completion %
+<StageAccordion stage="Identification"  />
+<StageAccordion stage="Definition"      />
+<StageAccordion stage="Delivery"        />
+<StageAccordion stage="Closure"         />
+<div class="export-bar">
+  <button class="btn-secondary" onClick=exportCSV>Export CSV</button>
+  <button class="btn-secondary" onClick=exportPDF>Export PDF</button>
+  <button class="btn-primary"  onClick=emailChecklist>Email via Mail App</button>
+</div>
+If plan not found → redirect /make-a-plan.
+
+Tooltip under title: “Tick items as you complete them. Changes save automatically.”
+
+3 StageAccordion behaviour
+Props: stage (“Identification”, …).
+
+Inside, render three sub-lists (hide a list if empty):
+
+Your Heuristics – tasks where origin==='heuristic'.
+
+TCOF Factors – tasks where origin==='factor'.
+
+Good Practice Tasks – tasks where frameworkCode exists.
+
+Each task row:
+
+checkbox (✔ writes task.done=true to plan, debounced save)
+
+text
+
+origin badge (for GP tasks show framework code)
+
+delete icon (allowed only for Heuristic & GP tasks, not TCOF template)
+
+Quick-Start case: Heuristic and GP arrays empty ⇒ their lists auto-collapse.
+
+4 SummaryBar
+Displays:
+
+Total tasks ✔/total
+
+Tasks by stage (small pill)
+
+Progress bar 0-100 %
+
+5 Export functions (utils/exportUtils.js)
+exportCSV(plan) – use PapaParse to flatten tasks into rows:
+Stage,Category,Task,Done then trigger downloadFile('checklist.csv').
+
+exportPDF(plan) – use jsPDF
+
+A4 portrait, one page per stage if needed.
+
+Bold stage heading, bullet list with ✔/□ icons.
+
+Both utils imported in ChecklistPage.
+
+6 Email feature
+js
+Copy
+Edit
+function emailChecklist(){
+  const body = encodeURIComponent(
+    generatePlaintextChecklist(plan)  // helper returns plain text list
+  );
+  window.location.href = `mailto:?subject=TCOF%20Checklist&body=${body}`;
+}
+This opens the user’s default mail client, no server needed.
+
+7 Design / UX
+Accordions: .accordion-header teal background #008080, white text; caret icon rotates.
+
+Task rows: soft stripe #f7f9fa; completed rows line-through + 50 % opacity.
+
+Progress bar colour teal.
+
+Empty list placeholder: “— none —”.
+
+8 Data persistence
+On checkbox toggle or delete → update plan.stages[stage].tasks[index].done; call savePlan.
+
+Deleting TCOF-factor tasks not allowed (greyed icon).
+
+Deleting a framework in Block 3 automatically removed its tasks; this page reflects latest state.
+
+9 Edge cases
+If user skipped Block 3, GP list empty (fine).
+
+If Quick-Start, heuristics & GP empty; SummaryBar still shows progress.
+
+If all tasks done, show confetti emoji 🎉 in title.
+
+10 Testing checklist
+Loads for both Full-plan and Quick-Start plans.
+
+Collapsible panels remember open/closed state per session (localStorage key accordionState).
+
+Checkbox toggles persist after refresh.
+
+CSV and PDF files download with correct row counts.
+
+mailto: link populates body with plain-text checklist.
+
+Delete icon works (and blocked for TCOF tasks).
+
+Progress bar updates live.
+
+No console errors.
+
+11 Deliverables
+pages/ChecklistPage.jsx
+
+components/StageAccordion.jsx
+
+components/SummaryBar.jsx
+
+utils/exportUtils.js (exportCSV, exportPDF, generatePlaintextChecklist)
+
+styles/checklist.css
+
+Router update
+
+Return list of new/changed files and one-sentence summary.
+

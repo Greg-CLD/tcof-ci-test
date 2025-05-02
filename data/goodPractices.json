@@ -1,0 +1,42 @@
+[
+  {
+    "code": "PRAXIS",
+    "name": "Praxis Framework",
+    "tasks": {
+      "Identification": ["Produce a Brief", "Create a Definition Plan"],
+      "Definition": ["Define Scope", "Project/Programme Mgt Plan", "Business Case"],
+      "Delivery": ["Delegate delivery", "Communicate with stakeholders", "Monitor progress"],
+      "Closure": ["Handover to Operations", "Demobilise project", "Capture lessons learned"]
+    }
+  },
+  {
+    "code": "TEAL_BOOK",
+    "name": "UK Government Teal Book",
+    "tasks": {
+      "Identification": ["Appoint SRO", "Validate the project brief", "Prepare Strategic Outline Case"],
+      "Definition": ["Detail delivery & procurement approach", "Develop OBC / FBC"],
+      "Delivery": ["Ensure outputs align with outcomes", "Ongoing risk management", "Change control"],
+      "Closure": []
+    }
+  },
+  {
+    "code": "SAFe",
+    "name": "SAFe Implementation Roadmap",
+    "tasks": {
+      "Identification": ["Lean Business Case", "Reaching the Tipping Point", "Train Change Agents"],
+      "Definition": ["Train Leaders", "Identify Value Streams", "Create Implementation Plan"],
+      "Delivery": ["Prepare for ART Launch", "Continuous Delivery Pipeline", "Coach ART Execution"],
+      "Closure": ["Transition to CD Pipeline", "Extend to Portfolio", "Sustain & Improve"]
+    }
+  },
+  {
+    "code": "AGILEPM",
+    "name": "AgilePM",
+    "tasks": {
+      "Identification": ["Appoint Sponsor & PM", "Conduct Feasibility Assessment"],
+      "Definition": ["Run Foundations Phase", "Prioritised Requirements List", "Solution Architecture"],
+      "Delivery": ["Plan & run Timeboxes", "Engage stakeholders", "Demonstrate increments"],
+      "Closure": ["Deploy final increment", "Post-Project Review", "Benefits measurement"]
+    }
+  }
+]

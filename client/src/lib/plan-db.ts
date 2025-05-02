@@ -56,6 +56,20 @@ export type PolicyTask = {
   stage: Stage;
 };
 
+export type GoodPracticeTask = {
+  id: string;
+  text: string;
+  stage: Stage;
+  frameworkCode: string;
+  completed?: boolean;
+};
+
+export type GoodPractice = {
+  zone: string | null;
+  frameworks: string[];
+  tasks: GoodPracticeTask[];
+};
+
 export type StageData = {
   heuristics: HeuristicItem[];
   factors: FactorItem[];
@@ -65,6 +79,7 @@ export type StageData = {
   mappings?: Mapping[];
   tasks?: TaskItem[];
   policyTasks?: PolicyTask[];
+  goodPractice?: GoodPractice;
 };
 
 export type PlanRecord = {
@@ -83,7 +98,12 @@ const createEmptyStageData = (): StageData => ({
   personalHeuristics: [],
   mappings: [],
   tasks: [],
-  policyTasks: []
+  policyTasks: [],
+  goodPractice: {
+    zone: null,
+    frameworks: [],
+    tasks: []
+  }
 });
 
 // Create empty plan record
@@ -275,6 +295,182 @@ export const removePolicyTask = (
   if (updatedPolicyTasks.length === policyTasks.length) return false;
   
   plan.stages[stage].policyTasks = updatedPolicyTasks;
+  plan.lastUpdated = new Date().toISOString();
+  
+  return true;
+};
+
+/**
+ * Set the Praxis zone for the plan
+ */
+export const setZone = (
+  planId: string,
+  zone: string
+): boolean => {
+  const plan = plans[planId];
+  if (!plan) return false;
+  
+  // Initialize goodPractice if it doesn't exist
+  if (!plan.stages.Identification.goodPractice) {
+    plan.stages.Identification.goodPractice = {
+      zone: null,
+      frameworks: [],
+      tasks: []
+    };
+  }
+  
+  // Ensure goodPractice exists in all stages
+  Object.keys(plan.stages).forEach(stageName => {
+    const stage = stageName as Stage;
+    if (!plan.stages[stage].goodPractice) {
+      plan.stages[stage].goodPractice = {
+        zone: null,
+        frameworks: [],
+        tasks: []
+      };
+    }
+    
+    // Set zone for all stages
+    if (plan.stages[stage].goodPractice) {
+      plan.stages[stage].goodPractice.zone = zone;
+    }
+  });
+  
+  plan.lastUpdated = new Date().toISOString();
+  return true;
+};
+
+/**
+ * Toggle a framework's selection status
+ */
+export const toggleFramework = (
+  planId: string,
+  frameworkCode: string
+): boolean => {
+  const plan = plans[planId];
+  if (!plan) return false;
+  
+  // Ensure all stages have a goodPractice property
+  Object.keys(plan.stages).forEach(stageName => {
+    const stage = stageName as Stage;
+    if (!plan.stages[stage].goodPractice) {
+      plan.stages[stage].goodPractice = {
+        zone: null,
+        frameworks: [],
+        tasks: []
+      };
+    }
+    
+    const goodPractice = plan.stages[stage].goodPractice!;
+    
+    // Toggle framework selection
+    if (goodPractice.frameworks.includes(frameworkCode)) {
+      // Remove framework and its tasks
+      goodPractice.frameworks = goodPractice.frameworks.filter(f => f !== frameworkCode);
+      goodPractice.tasks = goodPractice.tasks.filter(t => t.frameworkCode !== frameworkCode);
+    } else {
+      // Add framework
+      goodPractice.frameworks.push(frameworkCode);
+    }
+  });
+  
+  plan.lastUpdated = new Date().toISOString();
+  return true;
+};
+
+/**
+ * Toggle a good practice task's selection
+ */
+export const toggleGpTask = (
+  planId: string,
+  text: string,
+  frameworkCode: string,
+  stage: Stage
+): boolean => {
+  const plan = plans[planId];
+  if (!plan) return false;
+  
+  // Ensure goodPractice exists
+  if (!plan.stages[stage].goodPractice) {
+    plan.stages[stage].goodPractice = {
+      zone: null,
+      frameworks: [],
+      tasks: []
+    };
+  }
+  
+  const goodPractice = plan.stages[stage].goodPractice!;
+  
+  // Check if task already exists
+  const existingTaskIndex = goodPractice.tasks.findIndex(
+    t => t.text === text && t.frameworkCode === frameworkCode && t.stage === stage
+  );
+  
+  if (existingTaskIndex >= 0) {
+    // Remove the task
+    goodPractice.tasks = goodPractice.tasks.filter((_, index) => index !== existingTaskIndex);
+  } else {
+    // Add the task
+    goodPractice.tasks.push({
+      id: uuidv4(),
+      text,
+      stage,
+      frameworkCode,
+      completed: false
+    });
+  }
+  
+  plan.lastUpdated = new Date().toISOString();
+  return true;
+};
+
+/**
+ * Get the count of different task types
+ */
+export const getTaskCounts = (
+  planId: string
+): { heuristics: number, factorTasks: number, gpTasks: number } => {
+  const plan = plans[planId];
+  if (!plan) return { heuristics: 0, factorTasks: 0, gpTasks: 0 };
+  
+  let heuristicsCount = 0;
+  let factorTasksCount = 0;
+  let gpTasksCount = 0;
+  
+  // Count across all stages
+  Object.keys(plan.stages).forEach(stageName => {
+    const stage = stageName as Stage;
+    const stageData = plan.stages[stage];
+    
+    // Count personal heuristics
+    heuristicsCount += (stageData.personalHeuristics || []).length;
+    
+    // Count factor tasks
+    factorTasksCount += (stageData.tasks || []).filter(t => t.origin === 'factor').length;
+    
+    // Count good practice tasks
+    gpTasksCount += (stageData.goodPractice?.tasks || []).length;
+  });
+  
+  return {
+    heuristics: heuristicsCount,
+    factorTasks: factorTasksCount,
+    gpTasks: gpTasksCount
+  };
+};
+
+/**
+ * Mark a plan as complete
+ */
+export const markPlanComplete = (
+  planId: string,
+  complete: boolean = true
+): boolean => {
+  const plan = plans[planId];
+  if (!plan) return false;
+  
+  // Add a complete flag to the plan
+  (plan as any).complete = complete;
   plan.lastUpdated = new Date().toISOString();
   
   return true;
