@@ -1,0 +1,124 @@
+Replit Agent prompt #8 – /make-a-plan/admin
+Context
+• Quick-Start currently builds a plan from the TCOF success-factor tasks (data/tcofTasks.json).
+• We now introduce default personal heuristics that the Quick-Start path can also pre-load.
+• Those heuristics live in a new file data/presetHeuristics.json and must be editable from a browser-based Admin page.
+• Only one admin user (“Greg”) should have access.
+
+1 Create the presets file
+Add data/presetHeuristics.json with starter content:
+
+json
+Copy
+Edit
+[
+  { "id": "H1", "text": "Start slow to go fast", "notes": "" },
+  { "id": "H2", "text": "Test it small before you scale it big", "notes": "" }
+]
+Quick-Start flow (quickStartPlan()) must now:
+
+copy every entry in this file into plan.stages.Identification.personalHeuristics
+
+copy every entry in tcofTasks.json as before
+
+Update quickStartPlan() accordingly.
+
+2 Lightweight admin authentication
+Add utils/auth.js
+
+js
+Copy
+Edit
+export const ADMIN_EMAIL = "Greg@Confluity.co.uk";
+export function isAdmin(){
+  return localStorage.getItem("tcof_user") === ADMIN_EMAIL;
+}
+export function login(email){
+  if(email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()){
+    localStorage.setItem("tcof_user", ADMIN_EMAIL);
+    return true;
+  }
+  return false;
+}
+export function logout(){ localStorage.removeItem("tcof_user"); }
+3 Route & page
+Add route /make-a-plan/admin in the router (protected).
+
+New file pages/AdminPresetEditor.jsx.
+
+If !isAdmin() → render a simple login form (email input + “Log in”).
+On success redirect back to same page.
+
+4 Admin UI
+AdminPresetEditor.jsx layout:
+
+php-template
+Copy
+Edit
+<h1>Preset Editor</h1>
+<button onClick={logout}>Log out</button>
+
+<section>
+  <h2>Default Personal Heuristics (Quick-Start)</h2>
+  <PresetTable />          // editable rows
+  <button onClick={addRow}>+ Add Heuristic</button>
+  <button onClick={saveHeuristics} class="btn-primary">Save Changes</button>
+  <span class="status-msg">{saveMessage}</span>
+</section>
+
+<section>
+  <h2>TCOF Success-Factor Tasks</h2>
+  <p>You can download the JSON, edit offline, and re-upload.</p>
+  <button onClick={downloadTcofJSON}>Download</button>
+  <input type="file" accept=".json" onChange={uploadTcofJSON}/>
+</section>
+PresetTable – editable columns Text (required, ≤ 80 chars) and Notes. Delete icon per row.
+
+saveHeuristics() – writes the table to data/presetHeuristics.json then toast("Saved"). During dev, writing to file system is fine; in production swap to Replit DB.
+
+downloadTcofJSON – triggers a download of current tcofTasks.json.
+
+uploadTcofJSON – validates JSON structure ([{id,name,tasks:{…}}]) then overwrites file.
+
+5 Hook Quick-Start button
+Edit pages/MakeAPlanLanding.jsx
+
+diff
+Copy
+Edit
+-import { quickStartPlan } from '../utils/quickStart';
++import { quickStartPlan } from '../utils/quickStart';
++// display date of last preset update
++import presetH from '../../data/presetHeuristics.json';
+…
+<Card … >
+  <small>Preset heuristics: {presetH.length}</small>
+</Card>
+6 Testing checklist
+Navigate to /make-a-plan/admin → see login form.
+
+Enter Greg@Confluity.co.uk → taken to editor.
+
+Add a heuristic row, click Save, refresh → change persists.
+
+Quick-Start plan now includes the new heuristic.
+
+Download & re-upload tcofTasks.json, malformed JSON shows error toast.
+
+Log-out hides editor.
+
+Non-admin email rejected.
+
+7 Deliverables
+data/presetHeuristics.json (new)
+
+utils/auth.js (new)
+
+updated utils/quickStart.js (or wherever quickStartPlan lives)
+
+pages/AdminPresetEditor.jsx
+
+minor router & landing-page tweaks
+
+Return file list + one-sentence summary.
+

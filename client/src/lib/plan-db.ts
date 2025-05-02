@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { storage } from './storageAdapter';
 
 // Types for the plan record structure
 export type HeuristicItem = {
@@ -132,15 +133,40 @@ export const createEmptyPlan = (): string => {
 
 /**
  * Loads a plan by its ID
+ * If no ID is provided, attempts to load the most recent plan
  */
-export const loadPlan = (id: string): PlanRecord | null => {
-  return plans[id] || null;
+export const loadPlan = async (id?: string): Promise<PlanRecord | null> => {
+  // If no ID provided, try to get the latest plan ID from localStorage
+  let planId = id;
+  if (!planId) {
+    const storedId = localStorage.getItem('tcof_most_recent_plan');
+    if (!storedId) return null;
+    planId = storedId;
+  }
+  
+  // Check if the plan is in memory first
+  const plan = plans[planId];
+  if (plan) return plan;
+  
+  // If not in memory, try to load from storage
+  try {
+    const storedPlan = await storage.load(planId);
+    if (storedPlan) {
+      // Cache the plan in memory for faster access
+      plans[planId] = storedPlan;
+      return storedPlan;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error loading plan:', error);
+    return null;
+  }
 };
 
 /**
  * Saves plan data with the given ID
  */
-export const savePlan = (id: string, data: Partial<PlanRecord>): boolean => {
+export const savePlan = async (id: string, data: Partial<PlanRecord>): Promise<boolean> => {
   if (!plans[id]) return false;
   
   // Update the plan with new data
@@ -150,7 +176,17 @@ export const savePlan = (id: string, data: Partial<PlanRecord>): boolean => {
     lastUpdated: new Date().toISOString()
   };
   
-  return true;
+  // Save to localStorage as latest plan
+  localStorage.setItem('tcof_most_recent_plan', id);
+  
+  // Persist to storage
+  try {
+    await storage.save(id, plans[id]);
+    return true;
+  } catch (error) {
+    console.error('Error saving plan:', error);
+    return false;
+  }
 };
 
 // Export the plans object for debugging
@@ -159,12 +195,12 @@ export const getPlans = (): Record<string, PlanRecord> => ({ ...plans });
 /**
  * Adds a mapping between a heuristic and a factor
  */
-export const addMapping = (
+export const addMapping = async (
   planId: string, 
   heuristicId: string, 
   factorId: string | null, 
   stage: Stage
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -192,17 +228,20 @@ export const addMapping = (
   plan.stages[stage].mappings = mappings;
   plan.lastUpdated = new Date().toISOString();
   
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
 };
 
 /**
  * Adds a task to the plan
  */
-export const addTask = (
+export const addTask = async (
   planId: string,
   task: Omit<TaskItem, 'id'>,
   stage: Stage
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -219,18 +258,21 @@ export const addTask = (
   plan.stages[stage].tasks = tasks;
   plan.lastUpdated = new Date().toISOString();
   
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
 };
 
 /**
  * Updates a task's completed status
  */
-export const updateTaskStatus = (
+export const updateTaskStatus = async (
   planId: string,
   taskId: string,
   completed: boolean,
   stage: Stage
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -247,17 +289,20 @@ export const updateTaskStatus = (
   plan.stages[stage].tasks = tasks;
   plan.lastUpdated = new Date().toISOString();
   
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
 };
 
 /**
  * Adds a policy task to the plan
  */
-export const addPolicyTask = (
+export const addPolicyTask = async (
   planId: string,
   text: string,
   stage: Stage
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -275,17 +320,20 @@ export const addPolicyTask = (
   plan.stages[stage].policyTasks = policyTasks;
   plan.lastUpdated = new Date().toISOString();
   
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
 };
 
 /**
  * Removes a policy task from the plan
  */
-export const removePolicyTask = (
+export const removePolicyTask = async (
   planId: string,
   taskId: string,
   stage: Stage
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -297,16 +345,19 @@ export const removePolicyTask = (
   plan.stages[stage].policyTasks = updatedPolicyTasks;
   plan.lastUpdated = new Date().toISOString();
   
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
 };
 
 /**
  * Set the Praxis zone for the plan
  */
-export const setZone = (
+export const setZone = async (
   planId: string,
   zone: string
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -337,16 +388,20 @@ export const setZone = (
   });
   
   plan.lastUpdated = new Date().toISOString();
+  
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
 };
 
 /**
  * Toggle a framework's selection status
  */
-export const toggleFramework = (
+export const toggleFramework = async (
   planId: string,
   frameworkCode: string
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -375,18 +430,22 @@ export const toggleFramework = (
   });
   
   plan.lastUpdated = new Date().toISOString();
+  
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
 };
 
 /**
  * Toggle a good practice task's selection
  */
-export const toggleGpTask = (
+export const toggleGpTask = async (
   planId: string,
   text: string,
   frameworkCode: string,
   stage: Stage
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -421,6 +480,10 @@ export const toggleGpTask = (
   }
   
   plan.lastUpdated = new Date().toISOString();
+  
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
 };
 
@@ -462,10 +525,10 @@ export const getTaskCounts = (
 /**
  * Mark a plan as complete
  */
-export const markPlanComplete = (
+export const markPlanComplete = async (
   planId: string,
   complete: boolean = true
-): boolean => {
+): Promise<boolean> => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -473,5 +536,22 @@ export const markPlanComplete = (
   (plan as any).complete = complete;
   plan.lastUpdated = new Date().toISOString();
   
+  // Save changes to storage
+  await savePlan(planId, plan);
+  
   return true;
+};
+
+/**
+ * List all existing plans
+ */
+export const listExistingPlans = async (): Promise<string[]> => {
+  return await storage.list();
+};
+
+/**
+ * Check if a plan exists
+ */
+export const planExists = async (id: string): Promise<boolean> => {
+  return (await storage.load(id)) !== null;
 };
