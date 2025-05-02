@@ -11,6 +11,7 @@ import MakeAPlan from "@/pages/MakeAPlan";
 import MakeAPlanLanding from "@/pages/MakeAPlanLanding";
 import MakeAPlanFull from "@/pages/MakeAPlanFull";
 import MakeAPlanAdmin from "@/pages/MakeAPlanAdmin";
+import Block1Discover from "@/pages/Block1Discover";
 import Checklist from "@/pages/Checklist";
 import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/get-your-bearings" component={GetYourBearings} />
       <Route path="/make-a-plan" component={MakeAPlanLanding} />
+      <Route path="/make-a-plan/full/block-1" component={Block1Discover} />
       <Route path="/make-a-plan/full/:blockId" component={MakeAPlanFull} />
       <Route path="/make-a-plan/admin" component={MakeAPlanAdmin} />
       <Route path="/checklist" component={Checklist} />

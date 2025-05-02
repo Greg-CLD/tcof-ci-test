@@ -23,10 +23,25 @@ export type PracticeTaskItem = {
 
 export type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 
+export type SuccessFactorRating = {
+  rating: 1 | 2 | 3 | 4 | 5;
+  notes: string;
+  favourite?: boolean;
+};
+
+export type PersonalHeuristic = {
+  id: string;
+  text: string;
+  notes: string;
+  favourite?: boolean;
+};
+
 export type StageData = {
   heuristics: HeuristicItem[];
   factors: FactorItem[];
   practiceTasks: PracticeTaskItem[];
+  successFactorRatings?: Record<string, SuccessFactorRating>;
+  personalHeuristics?: PersonalHeuristic[];
 };
 
 export type PlanRecord = {
@@ -40,7 +55,9 @@ export type PlanRecord = {
 const createEmptyStageData = (): StageData => ({
   heuristics: [],
   factors: [],
-  practiceTasks: []
+  practiceTasks: [],
+  successFactorRatings: {},
+  personalHeuristics: []
 });
 
 // Create empty plan record

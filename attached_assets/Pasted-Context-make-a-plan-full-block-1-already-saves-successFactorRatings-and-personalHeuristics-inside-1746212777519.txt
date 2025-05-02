@@ -1,0 +1,148 @@
+Context
+• /make-a-plan/full/block-1 already saves successFactorRatings and personalHeuristics inside plan.stages.Identification.
+• Block 2 adds three new elements:
+
+heuristic-to-factor mappings (optional)
+
+user-defined tasks (up to 3 per heuristic per stage + extra tasks for factors)
+
+organisation-policy tasks (free-form, per stage)
+• We must persist them into the existing plan record so the final checklist page can render everything.
+
+1 Route & file
+New route /make-a-plan/full/block-2.
+
+File pages/Block2Connect.jsx; import into router.
+
+2 Data-model extensions (utils/planHelpers.js)
+Add helpers and schema comments:
+
+ts
+Copy
+Edit
+stages.<StageName> = {
+  successFactorRatings,          // already present
+  personalHeuristics,            // already present
+  mappings: {                    // NEW  Step 3
+    [heuristicId]: factorId | null
+  },
+  tasks: [                       // NEW  Step 4  (heuristic + factor tasks)
+    { id, text, stage, origin:'heuristic'|'factor', sourceId }
+  ],
+  policyTasks: [                 // NEW  Step 5
+    { id, text, stage, owner }
+  ]
+}
+Utility fns: addMapping, addTask, addPolicyTask, all auto-save.
+
+3 Page layout
+php-template
+Copy
+Edit
+<ProgressBar currentBlock=2 totalBlocks=3 />
+
+<h1>Block 2: Connect & Build</h1>
+<p class="subtitle">Turn insights into structure. Build tasks around what matters most.</p>
+
+─── STEP 3 ────────────────────────────────────────────
+<h2>Map your heuristics to TCOF factors (optional)</h2>
+<MappingTable />     ← left column = your heuristics, right = dropdown of 12 factors
+<button class="skip-for-now">Skip Step 3</button>
+
+─── STEP 4 ────────────────────────────────────────────
+<h2>Add tasks for each heuristic or factor</h2>
+<HeuristicTaskTabs />   ← one tab per Delivery-Journey stage (Identification … Closure)
+• show list of heuristics + factors for that stage
+• max 3 tasks per item; inline “+ Add task” row
+
+─── STEP 5 ────────────────────────────────────────────
+<h2>Add organisation or client policy tasks</h2>
+<PolicyTaskForm />   ← choose stage dropdown + textarea + “Add”
+
+<ActionButtons> Back | Next | Save | Skip→Checklist
+4 Component behaviour
+4.1 MappingTable (Step 3)
+Rows = personalHeuristics from plan.
+
+Second column is a <select> with “— No link —” + 12 factors.
+
+On change → addMapping(heuristicId, factorId) and savePlan.
+
+Skip button simply collapses this section and sets a flag; mappings can be edited later.
+
+4.2 HeuristicTaskTabs (Step 4)
+Tabs for Identification, Definition, Delivery, Closure.
+
+For the selected tab generate a list:
+
+every heuristic (always shown)
+
+every factor (always)
+
+Next to each item show existing tasks (max 3) and a “+” icon.
+
+Clicking “+” opens inline input; on Submit → addTask({text, stage, origin, sourceId}).
+
+Block adding >3 tasks; hint “Limit reached”.
+
+4.3 PolicyTaskForm (Step 5)
+Simple <select> stage + textarea.
+
+On Add → addPolicyTask({ id, text, stage, owner:'policy'}) and clear form.
+
+List below shows existing policy tasks per stage with delete icon.
+
+5 Navigation & validation
+Back → /make-a-plan/full/block-1.
+
+Next → /make-a-plan/full/block-3.
+
+Save progress – call savePlan; toast “Saved”.
+
+Skip to Checklist – same pattern as Block 1.
+
+No hard validation: user may proceed even if Step 3 or 4 left blank.
+
+6 Design specifics
+Re-use .card, .btn-primary, .btn-secondary, .skip-for-now.
+
+Tabs: active tab border-bottom teal #008080.
+
+Task lists: alternating row colour #f7f9fa; tasks under each heuristic indented.
+
+Limit radio/focus styles to remain WCAG AA.
+
+7 Testing checklist
+Page loads with plan data restored (any existing mappings/tasks).
+
+Adding a mapping saves immediately (refresh persists).
+
+Adding tasks obeys 3-per-item cap; persists across refresh.
+
+Policy tasks are stored and can be deleted.
+
+Next routes to Block 3, Back returns to Block 1.
+
+Skip goes to /checklist, which now shows newly added tasks.
+
+Console clean, DB writes confirmed.
+
+8 Deliverable
+Commit & list:
+
+pages/Block2Connect.jsx
+
+components/MappingTable.jsx
+
+components/HeuristicTaskTabs.jsx
+
+components/PolicyTaskForm.jsx
+
+Updated utils/planHelpers.js (new add* functions)
+
+Minor CSS in styles/tasks.css
+
+Router update
+
+Return file list plus <50-word summary of what changed.
+
