@@ -21,7 +21,8 @@ import {
   Home,
   BookOpen,
   Monitor,
-  DollarSign
+  DollarSign,
+  BarChart as BarChartIcon
 } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
@@ -159,6 +160,10 @@ export default function SiteHeader() {
                       Account
                     </div>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setLocation("/dashboard")}>
+                      <BarChartIcon className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setLocation("/profile")}>
                       <User className="mr-2 h-4 w-4" />
                       <span>My Profile</span>
@@ -264,6 +269,14 @@ export default function SiteHeader() {
               {isLoggedIn && (
                 <>
                   <div className="border-t border-gray-100 pt-2 space-y-2">
+                    <Link 
+                      href="/dashboard"
+                      onClick={() => handleNavigation("/dashboard")}
+                      className={`flex items-center py-2 px-3 rounded-md ${location === '/dashboard' ? 'bg-tcof-light' : ''} text-tcof-teal`}
+                    >
+                      <BarChartIcon className="h-5 w-5 mr-2" /> Dashboard
+                    </Link>
+                    
                     <Link 
                       href="/profile"
                       onClick={() => handleNavigation("/profile")}

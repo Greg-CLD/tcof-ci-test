@@ -10,6 +10,7 @@ import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
 import UserHistory from "@/pages/UserHistory";
 import ProfilePage from "@/pages/ProfilePage";
+import Dashboard from "@/pages/Dashboard";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -64,6 +65,36 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
+      
+      {/* Dashboard route - protected like other tools */}
+      <Route path="/dashboard">
+        {isAuthenticated('starter-access') || user ? (
+          <Dashboard />
+        ) : (
+          <div className="min-h-screen flex flex-col bg-white">
+            <SiteHeader />
+            <main className="flex-grow container mx-auto px-4 py-12">
+              <div className="max-w-2xl mx-auto text-center">
+                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
+                <p className="text-gray-600 mb-6">You need to sign in to access your dashboard.</p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link href="/auth">
+                    <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/tools/starter-access">
+                    <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light">
+                      Enter Access Password
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </main>
+            <SiteFooter />
+          </div>
+        )}
+      </Route>
       
       {/* Protected routes with dual authentication (old password system + new database auth) */}
       <Route path="/tools/goal-mapping">
