@@ -123,7 +123,7 @@ export default function Block2Design() {
         </IntroAccordion>
         
         {personalHeuristics.length === 0 && (
-          <Alert className="mb-6">
+          <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>No personal heuristics found</AlertTitle>
             <AlertDescription>
