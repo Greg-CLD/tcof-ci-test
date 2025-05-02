@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Loader2, Info } from 'lucide-react';
+import { Loader2, Info, FileSpreadsheet, FileText, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SiteHeader from '@/components/SiteHeader';
@@ -10,12 +10,15 @@ import StageAccordion from '@/components/checklist/StageAccordion';
 import { useToast } from '@/hooks/use-toast';
 import { PlanRecord, loadPlan } from '@/lib/plan-db';
 import { getLatestPlanId } from '@/lib/planHelpers';
-import { exportCSV, exportPDF, emailChecklist } from '@/lib/exportUtils';
+import { exportCSV, exportPDF, emailChecklist, downloadFile, getGoogleSheetsImportUrl } from '@/lib/exportUtils';
 import styles from '@/lib/styles/checklist.module.css';
 
 export default function Checklist() {
   const [plan, setPlan] = useState<PlanRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [csvExportUrl, setCsvExportUrl] = useState<string | null>(null);
+  const [csvFilename, setCsvFilename] = useState<string>('');
+  const [showCsvOptions, setShowCsvOptions] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -53,6 +56,15 @@ export default function Checklist() {
     loadPlanData();
   }, [setLocation, toast]);
   
+  // Cleanup URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (csvExportUrl) {
+        URL.revokeObjectURL(csvExportUrl);
+      }
+    };
+  }, [csvExportUrl]);
+  
   // Handle plan updates from child components
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
     setPlan(updatedPlan);
@@ -63,16 +75,73 @@ export default function Checklist() {
     if (!plan) return;
     
     try {
-      exportCSV(plan);
+      // Clean up previous URLs
+      if (csvExportUrl) {
+        URL.revokeObjectURL(csvExportUrl);
+      }
+      
+      // Generate the CSV and get the URL
+      const { url, filename } = exportCSV(plan);
+      setCsvExportUrl(url);
+      setCsvFilename(filename);
+      setShowCsvOptions(true);
+      
       toast({
-        title: 'CSV export successful',
-        description: 'Your checklist has been exported to CSV format.',
+        title: 'CSV export ready',
+        description: 'Choose how you want to use your CSV export.',
       });
     } catch (error) {
       console.error('Error exporting to CSV:', error);
       toast({
         title: 'Export failed',
         description: 'There was a problem exporting your checklist.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  // Handle CSV download
+  const handleDownloadCSV = () => {
+    if (!csvExportUrl || !csvFilename) return;
+    
+    try {
+      downloadFile(csvFilename, csvExportUrl);
+      toast({
+        title: 'CSV download started',
+        description: 'Your checklist CSV is being downloaded.',
+      });
+      setShowCsvOptions(false);
+    } catch (error) {
+      console.error('Error downloading CSV:', error);
+      toast({
+        title: 'Download failed',
+        description: 'There was a problem downloading your CSV file.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  // Handle open in Google Sheets
+  const handleOpenInGoogleSheets = () => {
+    if (!csvExportUrl) return;
+    
+    try {
+      // First download locally
+      downloadFile(csvFilename, csvExportUrl);
+      
+      // Then open Google Sheets import page
+      window.open(getGoogleSheetsImportUrl(csvExportUrl), '_blank');
+      
+      toast({
+        title: 'Google Sheets import started',
+        description: 'Your CSV has been downloaded and Google Sheets import page opened.',
+      });
+      setShowCsvOptions(false);
+    } catch (error) {
+      console.error('Error opening Google Sheets:', error);
+      toast({
+        title: 'Google Sheets import failed',
+        description: 'There was a problem opening Google Sheets.',
         variant: 'destructive',
       });
     }
@@ -221,26 +290,59 @@ export default function Checklist() {
           
           {/* Export options */}
           <div className={styles.exportBar}>
-            <Button
-              variant="outline"
-              onClick={handleExportCSV}
-              className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
-            >
-              Export CSV
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleExportPDF}
-              className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
-            >
-              Export PDF
-            </Button>
-            <Button
-              onClick={handleEmailChecklist}
-              className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-            >
-              Email via Mail App
-            </Button>
+            {!showCsvOptions ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleExportCSV}
+                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Export CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleExportPDF}
+                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Export PDF
+                </Button>
+                <Button
+                  onClick={handleEmailChecklist}
+                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white flex items-center gap-2"
+                >
+                  <Mail className="h-4 w-4" />
+                  Email via Mail App
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadCSV}
+                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Download CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleOpenInGoogleSheets}
+                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Open in Google Sheets
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCsvOptions(false)}
+                  className="border-gray-300 text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </main>

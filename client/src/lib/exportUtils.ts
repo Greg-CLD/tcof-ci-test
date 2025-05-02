@@ -3,11 +3,22 @@ import html2canvas from 'html2canvas';
 import { PlanRecord, Stage, TaskItem, GoodPracticeTask } from './plan-db';
 
 /**
+ * Get a timestamp formatted for filenames (YYYY-MM-DD format)
+ */
+function getTimestampForFilename(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Generate a CSV export of the checklist tasks
  * @param plan - The plan record containing tasks
  */
-export function exportCSV(plan: PlanRecord): void {
-  if (!plan) return;
+export function exportCSV(plan: PlanRecord): { url: string, filename: string } {
+  if (!plan) throw new Error('No plan provided');
   
   // CSV header
   let csv = 'Stage,Category,Task,Done\n';
@@ -51,23 +62,69 @@ export function exportCSV(plan: PlanRecord): void {
     }
   });
   
-  // Create and download the CSV file
-  downloadFile('checklist.csv', csv, 'text/csv');
+  // Create and prepare the file for download
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const filename = `TCOF_Checklist_${getTimestampForFilename()}.csv`;
+  
+  return { url, filename };
 }
 
 /**
  * Download a file to the user's device
  */
-function downloadFile(filename: string, content: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
+export function downloadFile(filename: string, url: string): void {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+}
+
+/**
+ * Get Google Sheets import URL for a CSV file
+ * @param csvUrl - The object URL of the CSV blob
+ */
+export function getGoogleSheetsImportUrl(csvUrl: string): string {
+  return `https://docs.google.com/spreadsheets/d/0/import?hl=en&uploadType=manual`;
+}
+
+/**
+ * Create header and footer for PDF pages
+ * @param doc - The jsPDF document
+ * @param pageNumber - Current page number
+ * @param totalPages - Total number of pages
+ */
+function addHeaderAndFooter(doc: jsPDF, pageNumber: number, totalPages: number): void {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  
+  // Add header with logo
+  try {
+    // Add logo to the header (adjust size and position as needed)
+    doc.addImage('/assets/confluity-logo.png', 'PNG', margin, 20, 120, 30);
+  } catch (e) {
+    console.warn('Could not add logo to PDF:', e);
+  }
+  
+  // Add title to header
+  doc.setFontSize(14);
+  doc.setTextColor(22, 65, 78); // #16414E
+  doc.text('The Connected Outcomes Framework Toolkit', pageWidth - margin - 240, 35);
+  
+  // Add footer with page number and date/time
+  doc.setFontSize(10);
+  doc.setTextColor(107, 114, 128); // #6b7280
+  
+  // Date and time in footer
+  const now = new Date();
+  const dateTimeStr = now.toLocaleString();
+  doc.text(`Generated: ${dateTimeStr}`, margin, pageHeight - 20);
+  
+  // Page numbers in footer
+  doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - margin - 60, pageHeight - 20);
 }
 
 /**
@@ -83,7 +140,10 @@ export async function exportPDF(elementId: string): Promise<void> {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 40;
+  const headerHeight = 60; // Space for header
+  const footerHeight = 30; // Space for footer
   const availableWidth = pageWidth - 2 * margin;
+  const availableHeight = pageHeight - headerHeight - footerHeight - 2 * margin;
   
   try {
     // Capture the element as canvas
@@ -99,39 +159,46 @@ export async function exportPDF(elementId: string): Promise<void> {
     const imgWidth = availableWidth;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
-    // Add title to the first page
-    pdf.setFontSize(18);
-    pdf.setTextColor(22, 65, 78); // #16414E
-    pdf.text('TCOF Project Checklist', margin, margin);
+    // Calculate total pages needed
+    const totalPages = Math.ceil(imgHeight / availableHeight);
     
-    // Add date
-    pdf.setFontSize(12);
-    pdf.setTextColor(107, 114, 128); // #6b7280
-    const date = new Date().toLocaleDateString();
-    pdf.text(`Generated on ${date}`, margin, margin + 20);
-    
-    // Add the image across multiple pages if needed
-    let heightLeft = imgHeight;
-    let position = 0;
-    let pageOffset = margin + 50; // Space for the title and date
-    
-    // First page
-    pdf.addImage(imgData, 'PNG', margin, pageOffset, imgWidth, imgHeight);
-    heightLeft -= (pageHeight - pageOffset);
-    position = heightLeft;
-    
-    // Additional pages if needed
-    while (heightLeft > 0) {
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', margin, -position + margin, imgWidth, imgHeight);
-      heightLeft -= (pageHeight - 2 * margin);
-      position += (pageHeight - 2 * margin);
+    // Process each page
+    for (let i = 0; i < totalPages; i++) {
+      // Add a new page after the first page
+      if (i > 0) {
+        pdf.addPage();
+      }
+      
+      // Add header and footer
+      addHeaderAndFooter(pdf, i + 1, totalPages);
+      
+      // Calculate the portion of the image to show on this page
+      const sourceY = i * availableHeight * canvas.width / imgWidth;
+      const sourceHeight = availableHeight * canvas.width / imgWidth;
+      
+      // Add the image portion for this page
+      pdf.addImage({
+        imageData: imgData,
+        format: 'PNG',
+        x: margin,
+        y: margin + headerHeight,
+        width: imgWidth,
+        height: Math.min(availableHeight, imgHeight - i * availableHeight),
+        compression: 'FAST',
+        rotation: 0,
+        srcX: 0,
+        srcY: i * availableHeight * canvas.width / imgWidth,
+        srcWidth: canvas.width,
+        srcHeight: Math.min(sourceHeight, canvas.height - sourceY)
+      });
     }
     
-    // Save the PDF
-    pdf.save('tcof_checklist.pdf');
+    // Save the PDF with timestamp in filename
+    const timestamp = getTimestampForFilename();
+    pdf.save(`TCOF_Checklist_${timestamp}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
+    throw error;
   }
 }
 
@@ -200,6 +267,7 @@ export function generatePlaintextChecklist(plan: PlanRecord): string {
   });
   
   text += 'Generated with The Connected Outcomes Framework Toolkit';
+  text += `\nDate: ${new Date().toLocaleString()}`;
   
   return text;
 }
