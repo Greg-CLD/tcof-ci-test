@@ -1,0 +1,81 @@
+Context
+You previously created:
+
+a new homepage with two CTA cards (Get Your Bearings, Make a Plan)
+
+individual pages for “Get Your Bearings” (with the three existing tools) and “Make a Plan” (placeholder).
+
+New requirements
+
+Global navigation – replace the current nav with:
+
+Starter Kit (top-level menu item)
+
+Get Your Bearings – route /get-your-bearings
+
+Make a Plan – route /make-a-plan
+
+Checklist – route /checklist (keep it hidden/disabled until the user has started a plan).
+
+Keep the site logo on the far left; nothing else is needed in the header for now.
+
+Routing & placeholders – make sure the three existing tools still open under /get-your-bearings exactly as before. Keep the simple placeholder page under /make-a-plan; we will flesh it out later.
+
+Checklist groundwork – create a minimal Replit DB (or a helper that can be swapped for Replit DB) with one collection/table called plans. A single plan record should contain:
+
+json
+Copy
+Edit
+{
+  "id": "<uuid>",
+  "created": "<ISO date>",
+  "stages": {           // Identification | Definition | Delivery | Closure
+    "Identification": { "heuristics": [], "factors": [], "practiceTasks": [] },
+    "Definition":      { … },
+    "Delivery":        { … },
+    "Closure":         { … }
+  }
+}
+For now just implement the helper functions:
+
+createEmptyPlan() → returns an id, inserts empty record
+
+loadPlan(id)
+
+savePlan(id, data)
+We will call these from later pages.
+
+Design system bootstrap – create a small CSS module (or Tailwind config if you prefer) with shared classes for:
+
+.btn-primary – background #008080 teal, white text
+
+.btn-secondary – outline teal, transparent background
+
+.nav-link.active – underline or bold
+
+.skip-for-now – secondary button style
+
+Page-level design notes (to apply on every future “Block” page, but just include the CSS / component stubs now):
+
+Step-by-step guidance area at top
+
+Editable table/form area
+
+Button row with Back · Next · Save progress · Skip for now
+
+Optional Skip to Summary link that goes to /checklist.
+No need to build Block pages yet—just set up reusable components (e.g. ProgressNav, ActionButtons).
+
+QA reminder – after updates, run the dev server and verify:
+
+New nav appears on every page.
+
+Links work.
+
+/checklist route exists but shows “Start a plan to see your checklist”.
+
+Replit DB helper file is present with the three functions above.
+
+Goal for this prompt
+Commit the updated navigation header, home page, new CSS/module, helper DB file, and any router updates. Do not remove any existing tool code. Provide a short summary of which files you changed or added.
+

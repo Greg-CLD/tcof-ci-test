@@ -8,6 +8,7 @@ import ProTools from "@/pages/ProTools";
 import StarterAccess from "@/pages/StarterAccess";
 import GetYourBearings from "@/pages/GetYourBearings";
 import MakeAPlan from "@/pages/MakeAPlan";
+import Checklist from "@/pages/Checklist";
 import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
 import UserHistory from "@/pages/UserHistory";
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/get-your-bearings" component={GetYourBearings} />
       <Route path="/make-a-plan" component={MakeAPlan} />
+      <Route path="/checklist" component={Checklist} />
       
       {/* Dashboard route - protected like other tools */}
       <Route path="/dashboard">

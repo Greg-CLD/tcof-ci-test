@@ -9,20 +9,21 @@ import {
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
 import { 
-  ChevronDown, 
   User, 
   History, 
   LogOut,
-  Settings,
   Key,
-  Save,
   Menu,
   X,
+  BarChart as BarChartIcon,
+  CheckSquare,
+  Compass,
+  ClipboardList,
+  ChevronDown,
   Home,
   BookOpen,
   Monitor,
-  DollarSign,
-  BarChart as BarChartIcon
+  DollarSign
 } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
@@ -79,51 +80,30 @@ export default function SiteHeader() {
           </a>
           
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-6">
             <Link 
               href="/" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/' ? 'font-medium' : ''}`}
+              className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/' ? 'nav-link active font-medium' : 'nav-link'}`}
             >
               Home
             </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger className={`flex items-center gap-1 text-tcof-dark hover:text-tcof-teal transition-colors ${location.startsWith('/tools') ? 'font-medium' : ''}`}>
-                Starter Kit <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center">
-                <DropdownMenuItem>
-                  <Link href="/tools/starter-access" className="w-full">
-                    Starter Kit Access
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href="/tools/goal-mapping" className="w-full">
-                    Goal-Mapping Tool
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href="/tools/cynefin-orientation" className="w-full">
-                    Cynefin Orientation Tool
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href="/tools/tcof-journey" className="w-full">
-                    TCOF Journey Decision Tree
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <Link 
-              href="/pro-tools" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/pro-tools' ? 'font-medium' : ''}`}
+              href="/get-your-bearings" 
+              className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/get-your-bearings' || location.includes('goal-mapping') || location.includes('cynefin-orientation') || location.includes('tcof-journey') ? 'nav-link active font-medium' : 'nav-link'}`}
             >
-              Pro Tools
+              <Compass className="h-4 w-4 mr-1" /> Get Your Bearings
             </Link>
             <Link 
-              href="/pricing" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/pricing' ? 'font-medium' : ''}`}
+              href="/make-a-plan" 
+              className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/make-a-plan' ? 'nav-link active font-medium' : 'nav-link'}`}
             >
-              Pricing
+              <ClipboardList className="h-4 w-4 mr-1" /> Make a Plan
+            </Link>
+            <Link 
+              href="/checklist" 
+              className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/checklist' ? 'nav-link active font-medium' : 'nav-link'}`}
+            >
+              <CheckSquare className="h-4 w-4 mr-1" /> Checklist
             </Link>
           </nav>
 
@@ -216,17 +196,35 @@ export default function SiteHeader() {
                 <Home className="h-5 w-5 mr-2" /> Home
               </Link>
               
-              <div className="space-y-1">
-                <div className="font-medium text-tcof-dark mb-1 flex items-center px-3 py-1">
-                  <BookOpen className="h-5 w-5 mr-2" /> Starter Kit
+              <Link 
+                href="/get-your-bearings"
+                onClick={() => handleNavigation("/get-your-bearings")}
+                className={`flex items-center py-2 px-3 rounded-md ${location === '/get-your-bearings' || location.includes('goal-mapping') || location.includes('cynefin-orientation') || location.includes('tcof-journey') ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+              >
+                <Compass className="h-5 w-5 mr-2" /> Get Your Bearings
+              </Link>
+              
+              <Link 
+                href="/make-a-plan"
+                onClick={() => handleNavigation("/make-a-plan")}
+                className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+              >
+                <ClipboardList className="h-5 w-5 mr-2" /> Make a Plan
+              </Link>
+              
+              <Link 
+                href="/checklist"
+                onClick={() => handleNavigation("/checklist")}
+                className={`flex items-center py-2 px-3 rounded-md ${location === '/checklist' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+              >
+                <CheckSquare className="h-5 w-5 mr-2" /> Checklist
+              </Link>
+              
+              {/* Tools Submenu */}
+              <div className="border-t border-gray-100 mt-2 pt-2">
+                <div className="font-medium text-gray-500 text-sm mb-1 flex items-center px-3 py-1">
+                  Tool Pages
                 </div>
-                <Link 
-                  href="/tools/starter-access"
-                  onClick={() => handleNavigation("/tools/starter-access")}
-                  className={`block py-1 px-8 text-sm rounded-md ${location === '/tools/starter-access' ? 'bg-tcof-light/70 text-tcof-teal' : 'hover:bg-tcof-light/30'}`}
-                >
-                  Starter Kit Access
-                </Link>
                 <Link 
                   href="/tools/goal-mapping"
                   onClick={() => handleNavigation("/tools/goal-mapping")}
@@ -249,22 +247,6 @@ export default function SiteHeader() {
                   TCOF Journey Decision Tree
                 </Link>
               </div>
-              
-              <Link 
-                href="/pro-tools"
-                onClick={() => handleNavigation("/pro-tools")}
-                className={`flex items-center py-2 px-3 rounded-md ${location === '/pro-tools' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
-              >
-                <Monitor className="h-5 w-5 mr-2" /> Pro Tools
-              </Link>
-              
-              <Link 
-                href="/pricing"
-                onClick={() => handleNavigation("/pricing")}
-                className={`flex items-center py-2 px-3 rounded-md ${location === '/pricing' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
-              >
-                <DollarSign className="h-5 w-5 mr-2" /> Pricing
-              </Link>
 
               {isLoggedIn && (
                 <>

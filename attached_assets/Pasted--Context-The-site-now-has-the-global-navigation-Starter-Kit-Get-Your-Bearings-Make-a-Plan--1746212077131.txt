@@ -1,0 +1,34 @@
+	Context
+	• The site now has the global navigation (Starter Kit ▸ Get Your Bearings / Make a Plan) and the Replit-DB helper with createEmptyPlan(), loadPlan(), savePlan().
+	• We need an engaging landing page under /make-a-plan that offers four clear ways to begin.
+	What to build
+		1. Route & file
+			§ Add a route /make-a-plan (index).
+			§ File name suggestion: pages/MakeAPlanLanding.jsx (update router import).
+		2. Hero / intro copy (plain, clear English)cssCopyEdit<h1>Make a Plan</h1><p>Pick the path that suits you. In every case we’ll build one checklist you can export or update later.</p>
+		3. Four large option cards in a responsive grid (2-up on desktop, 1-up on mobile).
+		Card	Title	Short description (≤ 20 words)	Action	Route / action
+		A	Full Configuration	“Step-by-step guidance through three building blocks.”	Start Full	/make-a-plan/full/block-1
+		B	Quick Start	“Load the TCOF default set and jump straight to your checklist.”	Quick Start	calls quickStartPlan() then redirects to /checklist
+		C	Continue Saved Plan	“Pick up where you left off.”	Continue	loads most-recent plan and routes to /checklist; button disabled if no plan
+		D	Admin Preset Editor	“Edit the default heuristics and tasks.”	Open Editor	/make-a-plan/admin
+		
+		4. Logic hooks
+			§ quickStartPlan() – creates a plan with id, pre-loads the default heuristics JSON (put placeholder import), saves via savePlan, then route.
+			§ getLatestPlanId() – tiny helper that checks localStorage for the most recent plan id; used to enable/disable the Continue button.
+		5. Design
+			§ Use the shared classes from prompt #1: .card, .btn-primary, .btn-secondary.
+			§ Card style: teal outline #008080, slight shadow, padding 1.5 rem, cursor pointer.
+			§ On hover: background #f0fffe.
+		6. Accessibility
+			§ Each card wraps the button in an <article> with aria-labelledby.
+			§ Provide ALT text if you add an icon.
+		7. Testing checklist (run after build)
+			§ npm run dev loads /make-a-plan with the four cards.
+			§ “Quick Start” creates a new record in plans and shows /checklist.
+			§ “Continue” stays disabled until you have at least one plan, then loads it.
+			§ No errors in console.
+			§ Header nav still shows Starter Kit ▸ Make a Plan highlighted.
+		8. Deliverable
+			§ Commit the new page, router update, helper in utils/planHelpers.js, minor CSS addition .card.
+			§ Return a brief list of changed/added files.
