@@ -45,8 +45,11 @@ export default function StageAccordion({ stage, plan, onPlanUpdate }: StageAccor
     }
     
     // Save to database and update the plan in parent component
-    savePlan(updatedPlan, true);
-    onPlanUpdate(updatedPlan);
+    const planId = getLatestPlanId();
+    if (planId) {
+      savePlan(planId, updatedPlan);
+      onPlanUpdate(updatedPlan);
+    }
   };
   
   // Handle task deletion
@@ -76,13 +79,16 @@ export default function StageAccordion({ stage, plan, onPlanUpdate }: StageAccor
     }
     
     // Save to database and update the plan in parent component
-    savePlan(updatedPlan, true);
-    onPlanUpdate(updatedPlan);
-    
-    toast({
-      title: "Task deleted",
-      description: "The task has been removed from your checklist.",
-    });
+    const planId = getLatestPlanId();
+    if (planId) {
+      savePlan(planId, updatedPlan);
+      onPlanUpdate(updatedPlan);
+      
+      toast({
+        title: "Task deleted",
+        description: "The task has been removed from your checklist.",
+      });
+    }
   };
   
   return (
