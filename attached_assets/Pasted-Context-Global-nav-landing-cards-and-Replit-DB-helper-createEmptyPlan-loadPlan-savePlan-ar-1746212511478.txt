@@ -1,0 +1,144 @@
+Context
+• Global nav, landing cards, and Replit-DB helper (createEmptyPlan / loadPlan / savePlan) are in place.
+• A plan record’s stages.Identification object must now store:
+
+ts
+Copy
+Edit
+{
+  successFactorRatings: { [factorId]: { rating: 1-5, notes: string, favourite?: boolean } },
+  personalHeuristics:   [ { id, text, notes, favourite?: boolean } ]
+}
+• Block 1 consists of Step 1 (rate 12 success factors) and Step 2 (enter personal heuristics).
+
+1 Route & file
+Add route /make-a-plan/full/block-1.
+
+New file pages/Block1Discover.jsx. Import in router.
+
+2 Page layout
+text
+Copy
+Edit
+┌───────────────────────────────────────────────┐
+│ <ProgressBar currentBlock=1 totalBlocks=3 /> │
+│ <h1>Block 1: Discover & Reflect</h1>          │
+│ <IntroAccordion> (copy provided below)        │
+├───────────────────────────────────────────────┤
+│ STEP 1 – Reflect on TCOF Heuristics           │
+│ 12-row editable table with 3 columns:         │
+│   Factor | 1-5 rating radio buttons | notes   │
+│ ⭐ icon per row (max 3 favourites)            │
+├───────────────────────────────────────────────┤
+│ STEP 2 – Add Your Own Heuristics              │
+│   + “Add heuristic” button -> inline form     │
+│   list of entered heuristics (text + notes +  │
+│   ⭐ toggle; allow up to 10)                   │
+├───────────────────────────────────────────────┤
+│ <ActionButtons>  Back | Next | Save | Skip→Checklist │
+└───────────────────────────────────────────────┘
+Component stubs (ProgressBar, ActionButtons) already created in prompt #1 CSS; just import and use.
+
+3 Step 1 – Success-factor rating table
+Provide the 12 factors in an array constant:
+
+js
+Copy
+Edit
+const TCOF_FACTORS = [
+  { id:'1.1', text:'Ask Why' },
+  { id:'1.2', text:'Get a Masterbuilder' },
+  … '4.3 Be Ready to Adapt'
+];
+For each row render:
+
+factor text
+
+five radio buttons labelled 1-5 with emoji (❌, 🤔, 🟡, ✅, 🔥) as in the brief
+
+free-text notes field (single-line)
+
+⭐ toggle button (disabled once three are chosen)
+
+On change, update successFactorRatings in page state and savePlan() debounced (500 ms).
+
+4 Step 2 – Personal heuristics list
+Add Heuristic modal / inline row with fields: text (required, ≤80 chars) and notes.
+
+Insert into personalHeuristics array with uuid.
+
+Each list item shows text, notes, ⭐ toggle, and a delete icon.
+
+Enforce max 10 heuristics, max 3 favourites overall (combined with Step 1 favourites).
+
+5 Navigation logic
+Back → /make-a-plan landing.
+
+Next → /make-a-plan/full/block-2.
+
+Save button calls savePlan(planId, currentData) and shows toast “Progress saved”.
+
+Skip to Checklist → /checklist (plan saved first).
+
+Disable Next until at least one rating AND one personal heuristic have been entered (user motivation).
+
+6 Intro accordion content (put in <IntroAccordion>)
+Use the plain-English copy supplied, trimmed to ±150 words:
+
+Why start here?
+Simpler rules beat complicated plans. TCOF gives you 12 proven “rules of thumb”. First, rate how strongly they feel true for you. Then add your own hard-won heuristics. These become the foundations of a checklist you’ll keep refining in later blocks.
+
+Add the Eureka paragraph and the 3-block outline. Accordion default = collapsed.
+
+7 Data persistence
+On page mount:
+
+const plan = loadPlan(planId) – if empty, redirect back to /make-a-plan (edge case).
+
+Pre-populate UI from plan.stages.Identification.
+
+On any change, debounce-save.
+
+When leaving via Next / Skip, call savePlan once more.
+
+8 Validation helpers
+validateFavouriteLimit() – max 3 stars total across both step tables.
+
+Highlight rows with missing rating before enabling Next.
+
+9 Design specifics
+Table striped rows (nth-child) with soft grey #f7f9fa.
+
+.starred row background #fff5e7.
+
+Use shared .btn-primary / .btn-secondary.
+
+10 Testing checklist
+Dev server loads /make-a-plan/full/block-1 showing intro collapsed.
+
+Ratings and notes persist after refresh (localStorage/DB).
+
+Adding heuristics updates plan record.
+
+⭐ favourite capped at three across both lists.
+
+Next button routes to Block 2 and Back goes to landing.
+
+Skip jumps to checklist and /checklist now displays “Identification” data.
+
+No ESLint or console errors.
+
+11 Deliverable
+Commit/describe:
+
+pages/Block1Discover.jsx
+
+components/SuccessFactorTable.jsx, components/HeuristicList.jsx
+
+Update router.js
+
+CSS additions in styles/cards.css
+
+Any helper additions in utils/planHelpers.js
+
+Return the list of changed files and a one-sentence summary.

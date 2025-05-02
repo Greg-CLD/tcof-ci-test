@@ -8,6 +8,9 @@ import ProTools from "@/pages/ProTools";
 import StarterAccess from "@/pages/StarterAccess";
 import GetYourBearings from "@/pages/GetYourBearings";
 import MakeAPlan from "@/pages/MakeAPlan";
+import MakeAPlanLanding from "@/pages/MakeAPlanLanding";
+import MakeAPlanFull from "@/pages/MakeAPlanFull";
+import MakeAPlanAdmin from "@/pages/MakeAPlanAdmin";
 import Checklist from "@/pages/Checklist";
 import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
@@ -69,7 +72,9 @@ function Router() {
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/get-your-bearings" component={GetYourBearings} />
-      <Route path="/make-a-plan" component={MakeAPlan} />
+      <Route path="/make-a-plan" component={MakeAPlanLanding} />
+      <Route path="/make-a-plan/full/:blockId" component={MakeAPlanFull} />
+      <Route path="/make-a-plan/admin" component={MakeAPlanAdmin} />
       <Route path="/checklist" component={Checklist} />
       
       {/* Dashboard route - protected like other tools */}
