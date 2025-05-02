@@ -1,6 +1,18 @@
 import { createEmptyPlan, savePlan, loadPlan, PlanRecord, planExists } from './plan-db';
 import { v4 as uuidv4 } from 'uuid';
 
+// Default preset heuristics for quick start
+interface PresetHeuristic {
+  id: string;
+  text: string;
+  notes: string;
+}
+
+const presetHeuristics: PresetHeuristic[] = [
+  { id: "H1", text: "Start slow to go fast", notes: "" },
+  { id: "H2", text: "Test it small before you scale it big", notes: "" }
+];
+
 // Default heuristics and tasks
 // This would normally be loaded from a JSON file or API
 const defaultHeuristics = {
@@ -89,7 +101,7 @@ export async function quickStartPlan(): Promise<string> {
     throw new Error('Failed to create and load plan');
   }
   
-  // Update the plan with default heuristics
+  // Update the plan with default heuristics and preset personal heuristics
   const updatedPlan: PlanRecord = {
     ...plan,
     stages: {
@@ -97,6 +109,24 @@ export async function quickStartPlan(): Promise<string> {
       ...defaultHeuristics
     }
   };
+  
+  // Add the preset heuristics to personal heuristics in the Identification stage
+  if (!updatedPlan.stages.Identification.personalHeuristics) {
+    updatedPlan.stages.Identification.personalHeuristics = [];
+  }
+  
+  // Convert the preset heuristics to the correct format and add them
+  const formattedHeuristics = presetHeuristics.map(h => ({
+    id: h.id,
+    text: h.text,
+    notes: h.notes,
+    favourite: false
+  }));
+  
+  updatedPlan.stages.Identification.personalHeuristics = [
+    ...updatedPlan.stages.Identification.personalHeuristics,
+    ...formattedHeuristics
+  ];
   
   // Save the updated plan
   await savePlan(planId, updatedPlan);

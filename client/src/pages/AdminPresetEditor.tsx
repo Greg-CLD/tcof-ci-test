@@ -1,0 +1,312 @@
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { Card } from '@/components/ui/card';
+import { Download, Upload, Trash2, Plus, Save, LogOut } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { isAdmin, login, logout, ADMIN_EMAIL } from '@/lib/auth';
+
+interface PresetHeuristic {
+  id: string;
+  text: string;
+  notes: string;
+}
+
+export default function AdminPresetEditor() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [email, setEmail] = useState('');
+  const [heuristics, setHeuristics] = useState<PresetHeuristic[]>([]);
+  const [saveMessage, setSaveMessage] = useState('');
+  const { toast } = useToast();
+  const [_, setLocation] = useLocation();
+
+  useEffect(() => {
+    // Check if user is already logged in as admin
+    const admin = isAdmin();
+    setIsLoggedIn(admin);
+    
+    // Load preset heuristics from the JSON file
+    if (admin) {
+      try {
+        setHeuristics([...presetHeuristics]);
+      } catch (error) {
+        console.error('Error loading preset heuristics:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load preset heuristics.",
+          variant: "destructive"
+        });
+        setHeuristics([]);
+      }
+    }
+  }, [toast]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (login(email)) {
+      setIsLoggedIn(true);
+      setEmail('');
+      toast({
+        title: "Success",
+        description: "Logged in successfully as admin.",
+      });
+    } else {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access this page.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsLoggedIn(false);
+    toast({
+      title: "Logged Out",
+      description: "Admin session ended.",
+    });
+  };
+
+  const handleAddRow = () => {
+    // Generate a new ID based on the highest existing ID number
+    const newId = heuristics.length > 0 
+      ? `H${parseInt(heuristics[heuristics.length - 1].id.substring(1)) + 1}`
+      : 'H1';
+    
+    setHeuristics([...heuristics, { id: newId, text: '', notes: '' }]);
+  };
+
+  const handleRemoveRow = (id: string) => {
+    setHeuristics(heuristics.filter(h => h.id !== id));
+  };
+
+  const handleTextChange = (id: string, value: string) => {
+    setHeuristics(heuristics.map(h => 
+      h.id === id ? { ...h, text: value } : h
+    ));
+  };
+
+  const handleNotesChange = (id: string, value: string) => {
+    setHeuristics(heuristics.map(h => 
+      h.id === id ? { ...h, notes: value } : h
+    ));
+  };
+
+  const saveHeuristics = async () => {
+    // Validate all heuristics have text
+    const invalidHeuristics = heuristics.filter(h => !h.text.trim());
+    if (invalidHeuristics.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: "All heuristics must have text (max 80 characters).",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // In a production environment, this would make an API call to update the file
+    // For now, we'll simulate saving
+    try {
+      // TODO: Replace with actual API call in production
+      console.log('Saving heuristics:', heuristics);
+      
+      setSaveMessage('Changes saved successfully!');
+      toast({
+        title: "Success",
+        description: "Preset heuristics saved successfully!",
+      });
+      
+      // Clear the message after 3 seconds
+      setTimeout(() => {
+        setSaveMessage('');
+      }, 3000);
+    } catch (error) {
+      console.error('Error saving heuristics:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save preset heuristics.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadTcofJSON = () => {
+    // This would download the tcofTasks.json file
+    toast({
+      title: "Not Implemented",
+      description: "This feature is not yet implemented.",
+      variant: "destructive"
+    });
+  };
+
+  const uploadTcofJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // This would validate and upload a new tcofTasks.json file
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const jsonContent = JSON.parse(event.target?.result as string);
+        // Validate JSON structure here
+        console.log('Uploaded JSON:', jsonContent);
+        toast({
+          title: "Success",
+          description: "File uploaded successfully.",
+        });
+      } catch (error) {
+        console.error('Invalid JSON file:', error);
+        toast({
+          title: "Error",
+          description: "Invalid JSON format. Please upload a valid JSON file.",
+          variant: "destructive"
+        });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // If not logged in, show the login form
+  if (!isLoggedIn) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="max-w-md mx-auto">
+          <Card className="p-6">
+            <h1 className="text-2xl font-bold text-center mb-6">Admin Login</h1>
+            <form onSubmit={handleLogin}>
+              <div className="mb-4">
+                <Input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full"
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full bg-tcof-teal hover:bg-tcof-teal/90">
+                Log In
+              </Button>
+            </form>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin editor view
+  return (
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Preset Editor</h1>
+        <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
+          <LogOut className="h-4 w-4" />
+          Log Out
+        </Button>
+      </div>
+
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Default Personal Heuristics (Quick-Start)</h2>
+        <Table>
+          <TableCaption>
+            Personal heuristics for Quick-Start plans (max 80 characters)
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-1/12">ID</TableHead>
+              <TableHead className="w-7/12">Text</TableHead>
+              <TableHead className="w-3/12">Notes</TableHead>
+              <TableHead className="w-1/12 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {heuristics.map((heuristic) => (
+              <TableRow key={heuristic.id}>
+                <TableCell className="font-medium">{heuristic.id}</TableCell>
+                <TableCell>
+                  <Input
+                    value={heuristic.text}
+                    onChange={(e) => handleTextChange(heuristic.id, e.target.value)}
+                    maxLength={80}
+                    required
+                  />
+                </TableCell>
+                <TableCell>
+                  <Textarea 
+                    value={heuristic.notes}
+                    onChange={(e) => handleNotesChange(heuristic.id, e.target.value)}
+                    rows={2}
+                  />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveRow(heuristic.id)}
+                    title="Delete heuristic"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        
+        <div className="flex mt-4 gap-4 items-center">
+          <Button onClick={handleAddRow} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add Heuristic
+          </Button>
+          <Button onClick={saveHeuristics} className="flex items-center gap-2 bg-tcof-teal hover:bg-tcof-teal/90">
+            <Save className="h-4 w-4" />
+            Save Changes
+          </Button>
+          {saveMessage && (
+            <span className="text-green-600 text-sm">{saveMessage}</span>
+          )}
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">TCOF Success-Factor Tasks</h2>
+        <p className="mb-4">You can download the JSON, edit offline, and re-upload.</p>
+        
+        <div className="flex gap-4 items-center">
+          <Button onClick={downloadTcofJSON} className="flex items-center gap-2" variant="outline">
+            <Download className="h-4 w-4" />
+            Download
+          </Button>
+          
+          <div className="flex items-center gap-2">
+            <Button className="flex items-center gap-2" variant="outline" asChild>
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <Upload className="h-4 w-4" />
+                Upload
+              </label>
+            </Button>
+            <input 
+              id="file-upload" 
+              type="file" 
+              accept=".json" 
+              onChange={uploadTcofJSON}
+              className="hidden"
+            />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
