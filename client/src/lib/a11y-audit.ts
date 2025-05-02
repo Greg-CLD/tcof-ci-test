@@ -306,7 +306,7 @@ function tryToFix(ruleId: string, node: any): void {
  * @param Component The component to wrap
  * @param options Accessibility audit options
  */
-export function withAccessibilityAudit<P>(
+export function withAccessibilityAudit<P extends object>(
   Component: React.ComponentType<P>,
   options: AuditOptions = defaultOptions
 ): React.ComponentType<P> {
@@ -316,7 +316,7 @@ export function withAccessibilityAudit<P>(
   }
   
   // Return a wrapped component that runs the audit
-  const AccessibilityAuditWrapper: React.FC<P> = (props) => {
+  const AccessibilityAuditWrapper = (props: P) => {
     React.useEffect(() => {
       // Wait for component to fully render
       const timeoutId = setTimeout(() => {
@@ -328,6 +328,10 @@ export function withAccessibilityAudit<P>(
     
     return React.createElement(Component, props);
   };
+  
+  // Add display name for dev tools
+  const displayName = Component.displayName || Component.name || 'Component';
+  AccessibilityAuditWrapper.displayName = `WithAccessibilityAudit(${displayName})`;
   
   return AccessibilityAuditWrapper;
 }
