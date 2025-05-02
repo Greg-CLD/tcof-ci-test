@@ -8,8 +8,9 @@ import {
   getToolRoute,
   getNextRecommendedTool
 } from "@/lib/progress-tracking";
+import { storage as db } from '@/lib/browserStorage';
 
-// Local storage key for progress data
+// Storage key for progress data
 const PROGRESS_STORAGE_KEY = 'tcof_user_progress';
 
 interface ProgressContextType {
@@ -33,16 +34,56 @@ const ProgressContext = createContext<ProgressContextType | null>(null);
  * Provider component for user progress tracking
  */
 export function ProgressProvider({ children }: { children: ReactNode }) {
-  const [progress, setProgress] = useState<UserProgress>(() => {
-    // Initialize from localStorage or create empty progress
-    const savedProgress = localStorage.getItem(PROGRESS_STORAGE_KEY);
-    return savedProgress ? JSON.parse(savedProgress) : createEmptyProgress();
-  });
+  const [progress, setProgress] = useState<UserProgress>(createEmptyProgress());
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Save progress to localStorage whenever it changes
+  // Load progress data on component mount
   useEffect(() => {
-    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
-  }, [progress]);
+    async function loadProgressData() {
+      setIsLoading(true);
+      try {
+        // Try to load from our storage adapter
+        const storedProgress = await db.get(PROGRESS_STORAGE_KEY);
+        
+        if (storedProgress) {
+          setProgress(typeof storedProgress === 'string' 
+            ? JSON.parse(storedProgress) 
+            : storedProgress);
+        } else {
+          // Check localStorage as fallback
+          const localProgress = localStorage.getItem(PROGRESS_STORAGE_KEY);
+          if (localProgress) {
+            const parsedProgress = JSON.parse(localProgress);
+            setProgress(parsedProgress);
+            // Save to our storage adapter for future use
+            await db.set(PROGRESS_STORAGE_KEY, localProgress);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading progress data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    loadProgressData();
+  }, []);
+  
+  // Save progress to storage whenever it changes
+  useEffect(() => {
+    if (isLoading) return; // Skip saving during the initial load
+    
+    // Save to both our storage adapter and localStorage for redundancy
+    const progressJSON = JSON.stringify(progress);
+    
+    // Save to our database adapter
+    db.set(PROGRESS_STORAGE_KEY, progressJSON).catch(error => {
+      console.error("Error saving progress to database:", error);
+    });
+    
+    // Also save to localStorage as backup
+    localStorage.setItem(PROGRESS_STORAGE_KEY, progressJSON);
+  }, [progress, isLoading]);
   
   /**
    * Update a specific tool's progress

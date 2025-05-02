@@ -1,0 +1,173 @@
+Replit Agent prompt — Upgrade Step 6 with full Delivery Approach Tool
+Context
+
+Block 3 currently shows a basic PraxisSelector.
+
+Replace that with the richer “Delivery Approach Tool” (2 questions → 6 zones → methods + tools → downloadable / copyable summary).
+
+Persist the choice in plan.goodPractice.zone and plan.goodPractice.recommended so the rest of the checklist continues to work.
+
+1 Create the data dictionary
+Add data/deliveryZones.json
+
+jsonc
+Copy
+Edit
+[
+  {
+    "zone": "Zone A",
+    "alias": "Simple Projects",
+    "summary": "Low-uncertainty, small scope. Classic plan-then-do.",
+    "methods": ["Waterfall", "Critical Path Scheduling"],
+    "tools":   ["Gantt Charts", "PERT", "Basic Risk Log"]
+  },
+  {
+    "zone": "Zone B",
+    "alias": "Hybrid / Adaptive",
+    "summary": "Medium scope, low–medium uncertainty. Mix agile with stage-gates.",
+    "methods": ["Hybrid PM", "Iterative Planning"],
+    "tools":   ["Rolling Wave", "Scrum-of-Scrums", "Burndown Chart"]
+  },
+  {
+    "zone": "Zone C",
+    "alias": "Agile Projects",
+    "summary": "High uncertainty or larger scope that benefits from agility.",
+    "methods": ["Scrum", "Kanban"],
+    "tools":   ["User Stories", "Kanban Board", "Retrospectives"]
+  },
+  {
+    "zone": "Zone D",
+    "alias": "Complex Adaptive",
+    "summary": "Large scope + high uncertainty. Probe–sense–respond.",
+    "methods": ["SAFe", "Systems Thinking"],
+    "tools":   ["Causal Loop Diagrams", "Program Increment Planning"]
+  },
+  {
+    "zone": "Zone E",
+    "alias": "Systems-Led Portfolio",
+    "summary": "Enterprise-scale, very high complexity. Portfolio & systems lenses.",
+    "methods": ["Portfolio Kanban", "Benefits Mapping"],
+    "tools":   ["Strategy Map", "Monte-Carlo Portfolio Simulation"]
+  },
+  {
+    "zone": "Zone F",
+    "alias": "Fast & Focused",
+    "summary": "Tiny scope but high uncertainty (e.g. innovation spike).",
+    "methods": ["Design Sprint", "Lean Startup"],
+    "tools":   ["4-day Sprint Canvas", "A/B Testing"]
+  }
+]
+(Zone F covers the “small-but-chaotic” corner of the matrix.)
+
+2 Drop-in component set
+Add components:
+
+components/DeliveryApproachTool.jsx
+
+components/ZoneResultCard.jsx
+
+DeliveryApproachTool renders:
+
+Question 1 radio group (Small | Medium | Large)
+
+Question 2 radio group (Low | Medium | High)
+
+Praxis quadrant SVG (300 × 300) – highlight chosen cell
+
+ZoneResultCard (after both answers picked)
+
+zone name, 2-line summary, bullet lists of methods and tools
+
+Copy summary button – copies plain text to clipboard
+
+Download PDF – jsPDF with brand styling (#008080 headings)
+
+“Add to my plan & continue” button → stores result and closes tool section.
+
+ZoneResultCard pulls its content from deliveryZones.json.
+
+3 Mapping logic
+Inside DeliveryApproachTool, map Q1 × Q2 → zone key:
+
+Scope \ Uncertainty	Low	Medium	High
+Small	A	B	F
+Medium	B	C	D
+Large	C	D	E
+
+4 Persist to plan
+js
+Copy
+Edit
+// plan.stages (unchanged) …
+plan.goodPractice.deliveryApproach = {
+  scope: 'Small'|'Medium'|'Large',
+  uncertainty: 'Low'|'Medium'|'High',
+  zone: 'Zone C',
+  methods: [...],
+  tools: [...]
+};
+Helper setDeliveryApproach(data) in utils/planHelpers.js writes and auto-saves.
+
+5 Swap into Block 3
+Edit pages/Block3Complete.jsx
+
+diff
+Copy
+Edit
+-import PraxisSelector from '../components/PraxisSelector';
++import DeliveryApproachTool from '../components/DeliveryApproachTool';
+…
+-<PraxisSelector … />
++<DeliveryApproachTool
++  initial={plan.goodPractice.deliveryApproach || null}
+/>
+Remove PraxisSelector.jsx from imports.
+
+6 Styling
+Add styles/approach.css
+
+css
+Copy
+Edit
+.da-card { background:#fff5e7;padding:1.5rem;border:2px solid #008080;border-radius:8px;margin-top:1rem; }
+.da-card h3 { color:#008080;margin:0 0 .5rem 0; }
+.da-grid svg { max-width:300px;margin:auto; }
+Re-use .btn-primary / .btn-secondary.
+
+7 Quick-Start neutral
+Quick-Start flow leaves deliveryApproach null so the checklist still works; the checklist page should hide “Good Practice → Delivery Approach” section if none.
+
+8 Testing checklist
+Open Block 3: Q1/Q2 default unselected, card hidden.
+
+Select Small + High → Zone F card shows.
+
+Click Copy summary → paste into notepad = correct text.
+
+Download PDF → header “Delivery Approach – Zone F”.
+
+Click Add to my plan → plan.goodPractice.deliveryApproach populated.
+
+Refresh page → tool shows saved choices.
+
+Checklist page now lists recommended methods & tools under “Good Practice Tasks”.
+
+Copy/Download still work on mobile viewport.
+
+9 Deliverables
+data/deliveryZones.json
+
+components/DeliveryApproachTool.jsx
+
+components/ZoneResultCard.jsx
+
+styles/approach.css
+
+Updated utils/planHelpers.js (setDeliveryApproach)
+
+Updated pages/Block3Complete.jsx (replace old selector)
+
+Remove unused PraxisSelector.jsx import.
+
+Return list of files changed and one-sentence summary.
+

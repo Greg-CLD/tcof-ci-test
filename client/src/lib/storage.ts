@@ -60,24 +60,63 @@ export interface TCOFJourneyData {
   lastUpdated: number;
 }
 
+// Import our browser-compatible storage adapter
+import { storage as db } from './browserStorage';
+
 // Storage helper functions
-export function saveToLocalStorage<T>(key: string, data: T): boolean {
+export async function saveToLocalStorage<T>(key: string, data: T): Promise<boolean> {
   try {
+    // Save to our storage adapter (which may be Replit DB or localStorage)
+    await db.set(key, JSON.stringify(data));
+    
+    // Always save a backup copy to localStorage directly
+    // This provides a fallback if the adapter fails
     localStorage.setItem(key, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error("Error saving to localStorage:", error);
-    return false;
+    console.error("Error saving to storage:", error);
+    
+    // Fallback to localStorage directly
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      return true;
+    } catch (localError) {
+      console.error("Error saving to localStorage:", localError);
+      return false;
+    }
   }
 }
 
-export function loadFromLocalStorage<T>(key: string): T | null {
+export async function loadFromLocalStorage<T>(key: string): Promise<T | null> {
   try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error("Error loading from localStorage:", error);
+    // First try to get from our storage adapter
+    const storedData = await db.get(key);
+    
+    if (storedData) {
+      return typeof storedData === 'string' ? JSON.parse(storedData) : storedData;
+    }
+    
+    // If not found in adapter, check localStorage directly
+    const localData = localStorage.getItem(key);
+    
+    if (localData) {
+      // Found in localStorage, migrate to our storage adapter for next time
+      await db.set(key, localData);
+      return JSON.parse(localData);
+    }
+    
     return null;
+  } catch (error) {
+    console.error("Error loading from storage:", error);
+    
+    // Fallback to localStorage directly
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (localError) {
+      console.error("Error loading from localStorage:", localError);
+      return null;
+    }
   }
 }
 
