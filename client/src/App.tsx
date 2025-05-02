@@ -23,6 +23,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import Dashboard from "@/pages/Dashboard";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { ProgressProvider } from "@/hooks/use-progress";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { Button } from "@/components/ui/button";
 import GoalMappingTool from "@/components/GoalMappingTool";
@@ -220,8 +221,10 @@ function App() {
         <AuthProtectionProvider>
           {/* Only enable accessibility audits in development */}
           <A11yAuditProvider disabled={!isDev}>
-            <Router />
-            <Toaster />
+            <ProgressProvider>
+              <Router />
+              <Toaster />
+            </ProgressProvider>
           </A11yAuditProvider>
         </AuthProtectionProvider>
       </AuthProvider>

@@ -6,6 +6,9 @@ import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { useToast } from "@/hooks/use-toast";
 import { Compass, ClipboardCheck, FileDown, Lock, ArrowRight, MapPin, Lightbulb } from "lucide-react";
+import ProgressTracker from "@/components/progress/ProgressTracker";
+import NextSteps from "@/components/progress/NextSteps";
+import { useProgress } from "@/hooks/use-progress";
 import { 
   STORAGE_KEYS, 
   loadFromLocalStorage, 
@@ -18,6 +21,7 @@ import vitruvianMan from "../assets/vitruvian-man.png";
 
 export default function Home() {
   const { toast } = useToast();
+  const { progress } = useProgress();
   
   // Handle generating a complete Part B Plan PDF with all tool data
   const handleGenerateCompletePDF = () => {
@@ -172,11 +176,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PDF Export Feature */}
+      {/* Progress Tracking Section */}
       <section className="py-12 bg-white">
         <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-6 text-tcof-dark">
+            Your Progress
+          </h2>
+          <div className="h-1 w-20 bg-tcof-teal mx-auto mb-12"></div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Progress Tracker */}
+            <ProgressTracker showDetailed={true} className="h-full" />
+            
+            {/* Next Steps */}
+            <NextSteps className="h-full" />
+          </div>
+        </div>
+      </section>
+      
+      {/* PDF Export Feature */}
+      <section className="py-12 bg-tcof-light">
+        <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <Card className="border border-tcof-teal/30 bg-tcof-light/50 shadow-md">
+            <Card className="border border-tcof-teal/30 bg-white shadow-md">
               <CardContent className="p-6 text-center">
                 <div className="flex items-center justify-center">
                   <FileDown className="h-6 w-6 text-tcof-teal mr-2" />

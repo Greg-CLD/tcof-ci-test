@@ -1,17 +1,16 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { 
-  getProgress, 
-  saveProgress, 
-  updateToolProgress,
-  markToolStarted,
-  markToolCompleted,
-  resetToolProgress,
-  resetAllProgress,
-  getNextRecommendedTool,
-  UserProgress,
-  ToolType,
-  ToolProgress
+  ToolType, 
+  UserProgress, 
+  ToolProgress, 
+  createEmptyProgress, 
+  calculateOverallProgress,
+  getToolRoute,
+  getNextRecommendedTool
 } from '@/lib/progress-tracking';
+
+// Local storage key for persisting progress data
+const PROGRESS_STORAGE_KEY = 'tcof-user-progress';
 
 interface ProgressContextType {
   progress: UserProgress;
@@ -25,62 +24,134 @@ interface ProgressContextType {
   isToolCompleted: (toolType: ToolType) => boolean;
 }
 
+/**
+ * Context for progress tracking
+ */
 const ProgressContext = createContext<ProgressContextType | null>(null);
 
 /**
  * Provider component for user progress tracking
  */
 export function ProgressProvider({ children }: { children: ReactNode }) {
-  const [progress, setProgress] = useState<UserProgress>(() => getProgress());
-  
-  // Update progress on mount
+  const [progress, setProgress] = useState<UserProgress>(() => {
+    // Try to load from localStorage on initial mount
+    try {
+      const savedProgress = localStorage.getItem(PROGRESS_STORAGE_KEY);
+      return savedProgress ? JSON.parse(savedProgress) : createEmptyProgress();
+    } catch (error) {
+      console.error('Error loading progress from localStorage:', error);
+      return createEmptyProgress();
+    }
+  });
+
+  // Save to localStorage whenever progress changes
   useEffect(() => {
-    setProgress(getProgress());
-  }, []);
-  
-  // Update tool progress
+    try {
+      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+    } catch (error) {
+      console.error('Error saving progress to localStorage:', error);
+    }
+  }, [progress]);
+
+  /**
+   * Update a specific tool's progress
+   */
   const updateTool = (toolType: ToolType, status: Partial<ToolProgress>) => {
-    const updatedProgress = updateToolProgress(toolType, status);
-    setProgress(updatedProgress);
+    const now = new Date().toISOString();
+    
+    setProgress(prev => {
+      // Create updated tool progress
+      const updatedToolProgress = {
+        ...prev.tools[toolType],
+        ...status,
+        lastUpdated: now
+      };
+      
+      // Create updated tools object
+      const updatedTools = {
+        ...prev.tools,
+        [toolType]: updatedToolProgress
+      };
+      
+      // Calculate new overall progress
+      const overallProgress = calculateOverallProgress(updatedTools);
+      
+      return {
+        overallProgress,
+        tools: updatedTools,
+        lastUpdated: now
+      };
+    });
   };
   
-  // Mark a tool as started
+  /**
+   * Mark a tool as started
+   */
   const startTool = (toolType: ToolType) => {
-    const updatedProgress = markToolStarted(toolType);
-    setProgress(updatedProgress);
+    if (!progress.tools[toolType].started) {
+      updateTool(toolType, { 
+        started: true,
+        progress: Math.max(progress.tools[toolType].progress, 10) // Set to at least 10% when started
+      });
+    }
   };
   
-  // Mark a tool as completed
+  /**
+   * Mark a tool as completed
+   */
   const completeTool = (toolType: ToolType) => {
-    const updatedProgress = markToolCompleted(toolType);
-    setProgress(updatedProgress);
+    updateTool(toolType, { 
+      started: true,
+      completed: true,
+      progress: 100 
+    });
   };
   
-  // Reset a tool's progress
+  /**
+   * Reset progress for a specific tool
+   */
   const resetTool = (toolType: ToolType) => {
-    const updatedProgress = resetToolProgress(toolType);
-    setProgress(updatedProgress);
+    const now = new Date().toISOString();
+    updateTool(toolType, {
+      started: false,
+      completed: false,
+      progress: 0,
+      lastUpdated: now
+    });
   };
   
-  // Reset all progress
+  /**
+   * Reset all progress
+   */
   const resetAll = () => {
-    const updatedProgress = resetAllProgress();
-    setProgress(updatedProgress);
+    setProgress(createEmptyProgress());
   };
   
-  // Get the next recommended tool
+  /**
+   * Get the next recommended tool
+   */
   const getNextTool = () => {
-    return getNextRecommendedTool();
+    const nextToolType = getNextRecommendedTool(progress);
+    if (!nextToolType) return null;
+    
+    return {
+      toolType: nextToolType,
+      route: getToolRoute(nextToolType)
+    };
   };
   
-  // Check if a tool is started
+  /**
+   * Check if a tool has been started
+   */
   const isToolStarted = (toolType: ToolType): boolean => {
-    return progress.tools[toolType]?.started || false;
+    return progress.tools[toolType].started;
   };
   
-  // Check if a tool is completed
+  /**
+   * Check if a tool has been completed
+   */
   const isToolCompleted = (toolType: ToolType): boolean => {
-    return progress.tools[toolType]?.completed || false;
+    return progress.tools[toolType].completed;
   };
   
   return (
