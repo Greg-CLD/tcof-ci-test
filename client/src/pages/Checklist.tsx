@@ -1,158 +1,242 @@
-import React, { useEffect, useState } from 'react';
-import { loadPlan, PlanRecord, StageData, Stage } from '@/lib/plan-db';
-import { getLatestPlanId } from '@/lib/planHelpers';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
+import { Loader2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Check, FileDown, RefreshCw } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import SiteHeader from '@/components/SiteHeader';
+import SiteFooter from '@/components/SiteFooter';
+import SummaryBar from '@/components/checklist/SummaryBar';
+import StageAccordion from '@/components/checklist/StageAccordion';
+import { useToast } from '@/hooks/use-toast';
+import { PlanRecord, loadPlan } from '@/lib/plan-db';
+import { exportCSV, exportPDF, emailChecklist } from '@/lib/exportUtils';
+import styles from '@/lib/styles/checklist.module.css';
 
 export default function Checklist() {
   const [plan, setPlan] = useState<PlanRecord | null>(null);
-  const [activeStage, setActiveStage] = useState<Stage>('Identification');
+  const [isLoading, setIsLoading] = useState(true);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   
+  // Load the plan data
   useEffect(() => {
-    const planId = getLatestPlanId();
-    if (planId) {
-      const loadedPlan = loadPlan(planId);
-      if (loadedPlan) {
+    const fetchPlan = async () => {
+      try {
+        const loadedPlan = await loadPlan();
+        if (!loadedPlan) {
+          // No plan found, redirect to make-a-plan
+          setLocation('/make-a-plan');
+          return;
+        }
+        
         setPlan(loadedPlan);
+      } catch (error) {
+        console.error('Error loading plan:', error);
+        toast({
+          title: 'Error loading plan',
+          description: 'There was a problem loading your plan. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, []);
+    };
+    
+    fetchPlan();
+  }, [setLocation, toast]);
   
-  const handleExportPDF = () => {
-    // Placeholder for PDF export function
-    console.log('Exporting plan as PDF...');
+  // Handle plan updates from child components
+  const handlePlanUpdate = (updatedPlan: PlanRecord) => {
+    setPlan(updatedPlan);
   };
   
-  const handleRefresh = () => {
-    const planId = getLatestPlanId();
-    if (planId) {
-      const loadedPlan = loadPlan(planId);
-      if (loadedPlan) {
-        setPlan(loadedPlan);
-      }
+  // Handle CSV export
+  const handleExportCSV = () => {
+    if (!plan) return;
+    
+    try {
+      exportCSV(plan);
+      toast({
+        title: 'CSV export successful',
+        description: 'Your checklist has been exported to CSV format.',
+      });
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      toast({
+        title: 'Export failed',
+        description: 'There was a problem exporting your checklist.',
+        variant: 'destructive',
+      });
     }
   };
   
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  // Handle PDF export
+  const handleExportPDF = async () => {
+    try {
+      await exportPDF('checklist-content');
+      toast({
+        title: 'PDF export successful',
+        description: 'Your checklist has been exported to PDF format.',
+      });
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast({
+        title: 'Export failed',
+        description: 'There was a problem exporting your checklist.',
+        variant: 'destructive',
+      });
     }
   };
   
+  // Handle email
+  const handleEmailChecklist = () => {
+    if (!plan) return;
+    
+    try {
+      emailChecklist(plan);
+    } catch (error) {
+      console.error('Error opening email client:', error);
+      toast({
+        title: 'Email failed',
+        description: 'There was a problem opening your email client.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  // Check if all tasks are completed
+  const allTasksCompleted = () => {
+    if (!plan) return false;
+    
+    let totalTasks = 0;
+    let completedTasks = 0;
+    
+    Object.values(plan.stages).forEach(stage => {
+      // Count regular tasks
+      (stage.tasks || []).forEach(task => {
+        totalTasks++;
+        if (task.completed) completedTasks++;
+      });
+      
+      // Count good practice tasks
+      (stage.goodPractice?.tasks || []).forEach(task => {
+        totalTasks++;
+        if (task.completed) completedTasks++;
+      });
+    });
+    
+    return totalTasks > 0 && completedTasks === totalTasks;
+  };
+  
+  // Render loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-tcof-light">
+        <SiteHeader />
+        <main className="flex-grow container mx-auto px-4 py-12 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 mx-auto animate-spin text-tcof-teal" />
+            <h2 className="mt-4 text-xl font-semibold text-tcof-dark">Loading your checklist...</h2>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+  
+  // Render no plan state
   if (!plan) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold text-tcof-blue mb-4">No Plan Found</h1>
-        <p className="mb-8">
-          You don't have any active plans. Start by creating one from the "Make a Plan" section.
-        </p>
-        <Button onClick={() => window.location.href = '/make-a-plan'}>
-          Create a Plan
-        </Button>
+      <div className="min-h-screen flex flex-col bg-tcof-light">
+        <SiteHeader />
+        <main className="flex-grow container mx-auto px-4 py-12 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-tcof-dark mb-4">No Plan Found</h2>
+            <p className="text-gray-600 mb-6">You need to create a plan first before viewing your checklist.</p>
+            <Button
+              onClick={() => setLocation('/make-a-plan')}
+              className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+            >
+              Create a Plan
+            </Button>
+          </div>
+        </main>
+        <SiteFooter />
       </div>
     );
   }
   
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-tcof-blue">Your Checklist</h1>
-        <div className="flex gap-2">
-          <Button onClick={handleRefresh} variant="outline" className="flex items-center gap-1">
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-          <Button onClick={handleExportPDF} variant="outline" className="flex items-center gap-1">
-            <FileDown className="h-4 w-4" />
-            Export PDF
-          </Button>
+    <div className="min-h-screen flex flex-col bg-tcof-light">
+      <SiteHeader />
+      <main className="flex-grow container mx-auto px-4 py-12">
+        <div id="checklist-content" className="max-w-4xl mx-auto">
+          <div className={styles.pageTitle}>
+            <h1 className={styles.pageTitleText}>
+              {allTasksCompleted() && '🎉 '} Your Project Checklist
+            </h1>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="ml-2 h-5 w-5 text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Tick items as you complete them. Changes save automatically.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          
+          <SummaryBar plan={plan} />
+          
+          {/* Stage accordions */}
+          <StageAccordion
+            stage="Identification"
+            plan={plan}
+            onPlanUpdate={handlePlanUpdate}
+          />
+          <StageAccordion
+            stage="Definition"
+            plan={plan}
+            onPlanUpdate={handlePlanUpdate}
+          />
+          <StageAccordion
+            stage="Delivery"
+            plan={plan}
+            onPlanUpdate={handlePlanUpdate}
+          />
+          <StageAccordion
+            stage="Closure"
+            plan={plan}
+            onPlanUpdate={handlePlanUpdate}
+          />
+          
+          {/* Export options */}
+          <div className={styles.exportBar}>
+            <Button
+              variant="outline"
+              onClick={handleExportCSV}
+              className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
+            >
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportPDF}
+              className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
+            >
+              Export PDF
+            </Button>
+            <Button
+              onClick={handleEmailChecklist}
+              className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+            >
+              Email via Mail App
+            </Button>
+          </div>
         </div>
-      </div>
-      
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <div className="flex justify-between text-sm text-gray-500">
-          <span>Plan ID: {plan.id.substring(0, 8)}...</span>
-          <span>Created: {new Date(plan.created).toLocaleDateString()}</span>
-          {plan.lastUpdated && <span>Updated: {new Date(plan.lastUpdated).toLocaleDateString()}</span>}
-        </div>
-      </div>
-      
-      <Tabs defaultValue="Identification" onValueChange={(value) => setActiveStage(value as Stage)}>
-        <TabsList className="grid grid-cols-4 mb-6">
-          <TabsTrigger value="Identification">Identification</TabsTrigger>
-          <TabsTrigger value="Definition">Definition</TabsTrigger>
-          <TabsTrigger value="Delivery">Delivery</TabsTrigger>
-          <TabsTrigger value="Closure">Closure</TabsTrigger>
-        </TabsList>
-        
-        {Object.entries(plan.stages).map(([stage, data]) => (
-          <TabsContent key={stage} value={stage} className="space-y-6">
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Heuristics</h2>
-              <div className="space-y-3">
-                {data.heuristics.map((heuristic) => (
-                  <div key={heuristic.id} className="flex items-start gap-2 p-3 border rounded-lg">
-                    <Checkbox id={heuristic.id} checked={heuristic.completed} />
-                    <label htmlFor={heuristic.id} className="text-sm text-gray-700">
-                      {heuristic.text}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </section>
-            
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Impact Factors</h2>
-              <div className="space-y-3">
-                {data.factors.map((factor) => (
-                  <div key={factor.id} className="flex items-start justify-between gap-2 p-3 border rounded-lg">
-                    <span className="text-sm text-gray-700">{factor.text}</span>
-                    <Badge className={getImpactColor(factor.impact)}>
-                      {factor.impact}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </section>
-            
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Practice Tasks</h2>
-              <div className="space-y-3">
-                {data.practiceTasks.map((task) => (
-                  <div key={task.id} className="flex items-start gap-2 p-3 border rounded-lg">
-                    <Checkbox id={task.id} checked={task.completed} />
-                    <div className="flex-1">
-                      <label htmlFor={task.id} className="text-sm text-gray-700">
-                        {task.text}
-                      </label>
-                      {task.dueDate && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Due: {new Date(task.dueDate).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-                    {task.assignee && (
-                      <Badge variant="outline" className="text-xs">
-                        {task.assignee}
-                      </Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          </TabsContent>
-        ))}
-      </Tabs>
+      </main>
+      <SiteFooter />
     </div>
   );
 }

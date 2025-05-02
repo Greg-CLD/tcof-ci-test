@@ -1,0 +1,242 @@
+/* Checklist page styles */
+
+.pageTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.pageTitleText {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #16414E;
+}
+
+.tooltip {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.summaryBar {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.summaryTotal {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #16414E;
+}
+
+.summaryCount {
+  font-weight: 700;
+  color: #008080;
+}
+
+.stageCounters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stagePill {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #f0fafa;
+  color: #008080;
+  border: 1px solid #e5e7eb;
+}
+
+.progressBarContainer {
+  height: 0.5rem;
+  background-color: #f3f4f6;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background-color: #008080;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.accordionWrapper {
+  margin-bottom: 1rem;
+}
+
+.accordionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background-color: #008080;
+  color: white;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.accordionHeaderCollapsed {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.accordionCaret {
+  transition: transform 0.2s ease;
+}
+
+.accordionCaretOpen {
+  transform: rotate(90deg);
+}
+
+.accordionContent {
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  border-bottom-left-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.taskSection {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.taskSectionLast {
+  border-bottom: none;
+}
+
+.taskSectionHeader {
+  font-weight: 600;
+  color: #16414E;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.taskList {
+  margin-bottom: 0.5rem;
+}
+
+.emptyList {
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+  padding: 0.75rem;
+}
+
+.taskRow {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.taskRowEven {
+  background-color: #f7f9fa;
+}
+
+.taskRowOdd {
+  background-color: white;
+}
+
+.taskRowCompleted {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.taskCheckbox {
+  margin-right: 0.75rem;
+}
+
+.taskText {
+  flex-grow: 1;
+  font-size: 0.875rem;
+}
+
+.taskBadge {
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.taskBadgeHeuristic {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.taskBadgeFactor {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.taskBadgeGp {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.deleteIcon {
+  color: #6b7280;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.deleteIcon:hover {
+  opacity: 1;
+  color: #ef4444;
+}
+
+.deleteIconDisabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.deleteIconDisabled:hover {
+  color: #6b7280;
+}
+
+.exportBar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  padding: 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+@media (max-width: 640px) {
+  .exportBar {
+    flex-direction: column;
+  }
+  
+  .exportBar button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,150 @@
+Replit Agent prompt #7 – Unified persistence layer & “Continue” logic
+Context
+• Every page currently calls loadPlan(planId) and savePlan(planId, data) from utils/planHelpers.js.
+• Those helpers write straight to a simple in-memory object (or Replit DB in dev).
+• We now need a thin storage adapter that uses localStorage in the browser but can be swapped for Replit DB later without changing any consumer code.
+• We also need to surface a Continue Saved Plan card on the /make-a-plan landing page only when at least one saved plan exists.
+
+1 Create storage adapter
+Add file utils/storageAdapter.js
+
+js
+Copy
+Edit
+/* utils/storageAdapter.js
+ *
+ * drop-in storage layer. Default = browser localStorage.
+ * later we can switch to Replit DB by changing only this file.
+ */
+
+const KEY_PREFIX = 'tcof_plan_';
+
+function persist(id, plan) {
+  localStorage.setItem(KEY_PREFIX + id, JSON.stringify(plan));
+}
+
+function fetch(id) {
+  const raw = localStorage.getItem(KEY_PREFIX + id);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function remove(id) {
+  localStorage.removeItem(KEY_PREFIX + id);
+}
+
+function listIds() {
+  return Object.keys(localStorage)
+    .filter(k => k.startsWith(KEY_PREFIX))
+    .map(k => k.replace(KEY_PREFIX, ''));
+}
+
+/* shim that looks like an async ReplitDB call */
+export const storage = {
+  save:   (id, data)      => Promise.resolve(persist(id, data)),
+  load:   id              => Promise.resolve(fetch(id)),
+  delete: id              => Promise.resolve(remove(id)),
+  list:   ()              => Promise.resolve(listIds())
+};
+2 Refactor planHelpers to use adapter
+Edit utils/planHelpers.js
+
+diff
+Copy
+Edit
+-import { someOldSave, someOldLoad } from './oldStore';
++import { storage } from './storageAdapter';
+
+ export async function savePlan(id, data){
+-  someOldSave(id, data);
++  await storage.save(id, data);
+ }
+
+ export async function loadPlan(id){
+-  return someOldLoad(id);
++  return await storage.load(id);
+ }
+ 
+ export async function planExists(id){
+-  return !!someOldLoad(id);
++  return (await storage.load(id)) !== null;
+ }
+ 
+ export async function listExistingPlans(){
+-  return []; // placeholder
++  return await storage.list();
+ }
+3 Expose “Continue Saved Plan” dynamically
+Edit pages/MakeAPlanLanding.jsx
+
+import { listExistingPlans } from '../utils/planHelpers';
+
+On component mount:
+
+js
+Copy
+Edit
+const [hasPlan, setHasPlan] = useState(false);
+
+useEffect(()=>{
+  listExistingPlans().then(ids => setHasPlan(ids.length > 0));
+},[]);
+Render logic:
+
+jsx
+Copy
+Edit
+<Card
+  title="Continue Saved Plan"
+  description="Pick up where you left off."
+  disabled={!hasPlan}
+  onClick={()=> navigate(`/checklist`)}
+/>
+If disabled, card is greyed out and not focusable.
+
+4 Auto-generate planId if none exists
+In quickStartPlan() and in Block 1 page mount:
+
+js
+Copy
+Edit
+if(!currentPlanId){
+  currentPlanId = crypto.randomUUID();
+  createEmptyPlan(currentPlanId);   // already defines structure
+}
+Keep currentPlanId in localStorage under key tcof_lastPlan.
+
+5 Helper: “Delete all plans” (for dev QA)
+Add to storageAdapter
+
+js
+Copy
+Edit
+function wipeAll(){ Object.keys(localStorage)
+  .filter(k=>k.startsWith(KEY_PREFIX)).forEach(k=>localStorage.removeItem(k)); }
+export const storage = { … , wipeAll };
+Not wired to UI, but handy in browser console.
+
+6 Testing checklist
+Start a plan ➜ refresh ➜ data restores.
+
+Landing page now shows Continue card enabled.
+
+Clicking Continue opens /checklist for latest plan id.
+
+Create second plan ➜ both stored; listExistingPlans() returns 2 ids.
+
+Manual storage.wipeAll() hides Continue card.
+
+No console errors in all pages; localStorage keys appear with prefix tcof_plan_.
+
+7 Deliverables
+utils/storageAdapter.js (new)
+
+updates in utils/planHelpers.js
+
+updates in pages/MakeAPlanLanding.jsx
+
+minor tweaks where currentPlanId is created or referenced
+
+Return a short file-change summary after commit.
+
