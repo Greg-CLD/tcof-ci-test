@@ -40,33 +40,46 @@ export default function Block1Discover() {
   
   // Load the plan when component mounts
   useEffect(() => {
-    const id = getLatestPlanId();
-    if (!id) {
-      // No plan found, redirect to /make-a-plan
-      setLocation('/make-a-plan');
-      return;
+    async function loadPlanData() {
+      try {
+        const id = getLatestPlanId();
+        if (!id) {
+          // No plan found, redirect to /make-a-plan
+          setLocation('/make-a-plan');
+          return;
+        }
+        
+        setPlanId(id);
+        const loadedPlan = await loadPlan(id);
+        
+        if (!loadedPlan) {
+          setLocation('/make-a-plan');
+          return;
+        }
+        
+        setPlan(loadedPlan);
+        
+        // Extract success factor ratings and personal heuristics
+        if (loadedPlan.stages.Identification.successFactorRatings) {
+          setSuccessFactorRatings(loadedPlan.stages.Identification.successFactorRatings);
+        }
+        
+        if (loadedPlan.stages.Identification.personalHeuristics) {
+          setPersonalHeuristics(loadedPlan.stages.Identification.personalHeuristics);
+        }
+      } catch (error) {
+        console.error('Error loading plan:', error);
+        toast({
+          title: "Error Loading Plan",
+          description: "There was a problem loading your plan. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
     
-    setPlanId(id);
-    const loadedPlan = loadPlan(id);
-    
-    if (!loadedPlan) {
-      setLocation('/make-a-plan');
-      return;
-    }
-    
-    setPlan(loadedPlan);
-    
-    // Extract success factor ratings and personal heuristics
-    if (loadedPlan.stages.Identification.successFactorRatings) {
-      setSuccessFactorRatings(loadedPlan.stages.Identification.successFactorRatings);
-    }
-    
-    if (loadedPlan.stages.Identification.personalHeuristics) {
-      setPersonalHeuristics(loadedPlan.stages.Identification.personalHeuristics);
-    }
-    
-    setIsLoading(false);
+    loadPlanData();
   }, []);
   
   // Create a debounced save function

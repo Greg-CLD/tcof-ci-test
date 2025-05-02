@@ -24,15 +24,27 @@ export default function Home() {
   const { progress } = useProgress();
   
   // Handle generating a complete Part B Plan PDF with all tool data
-  const handleGenerateCompletePDF = () => {
+  const handleGenerateCompletePDF = async () => {
     try {
-      // Load data from localStorage for each tool
-      const goalMapData = loadFromLocalStorage<GoalMapData>(STORAGE_KEYS.GOAL_MAP);
-      const cynefinSelection = loadFromLocalStorage<CynefinSelection>(STORAGE_KEYS.CYNEFIN_SELECTION);
-      const tcofJourneyData = loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY);
+      // Show loading toast
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we create your PDF..."
+      });
+      
+      // Load data asynchronously for each tool
+      const [goalMapData, cynefinSelection, tcofJourneyData] = await Promise.all([
+        loadFromLocalStorage<GoalMapData>(STORAGE_KEYS.GOAL_MAP),
+        loadFromLocalStorage<CynefinSelection>(STORAGE_KEYS.CYNEFIN_SELECTION),
+        loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY)
+      ]);
       
       // Generate the complete PDF with all tool data
-      generateCompletePDF(goalMapData, cynefinSelection, tcofJourneyData);
+      generateCompletePDF(
+        goalMapData || initialGoalMapData, 
+        cynefinSelection || initialCynefinSelection,
+        tcofJourneyData || initialTCOFJourneyData
+      );
       
       toast({
         title: "Complete PDF Generated",
