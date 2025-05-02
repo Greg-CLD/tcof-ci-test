@@ -16,7 +16,8 @@ import { elementToPDF } from "@/lib/pdf-utils";
 import { Link } from "wouter";
 import { 
   FileDown, ArrowLeft, Target as TargetIcon, Compass as CompassIcon, 
-  GitBranch as GitBranchIcon, File as FileIcon, Save, Download, Trash2
+  GitBranch as GitBranchIcon, File as FileIcon, Save, Download, Trash2,
+  History
 } from "lucide-react";
 
 // Success Map Level types

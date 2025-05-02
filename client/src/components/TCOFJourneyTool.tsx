@@ -33,25 +33,19 @@ const decisionTree: Record<string, Question> = {
   },
   "q2": {
     id: "q2",
-    text: "Are you still exploring different ideas or approaches?",
-    yesLeadsTo: "identification",
-    noLeadsTo: "q3"
+    text: "Have you picked the option you're going to move forward with?",
+    yesLeadsTo: "q3",
+    noLeadsTo: "identification"
   },
   "q3": {
     id: "q3",
-    text: "Have you picked the option you're going to move forward with?",
-    yesLeadsTo: "q4",
+    text: "Have you tested your idea in a small way, and do you have a delivery plan (with funding) ready?",
+    yesLeadsTo: "delivery",
     noLeadsTo: "definition"
   },
   "q4": {
     id: "q4",
-    text: "Have you tested your idea in a small way, and do you have a delivery plan (with funding) ready?",
-    yesLeadsTo: "q5",
-    noLeadsTo: "definition"
-  },
-  "q5": {
-    id: "q5",
-    text: "Has your product or solution already been delivered and adopted by users?",
+    text: "Delivered and adopted?",
     yesLeadsTo: "closure",
     noLeadsTo: "delivery"
   }
@@ -62,10 +56,9 @@ const questionNumbers: Record<string, number> = {
   "q1": 1,
   "q2": 2,
   "q3": 3,
-  "q4": 4,
-  "q5": 5
+  "q4": 4
 };
-const totalQuestions = Object.keys(questionNumbers).length;
+const totalQuestions = Object.keys(decisionTree).length;
 
 // Phase descriptions
 const phaseDescriptions: Record<ImplementationStage, {
