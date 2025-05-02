@@ -9,6 +9,7 @@ import SummaryBar from '@/components/checklist/SummaryBar';
 import StageAccordion from '@/components/checklist/StageAccordion';
 import { useToast } from '@/hooks/use-toast';
 import { PlanRecord, loadPlan } from '@/lib/plan-db';
+import { getLatestPlanId } from '@/lib/planHelpers';
 import { exportCSV, exportPDF, emailChecklist } from '@/lib/exportUtils';
 import styles from '@/lib/styles/checklist.module.css';
 
@@ -20,29 +21,32 @@ export default function Checklist() {
   
   // Load the plan data
   useEffect(() => {
-    const fetchPlan = async () => {
-      try {
-        const loadedPlan = await loadPlan();
-        if (!loadedPlan) {
-          // No plan found, redirect to make-a-plan
-          setLocation('/make-a-plan');
-          return;
-        }
-        
-        setPlan(loadedPlan);
-      } catch (error) {
-        console.error('Error loading plan:', error);
-        toast({
-          title: 'Error loading plan',
-          description: 'There was a problem loading your plan. Please try again.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
+    try {
+      const id = getLatestPlanId();
+      if (!id) {
+        // No plan found, redirect to make-a-plan
+        setLocation('/make-a-plan');
+        return;
       }
-    };
-    
-    fetchPlan();
+      
+      const loadedPlan = loadPlan(id);
+      if (!loadedPlan) {
+        // Plan ID exists but plan not found
+        setLocation('/make-a-plan');
+        return;
+      }
+      
+      setPlan(loadedPlan);
+    } catch (error) {
+      console.error('Error loading plan:', error);
+      toast({
+        title: 'Error loading plan',
+        description: 'There was a problem loading your plan. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [setLocation, toast]);
   
   // Handle plan updates from child components

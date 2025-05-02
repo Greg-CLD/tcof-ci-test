@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PlanRecord, Stage, TaskItem, GoodPracticeTask } from '@/lib/plan-db';
 import styles from '@/lib/styles/checklist.module.css';
 import { savePlan } from '@/lib/plan-db';
+import { getLatestPlanId } from '@/lib/planHelpers';
 
 interface StageAccordionProps {
   stage: Stage;
