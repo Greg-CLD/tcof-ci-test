@@ -122,6 +122,7 @@ export default function MakeAPlanLanding() {
               <p className="text-gray-700 mb-6 flex-grow">
                 Load the TCOF default set and jump straight to your checklist.
               </p>
+              <p className="text-xs text-gray-500 mb-2">Preset heuristics: 2</p>
               <Button 
                 onClick={handleQuickStart}
                 className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"

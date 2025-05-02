@@ -10,7 +10,7 @@ import GetYourBearings from "@/pages/GetYourBearings";
 import MakeAPlan from "@/pages/MakeAPlan";
 import MakeAPlanLanding from "@/pages/MakeAPlanLanding";
 import MakeAPlanFull from "@/pages/MakeAPlanFull";
-import MakeAPlanAdmin from "@/pages/MakeAPlanAdmin";
+import AdminPresetEditor from "@/pages/AdminPresetEditor";
 import Block1Discover from "@/pages/Block1Discover";
 import Block2Design from "@/pages/Block2Design";
 import Block3Deliver from "@/pages/Block3Deliver";
@@ -81,7 +81,7 @@ function Router() {
       <Route path="/make-a-plan/full/block-2" component={Block2Design} />
       <Route path="/make-a-plan/full/block-3" component={Block3Complete} />
       <Route path="/make-a-plan/full/:blockId" component={MakeAPlanFull} />
-      <Route path="/make-a-plan/admin" component={MakeAPlanAdmin} />
+      <Route path="/make-a-plan/admin" component={AdminPresetEditor} />
       <Route path="/checklist" component={Checklist} />
       
       {/* Dashboard route - protected like other tools */}

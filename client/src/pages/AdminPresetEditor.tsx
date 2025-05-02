@@ -31,15 +31,23 @@ export default function AdminPresetEditor() {
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
 
+  // Default preset heuristics
+  const defaultPresets = [
+    { id: "H1", text: "Start slow to go fast", notes: "" },
+    { id: "H2", text: "Test it small before you scale it big", notes: "" }
+  ];
+
   useEffect(() => {
     // Check if user is already logged in as admin
     const admin = isAdmin();
     setIsLoggedIn(admin);
     
-    // Load preset heuristics from the JSON file
+    // Load preset heuristics
     if (admin) {
       try {
-        setHeuristics([...presetHeuristics]);
+        // In a production environment, this would fetch from an API
+        // For now, we'll use default presets
+        setHeuristics([...defaultPresets]);
       } catch (error) {
         console.error('Error loading preset heuristics:', error);
         toast({
