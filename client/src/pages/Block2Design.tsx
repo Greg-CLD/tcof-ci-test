@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
+import SuccessFactorMapping from '@/components/plan/SuccessFactorMapping';
+import ExcelImport from '@/components/plan/ExcelImport';
+import TaskList from '@/components/plan/TaskList';
+import StageSelector from '@/components/plan/StageSelector';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { Stage, loadPlan, savePlan, createEmptyPlan } from '@/lib/plan-db';
+import { getTcofData } from '@/lib/tcofData';
 
 export default function Block2Design() {
   const [_, setLocation] = useLocation();
+  const [planId, setPlanId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentStage, setCurrentStage] = useState<Stage>('Identification');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Define steps for the progress bar
   const steps: Step[] = [
@@ -14,6 +26,54 @@ export default function Block2Design() {
     { id: 'block-2', label: 'Block 2: Design', completed: false },
     { id: 'block-3', label: 'Block 3: Deliver', completed: false },
   ];
+  
+  // Load or create plan
+  useEffect(() => {
+    // Try to load the active plan ID from localStorage
+    const savedPlanId = localStorage.getItem('activePlanId');
+    
+    if (savedPlanId) {
+      // Check if the plan exists
+      const plan = loadPlan(savedPlanId);
+      if (plan) {
+        setPlanId(savedPlanId);
+        setIsLoading(false);
+        return;
+      }
+    }
+    
+    // Create a new plan if none exists
+    const newPlanId = createEmptyPlan();
+    setPlanId(newPlanId);
+    localStorage.setItem('activePlanId', newPlanId);
+    setIsLoading(false);
+  }, []);
+  
+  // Get plan data for the current stage
+  const planData = planId ? loadPlan(planId) : null;
+  const stageData = planData?.stages[currentStage];
+  
+  // Get personal heuristics from Block 1
+  const personalHeuristics = stageData?.personalHeuristics || [];
+  
+  // Get mappings, tasks, and policy tasks for the current stage
+  const mappings = stageData?.mappings || [];
+  const tasks = stageData?.tasks || [];
+  const policyTasks = stageData?.policyTasks || [];
+  
+  const handleStageChange = (stage: Stage) => {
+    setCurrentStage(stage);
+  };
+  
+  const handleMappingChange = () => {
+    // Trigger refresh when mappings change
+    setRefreshTrigger(prev => prev + 1);
+  };
+  
+  const handleTasksChange = () => {
+    // Trigger refresh when tasks change
+    setRefreshTrigger(prev => prev + 1);
+  };
   
   const handleBack = () => {
     setLocation('/make-a-plan/full/block-1');
@@ -27,27 +87,80 @@ export default function Block2Design() {
     setLocation('/checklist');
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p>Loading your plan...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <ProgressNav steps={steps} currentStepId="block-2" />
         
-        <h1 className="text-3xl font-bold text-tcof-dark mb-6">Block 2: Design Your Plan</h1>
+        <h1 className="text-3xl font-bold text-tcof-dark mb-6">Block 2: Connect & Build</h1>
         
-        <IntroAccordion title="Building your strategy">
-          <p>
-            This is a placeholder for the Block 2 content. This block will allow you to design your strategy
-            based on the heuristics and factors identified in Block 1.
+        <IntroAccordion title="TCOF Phase 2: Connect & Build">
+          <p className="mb-4">
+            In this phase, you'll map your personal heuristics to TCOF success factors and import tasks 
+            from the TCOF framework. This helps you build a comprehensive task list based on proven practices.
           </p>
+          <p>
+            Steps to complete this block:
+          </p>
+          <ol className="list-decimal list-inside space-y-2 mt-2 mb-4">
+            <li>Select a project stage (Identification, Definition, Delivery, or Closure)</li>
+            <li>Map your personal heuristics to TCOF success factors</li>
+            <li>Import tasks from the TCOF framework</li>
+            <li>Add custom policy tasks as needed</li>
+            <li>Repeat for each project stage</li>
+          </ol>
         </IntroAccordion>
         
-        <div className="bg-white p-6 rounded-lg border mb-8">
-          <div className="py-12 text-center">
-            <h2 className="text-xl font-semibold mb-4 text-tcof-dark">Block 2 is under development</h2>
-            <p className="text-gray-600 mb-6">
-              The Design block is coming soon. You can go back to Block 1 or skip ahead to your checklist.
-            </p>
-          </div>
+        {personalHeuristics.length === 0 && (
+          <Alert className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>No personal heuristics found</AlertTitle>
+            <AlertDescription>
+              Please go back to Block 1 and add some personal heuristics before proceeding with this step.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="space-y-6 mb-8">
+          {/* Stage selector */}
+          <StageSelector currentStage={currentStage} onStageChange={handleStageChange} />
+          
+          {/* Success Factor Mapping */}
+          <SuccessFactorMapping 
+            planId={planId || ''} 
+            stage={currentStage}
+            heuristics={personalHeuristics}
+            mappings={mappings}
+            onMappingChange={handleMappingChange}
+          />
+          
+          {/* Excel Import */}
+          <ExcelImport 
+            planId={planId || ''}
+            stage={currentStage}
+            onTasksImported={handleTasksChange}
+            mappings={mappings}
+          />
+          
+          {/* Task List */}
+          <TaskList 
+            planId={planId || ''}
+            tasks={tasks}
+            policyTasks={policyTasks}
+            stage={currentStage}
+            onTasksChange={handleTasksChange}
+          />
         </div>
         
         <ActionButtons 
@@ -55,7 +168,7 @@ export default function Block2Design() {
           onNext={handleNext}
           onSkip={handleSkipToChecklist}
           showSkip={true}
-          isNextDisabled={true}
+          isNextDisabled={false}
         />
       </div>
     </div>

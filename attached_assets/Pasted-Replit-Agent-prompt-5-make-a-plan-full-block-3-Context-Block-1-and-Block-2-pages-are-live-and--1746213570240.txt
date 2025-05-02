@@ -1,0 +1,195 @@
+Replit Agent prompt #5 – /make-a-plan/full/block-3
+Context
+• Block 1 and Block 2 pages are live and writing to the plan record.
+• tcofTasks.json already drives template tasks.
+• Block 3 must (a) pick a Praxis “zone”, (b) let the user add good-practice frameworks/tasks, and (c) generate the finished checklist then route to /checklist.
+
+0 Seed good-practice catalogue
+Create data/goodPractices.json with (at minimum) the frameworks and stage-mapped tasks below.
+Structure:
+
+jsonc
+Copy
+Edit
+[
+  {
+    "code": "PRAXIS",
+    "name": "Praxis Framework",
+    "tasks": {
+      "Identification": ["Produce a Brief", "Create a Definition Plan"],
+      "Definition":      ["Define Scope", "Project/Programme Mgt Plan", "Business Case"],
+      "Delivery":        ["Delegate delivery", "Communicate with stakeholders", "Monitor progress"],
+      "Closure":         ["Handover to Operations", "Demobilise project", "Capture lessons learned"]
+    }
+  },
+  {
+    "code": "TEAL_BOOK",
+    "name": "UK Government Teal Book",
+    "tasks": {
+      "Identification": ["Appoint SRO", "Validate the project brief", "Prepare Strategic Outline Case"],
+      "Definition":      ["Detail delivery & procurement approach", "Develop OBC / FBC"],
+      "Delivery":        ["Ensure outputs align with outcomes", "Ongoing risk management", "Change control"],
+      "Closure":         []
+    }
+  },
+  {
+    "code": "SAFe",
+    "name": "SAFe Implementation Roadmap",
+    "tasks": {
+      "Identification": ["Lean Business Case", "Reaching the Tipping Point", "Train Change Agents"],
+      "Definition":      ["Train Leaders", "Identify Value Streams", "Create Implementation Plan"],
+      "Delivery":        ["Prepare for ART Launch", "Continuous Delivery Pipeline", "Coach ART Execution"],
+      "Closure":         ["Transition to CD Pipeline", "Extend to Portfolio", "Sustain & Improve"]
+    }
+  },
+  {
+    "code": "AGILEPM",
+    "name": "AgilePM",
+    "tasks": {
+      "Identification": ["Appoint Sponsor & PM", "Conduct Feasibility Assessment"],
+      "Definition":      ["Run Foundations Phase", "Prioritised Requirements List", "Solution Architecture"],
+      "Delivery":        ["Plan & run Timeboxes", "Engage stakeholders", "Demonstrate increments"],
+      "Closure":         ["Deploy final increment", "Post-Project Review", "Benefits measurement"]
+    }
+  }
+]
+Add util utils/goodPracticeData.js that memo-loads this JSON and provides:
+
+getFrameworkByCode(code)
+
+getFrameworksForZone(zone) – mapping:
+
+scss
+Copy
+Edit
+Zone A (Simple)        -> ["PRAXIS","AGILEPM"]
+Zone B (Hybrid/Adaptive)-> ["PRAXIS","TEAL_BOOK","AGILEPM"]
+Zone C (Agile)         -> ["SAFe","AGILEPM"]
+Zone D (Complex Agile) -> ["SAFe"]
+Zone E (Systems-Led)   -> ["TEAL_BOOK"]
+1 Route & file
+Add route /make-a-plan/full/block-3.
+
+New page pages/Block3Complete.jsx; add to router.
+
+2 Data-model extension
+In plan.stages add:
+
+ts
+Copy
+Edit
+goodPractice: {
+  zone: null,                 // e.g. "Zone B"
+  frameworks: [],             // ["PRAXIS","SAFe",…]
+  tasks: [                    // selected tasks
+    { id, text, stage, frameworkCode }
+  ]
+}
+Helpers: setZone, toggleFramework, toggleGptask.
+
+3 Page layout
+pgsql
+Copy
+Edit
+<ProgressBar currentBlock=3 totalBlocks=3 />
+
+<h1>Block 3: Complete & Confirm</h1>
+<p class="subtitle">Bring it all together with proven methods and your personalised checklist.</p>
+
+── STEP 6 ─────────────────────────────────────────────
+<PraxisSelector />      // 2 Qs + 2×2 quadrant
+• Q1  Scope: Small / Medium / Large  (radio buttons)
+• Q2  Uncertainty: Low / Medium / High
+• When both answered: highlight zone (A-E), show card with description + auto-suggested frameworks.
+• "Accept zone & continue" stores zone & suggested frameworks (can deselect later).
+
+── STEP 7 ─────────────────────────────────────────────
+<FrameworkPicker />
+• List checkboxes for all frameworks (name + short tagline).
+• Pre-tick those suggested by zone; user can add/remove.
+• Clicking a framework expands its stage-mapped tasks list with checkboxes.
+• Ticking a task calls `toggleGptask()`; default all tasks ticked when framework first chosen.
+• "Skip Step 7" button collapses picker without saving any GP tasks.
+
+── STEP 8 ─────────────────────────────────────────────
+<ReviewCard />
+• Summarise: # heuristics, # factor tasks, # GP tasks selected.
+• Button **“Review & Generate Checklist”**
+    – ensures plan saved
+    – sets `plan.complete=true`
+    – routes to `/checklist`
+
+<ActionButtons> Back | Next(disabled—this is final) | Save | Skip→Checklist
+4 Component behaviour
+4.1 PraxisSelector
+After answering the 2 radios, compute zone using table:
+
+Scope▼ \ Uncertainty►	Low	Medium	High
+Small	Zone A	Zone B	Zone C
+Medium	Zone B	Zone C	Zone D
+Large	Zone C	Zone D	Zone E
+
+Show a 2×2 SVG grid with shaded zone highlight.
+
+On confirm → setZone(zone); fetch recommended frameworks and pre-select them.
+
+4.2 FrameworkPicker
+goodPracticeData.getFrameworkByCode(code) gives stages/tasks.
+
+Expanding a framework lists tasks grouped by stage (accordion).
+
+Task checkboxes update goodPractice.tasks.
+
+Warn if total GP tasks > 30 (“Consider trimming for focus”).
+
+5 Generate Checklist (Step 8)
+Nothing to render here—the existing /checklist page already reads plan object. Just mark complete and navigate.
+
+6 Save / navigation
+Back → /make-a-plan/full/block-2
+
+Save – savePlan toast.
+
+Skip→Checklist – saves, sets plan.complete=true, routes.
+
+7 Design specifics
+Use shared .card, .btn-primary, .btn-secondary.
+
+Quadrant picker: 300 × 300 px SVG, teal highlight.
+
+Framework chip badges: teal border, hover fill #f0fffe.
+
+8 Testing checklist
+2-question selector yields correct zone.
+
+Suggested frameworks auto-ticked.
+
+Tasks appear per framework, checkboxes persist after refresh.
+
+Skip buttons bypass Step 6/7 cleanly.
+
+Review & Generate → checklist shows GP tasks.
+
+Quick-Start flow: if user never visits Block 3, checklist still works (GP section empty).
+
+Console clean.
+
+9 Deliverables
+data/goodPractices.json
+
+utils/goodPracticeData.js
+
+pages/Block3Complete.jsx
+
+components/PraxisSelector.jsx
+
+components/FrameworkPicker.jsx
+
+components/ReviewCard.jsx
+
+Updates to utils/planHelpers.js
+
+styles/gp.css
+
+Return the list of new/changed files and a one-sentence summary when done.
+
