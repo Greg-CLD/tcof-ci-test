@@ -1,0 +1,142 @@
+Replit Agent prompt #4 – Block 2 “Connect & Build” (with Excel import)
+Context
+• /make-a-plan/full/block-1 is complete and saves ratings + personal heuristics.
+• We have uploaded /mnt/data/TCOF Success Factor Tasks.xlsx (Sheet 1).
+• This sheet contains one row per TCOF success factor plus four columns of template tasks (Identification, Definition, Delivery, Closure).
+• We must parse that sheet once, write it to a JSON file in the repo (data/tcofTasks.json), and load it client-side.
+
+0 One-off data import (Agent should run this now)
+Read /mnt/data/TCOF Success Factor Tasks.xlsx (Sheet1).
+
+Produce a JSON array of objects:
+
+jsonc
+Copy
+Edit
+[
+  {
+    "id": "1.1",
+    "name": "Ask Why",
+    "tasks": {
+      "Identification": ["Consult key stakeholders", "Understand pains and wants", "Define goals"],
+      "Definition":      [],
+      "Delivery":        [],
+      "Closure":         []
+    }
+  },
+  …
+]
+Save that array to the project at data/tcofTasks.json and commit it.
+
+Export a small util getTcofData() that returns the parsed array (memoised).
+
+1 Route & file
+Add /make-a-plan/full/block-2.
+
+New page: pages/Block2Connect.jsx (import router).
+
+2 Data-model extensions (utils/planHelpers.js)
+ts
+Copy
+Edit
+stages.<Stage> = {
+  …existing,
+  mappings:      { [heuristicId]: factorId | null },
+  tasks:         [ { id, text, stage, origin:'heuristic'|'factor', sourceId } ],
+  policyTasks:   [ { id, text, stage } ]
+}
+Add helper fns addMapping, addTask, addPolicyTask (auto-save).
+
+3 Page layout & behaviour
+sql
+Copy
+Edit
+<ProgressBar currentBlock=2 totalBlocks=3 />
+<h1>Block 2: Connect & Build</h1>
+<p class="subtitle">Turn insights into structure. Build tasks around what matters most.</p>
+
+/* ── STEP 3 ── */
+<MappingTable />   // rows = personalHeuristics; dropdown items = 12 factors from JSON
+<button class="skip-for-now">Skip Step 3</button>
+
+/* ── STEP 4 ── */
+<HeuristicTaskTabs />  // Four tabs (Identification…Closure)
+   • For each stage show:
+       – every heuristic
+       – every success factor for that stage
+         • for factors show the template tasks read from JSON, each with a ✔ checkbox
+   • “+ Add task” lets user add up to 3 extra tasks per item.
+
+/* ── STEP 5 ── */
+<PolicyTaskForm />  // stage pick-list + textarea + Add
+
+<ActionButtons>  Back | Next | Save | Skip→Checklist
+Step 3 • MappingTable specifics
+Dropdown list built from tcofData.map(f => ({ value:f.id, label:f.id+' '+f.name })).
+
+After user selects a factor the mapping saves instantly (addMapping).
+
+Step 4 • HeuristicTaskTabs specifics
+When the tab switches, fetch template factor tasks from JSON for that stage.
+
+Template tasks appear with a fixed tick box (✅ default ON, user can untick to exclude).
+
+Added or unticked state stored in tasks array.
+
+Step 5 • PolicyTaskForm
+Adds free-form tasks into policyTasks.
+
+List below shows current policy tasks with delete icon.
+
+4 Navigation / persistence
+Back → /make-a-plan/full/block-1
+
+Next → /make-a-plan/full/block-3
+
+Save progress – saves plan, toast “Saved”.
+
+Skip to Checklist – saves then /checklist.
+
+5 Design notes
+Re-use shared styles; new .tab-panel and .task-row in styles/tasks.css.
+
+Favourite-star limits remain from Block 1.
+
+6 Testing checklist
+JSON file generated and committed.
+
+Mapping dropdown shows 12 factors.
+
+Template tasks pre-ticked for each factor / stage.
+
+Added tasks persist and capped at 3 per item.
+
+Skip / Next / Back behave and DB writes confirmed.
+
+Quick-Start flow (quickStartPlan()) should now:
+
+load tcofTasks.json
+
+copy every template task (all four stages) into the new plan
+
+mark template tasks’ origin = 'factor'
+
+7 Deliverables
+data/tcofTasks.json (generated)
+
+utils/tcofData.js (getTcofData)
+
+pages/Block2Connect.jsx
+
+components/MappingTable.jsx
+
+components/HeuristicTaskTabs.jsx
+
+components/PolicyTaskForm.jsx
+
+Updated utils/planHelpers.js
+
+styles/tasks.css
+
+Return the list of new/changed files and a 1-sentence summary.
+
