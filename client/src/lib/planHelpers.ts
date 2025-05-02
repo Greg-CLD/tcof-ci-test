@@ -186,3 +186,38 @@ export async function getAllPlans(): Promise<string[]> {
   const { listExistingPlans } = await import('./plan-db');
   return await listExistingPlans();
 }
+
+/**
+ * Sets the delivery approach for a plan and saves it
+ * @param planId Plan ID
+ * @param data Delivery approach data to save
+ * @returns True if the plan was saved successfully
+ */
+export async function setDeliveryApproach(
+  planId: string, 
+  data: {
+    scope: 'Small' | 'Medium' | 'Large',
+    uncertainty: 'Low' | 'Medium' | 'High',
+    zone: string,
+    methods: string[],
+    tools: string[]
+  }
+): Promise<boolean> {
+  const plan = await loadPlan(planId);
+  
+  if (!plan) {
+    console.error('No plan found with ID:', planId);
+    return false;
+  }
+  
+  // Initialize goodPractice if it doesn't exist
+  if (!plan.goodPractice) {
+    plan.goodPractice = {};
+  }
+  
+  // Update the delivery approach
+  plan.goodPractice.deliveryApproach = data;
+  
+  // Save the updated plan
+  return await savePlan(planId, plan);
+}

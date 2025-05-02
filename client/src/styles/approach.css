@@ -1,0 +1,15 @@
+.da-card { 
+  background:#fff5e7;
+  padding:1.5rem;
+  border:2px solid #008080;
+  border-radius:8px;
+  margin-top:1rem;
+}
+.da-card h3 { 
+  color:#008080;
+  margin:0 0 .5rem 0;
+}
+.da-grid svg { 
+  max-width:300px;
+  margin:auto;
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "zone": "Zone A",
+    "alias": "Simple Projects",
+    "summary": "Low-uncertainty, small scope. Classic plan-then-do.",
+    "methods": ["Waterfall", "Critical Path Scheduling"],
+    "tools":   ["Gantt Charts", "PERT", "Basic Risk Log"]
+  },
+  {
+    "zone": "Zone B",
+    "alias": "Hybrid / Adaptive",
+    "summary": "Medium scope, low–medium uncertainty. Mix agile with stage-gates.",
+    "methods": ["Hybrid PM", "Iterative Planning"],
+    "tools":   ["Rolling Wave", "Scrum-of-Scrums", "Burndown Chart"]
+  },
+  {
+    "zone": "Zone C",
+    "alias": "Agile Projects",
+    "summary": "High uncertainty or larger scope that benefits from agility.",
+    "methods": ["Scrum", "Kanban"],
+    "tools":   ["User Stories", "Kanban Board", "Retrospectives"]
+  },
+  {
+    "zone": "Zone D",
+    "alias": "Complex Adaptive",
+    "summary": "Large scope + high uncertainty. Probe–sense–respond.",
+    "methods": ["SAFe", "Systems Thinking"],
+    "tools":   ["Causal Loop Diagrams", "Program Increment Planning"]
+  },
+  {
+    "zone": "Zone E",
+    "alias": "Systems-Led Portfolio",
+    "summary": "Enterprise-scale, very high complexity. Portfolio & systems lenses.",
+    "methods": ["Portfolio Kanban", "Benefits Mapping"],
+    "tools":   ["Strategy Map", "Monte-Carlo Portfolio Simulation"]
+  },
+  {
+    "zone": "Zone F",
+    "alias": "Fast & Focused",
+    "summary": "Tiny scope but high uncertainty (e.g. innovation spike).",
+    "methods": ["Design Sprint", "Lean Startup"],
+    "tools":   ["4-day Sprint Canvas", "A/B Testing"]
+  }
+]
