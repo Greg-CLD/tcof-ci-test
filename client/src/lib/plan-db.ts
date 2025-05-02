@@ -125,10 +125,18 @@ const plans: Record<string, PlanRecord> = {};
 /**
  * Creates an empty plan and returns its ID
  */
-export const createEmptyPlan = (): string => {
+export const createEmptyPlan = async (): Promise<string> => {
   const newPlan = createEmptyPlanRecord();
   plans[newPlan.id] = newPlan;
-  return newPlan.id;
+  
+  try {
+    // Store the new plan in persistent storage
+    await storage.save(newPlan.id, newPlan);
+    return newPlan.id;
+  } catch (error) {
+    console.error('Error creating empty plan:', error);
+    return newPlan.id; // Still return the ID even if storage fails
+  }
 };
 
 /**
