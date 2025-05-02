@@ -3,14 +3,16 @@ import { useLocation } from 'wouter';
 import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
-import PraxisSelector from '@/components/plan/PraxisSelector';
+import DeliveryApproachTool, { DeliveryApproachData } from '@/components/DeliveryApproachTool';
 import FrameworkPicker from '@/components/plan/FrameworkPicker';
 import ReviewCard from '@/components/plan/ReviewCard';
 import { Stage, loadPlan, savePlan, createEmptyPlan, setZone, toggleFramework, toggleGpTask, markPlanComplete } from '@/lib/plan-db';
 import { getFrameworkByCode } from '@/lib/goodPracticeData';
+import { setDeliveryApproach } from '@/lib/planHelpers';
 import styles from '@/lib/styles/gp.module.css';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import '../styles/approach.css';
 
 export default function Block3Complete() {
   const [_, setLocation] = useLocation();
@@ -32,60 +34,74 @@ export default function Block3Complete() {
   
   // Load or create plan
   useEffect(() => {
-    // Try to load the active plan ID from localStorage
-    const savedPlanId = localStorage.getItem('activePlanId');
-    
-    if (savedPlanId) {
-      // Check if the plan exists
-      const plan = loadPlan(savedPlanId);
-      if (plan) {
-        setPlanId(savedPlanId);
-        
-        // Load zone and frameworks if they exist
-        const goodPractice = plan.stages.Identification.goodPractice;
-        if (goodPractice?.zone) {
-          setPraxisZone(goodPractice.zone);
-          setZoneSelected(true);
-          setSelectedFrameworks(goodPractice.frameworks || []);
-          
-          // Build selected tasks map
-          const tasksMap: Record<string, Record<Stage, string[]>> = {};
-          
-          // Process all stages
-          Object.keys(plan.stages).forEach(stageKey => {
-            const stage = stageKey as Stage;
-            const stageGoodPractice = plan.stages[stage].goodPractice;
+    async function loadExistingPlan() {
+      // Try to load the active plan ID from localStorage
+      const savedPlanId = localStorage.getItem('activePlanId');
+      
+      if (savedPlanId) {
+        try {
+          // Check if the plan exists
+          const plan = await loadPlan(savedPlanId);
+          if (plan && plan.stages && plan.stages.Identification) {
+            setPlanId(savedPlanId);
             
-            if (stageGoodPractice?.tasks) {
-              // Group tasks by framework code
-              stageGoodPractice.tasks.forEach(task => {
-                if (!tasksMap[task.frameworkCode]) {
-                  tasksMap[task.frameworkCode] = {
-                    'Identification': [],
-                    'Definition': [],
-                    'Delivery': [],
-                    'Closure': []
-                  };
-                }
+            // Load zone and frameworks if they exist
+            const goodPractice = plan.stages.Identification.goodPractice;
+            if (goodPractice?.zone) {
+              setPraxisZone(goodPractice.zone);
+              setZoneSelected(true);
+              setSelectedFrameworks(goodPractice.frameworks || []);
+              
+              // Build selected tasks map
+              const tasksMap: Record<string, Record<Stage, string[]>> = {};
+              
+              // Process all stages
+              Object.keys(plan.stages).forEach(stageKey => {
+                const stage = stageKey as Stage;
+                const stageGoodPractice = plan.stages[stage].goodPractice;
                 
-                tasksMap[task.frameworkCode][task.stage].push(task.text);
+                if (stageGoodPractice?.tasks) {
+                  // Group tasks by framework code
+                  stageGoodPractice.tasks.forEach((task: any) => {
+                    if (!tasksMap[task.frameworkCode]) {
+                      tasksMap[task.frameworkCode] = {
+                        'Identification': [],
+                        'Definition': [],
+                        'Delivery': [],
+                        'Closure': []
+                      };
+                    }
+                    
+                    tasksMap[task.frameworkCode][task.stage].push(task.text);
+                  });
+                }
               });
+              
+              setSelectedTasks(tasksMap);
             }
-          });
-          
-          setSelectedTasks(tasksMap);
+            
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Error loading plan:", error);
+          // Continue to create a new plan
         }
-        
+      }
+      
+      // Create a new plan if none exists or if there was an error
+      try {
+        const newPlanId = await createEmptyPlan();
+        setPlanId(newPlanId);
+        localStorage.setItem('activePlanId', newPlanId);
+      } catch (error) {
+        console.error("Error creating new plan:", error);
+      } finally {
         setIsLoading(false);
-        return;
       }
     }
     
-    // Create a new plan if none exists
-    const newPlanId = createEmptyPlan();
-    setPlanId(newPlanId);
-    localStorage.setItem('activePlanId', newPlanId);
-    setIsLoading(false);
+    loadExistingPlan();
   }, []);
   
   const handleZoneSelected = (zone: string, suggestedFrameworks: string[]) => {
@@ -270,6 +286,61 @@ export default function Block3Complete() {
     // Navigate to checklist
     setLocation('/checklist');
   };
+  
+  // Handler for the delivery approach tool
+  const handleDeliveryApproachSave = async (data: DeliveryApproachData) => {
+    if (!planId) return;
+    
+    // Save the delivery approach data to the plan
+    await setDeliveryApproach(planId, data);
+    
+    // Update the UI state
+    setPraxisZone(data.zone);
+    setZoneSelected(true);
+    
+    // Get related frameworks based on the zone
+    // Simplified - just use predefined frameworks based on zone
+    let suggestedFrameworks: string[] = [];
+    if (data.zone.includes('A')) {
+      suggestedFrameworks = ["PRAXIS", "AGILEPM"];
+    } else if (data.zone.includes('B')) {
+      suggestedFrameworks = ["PRAXIS", "TEAL_BOOK", "AGILEPM"];
+    } else if (data.zone.includes('C')) {
+      suggestedFrameworks = ["SAFe", "AGILEPM"];
+    } else if (data.zone.includes('D')) {
+      suggestedFrameworks = ["SAFe"];
+    } else if (data.zone.includes('E')) {
+      suggestedFrameworks = ["TEAL_BOOK"];
+    } else if (data.zone.includes('F')) {
+      suggestedFrameworks = ["AGILEPM"];
+    }
+    
+    setSelectedFrameworks(suggestedFrameworks);
+    
+    // Build selected tasks map
+    const tasksMap: Record<string, Record<Stage, string[]>> = {};
+    
+    suggestedFrameworks.forEach((code: string) => {
+      const framework = getFrameworkByCode(code);
+      if (framework) {
+        tasksMap[code] = {
+          'Identification': [...framework.tasks.Identification],
+          'Definition': [...framework.tasks.Definition],
+          'Delivery': [...framework.tasks.Delivery],
+          'Closure': [...framework.tasks.Closure]
+        };
+      }
+    });
+    
+    setSelectedTasks(tasksMap);
+    setRefreshTrigger(prev => prev + 1);
+    
+    toast({
+      title: 'Delivery Approach Selected',
+      description: `You've selected ${data.zone}. Recommended methods and tools have been added to your plan.`,
+      variant: 'default',
+    });
+  };
 
   if (isLoading) {
     return (
@@ -309,7 +380,7 @@ export default function Block3Complete() {
           </ol>
         </IntroAccordion>
         
-        {/* Step 6: Praxis Selector */}
+        {/* Step 6: Delivery Approach Tool */}
         <div className={styles.stepHeading}>
           <div className={styles.stepNumber}>6</div>
           <div className={styles.stepTitle}>Choose Project Approach</div>
@@ -319,17 +390,16 @@ export default function Block3Complete() {
         </div>
         
         {!zoneSelected ? (
-          <PraxisSelector 
-            onZoneSelected={handleZoneSelected}
-            initialZone={praxisZone}
+          <DeliveryApproachTool
+            onSave={handleDeliveryApproachSave}
           />
         ) : (
           <div className={styles.zoneCard}>
             <div className={styles.zoneTitle}>{praxisZone || 'No zone selected'}</div>
             <p className="text-sm text-gray-600 mt-1">
               {praxisZone ? 
-                `You've selected ${praxisZone}. Recommended frameworks have been added.` : 
-                'You skipped the zone selection. Choose frameworks manually.'}
+                `You've selected ${praxisZone}. Recommended delivery methods and tools have been added.` : 
+                'You skipped the approach selection. Choose frameworks manually.'}
             </p>
           </div>
         )}

@@ -60,10 +60,10 @@ interface DeliveryZone {
   tools: string[];
 }
 
-interface DeliveryApproachData {
-  scope: 'Small' | 'Medium' | 'Large' | null;
-  uncertainty: 'Low' | 'Medium' | 'High' | null;
-  zone: string | null;
+export interface DeliveryApproachData {
+  scope: 'Small' | 'Medium' | 'Large';
+  uncertainty: 'Low' | 'Medium' | 'High';
+  zone: string;
   methods: string[];
   tools: string[];
 }
