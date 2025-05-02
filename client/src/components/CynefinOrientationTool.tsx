@@ -117,7 +117,34 @@ export default function CynefinOrientationTool() {
   
   const [selectedQuadrant, setSelectedQuadrant] = useState<CynefinQuadrant | null>(storedData.quadrant);
   const [showIntro, setShowIntro] = useState(true);
+  const [selectionName, setSelectionName] = useState("My Cynefin Assessment");
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Database save mutation
+  const saveSelectionMutation = useMutation({
+    mutationFn: async (data: { name: string, data: any }) => {
+      const response = await apiRequest("POST", "/api/cynefin-selections", data);
+      if (!response.ok) {
+        throw new Error("Failed to save selection to database");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cynefin-selections"] });
+      toast({
+        title: "Assessment saved",
+        description: "Your Cynefin assessment has been saved to your account.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error saving",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Handle quadrant selection
   const handleQuadrantSelect = (quadrant: CynefinQuadrant) => {
@@ -140,21 +167,33 @@ export default function CynefinOrientationTool() {
       return;
     }
 
-    const success = saveToLocalStorage(STORAGE_KEYS.CYNEFIN_SELECTION, {
+    // First save to localStorage for offline use
+    const data = {
       quadrant: selectedQuadrant,
       lastUpdated: Date.now()
-    });
+    };
     
-    if (success) {
+    const success = saveToLocalStorage(STORAGE_KEYS.CYNEFIN_SELECTION, data);
+    
+    if (!success) {
       toast({
-        title: "Selection saved",
-        description: "Your domain type has been saved successfully."
+        title: "Error saving locally",
+        description: "There was a problem saving your selection to local storage.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Then save to database if user is logged in
+    if (user) {
+      saveSelectionMutation.mutate({
+        name: selectionName,
+        data: data
       });
     } else {
       toast({
-        title: "Error saving",
-        description: "There was a problem saving your selection.",
-        variant: "destructive"
+        title: "Assessment saved locally",
+        description: "Your assessment has been saved locally. Sign in to save it to your account.",
       });
     }
   };
@@ -248,6 +287,22 @@ export default function CynefinOrientationTool() {
             </div>
           </div>
           
+          {selectedQuadrant && (
+            <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
+              <div className="w-full md:w-1/3">
+                <label htmlFor="selection-name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Assessment Name
+                </label>
+                <Input
+                  id="selection-name"
+                  value={selectionName}
+                  onChange={(e) => setSelectionName(e.target.value)}
+                  placeholder="Enter a name for your assessment"
+                />
+              </div>
+            </div>
+          )}
+          
           <div className="flex justify-between items-center">
             <Button 
               variant="ghost" 
@@ -262,7 +317,7 @@ export default function CynefinOrientationTool() {
                 onClick={handleSave}
                 className="flex items-center gap-1"
               >
-                <i className="ri-save-line mr-1"></i> Save Result
+                <Save className="h-4 w-4 mr-1" /> Save Result
               </Button>
               {selectedQuadrant && (
                 <Button 

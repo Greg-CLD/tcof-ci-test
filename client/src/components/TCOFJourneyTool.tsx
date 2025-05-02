@@ -2,8 +2,12 @@ import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   STORAGE_KEYS,
   TCOFJourneyData,
@@ -13,7 +17,7 @@ import {
   saveToLocalStorage
 } from "@/lib/storage";
 import { elementToPDF } from "@/lib/pdf-utils";
-import { FileDown } from "lucide-react";
+import { FileDown, Save } from "lucide-react";
 
 // Decision tree question type
 type Question = {
@@ -128,8 +132,35 @@ export default function TCOFJourneyTool() {
   const [stage, setStage] = useState<ImplementationStage | null>(storedData.stage);
   const [notes, setNotes] = useState<Record<string, string>>(storedData.notes || {});
   const [showIntro, setShowIntro] = useState<boolean>(true);
+  const [journeyName, setJourneyName] = useState("My TCOF Journey");
   
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Database save mutation
+  const saveJourneyMutation = useMutation({
+    mutationFn: async (data: { name: string, data: any }) => {
+      const response = await apiRequest("POST", "/api/tcof-journeys", data);
+      if (!response.ok) {
+        throw new Error("Failed to save journey to database");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tcof-journeys"] });
+      toast({
+        title: "Journey saved",
+        description: "Your TCOF journey has been saved to your account.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error saving",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Handle answering a question
   const handleAnswer = (questionId: string, answer: boolean) => {
@@ -180,18 +211,28 @@ export default function TCOFJourneyTool() {
       lastUpdated: Date.now()
     };
     
+    // First save to localStorage for offline use
     const success = saveToLocalStorage(STORAGE_KEYS.TCOF_JOURNEY, journeyData);
     
-    if (success) {
+    if (!success) {
       toast({
-        title: "Journey data saved",
-        description: "Your delivery phase and notes have been saved successfully."
+        title: "Error saving locally",
+        description: "There was a problem saving your journey data to local storage.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Then save to database if user is logged in
+    if (user) {
+      saveJourneyMutation.mutate({
+        name: journeyName,
+        data: journeyData
       });
     } else {
       toast({
-        title: "Error saving",
-        description: "There was a problem saving your journey data.",
-        variant: "destructive"
+        title: "Journey saved locally",
+        description: "Your journey has been saved locally. Sign in to save it to your account.",
       });
     }
   };
@@ -369,6 +410,22 @@ export default function TCOFJourneyTool() {
                 </div>
               )}
               
+              {stage && (
+                <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
+                  <div className="w-full md:w-1/3">
+                    <Label htmlFor="journey-name" className="font-medium text-sm mb-1 block">
+                      Journey Name
+                    </Label>
+                    <Input
+                      id="journey-name"
+                      value={journeyName}
+                      onChange={(e) => setJourneyName(e.target.value)}
+                      placeholder="Enter a name for your journey"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="flex justify-between">
                 <Button 
                   variant="ghost" 
@@ -397,7 +454,7 @@ export default function TCOFJourneyTool() {
                     onClick={handleSave}
                     className="flex items-center gap-1"
                   >
-                    <i className="ri-save-line mr-1"></i> Save Results
+                    <Save className="h-4 w-4 mr-1" /> Save Results
                   </Button>
                 </div>
               </div>
