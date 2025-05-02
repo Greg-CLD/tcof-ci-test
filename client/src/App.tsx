@@ -207,13 +207,22 @@ function Router() {
   );
 }
 
+// Dev-only import for accessibility audit
+import A11yAuditProvider from '@/components/A11yAuditProvider';
+
 function App() {
+  // Check if we're in development mode
+  const isDev = import.meta.env.DEV;
+  
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AuthProtectionProvider>
-          <Router />
-          <Toaster />
+          {/* Only enable accessibility audits in development */}
+          <A11yAuditProvider disabled={!isDev}>
+            <Router />
+            <Toaster />
+          </A11yAuditProvider>
         </AuthProtectionProvider>
       </AuthProvider>
     </QueryClientProvider>
