@@ -85,16 +85,19 @@ export default function Block1Discover() {
   // Create a debounced save function
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSave = useCallback(
-    debounce((id: string, data: any) => {
-      if (savePlan(id, data)) {
+    debounce(async (id: string, data: any) => {
+      try {
+        await savePlan(id, data);
         console.log('Progress auto-saved');
+      } catch (error) {
+        console.error('Error auto-saving plan:', error);
       }
     }, 500),
     []
   );
   
   // Save the current plan data
-  const saveCurrentPlan = () => {
+  const saveCurrentPlan = async () => {
     if (!planId || !plan) return false;
     
     const updatedPlan = {
@@ -109,7 +112,17 @@ export default function Block1Discover() {
       }
     };
     
-    return savePlan(planId, updatedPlan);
+    try {
+      return await savePlan(planId, updatedPlan);
+    } catch (error) {
+      console.error('Error saving plan:', error);
+      toast({
+        title: "Save Failed",
+        description: "There was a problem saving your plan. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
   };
   
   // Handle success factor rating change
@@ -154,19 +167,21 @@ export default function Block1Discover() {
   };
   
   // Navigation handlers
-  const handleBack = () => {
-    saveCurrentPlan();
+  const handleBack = async () => {
+    await saveCurrentPlan();
     setLocation('/make-a-plan');
   };
   
-  const handleNext = () => {
-    if (saveCurrentPlan()) {
+  const handleNext = async () => {
+    const saved = await saveCurrentPlan();
+    if (saved) {
       setLocation('/make-a-plan/full/block-2');
     }
   };
   
-  const handleSave = () => {
-    if (saveCurrentPlan()) {
+  const handleSave = async () => {
+    const saved = await saveCurrentPlan();
+    if (saved) {
       toast({
         title: "Progress saved",
         description: "Your plan has been saved successfully.",
@@ -174,8 +189,8 @@ export default function Block1Discover() {
     }
   };
   
-  const handleSkipToChecklist = () => {
-    saveCurrentPlan();
+  const handleSkipToChecklist = async () => {
+    await saveCurrentPlan();
     setLocation('/checklist');
   };
   

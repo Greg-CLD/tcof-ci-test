@@ -14,7 +14,10 @@ import {
   loadFromLocalStorage, 
   GoalMapData, 
   CynefinSelection, 
-  TCOFJourneyData 
+  TCOFJourneyData,
+  initialGoalMapData,
+  initialCynefinSelection,
+  initialTCOFJourneyData
 } from "@/lib/storage";
 import { generateCompletePDF } from "@/lib/pdf-utils";
 import vitruvianMan from "../assets/vitruvian-man.png";
