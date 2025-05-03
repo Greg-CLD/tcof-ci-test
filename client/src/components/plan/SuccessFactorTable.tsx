@@ -102,6 +102,16 @@ export default function SuccessFactorTable({
     }
   };
 
+  // Render loading state if no factors are loaded yet
+  if (tcofFactors.length === 0) {
+    return (
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4 text-tcof-dark">STEP 1 – Reflect on TCOF Heuristics</h2>
+        <div className="text-center py-8">Loading factors...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-4">

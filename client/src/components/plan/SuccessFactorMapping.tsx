@@ -31,8 +31,8 @@ interface SuccessFactorMappingProps {
 export default function SuccessFactorMapping({
   planId,
   stage,
-  heuristics,
-  mappings,
+  heuristics = [], // Provide a default empty array to prevent undefined errors
+  mappings = [], // Provide a default empty array to prevent undefined errors
   onMappingChange
 }: SuccessFactorMappingProps) {
   const [factorOptions, setFactorOptions] = useState<Array<{ value: string; label: string }>>([]);
