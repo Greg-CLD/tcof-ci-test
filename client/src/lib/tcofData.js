@@ -168,6 +168,22 @@ export function getFactorTasks(factorId, stage) {
 }
 
 /**
+ * Gets factor name by ID
+ * @param {string} factorId - The ID of the success factor
+ * @returns {string} Formatted factor name with ID
+ */
+export function getFactorNameById(factorId) {
+  try {
+    const factors = getTcofData();
+    const factor = factors.find(f => f.id === factorId);
+    return factor ? `${factor.id}: ${factor.name}` : factorId;
+  } catch (error) {
+    console.error('Error getting factor name by ID:', error);
+    return factorId;
+  }
+}
+
+/**
  * Returns rating information for success factors
  * @returns {Record<number, { emoji: string, description: string }>} Rating information
  */

@@ -19,6 +19,7 @@ import { Stage, TaskItem, addTask, updateTaskStatus, PolicyTask, addPolicyTask, 
 import styles from '@/lib/styles/tasks.module.css';
 import { Plus, Trash2, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getFactorNameById } from '@/lib/tcofData';
 
 interface TaskListProps {
   planId: string;
@@ -39,13 +40,21 @@ export default function TaskList({
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
 
-  const handleCheckboxChange = (id: string, checked: boolean) => {
-    if (updateTaskStatus(planId, id, checked, stage)) {
+  const handleCheckboxChange = async (id: string, checked: boolean) => {
+    try {
+      await updateTaskStatus(planId, id, checked, stage);
       onTasksChange();
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      toast({
+        title: "Error updating task",
+        description: "Failed to update task status.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleAddPolicyTask = () => {
+  const handleAddPolicyTask = async () => {
     if (!newPolicyTask.trim()) {
       toast({
         title: "Task text required",
@@ -55,7 +64,8 @@ export default function TaskList({
       return;
     }
 
-    if (addPolicyTask(planId, newPolicyTask.trim(), stage)) {
+    try {
+      await addPolicyTask(planId, newPolicyTask.trim(), stage);
       setNewPolicyTask('');
       onTasksChange();
       toast({
@@ -63,16 +73,31 @@ export default function TaskList({
         description: "Your policy task has been added.",
         variant: "default",
       });
+    } catch (error) {
+      console.error('Error adding policy task:', error);
+      toast({
+        title: "Error adding task",
+        description: "Failed to add policy task.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleRemovePolicyTask = (id: string) => {
-    if (removePolicyTask(planId, id, stage)) {
+  const handleRemovePolicyTask = async (id: string) => {
+    try {
+      await removePolicyTask(planId, id, stage);
       onTasksChange();
       toast({
         title: "Task removed",
         description: "The policy task has been removed.",
         variant: "default",
+      });
+    } catch (error) {
+      console.error('Error removing policy task:', error);
+      toast({
+        title: "Error removing task",
+        description: "Failed to remove policy task.",
+        variant: "destructive",
       });
     }
   };
@@ -201,7 +226,7 @@ export default function TaskList({
               Object.entries(factorTasksBySource).map(([factorId, tasks]) => (
                 <div key={factorId} className="mb-6">
                   <h3 className="text-sm font-semibold text-tcof-dark mb-2 border-b pb-1">
-                    Success Factor: {factorId}
+                    Success Factor: {getFactorNameById(factorId)}
                   </h3>
                   <div className="pl-4">
                     {tasks.map(task => (

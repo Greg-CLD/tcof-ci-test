@@ -21,4 +21,6 @@ declare module '@/lib/tcofData' {
     emoji: string; 
     description: string 
   }>;
+
+  export function getFactorNameById(factorId: string): string;
 }
