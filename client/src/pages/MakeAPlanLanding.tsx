@@ -36,6 +36,14 @@ export default function MakeAPlanLanding() {
       setIsLoading(true);
       // Create a new plan with default values
       const planId = await quickStartPlan();
+      
+      // Show success toast
+      toast({
+        title: "Success!",
+        description: "Quick-Start checklist ready!",
+      });
+      
+      // Navigate to the checklist page
       setLocation('/checklist');
     } catch (error) {
       console.error('Error creating quick start plan:', error);

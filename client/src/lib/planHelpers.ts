@@ -175,11 +175,14 @@ export async function quickStartPlan(): Promise<string> {
         favourite: false
       }));
       
-      // Add preset heuristics to the Identification stage
-      updatedPlan.stages.Identification.personalHeuristics = [
-        ...updatedPlan.stages.Identification.personalHeuristics || [],
-        ...formattedHeuristics
-      ];
+      // Add preset heuristics to all stages to ensure coverage
+      Object.keys(updatedPlan.stages).forEach(stageName => {
+        const stageKey = stageName as keyof typeof updatedPlan.stages;
+        updatedPlan.stages[stageKey].personalHeuristics = [
+          ...updatedPlan.stages[stageKey].personalHeuristics || [],
+          ...formattedHeuristics
+        ];
+      });
     }
     
     // Load the TCOF success factor tasks from API
@@ -222,21 +225,101 @@ export async function quickStartPlan(): Promise<string> {
             favourite: false
           }));
         }
+        
+        // Create tasks from the factors
+        if (defaultStage.factors && defaultStage.factors.length > 0) {
+          if (!updatedPlan.stages[planStageKey].tasks) {
+            updatedPlan.stages[planStageKey].tasks = [];
+          }
+          
+          // Add tasks derived from factors
+          defaultStage.factors.forEach(factor => {
+            updatedPlan.stages[planStageKey].tasks.push({
+              id: `task-${factor.id}`,
+              text: `Address ${factor.text}`,
+              completed: false,
+              origin: 'factor',
+              stage: planStageKey as Stage
+            });
+          });
+        }
       });
-    } else {
-      // Success! Create success factor ratings for each TCOF task
+      
+      // Ensure we have success factor ratings for all factors
       const successFactorRatings: Record<string, any> = {};
       
+      // Collect all factor IDs from all stages
+      Object.keys(defaultHeuristics).forEach(stageName => {
+        const stageKey = stageName as keyof typeof defaultHeuristics;
+        const defaultStage = defaultHeuristics[stageKey];
+        
+        if (defaultStage.factors) {
+          defaultStage.factors.forEach(factor => {
+            successFactorRatings[factor.id] = {
+              rating: 0,
+              notes: '',
+              favourite: false
+            };
+          });
+        }
+      });
+      
+      // Add the success factor ratings to the Identification stage
+      updatedPlan.stages.Identification.successFactorRatings = successFactorRatings;
+    } else {
+      // Process TCOF tasks from the API response
+      const successFactorRatings: Record<string, any> = {};
+      const stageTasks: Record<string, any[]> = {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      };
+      
+      // Create ratings for all factors and extract tasks for each stage
       tcofTasks.forEach(task => {
+        // Create rating for this factor
         successFactorRatings[task.id] = {
           rating: 0,
           notes: '',
           favourite: false
         };
+        
+        // Process tasks for each stage
+        if (task.tasks) {
+          // Add tasks for each stage
+          Object.keys(task.tasks).forEach(stageName => {
+            const stageKey = stageName as keyof typeof stageTasks;
+            if (task.tasks[stageName]) {
+              task.tasks[stageName].forEach((taskText: string) => {
+                stageTasks[stageKey].push({
+                  id: `task-${task.id}-${stageTasks[stageKey].length}`,
+                  text: taskText,
+                  completed: false,
+                  origin: 'factor',
+                  stage: stageKey as Stage
+                });
+              });
+            }
+          });
+        }
       });
       
-      // Add the success factor ratings to the Identification stage
+      // Add success factor ratings to the Identification stage
       updatedPlan.stages.Identification.successFactorRatings = successFactorRatings;
+      
+      // Add tasks to each stage
+      Object.keys(stageTasks).forEach(stageName => {
+        const stageKey = stageName as keyof typeof updatedPlan.stages;
+        if (!updatedPlan.stages[stageKey].tasks) {
+          updatedPlan.stages[stageKey].tasks = [];
+        }
+        
+        updatedPlan.stages[stageKey].tasks = [
+          ...updatedPlan.stages[stageKey].tasks || [],
+          ...stageTasks[stageName]
+        ];
+      });
     }
     
     // Save the updated plan

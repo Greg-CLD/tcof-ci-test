@@ -128,7 +128,7 @@ export default function StageAccordion({ stage, plan, onPlanUpdate }: StageAccor
                 ))}
               </div>
             ) : (
-              <div className={styles.emptyList}>— no personal heuristics —</div>
+              <div className={styles.emptyList}>— No tasks yet —</div>
             )}
           </div>
           
@@ -152,7 +152,7 @@ export default function StageAccordion({ stage, plan, onPlanUpdate }: StageAccor
                 ))}
               </div>
             ) : (
-              <div className={styles.emptyList}>— no TCOF factor tasks —</div>
+              <div className={styles.emptyList}>— No tasks yet —</div>
             )}
           </div>
           
@@ -177,7 +177,7 @@ export default function StageAccordion({ stage, plan, onPlanUpdate }: StageAccor
                   ))}
                 </div>
               ) : (
-                <div className={styles.emptyList}>— no good practice tasks —</div>
+                <div className={styles.emptyList}>— No tasks yet —</div>
               )}
             </div>
           )}
