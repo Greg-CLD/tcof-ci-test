@@ -1,0 +1,96 @@
+REPLIT AGENT PROMPT – Block 2 Final Workflow & UI Alignment
+mathematica
+Copy
+Edit
+We still have mismatches in Block 2. Please implement the following final fixes so Block 2 exactly follows the intended three-step flow and reuses the admin task-editor UI.
+
+────────────────────────────────────────
+1️⃣  LOAD PERSONAL HEURISTICS INTO BLOCK 2
+
+• Source: use the current user’s saved plan (localStorage/Replit DB)  
+  plan.personalHeuristics should be an array of { id, text, favourite }.  
+• If personalHeuristics.length > 0, Step 3 must show them.  
+• Remove the “No personal heuristics found” error when data exists.
+
+────────────────────────────────────────
+2️⃣  STEP 3 – MAP HEURISTICS TO TCOF FACTORS
+
+UI requirements:
+• Display the 12 canonical TCOF factors in the left column.  
+• Next to each factor, show a **multi-select dropdown** of user heuristics (unmapped).  
+  – Selecting a heuristic links it to that factor.  
+  – A heuristic can map to multiple factors if desired.  
+• A “Skip this step” button should bypass mapping.  
+Data requirements:
+• Store mappings in plan as  
+  plan.heuristicLinks = { heuristicId: [factorId, …] }  
+• When a heuristic is linked, mark it **linked** so Step 4 hides it.
+
+────────────────────────────────────────
+3️⃣  STEP 4 – TASKS FOR UN-LINKED USER HEURISTICS
+
+• Show only the user heuristics **not** linked in Step 3.  
+• Reuse the **FactorTaskEditor UI** from the admin page:  
+  – Left pane: list of un-linked heuristic titles.  
+  – Right pane: 4 collapsible stage editors (Identification … Closure)  
+    each with "+ Add Task" and delete buttons.  
+• Auto-save: Once a task is added/edited/deleted, persist to  
+  plan.stages[stage].tasks with origin:'userHeuristic'.  
+• If no un-linked heuristics remain, show a message “All heuristics are mapped to TCOF; no extra tasks needed.”
+
+────────────────────────────────────────
+4️⃣  STEP 5 – ORGANISATIONAL POLICY TASKS
+
+• Mirror the same FactorTaskEditor UI but header = “Organisational Process Tasks”.  
+• Tasks saved with origin:'orgPolicy'.  
+• Unlimited tasks per stage.
+
+────────────────────────────────────────
+5️⃣  CLEAN-UP UI
+
+• Remove the “Import Tasks from Database” panel entirely.  
+• Add breadcrumb / headers:  
+  Step 3 – Link Heuristics ↔ Success Factors  
+  Step 4 – Add Tasks to Your Unique Heuristics  
+  Step 5 – Add Organisational Process Tasks  
+• Auto-save after every change OR add a clearly visible “Save Progress” at bottom.
+
+────────────────────────────────────────
+6️⃣  CHECKLIST INTEGRATION
+
+• Checklist page should include:  
+  – All canonical TCOF tasks (origin:'factor')  
+  – Tasks from user heuristics (origin:'userHeuristic')  
+  – Tasks from organisational policies (origin:'orgPolicy')  
+• Hide tasks for heuristics that are linked to factors in Step 3 (since they
+  rely on the factor’s own tasks).
+
+────────────────────────────────────────
+7️⃣  TESTS
+
+• tests/block2.mapping.test.tsx  
+  – Mock plan with two heuristics.  
+  – Map one to factor 2.1, leave one un-mapped.  
+  – Navigate to Step 4; expect only the un-mapped heuristic appears.  
+
+• tests/block2.tasksPersist.test.tsx  
+  – Add a task under un-mapped heuristic → reload component → task persists.  
+
+• tests/step5.orgPolicy.test.tsx  
+  – Add policy task “Obtain legal sign-off” to Definition stage → verify in checklist.
+
+────────────────────────────────────────
+FILES TO UPDATE
+• pages/Block2Connect.tsx  (build the three-step accordion)  
+• components/FactorTaskEditor.tsx  (reuse admin component, allow custom label)  
+• utils/planHelpers.ts  (add heuristicLinks, ensure task origin flags)  
+• tests folder (add tests above)
+
+After deployment:
+✔ Block 2 loads the user’s heuristics.  
+✔ Step 3 shows mapping UI; mapping hides heuristics from Step 4.  
+✔ Step 4 uses admin-style task editor for remaining heuristics.  
+✔ Step 5 uses same editor for organisational tasks.  
+✔ All changes auto-save and appear in final checklist.
+
+End of prompt
