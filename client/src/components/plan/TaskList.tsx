@@ -117,6 +117,14 @@ export default function TaskList({
     factorTasksBySource[sourceId].push(task);
   });
   
+  // Sort the factor IDs to ensure consistent ordering
+  const sortedFactorIds = Object.keys(factorTasksBySource).sort((a, b) => {
+    // Extract numeric part of factor ID (e.g., "sf-1" -> 1)
+    const aNum = parseInt(a.split('-')[1]);
+    const bNum = parseInt(b.split('-')[1]);
+    return aNum - bNum;
+  });
+  
   // Get displayed tasks based on active tab
   let displayedTasks: TaskItem[] = [];
   if (activeTab === 'all') {
@@ -194,25 +202,92 @@ export default function TaskList({
                 No tasks found. Import tasks from mapped success factors or add custom policy tasks.
               </div>
             ) : (
-              displayedTasks.map(task => (
-                <div key={task.id} className={styles.taskRow}>
-                  <Checkbox
-                    id={`task-${task.id}`}
-                    checked={task.completed}
-                    onCheckedChange={(checked) => handleCheckboxChange(task.id, checked === true)}
-                    className={styles.checkbox}
-                  />
-                  <label 
-                    htmlFor={`task-${task.id}`} 
-                    className={`${styles.text} ${task.completed ? 'line-through text-muted-foreground' : ''}`}
-                  >
-                    {task.text}
-                    <span className={`${styles.badge} ${styles[task.origin]}`}>
-                      {task.origin}
-                    </span>
-                  </label>
-                </div>
-              ))
+              <div>
+                {/* First display factor tasks grouped by success factor */}
+                {factorTasks.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-tcof-dark mb-4 border-b pb-2">Success Factor Tasks</h3>
+                    {sortedFactorIds.map(factorId => (
+                      <div key={factorId} className="mb-6">
+                        <h4 className="text-sm font-semibold text-tcof-dark mb-3 border-b pb-1 flex items-center">
+                          <span className="bg-tcof-teal text-white text-xs rounded-md px-2 py-1 mr-2">
+                            {factorId}
+                          </span>
+                          <span className="flex-1">{getFactorNameById(factorId)}</span>
+                        </h4>
+                        <div className="pl-4">
+                          {factorTasksBySource[factorId].map(task => (
+                            <div key={task.id} className={styles.taskRow}>
+                              <Checkbox
+                                id={`task-${task.id}`}
+                                checked={task.completed}
+                                onCheckedChange={(checked) => handleCheckboxChange(task.id, checked === true)}
+                                className={styles.checkbox}
+                              />
+                              <label 
+                                htmlFor={`task-${task.id}`} 
+                                className={`${styles.text} ${task.completed ? 'line-through text-muted-foreground' : ''}`}
+                              >
+                                {task.text}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Display heuristic tasks */}
+                {heuristicTasks.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-tcof-dark mb-4 border-b pb-2">Personal Heuristic Tasks</h3>
+                    <div className="pl-4">
+                      {heuristicTasks.map(task => (
+                        <div key={task.id} className={styles.taskRow}>
+                          <Checkbox
+                            id={`task-${task.id}`}
+                            checked={task.completed}
+                            onCheckedChange={(checked) => handleCheckboxChange(task.id, checked === true)}
+                            className={styles.checkbox}
+                          />
+                          <label 
+                            htmlFor={`task-${task.id}`} 
+                            className={`${styles.text} ${task.completed ? 'line-through text-muted-foreground' : ''}`}
+                          >
+                            {task.text}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Display policy tasks */}
+                {policyOriginTasks.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-tcof-dark mb-4 border-b pb-2">Custom Policy Tasks</h3>
+                    <div className="pl-4">
+                      {policyOriginTasks.map(task => (
+                        <div key={task.id} className={styles.taskRow}>
+                          <Checkbox
+                            id={`task-${task.id}`}
+                            checked={task.completed}
+                            onCheckedChange={(checked) => handleCheckboxChange(task.id, checked === true)}
+                            className={styles.checkbox}
+                          />
+                          <label 
+                            htmlFor={`task-${task.id}`} 
+                            className={`${styles.text} ${task.completed ? 'line-through text-muted-foreground' : ''}`}
+                          >
+                            {task.text}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </TabsContent>
           
@@ -222,14 +297,17 @@ export default function TaskList({
                 No factor tasks found. Import tasks from mapped success factors.
               </div>
             ) : (
-              // Group tasks by success factor
-              Object.entries(factorTasksBySource).map(([factorId, tasks]) => (
+              // Group tasks by success factor, using the sorted order
+              sortedFactorIds.map(factorId => (
                 <div key={factorId} className="mb-6">
-                  <h3 className="text-sm font-semibold text-tcof-dark mb-2 border-b pb-1">
-                    Success Factor: {getFactorNameById(factorId)}
+                  <h3 className="text-sm font-semibold text-tcof-dark mb-3 border-b pb-1 flex items-center">
+                    <span className="bg-tcof-teal text-white text-xs rounded-md px-2 py-1 mr-2">
+                      {factorId}
+                    </span>
+                    <span className="flex-1">{getFactorNameById(factorId)}</span>
                   </h3>
                   <div className="pl-4">
-                    {tasks.map(task => (
+                    {factorTasksBySource[factorId].map(task => (
                       <div key={task.id} className={styles.taskRow}>
                         <Checkbox
                           id={`task-${task.id}`}
