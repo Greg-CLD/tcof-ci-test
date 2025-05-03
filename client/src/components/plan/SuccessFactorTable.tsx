@@ -60,9 +60,9 @@ export default function SuccessFactorTable({
     setFactorList(sampleFactors);
     
     // Process the imported tcofFactors data
-    if (tcofFactorsRaw && Array.isArray(tcofFactorsRaw) && tcofFactorsRaw.length > 0) {
+    if (tcofFactors && Array.isArray(tcofFactors) && tcofFactors.length > 0) {
       // Map the tcofFactors data to the required format
-      const formattedFactors = tcofFactorsRaw.map((factor: { id: string, title: string }) => ({
+      const formattedFactors = tcofFactors.map(factor => ({
         id: factor.id,
         name: factor.title
       }));
