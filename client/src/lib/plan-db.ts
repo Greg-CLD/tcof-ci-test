@@ -65,10 +65,17 @@ export type GoodPracticeTask = {
   completed?: boolean;
 };
 
+export type CustomFramework = {
+  id: string;
+  name: string;
+  tasks: Record<Stage, string[]>;
+};
+
 export type GoodPractice = {
   zone: string | null;
   frameworks: string[];
   tasks: GoodPracticeTask[];
+  customFrameworks?: CustomFramework[];
 };
 
 export type StageData = {
@@ -117,7 +124,8 @@ const createEmptyStageData = (): StageData => ({
   goodPractice: {
     zone: null,
     frameworks: [],
-    tasks: []
+    tasks: [],
+    customFrameworks: []
   }
 });
 
@@ -390,7 +398,8 @@ export const setZone = async (
     plan.stages.Identification.goodPractice = {
       zone: null,
       frameworks: [],
-      tasks: []
+      tasks: [],
+      customFrameworks: []
     };
   }
   
