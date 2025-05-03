@@ -31,6 +31,8 @@ import CynefinOrientationTool from "@/components/CynefinOrientationTool";
 import TCOFJourneyTool from "@/components/TCOFJourneyTool";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import GlobalNav from "@/components/GlobalNav";
+import Breadcrumb from "@/components/Breadcrumb";
 
 // Tool components wrapped with layout
 const GoalMappingPage = () => (
@@ -222,8 +224,14 @@ function App() {
           {/* Only enable accessibility audits in development */}
           <A11yAuditProvider disabled={!isDev}>
             <ProgressProvider>
-              <Router />
-              <Toaster />
+              <div className="flex flex-col min-h-screen">
+                <GlobalNav />
+                <Breadcrumb />
+                <div className="flex-grow">
+                  <Router />
+                </div>
+                <Toaster />
+              </div>
             </ProgressProvider>
           </A11yAuditProvider>
         </AuthProtectionProvider>
