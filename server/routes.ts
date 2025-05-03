@@ -155,6 +155,18 @@ function isAuthenticated(req: Request, res: Response, next: any) {
   res.status(401).json({ message: "Authentication required" });
 }
 
+// Check if user is an admin (case-insensitive email check)
+function isAdmin(req: Request, res: Response, next: any) {
+  if (req.isAuthenticated() && req.user) {
+    // Case-insensitive comparison of the username/email
+    const user = req.user as any;
+    if (user.username && typeof user.username === 'string' && user.username.toLowerCase() === 'greg@confluity.co.uk') {
+      return next();
+    }
+  }
+  res.status(403).json({ message: "Admin access required" });
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
   setupAuth(app);
@@ -709,7 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // Admin preset editor API endpoints
-  app.get('/api/admin/tcof-tasks', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/admin/tcof-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
       // First try to load the success factors from database
       const factors = await getFactors();
