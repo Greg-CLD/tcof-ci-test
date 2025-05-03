@@ -167,13 +167,24 @@ export default function Block2Design() {
         setRefreshTrigger(prev => prev + 1);
         
         // Show success message
-        alert("Block cleared. All mappings and tasks have been removed.");
+        toast({
+          title: "Block cleared",
+          description: "All mappings and tasks have been removed",
+        });
       } else {
-        alert("Failed to clear block data");
+        toast({
+          title: "Error",
+          description: "Failed to clear block data",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error clearing block:', error);
-      alert("Failed to clear block data");
+      toast({
+        title: "Error",
+        description: "Failed to clear block data",
+        variant: "destructive"
+      });
     }
   };
 
@@ -257,7 +268,9 @@ export default function Block2Design() {
           onPrevious={handleBack}
           onNext={handleNext}
           onSkip={handleSkipToChecklist}
+          onClear={handleClearBlock}
           showSkip={true}
+          showClear={true}
           isNextDisabled={false}
         />
       </div>
