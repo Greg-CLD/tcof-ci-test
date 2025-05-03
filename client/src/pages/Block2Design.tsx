@@ -8,9 +8,11 @@ import IntroAccordion from '@/components/plan/IntroAccordion';
 import SuccessFactorMapping from '@/components/plan/SuccessFactorMapping';
 import TaskList from '@/components/plan/TaskList';
 import StageSelector from '@/components/plan/StageSelector';
+import FactorTaskEditor, { StageType } from '@/components/plan/FactorTaskEditor';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
 import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask, PolicyTask } from '@/lib/plan-db';
+import { getTcofFactors } from '@/lib/tcofData';
 import { 
   Card, 
   CardContent, 
@@ -28,6 +30,13 @@ export default function Block2Design() {
   const [currentStage, setCurrentStage] = useState<Stage>('Identification');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [newPolicyTask, setNewPolicyTask] = useState('');
+  const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
+  const [factorTasks, setFactorTasks] = useState<Record<StageType, string[]>>({
+    Identification: [],
+    Definition: [],
+    Delivery: [],
+    Closure: []
+  });
   
   // Define steps for the progress bar
   const steps: Step[] = [
