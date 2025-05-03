@@ -1,0 +1,258 @@
+[
+  {
+    "id": "tcof-1",
+    "title": "1.1 Ask Why",
+    "identification": "Consult key stakeholders",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-2",
+    "title": "1.1 Ask Why",
+    "identification": "Understand pains and wants",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-3",
+    "title": "1.1 Ask Why",
+    "identification": "Define goals",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-4",
+    "title": "1.2 Get a Masterbuilder",
+    "identification": "Define the type of person you need",
+    "definition": "Confirm you have access to a master builder ready for the next stage",
+    "delivery": "Confirm you have access to a master builder ready for the next stage",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-5",
+    "title": "1.2 Get a Masterbuilder",
+    "identification": "Find a leader",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-6",
+    "title": "1.2 Get a Masterbuilder",
+    "identification": "Get access to additional support (if needed)",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-7",
+    "title": "1.3 Get Your People on the Bus",
+    "identification": "Get a team that has worked with your masterbuilder (if possible)",
+    "definition": "Build support with Change Champions",
+    "delivery": "Support champions to influence others",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-8",
+    "title": "1.3 Get Your People on the Bus",
+    "identification": "Identify early champions (if there is business change)",
+    "definition": "Enable team productivity",
+    "delivery": "Enable team productivity",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-9",
+    "title": "1.3 Get Your People on the Bus",
+    "identification": "Run team development workshops",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-10",
+    "title": "1.4 Make Friends and Keep them Friendly",
+    "identification": "Create a plan to engage with other stakeholders",
+    "definition": "Stakeholder communications, training and engagement",
+    "delivery": "Stakeholder communications, training and engagement",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-11",
+    "title": "1.4 Make Friends and Keep them Friendly",
+    "identification": "Engage stakeholders, customers, and users",
+    "definition": "Empower stakeholders, users, customers to support decision making",
+    "delivery": "Empower stakeholders, users, customers to support decision making",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-12",
+    "title": "1.4 Make Friends and Keep them Friendly",
+    "identification": "Develop a mechanism to foster transparency and involve stakeholders in key decisions",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-13",
+    "title": "2.1 Recognise that your project is not unique",
+    "identification": "Identify and learn lessons from three people or projects that have achieved similar outcomes",
+    "definition": "Re-engage with past projects to learn new lessons about the next stage",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-14",
+    "title": "2.1 Recognise that your project is not unique",
+    "identification": "Find out how long their projects took, what they cost, and whether the expected value was delivered",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-15",
+    "title": "2.1 Recognise that your project is not unique",
+    "identification": "Apply these insights to your plan",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-16",
+    "title": "2.2 Look for Tried & Tested Options",
+    "identification": "Identify three delivery methods using tried and tested techniques",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-17",
+    "title": "2.2 Look for Tried & Tested Options",
+    "identification": "Validate your best option through prototyping and customer or user feedback",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-18",
+    "title": "2.2 Look for Tried & Tested Options",
+    "identification": "Complete a pros and cons list for each option. Rate against:\n- Use of tried and tested methods\n- Likelihood of delivering goals\n- Modularity and scalability\n- Ease of building a minimum or maximum viable product\nInclude metrics where possible",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-19",
+    "title": "3.1 Think Big, Start Small",
+    "identification": "Break your preferred solution into small, modular parts",
+    "definition": "Re-engage with past projects to learn new lessons about the next stage",
+    "delivery": "Scale up and go big. Roll out sections / modular solution to other areas",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-20",
+    "title": "3.1 Think Big, Start Small",
+    "identification": "Ask the question: what is my Lego?",
+    "definition": "Validate that the solution will achieve the goals.",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-21",
+    "title": "3.1 Think Big, Start Small",
+    "identification": "Ensure people and plans are in place to develop the solution in Phase 2",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-22",
+    "title": "3.2 Learn by Experimenting",
+    "identification": "Create a plan to develop an MVP or MXVP in Stage 2",
+    "definition": "Develop module as a minimum viable product, if possible. Otherwise, develop a maximum virtual product.",
+    "delivery": "Continue regular learning and reflection sessions (at least monthly)",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-23",
+    "title": "3.2 Learn by Experimenting",
+    "identification": "Start regular reflection sessions: weekly, fortnightly, or monthly",
+    "definition": "Continue regular learning and reflection sessions (at least monthly)",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-24",
+    "title": "3.3 Keep on top of risks",
+    "identification": "List your top five risks now",
+    "definition": "Continuously identify and mittigate risks (review at least monthly)",
+    "delivery": "Continuously identify and mitigate risks (review at least monthly)",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-25",
+    "title": "3.3 Keep on top of risks",
+    "identification": "Create a mitigation plan for each one",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-26",
+    "title": "3.3 Keep on top of risks",
+    "identification": "Review and update your risk plan monthly (or more often)",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-27",
+    "title": "4.1 Adjust for optimism",
+    "identification": "Compare how long similar projects took in Stage 2 and 3 versus their original estimates",
+    "definition": "Look to previous projects to identify level of optimism for Stage 3, apply this contingency % to your estimate for time / cost / resources required for stage 3",
+    "delivery": "Build optimism allowances into all forecasts.",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-28",
+    "title": "4.1 Adjust for optimism",
+    "identification": "Adjust your forecast based on this optimism allowance and include contingency",
+    "definition": "-",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-29",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
+    "identification": "Identify the success measures for your solution in Stage 2",
+    "definition": "Identify the measurable success measures for your solution in Stage 3",
+    "delivery": "Confirm the built solution meets your goals. Measure this with metrics.",
+    "closure": "Record results for posterity"
+  },
+  {
+    "id": "tcof-30",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
+    "identification": "Confirm the business case do the benefits outweigh the costs?",
+    "definition": "Confirm the business case do the benefits outweigh the costs?",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-31",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
+    "identification": "-",
+    "definition": "Confirm you've used data to validate your chosen option and plan, including optimism bias",
+    "delivery": "-",
+    "closure": "-"
+  },
+  {
+    "id": "tcof-32",
+    "title": "4.3 Be Ready to Adapt",
+    "identification": "Set up regular meetings with key people to adapt to a changing world",
+    "definition": "Adapt the requirements / plan / scope based as new information comes to light.",
+    "delivery": "Adapt the requirements / plan / scope based as new information comes to light.",
+    "closure": "-"
+  }
+]

@@ -1,0 +1,322 @@
+[
+  {
+    "id": "tcof-1",
+    "title": "1.1 Ask Why",
+    "tasks": {
+      "Identification": ["Consult key stakeholders"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-2",
+    "title": "1.1 Ask Why",
+    "tasks": {
+      "Identification": ["Understand pains and wants"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-3",
+    "title": "1.1 Ask Why",
+    "tasks": {
+      "Identification": ["Define goals"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-4",
+    "title": "1.2 Get a Masterbuilder",
+    "tasks": {
+      "Identification": ["Define the type of person you need"],
+      "Definition": ["Confirm you have access to a master builder ready for the next stage"],
+      "Delivery": ["Confirm you have access to a master builder ready for the next stage"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-5",
+    "title": "1.2 Get a Masterbuilder",
+    "tasks": {
+      "Identification": ["Find a leader"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-6",
+    "title": "1.2 Get a Masterbuilder",
+    "tasks": {
+      "Identification": ["Get access to additional support (if needed)"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-7",
+    "title": "1.3 Get Your People on the Bus",
+    "tasks": {
+      "Identification": ["Get a team that has worked with your masterbuilder (if possible)"],
+      "Definition": ["Build support with Change Champions"],
+      "Delivery": ["Support champions to influence others"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-8",
+    "title": "1.3 Get Your People on the Bus",
+    "tasks": {
+      "Identification": ["Identify early champions (if there is business change)"],
+      "Definition": ["Enable team productivity"],
+      "Delivery": ["Enable team productivity"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-9",
+    "title": "1.3 Get Your People on the Bus",
+    "tasks": {
+      "Identification": ["Run team development workshops"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-10",
+    "title": "1.4 Make Friends and Keep them Friendly",
+    "tasks": {
+      "Identification": ["Create a plan to engage with other stakeholders"],
+      "Definition": ["Stakeholder communications, training and engagement"],
+      "Delivery": ["Stakeholder communications, training and engagement"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-11",
+    "title": "1.4 Make Friends and Keep them Friendly",
+    "tasks": {
+      "Identification": ["Engage stakeholders, customers, and users"],
+      "Definition": ["Empower stakeholders, users, customers to support decision making"],
+      "Delivery": ["Empower stakeholders, users, customers to support decision making"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-12",
+    "title": "1.4 Make Friends and Keep them Friendly",
+    "tasks": {
+      "Identification": ["Develop a mechanism to foster transparency and involve stakeholders in key decisions"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-13",
+    "title": "2.1 Recognise that your project is not unique",
+    "tasks": {
+      "Identification": ["Identify and learn lessons from three people or projects that have achieved similar outcomes"],
+      "Definition": ["Re-engage with past projects to learn new lessons about the next stage"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-14",
+    "title": "2.1 Recognise that your project is not unique",
+    "tasks": {
+      "Identification": ["Find out how long their projects took, what they cost, and whether the expected value was delivered"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-15",
+    "title": "2.1 Recognise that your project is not unique",
+    "tasks": {
+      "Identification": ["Apply these insights to your plan"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-16",
+    "title": "2.2 Look for Tried & Tested Options",
+    "tasks": {
+      "Identification": ["Identify three delivery methods using tried and tested techniques"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-17",
+    "title": "2.2 Look for Tried & Tested Options",
+    "tasks": {
+      "Identification": ["Validate your best option through prototyping and customer or user feedback"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-18",
+    "title": "2.2 Look for Tried & Tested Options",
+    "tasks": {
+      "Identification": ["Complete a pros and cons list for each option. Rate against:\n- Use of tried and tested methods\n- Likelihood of delivering goals\n- Modularity and scalability\n- Ease of building a minimum or maximum viable product\nInclude metrics where possible"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-19",
+    "title": "3.1 Think Big, Start Small",
+    "tasks": {
+      "Identification": ["Break your preferred solution into small, modular parts"],
+      "Definition": ["Re-engage with past projects to learn new lessons about the next stage"],
+      "Delivery": ["Scale up and go big. Roll out sections / modular solution to other areas"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-20",
+    "title": "3.1 Think Big, Start Small",
+    "tasks": {
+      "Identification": ["Ask the question: what is my Lego?"],
+      "Definition": ["Validate that the solution will achieve the goals."],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-21",
+    "title": "3.1 Think Big, Start Small",
+    "tasks": {
+      "Identification": ["Ensure people and plans are in place to develop the solution in Phase 2"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-22",
+    "title": "3.2 Learn by Experimenting",
+    "tasks": {
+      "Identification": ["Create a plan to develop an MVP or MXVP in Stage 2"],
+      "Definition": ["Develop module as a minimum viable product, if possible. Otherwise, develop a maximum virtual product."],
+      "Delivery": ["Continue regular learning and reflection sessions (at least monthly)"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-23",
+    "title": "3.2 Learn by Experimenting",
+    "tasks": {
+      "Identification": ["Start regular reflection sessions: weekly, fortnightly, or monthly"],
+      "Definition": ["Continue regular learning and reflection sessions (at least monthly)"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-24",
+    "title": "3.3 Keep on top of risks",
+    "tasks": {
+      "Identification": ["List your top five risks now"],
+      "Definition": ["Continuously identify and mittigate risks (review at least monthly)"],
+      "Delivery": ["Continuously identify and mitigate risks (review at least monthly)"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-25",
+    "title": "3.3 Keep on top of risks",
+    "tasks": {
+      "Identification": ["Create a mitigation plan for each one"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-26",
+    "title": "3.3 Keep on top of risks",
+    "tasks": {
+      "Identification": ["Review and update your risk plan monthly (or more often)"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-27",
+    "title": "4.1 Adjust for optimism",
+    "tasks": {
+      "Identification": ["Compare how long similar projects took in Stage 2 and 3 versus their original estimates"],
+      "Definition": ["Look to previous projects to identify level of optimism for Stage 3, apply this contingency % to your estimate for time / cost / resources required for stage 3"],
+      "Delivery": ["Build optimism allowances into all forecasts."],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-28",
+    "title": "4.1 Adjust for optimism",
+    "tasks": {
+      "Identification": ["Adjust your forecast based on this optimism allowance and include contingency"],
+      "Definition": ["-"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-29",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
+    "tasks": {
+      "Identification": ["Identify the success measures for your solution in Stage 2"],
+      "Definition": ["Identify the measurable success measures for your solution in Stage 3"],
+      "Delivery": ["Confirm the built solution meets your goals. Measure this with metrics."],
+      "Closure": ["Record results for posterity"]
+    }
+  },
+  {
+    "id": "tcof-30",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
+    "tasks": {
+      "Identification": ["Confirm the business case do the benefits outweigh the costs?"],
+      "Definition": ["Confirm the business case do the benefits outweigh the costs?"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-31",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
+    "tasks": {
+      "Identification": ["-"],
+      "Definition": ["Confirm you've used data to validate your chosen option and plan, including optimism bias"],
+      "Delivery": ["-"],
+      "Closure": ["-"]
+    }
+  },
+  {
+    "id": "tcof-32",
+    "title": "4.3 Be Ready to Adapt",
+    "tasks": {
+      "Identification": ["Set up regular meetings with key people to adapt to a changing world"],
+      "Definition": ["Adapt the requirements / plan / scope based as new information comes to light."],
+      "Delivery": ["Adapt the requirements / plan / scope based as new information comes to light."],
+      "Closure": ["-"]
+    }
+  }
+]

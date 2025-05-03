@@ -1,0 +1,48 @@
+We’re experiencing persistent problems relying on an uploaded Excel file to populate TCOF Success Factors and their tasks. Please remove this dependency on spreadsheets and instead follow this new architecture:
+
+1. ✅ **Initial Data Source:**
+   - I am uploading a JSON file named `tcof_success_factors_v2.json` containing all TCOF success factors and associated tasks for each of the four stages.
+   - This JSON file contains an array of success factor objects, each with the following structure:
+     {
+       "title": "1.1 Ask Why",
+       "tasks": {
+         "Identification": ["Example task 1", "Example task 2"],
+         "Definition": [...],
+         "Delivery": [...],
+         "Closure": [...]
+       }
+     }
+
+2. ✅ **Database Storage:**
+   - Store the success factors and tasks permanently in the Replit DB or another server-side JSON file, not in memory or localStorage.
+   - On app load, the system should read this saved JSON from the database directly, not from a file upload.
+
+3. ✅ **Admin Panel:**
+   - The admin editor page should:
+     - Load success factors and tasks from the stored database file.
+     - Let me manually edit and save the list.
+     - Allow me to add new factors, rename them, or change tasks per stage.
+     - Provide an option to reset all factors from the uploaded `tcof_success_factors_v2.json`.
+
+4. ✅ **Step 1 Page:**
+   - Display **all success factor titles only** (from the saved DB), for reflection and rating.
+   - Include the emoji rating scale with a hover-over or static key:
+     - ❌ Doesn’t land (1)
+     - 🤔 Unfamiliar (2)
+     - 🟡 Seems true (3)
+     - ✅ Proven (4)
+     - 🔥 Hard-won truth (5)
+
+5. ✅ **Checklist Page:**
+   - Preload the checklist with all tasks from every success factor, grouped under each stage.
+   - These should appear under the “TCOF Success Factors” section in the checklist.
+   - Any deletions or edits should not affect the database but be saved per-user via localStorage or session.
+
+6. ✅ **User Experience:**
+   - Eliminate any spreadsheet loaders or parsing logic on the frontend.
+   - Provide clear confirmation messages when tasks or factors are saved.
+   - Ensure the full list loads correctly on app refresh.
+
+Once complete, I should be able to update the full success factors list either via JSON upload (admin only) or the admin editor interface, with the changes reflected everywhere in the app.
+
+Please confirm which files or components you’ve updated to implement this new architecture.
