@@ -436,20 +436,45 @@ export default function AdminFactorEditor() {
   };
 
   // Confirm import
-  const handleConfirmImport = () => {
-    setFactors(importedFactors);
-    setShowImportDialog(false);
-    setImportedFactors([]);
-    
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const handleConfirmImport = async () => {
+    try {
+      setIsSaving(true);
+      
+      // First replace all local factors
+      setFactors(importedFactors);
+      
+      // Then try to save to the server using the API
+      const success = await saveFactors(importedFactors);
+      
+      if (success) {
+        toast({
+          title: 'Import successful',
+          description: `Imported and saved ${importedFactors.length} success factors.`,
+          variant: 'default'
+        });
+      } else {
+        toast({
+          title: 'Partial import',
+          description: `Imported ${importedFactors.length} factors locally, but failed to save to server.`,
+          variant: 'default'
+        });
+      }
+    } catch (error) {
+      console.error('Error saving imported factors:', error);
+      toast({
+        title: 'Import partial',
+        description: 'Factors imported locally only. Server save failed.',
+        variant: 'destructive'
+      });
+    } finally {
+      setShowImportDialog(false);
+      setImportedFactors([]);
+      setIsSaving(false);
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
-    
-    toast({
-      title: 'Import successful',
-      description: `Imported ${importedFactors.length} success factors.`,
-      variant: 'default'
-    });
   };
 
   return (
