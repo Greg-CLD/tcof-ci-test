@@ -50,7 +50,15 @@ async function loadSuccessFactorTasks(): Promise<any[]> {
 
 // Default heuristics and tasks
 // This would normally be loaded from a JSON file or API
-const defaultHeuristics = {
+interface DefaultHeuristicsType {
+  [key: string]: {
+    heuristics: { id: string; text: string; completed: boolean }[];
+    factors: { id: string; text: string; impact: 'low' | 'medium' | 'high' }[];
+    practiceTasks: { id: string; text: string; completed: boolean }[];
+  };
+}
+
+const defaultHeuristics: DefaultHeuristicsType = {
   Identification: {
     heuristics: [
       { id: 'h1', text: 'Define the problem statement clearly', completed: false },
@@ -137,101 +145,98 @@ export async function quickStartPlan(): Promise<string> {
       throw new Error('Failed to create and load plan');
     }
     
-    // Update the plan with default heuristics
+    // Initialize the updated plan with default structure
     const updatedPlan: PlanRecord = {
       ...plan,
       stages: {
-        ...plan.stages,
-        ...defaultHeuristics as any // Type cast to avoid TypeScript errors
+        ...plan.stages
       }
     };
     
-    // Ensure the personalHeuristics array exists in the Identification stage
-    if (!updatedPlan.stages.Identification.personalHeuristics) {
-      updatedPlan.stages.Identification.personalHeuristics = [];
-    }
+    // Ensure the personalHeuristics array exists in each stage
+    Object.keys(updatedPlan.stages).forEach(stageName => {
+      const stageKey = stageName as keyof typeof updatedPlan.stages;
+      if (!updatedPlan.stages[stageKey].personalHeuristics) {
+        updatedPlan.stages[stageKey].personalHeuristics = [];
+      }
+    });
     
     // Load preset heuristics from API
     const presetHeuristics = await loadPresetHeuristics();
+    
     if (!presetHeuristics || presetHeuristics.length === 0) {
-      throw new Error('No preset heuristics found');
+      console.error('No preset heuristics found, using defaults');
+    } else {
+      // Convert the preset heuristics to the correct format and add them
+      const formattedHeuristics = presetHeuristics.map((h: PresetHeuristic) => ({
+        id: h.id,
+        text: h.text,
+        notes: h.notes || "",
+        favourite: false
+      }));
+      
+      // Add preset heuristics to the Identification stage
+      updatedPlan.stages.Identification.personalHeuristics = [
+        ...updatedPlan.stages.Identification.personalHeuristics || [],
+        ...formattedHeuristics
+      ];
     }
-    
-    // Convert the preset heuristics to the correct format and add them
-    const formattedHeuristics = presetHeuristics.map((h: PresetHeuristic) => ({
-      id: h.id,
-      text: h.text,
-      notes: h.notes || "",
-      favourite: false
-    }));
-    
-    // Add preset heuristics to the plan
-    updatedPlan.stages.Identification.personalHeuristics = [
-      ...updatedPlan.stages.Identification.personalHeuristics || [],
-      ...formattedHeuristics
-    ];
     
     // Load the TCOF success factor tasks from API
     const tcofTasks = await loadSuccessFactorTasks();
     
-    // If we have success factor tasks, use them; otherwise use default factors
-    if (tcofTasks && tcofTasks.length > 0) {
-      // Organize tasks by category (Identification, Definition, Delivery, Closure)
-      const tasksByStage: Record<string, any[]> = {
-        Identification: [],
-        Definition: [],
-        Delivery: [],
-        Closure: []
-      };
+    if (!tcofTasks || tcofTasks.length === 0) {
+      console.error('No TCOF tasks found from API, using defaults');
       
-      // Group tasks by stage
-      tcofTasks.forEach(task => {
-        if (task.stage && tasksByStage[task.stage]) {
-          tasksByStage[task.stage].push({
-            id: task.id,
-            text: task.text,
-            impact: task.impact || 'medium'
-          });
-        }
-      });
-      
-      // Update each stage's factors with the API-loaded tasks
-      Object.keys(tasksByStage).forEach(stageName => {
-        const stageTasks = tasksByStage[stageName];
-        if (stageTasks && stageTasks.length > 0) {
-          const planStageKey = stageName as keyof typeof updatedPlan.stages;
-          
-          // Ensure the factors array exists in this stage
-          if (!updatedPlan.stages[planStageKey].factors) {
-            updatedPlan.stages[planStageKey].factors = [];
-          }
-          
-          // Replace with the API-loaded tasks
-          updatedPlan.stages[planStageKey].factors = stageTasks;
-        }
-      });
-    } else {
       // Fall back to default factors if no API-loaded tasks are available
       Object.keys(defaultHeuristics).forEach(stageName => {
         const stageKey = stageName as keyof typeof defaultHeuristics;
-        const stageFactors = defaultHeuristics[stageKey].factors;
-        if (stageFactors) {
-          const planStageKey = stageName as keyof typeof updatedPlan.stages;
-          
-          // Ensure the factors array exists in this stage
+        const defaultStage = defaultHeuristics[stageKey];
+        const planStageKey = stageName as keyof typeof updatedPlan.stages;
+        
+        // Add default factors
+        if (defaultStage.factors) {
           if (!updatedPlan.stages[planStageKey].factors) {
             updatedPlan.stages[planStageKey].factors = [];
           }
           
-          // Add any missing factors
-          stageFactors.forEach(factor => {
-            const existingFactorIndex = updatedPlan.stages[planStageKey].factors.findIndex(f => f.id === factor.id);
-            if (existingFactorIndex === -1) {
-              updatedPlan.stages[planStageKey].factors.push(factor);
-            }
-          });
+          updatedPlan.stages[planStageKey].factors = defaultStage.factors;
+        }
+        
+        // Add default practice tasks
+        if (defaultStage.practiceTasks) {
+          if (!updatedPlan.stages[planStageKey].practiceTasks) {
+            updatedPlan.stages[planStageKey].practiceTasks = [];
+          }
+          
+          updatedPlan.stages[planStageKey].practiceTasks = defaultStage.practiceTasks;
+        }
+        
+        // Add default heuristics if none were loaded from the API
+        if (presetHeuristics.length === 0 && defaultStage.heuristics) {
+          // Convert default heuristics to PersonalHeuristic format
+          updatedPlan.stages[planStageKey].personalHeuristics = defaultStage.heuristics.map(h => ({
+            id: h.id,
+            text: h.text,
+            notes: "",
+            favourite: false
+          }));
         }
       });
+    } else {
+      // Success! Create success factor ratings for each TCOF task
+      const successFactorRatings: Record<string, any> = {};
+      
+      tcofTasks.forEach(task => {
+        successFactorRatings[task.id] = {
+          rating: 0,
+          notes: '',
+          favourite: false
+        };
+      });
+      
+      // Add the success factor ratings to the Identification stage
+      updatedPlan.stages.Identification.successFactorRatings = successFactorRatings;
     }
     
     // Save the updated plan

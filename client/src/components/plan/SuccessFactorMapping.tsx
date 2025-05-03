@@ -47,7 +47,8 @@ export default function SuccessFactorMapping({
   }, []);
 
   const handleFactorChange = (heuristicId: string, factorId: string | null) => {
-    if (addMapping(planId, heuristicId, factorId, stage)) {
+    const success = addMapping(planId, heuristicId, factorId, stage);
+    if (success) {
       onMappingChange();
     }
   };

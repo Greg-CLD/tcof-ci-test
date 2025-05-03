@@ -217,12 +217,12 @@ export const getPlans = (): Record<string, PlanRecord> => ({ ...plans });
 /**
  * Adds a mapping between a heuristic and a factor
  */
-export const addMapping = async (
+export const addMapping = (
   planId: string, 
   heuristicId: string, 
   factorId: string | null, 
   stage: Stage
-): Promise<boolean> => {
+): boolean => {
   const plan = plans[planId];
   if (!plan) return false;
   
@@ -250,8 +250,10 @@ export const addMapping = async (
   plan.stages[stage].mappings = mappings;
   plan.lastUpdated = new Date().toISOString();
   
-  // Save changes to storage
-  await savePlan(planId, plan);
+  // Save changes to storage asynchronously but don't wait for it
+  savePlan(planId, plan).catch(err => {
+    console.error('Error saving mapping:', err);
+  });
   
   return true;
 };
