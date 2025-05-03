@@ -543,20 +543,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Set up utilities for success factors using file system
+  
+  // Simple server-side factors database
+  // Define our factor interface
+  interface FactorTask {
+    id: string;
+    title: string;
+    tasks: {
+      Identification: string[];
+      Definition: string[];
+      Delivery: string[];
+      Closure: string[];
+    };
+  }
+  
+  let factorsCache: FactorTask[] | null = null;
+  
+  // Get factors from file system
+  async function getFactors(): Promise<FactorTask[]> {
+    if (factorsCache) {
+      return factorsCache;
+    }
+    
+    try {
+      // Try to load from successFactors.json first
+      const factorsPath = path.join(process.cwd(), 'data', 'successFactors.json');
+      if (fs.existsSync(factorsPath)) {
+        const data = fs.readFileSync(factorsPath, 'utf8');
+        const parsed = JSON.parse(data) as FactorTask[];
+        factorsCache = parsed;
+        return factorsCache;
+      }
+      
+      // Fall back to tcofTasks.json if needed
+      const tasksPath = path.join(process.cwd(), 'data', 'tcofTasks.json');
+      if (fs.existsSync(tasksPath)) {
+        const data = fs.readFileSync(tasksPath, 'utf8');
+        const parsed = JSON.parse(data) as FactorTask[];
+        factorsCache = parsed;
+        return factorsCache;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error loading factors:', error);
+      return [];
+    }
+  }
+  
+  // Save factors to file system
+  async function saveFactors(factors: FactorTask[]): Promise<boolean> {
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      
+      fs.writeFileSync(
+        path.join(dataDir, 'successFactors.json'), 
+        JSON.stringify(factors, null, 2),
+        'utf8'
+      );
+      
+      // Update the cache
+      factorsCache = factors;
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving factors:', error);
+      return false;
+    }
+  }
+  
   // Admin preset editor API endpoints
   app.get('/api/admin/tcof-tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // First try to load the success factors
+      // First try to load the success factors from database
+      const factors = await getFactors();
+      
+      if (factors && factors.length > 0) {
+        return res.json(factors);
+      }
+      
+      // If no factors in DB, try to load from files
       try {
         const successFactorsData = fs.readFileSync(path.join(process.cwd(), 'data', 'successFactors.json'), 'utf8');
-        return res.json(JSON.parse(successFactorsData));
+        const parsedFactors = JSON.parse(successFactorsData);
+        
+        // Store in database for future use
+        await saveFactors(parsedFactors);
+        
+        return res.json(parsedFactors);
       } catch (sfError) {
         console.warn('successFactors.json not found, falling back to tcofTasks.json');
       }
       
       // Fall back to the old format if needed
       const coreTasksData = fs.readFileSync(path.join(process.cwd(), 'data', 'tcofTasks.json'), 'utf8');
-      res.json(JSON.parse(coreTasksData));
+      const oldFormatData = JSON.parse(coreTasksData);
+      
+      // Store in database for future use
+      await saveFactors(oldFormatData);
+      
+      res.json(oldFormatData);
     } catch (error: any) {
       console.error('Error loading tasks data:', error);
       res.status(500).json({ message: 'Failed to load core tasks data' });
@@ -575,13 +665,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid data format. Expected an array of success factors.' });
       }
       
-      // Ensure data directory exists
+      // Ensure data directory exists (for backward compatibility)
       const dataDir = path.join(process.cwd(), 'data');
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
       }
       
-      // Save the updated success factors to the file
+      // Save the success factors to the database
+      await saveFactors(req.body);
+      
+      // Also save to file for backward compatibility
       fs.writeFileSync(
         path.join(dataDir, 'successFactors.json'), 
         JSON.stringify(req.body, null, 2),
@@ -590,8 +683,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ success: true, message: 'Success factors saved successfully' });
     } catch (error: any) {
-      console.error('Error saving successFactors.json:', error);
+      console.error('Error saving success factors:', error);
       res.status(500).json({ message: 'Failed to save success factors data' });
+    }
+  });
+  
+  // Success Factor Editor API endpoints
+  app.get('/api/admin/success-factors', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const factors = await getFactors();
+      res.json(factors || []);
+    } catch (error: any) {
+      console.error('Error getting success factors:', error);
+      res.status(500).json({ message: 'Failed to get success factors' });
+    }
+  });
+  
+  app.get('/api/admin/success-factors/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const factorId = req.params.id;
+      const factors = await getFactors();
+      
+      if (!factors || factors.length === 0) {
+        return res.status(404).json({ message: 'No success factors found' });
+      }
+      
+      const factor = factors.find((f: FactorTask) => f.id === factorId);
+      
+      if (!factor) {
+        return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
+      }
+      
+      res.json(factor);
+    } catch (error: any) {
+      console.error('Error getting success factor:', error);
+      res.status(500).json({ message: 'Failed to get success factor' });
+    }
+  });
+  
+  app.post('/api/admin/success-factors', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Only allow admin users to create success factors
+      if ((req.user as any).username !== 'greg@confluity.co.uk') {
+        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
+      }
+      
+      const newFactor = req.body;
+      
+      // Validate the new factor
+      if (!newFactor.id || !newFactor.title || !newFactor.tasks) {
+        return res.status(400).json({ message: 'Invalid factor data. Must include id, title, and tasks.' });
+      }
+      
+      // Get existing factors
+      const factors = await getFactors() || [];
+      
+      // Check if factor with this ID already exists
+      if (factors.some((f: FactorTask) => f.id === newFactor.id)) {
+        return res.status(409).json({ message: `Factor with ID ${newFactor.id} already exists` });
+      }
+      
+      // Add the new factor
+      factors.push(newFactor);
+      
+      // Save updated factors
+      await saveFactors(factors);
+      
+      res.status(201).json(newFactor);
+    } catch (error: any) {
+      console.error('Error creating success factor:', error);
+      res.status(500).json({ message: 'Failed to create success factor' });
+    }
+  });
+  
+  app.put('/api/admin/success-factors/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Only allow admin users to update success factors
+      if ((req.user as any).username !== 'greg@confluity.co.uk') {
+        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
+      }
+      
+      const factorId = req.params.id;
+      const updatedFactor = req.body;
+      
+      // Validate the updated factor
+      if (!updatedFactor.id || !updatedFactor.title || !updatedFactor.tasks) {
+        return res.status(400).json({ message: 'Invalid factor data. Must include id, title, and tasks.' });
+      }
+      
+      // Get existing factors
+      const factors = await getFactors() || [];
+      
+      // Find the factor to update
+      const factorIndex = factors.findIndex((f: FactorTask) => f.id === factorId);
+      
+      if (factorIndex === -1) {
+        return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
+      }
+      
+      // Ensure the ID in the body matches the URL parameter
+      if (updatedFactor.id !== factorId) {
+        return res.status(400).json({ message: 'Factor ID in body must match ID in URL' });
+      }
+      
+      // Update the factor
+      factors[factorIndex] = updatedFactor;
+      
+      // Save updated factors
+      await saveFactors(factors);
+      
+      res.json(updatedFactor);
+    } catch (error: any) {
+      console.error('Error updating success factor:', error);
+      res.status(500).json({ message: 'Failed to update success factor' });
+    }
+  });
+  
+  app.delete('/api/admin/success-factors/:id', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Only allow admin users to delete success factors
+      if ((req.user as any).username !== 'greg@confluity.co.uk') {
+        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
+      }
+      
+      const factorId = req.params.id;
+      
+      // Get existing factors
+      const factors = await getFactors() || [];
+      
+      // Find the factor to delete
+      const factorIndex = factors.findIndex(f => f.id === factorId);
+      
+      if (factorIndex === -1) {
+        return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
+      }
+      
+      // Remove the factor
+      factors.splice(factorIndex, 1);
+      
+      // Save updated factors
+      await saveFactors(factors);
+      
+      res.json({ success: true, message: `Success factor with ID ${factorId} deleted` });
+    } catch (error: any) {
+      console.error('Error deleting success factor:', error);
+      res.status(500).json({ message: 'Failed to delete success factor' });
     }
   });
 

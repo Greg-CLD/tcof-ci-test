@@ -18,9 +18,25 @@ if (isBrowser) {
   };
 } else {
   // In Node.js environment, use Replit Database
-  // This code will only run on the server
-  const Database = require('@replit/database').default;
-  db = new Database();
+  // Dynamic import will be used on the server
+  try {
+    // Note: This will never actually run in the browser
+    // It's just code to make the server-side version work
+    const { default: Database } = await import('@replit/database');
+    db = new Database();
+  } catch (error) {
+    console.error('Failed to initialize Replit Database:', error);
+    // Create a fallback in-memory database for the server
+    const memoryDb = {};
+    db = {
+      async get(key) {
+        return memoryDb[key];
+      },
+      async set(key, value) {
+        memoryDb[key] = value;
+      }
+    };
+  }
 }
 
 export async function getFactors() {
