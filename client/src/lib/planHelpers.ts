@@ -1,17 +1,30 @@
 import { createEmptyPlan, savePlan, loadPlan, PlanRecord, planExists } from './plan-db';
 import { v4 as uuidv4 } from 'uuid';
 
-// Default preset heuristics for quick start
-interface PresetHeuristic {
+// Default preset heuristics types
+export interface PresetHeuristic {
   id: string;
   text: string;
   notes: string;
 }
 
-const presetHeuristics: PresetHeuristic[] = [
-  { id: "H1", text: "Start slow to go fast", notes: "" },
-  { id: "H2", text: "Test it small before you scale it big", notes: "" }
-];
+// Async function to load presetHeuristics from JSON
+async function loadPresetHeuristics(): Promise<PresetHeuristic[]> {
+  try {
+    const response = await fetch('/data/presetHeuristics.json');
+    if (!response.ok) {
+      throw new Error(`Failed to load preset heuristics: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error loading preset heuristics:', error);
+    // Fallback default heuristics if JSON fails to load
+    return [
+      { id: "H1", text: "Start slow to go fast", notes: "" },
+      { id: "H2", text: "Test it small before you scale it big", notes: "" }
+    ];
+  }
+}
 
 // Default heuristics and tasks
 // This would normally be loaded from a JSON file or API
@@ -91,50 +104,82 @@ const defaultHeuristics = {
  * @returns The ID of the newly created plan
  */
 export async function quickStartPlan(): Promise<string> {
-  // Create a new empty plan
-  const planId = createEmptyPlan();
-  
-  // Load the plan
-  const plan = await loadPlan(planId);
-  
-  if (!plan) {
-    throw new Error('Failed to create and load plan');
-  }
-  
-  // Update the plan with default heuristics and preset personal heuristics
-  const updatedPlan: PlanRecord = {
-    ...plan,
-    stages: {
-      ...plan.stages,
-      ...defaultHeuristics
+  try {
+    // Create a new empty plan (now an async operation)
+    const planId = await createEmptyPlan();
+    
+    // Load the plan
+    const plan = await loadPlan(planId);
+    
+    if (!plan) {
+      throw new Error('Failed to create and load plan');
     }
-  };
-  
-  // Add the preset heuristics to personal heuristics in the Identification stage
-  if (!updatedPlan.stages.Identification.personalHeuristics) {
-    updatedPlan.stages.Identification.personalHeuristics = [];
+    
+    // Update the plan with default heuristics
+    const updatedPlan: PlanRecord = {
+      ...plan,
+      stages: {
+        ...plan.stages,
+        ...defaultHeuristics
+      }
+    };
+    
+    // Ensure the personalHeuristics array exists in the Identification stage
+    if (!updatedPlan.stages.Identification.personalHeuristics) {
+      updatedPlan.stages.Identification.personalHeuristics = [];
+    }
+    
+    // Load preset heuristics from JSON file
+    const presetHeuristics = await loadPresetHeuristics();
+    
+    // Convert the preset heuristics to the correct format and add them
+    const formattedHeuristics = presetHeuristics.map(h => ({
+      id: h.id,
+      text: h.text,
+      notes: h.notes || "",
+      favourite: false
+    }));
+    
+    // Add preset heuristics to the plan
+    updatedPlan.stages.Identification.personalHeuristics = [
+      ...updatedPlan.stages.Identification.personalHeuristics,
+      ...formattedHeuristics
+    ];
+    
+    // Make sure all 12 success factors are included
+    Object.keys(defaultHeuristics).forEach(stageName => {
+      const stageFactors = defaultHeuristics[stageName as keyof typeof defaultHeuristics].factors;
+      if (stageFactors) {
+        // Ensure the factors array exists in this stage
+        if (!updatedPlan.stages[stageName as keyof typeof updatedPlan.stages].factors) {
+          updatedPlan.stages[stageName as keyof typeof updatedPlan.stages].factors = [];
+        }
+        
+        // Add any missing factors
+        stageFactors.forEach(factor => {
+          const existingFactorIndex = updatedPlan.stages[stageName as keyof typeof updatedPlan.stages].factors.findIndex(f => f.id === factor.id);
+          if (existingFactorIndex === -1) {
+            updatedPlan.stages[stageName as keyof typeof updatedPlan.stages].factors.push(factor);
+          }
+        });
+      }
+    });
+    
+    // Save the updated plan
+    const success = await savePlan(planId, updatedPlan);
+    
+    if (!success) {
+      throw new Error('Failed to save plan');
+    }
+    
+    // Store this plan ID in localStorage as the most recent plan
+    localStorage.setItem('tcof_most_recent_plan', planId);
+    
+    return planId;
+  } catch (error) {
+    console.error('Error in quickStartPlan:', error);
+    throw new Error('Quick-Start failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
-  
-  // Convert the preset heuristics to the correct format and add them
-  const formattedHeuristics = presetHeuristics.map(h => ({
-    id: h.id,
-    text: h.text,
-    notes: h.notes,
-    favourite: false
-  }));
-  
-  updatedPlan.stages.Identification.personalHeuristics = [
-    ...updatedPlan.stages.Identification.personalHeuristics,
-    ...formattedHeuristics
-  ];
-  
-  // Save the updated plan
-  await savePlan(planId, updatedPlan);
-  
-  // Store this plan ID in localStorage as the most recent plan
-  localStorage.setItem('tcof_most_recent_plan', planId);
-  
-  return planId;
 }
 
 /**
@@ -150,14 +195,36 @@ export function getLatestPlanId(): string | null {
  * @returns True if there's a valid plan, false otherwise
  */
 export async function hasExistingPlan(): Promise<boolean> {
-  const planId = getLatestPlanId();
-  
-  if (!planId) {
+  try {
+    const planId = getLatestPlanId();
+    
+    if (!planId) {
+      return false;
+    }
+    
+    // Get all plans from storage
+    const existingPlans = await getAllPlans();
+    
+    // No plans at all
+    if (existingPlans.length === 0) {
+      return false;
+    }
+    
+    // Verify the plan exists
+    const exists = await planExists(planId);
+    
+    // If the most recent plan doesn't exist but we have other plans,
+    // update the most recent plan ID to the first available plan
+    if (!exists && existingPlans.length > 0) {
+      localStorage.setItem('tcof_most_recent_plan', existingPlans[0]);
+      return true;
+    }
+    
+    return exists;
+  } catch (error) {
+    console.error('Error checking if plan exists:', error);
     return false;
   }
-  
-  // Verify the plan exists
-  return await planExists(planId);
 }
 
 /**
