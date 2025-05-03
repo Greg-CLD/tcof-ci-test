@@ -31,9 +31,9 @@ const officialFactorTitles = [
 
 // Official canonical IDs for the 12 TCOF success factors
 const officialFactorIds = [
-  "tcof-1", "tcof-2", "tcof-3", "tcof-4", 
-  "tcof-5", "tcof-6", "tcof-7", "tcof-8", 
-  "tcof-9", "tcof-10", "tcof-11", "tcof-12"
+  "sf-1", "sf-2", "sf-3", "sf-4", 
+  "sf-5", "sf-6", "sf-7", "sf-8", 
+  "sf-9", "sf-10", "sf-11", "sf-12"
 ];
 
 async function updateCanonicalFactors() {
