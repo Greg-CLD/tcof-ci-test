@@ -39,7 +39,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import { Loader2, Plus, Save, Trash2, Upload } from 'lucide-react';
-import { getFactors, saveFactors } from '@/utils/factorStore';
+import { getFactors, saveFactors, createFactor, updateFactor, deleteFactor } from '@/utils/factorStore';
 
 // Types for the success factor
 import { SuccessFactor } from '@/utils/factorStore';
@@ -124,7 +124,7 @@ export default function AdminFactorEditor() {
   };
 
   // Add a new factor
-  const handleAddFactor = () => {
+  const handleAddFactor = async () => {
     const newId = `${factors.length + 1}.1`;
     const newFactor: SuccessFactor = {
       id: newId,
@@ -137,21 +137,68 @@ export default function AdminFactorEditor() {
       }
     };
     
-    setFactors([...factors, newFactor]);
-    setSelectedFactorId(newId);
+    try {
+      // Use the new createFactor API
+      const createdFactor = await createFactor(newFactor);
+      
+      if (createdFactor) {
+        setFactors([...factors, createdFactor]);
+        setSelectedFactorId(createdFactor.id);
+        
+        toast({
+          title: 'Success',
+          description: 'New success factor created.',
+          variant: 'default',
+        });
+      } else {
+        // Fall back to local-only creation if API fails
+        setFactors([...factors, newFactor]);
+        setSelectedFactorId(newId);
+        
+        toast({
+          title: 'Warning',
+          description: 'Created factor locally only. Save all factors to persist.',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Error creating factor:', error);
+      // Fall back to local-only creation
+      setFactors([...factors, newFactor]);
+      setSelectedFactorId(newId);
+      
+      toast({
+        title: 'Warning',
+        description: 'Could not save to server. Factor created locally only.',
+        variant: 'default',
+      });
+    }
   };
 
   // Update factor title
-  const handleUpdateFactorTitle = (factorId: string, newTitle: string) => {
+  const handleUpdateFactorTitle = async (factorId: string, newTitle: string) => {
+    // First update local state for immediate feedback
+    const updatedFactor = factors.find(f => f.id === factorId);
+    if (!updatedFactor) return;
+    
+    const newFactor = { ...updatedFactor, title: newTitle };
+    
+    // Update local state immediately
     setFactors(prevFactors => 
       prevFactors.map(f => 
-        f.id === factorId ? { ...f, title: newTitle } : f
+        f.id === factorId ? newFactor : f
       )
     );
+    
+    // Then try to update via API (don't wait for this to complete)
+    updateFactor(factorId, newFactor).catch(error => {
+      console.error('Error updating factor title:', error);
+      // No toast here as it would be annoying for every keystroke
+    });
   };
 
   // Update factor ID
-  const handleUpdateFactorId = (factorId: string, newId: string) => {
+  const handleUpdateFactorId = async (factorId: string, newId: string) => {
     // Check if ID already exists
     if (factors.some(f => f.id === newId && f.id !== factorId)) {
       toast({
@@ -162,73 +209,169 @@ export default function AdminFactorEditor() {
       return;
     }
 
-    setFactors(prevFactors => 
-      prevFactors.map(f => 
-        f.id === factorId ? { ...f, id: newId } : f
-      )
-    );
-    setSelectedFactorId(newId);
+    const updatedFactor = factors.find(f => f.id === factorId);
+    if (!updatedFactor) return;
+    
+    // Create a copy with the new ID
+    const newFactor = { ...updatedFactor, id: newId };
+    
+    try {
+      // First try to create a new factor with the new ID
+      const created = await createFactor(newFactor);
+      
+      if (created) {
+        // If successful, delete the old one
+        await deleteFactor(factorId);
+        
+        // Update local state
+        setFactors(prevFactors => 
+          prevFactors.map(f => f.id === factorId ? newFactor : f)
+        );
+        setSelectedFactorId(newId);
+        
+        toast({
+          title: 'Success',
+          description: 'Factor ID updated successfully.',
+          variant: 'default',
+        });
+      } else {
+        // Fall back to local-only update
+        setFactors(prevFactors => 
+          prevFactors.map(f => f.id === factorId ? newFactor : f)
+        );
+        setSelectedFactorId(newId);
+        
+        toast({
+          title: 'Warning',
+          description: 'ID updated locally only. Save all factors to persist changes.',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating factor ID:', error);
+      
+      // Fall back to local-only update
+      setFactors(prevFactors => 
+        prevFactors.map(f => f.id === factorId ? newFactor : f)
+      );
+      setSelectedFactorId(newId);
+      
+      toast({
+        title: 'Warning',
+        description: 'Could not update ID on server. Updated locally only.',
+        variant: 'default',
+      });
+    }
   };
 
   // Add a new task to a factor
-  const handleAddTask = (factorId: string, stage: StageType) => {
+  const handleAddTask = async (factorId: string, stage: StageType) => {
+    const updatedFactor = factors.find(f => f.id === factorId);
+    if (!updatedFactor) return;
+    
+    // Create a copy with the new task added
+    const updatedTasks = { ...updatedFactor.tasks };
+    updatedTasks[stage] = [...updatedTasks[stage], 'New task'];
+    const newFactor = { ...updatedFactor, tasks: updatedTasks };
+    
+    // Update UI immediately
     setFactors(prevFactors => 
-      prevFactors.map(f => {
-        if (f.id === factorId) {
-          const updatedTasks = { ...f.tasks };
-          updatedTasks[stage] = [...updatedTasks[stage], 'New task'];
-          return { ...f, tasks: updatedTasks };
-        }
-        return f;
-      })
+      prevFactors.map(f => f.id === factorId ? newFactor : f)
     );
+    
+    // Then try to update via API (in background)
+    updateFactor(factorId, newFactor).catch(error => {
+      console.error(`Error adding task for factor ${factorId}:`, error);
+    });
   };
 
   // Update a task text
-  const handleUpdateTask = (factorId: string, stage: StageType, taskIndex: number, newText: string) => {
+  const handleUpdateTask = async (factorId: string, stage: StageType, taskIndex: number, newText: string) => {
+    const updatedFactor = factors.find(f => f.id === factorId);
+    if (!updatedFactor) return;
+    
+    // Create a copy with the updated task
+    const updatedTasks = { ...updatedFactor.tasks };
+    const tasks = [...updatedTasks[stage]];
+    tasks[taskIndex] = newText;
+    updatedTasks[stage] = tasks;
+    const newFactor = { ...updatedFactor, tasks: updatedTasks };
+    
+    // Update UI immediately
     setFactors(prevFactors => 
-      prevFactors.map(f => {
-        if (f.id === factorId) {
-          const updatedTasks = { ...f.tasks };
-          const tasks = [...updatedTasks[stage]];
-          tasks[taskIndex] = newText;
-          updatedTasks[stage] = tasks;
-          return { ...f, tasks: updatedTasks };
-        }
-        return f;
-      })
+      prevFactors.map(f => f.id === factorId ? newFactor : f)
     );
+    
+    // Debounce the API update - don't try to update on every keystroke
+    // We can just let them update the task text and then update the API
+    // when they navigate away or perform another action
   };
 
   // Delete a task
-  const handleDeleteTask = (factorId: string, stage: StageType, taskIndex: number) => {
+  const handleDeleteTask = async (factorId: string, stage: StageType, taskIndex: number) => {
+    const updatedFactor = factors.find(f => f.id === factorId);
+    if (!updatedFactor) return;
+    
+    // Create a copy with the task deleted
+    const updatedTasks = { ...updatedFactor.tasks };
+    const tasks = [...updatedTasks[stage]];
+    tasks.splice(taskIndex, 1);
+    updatedTasks[stage] = tasks;
+    const newFactor = { ...updatedFactor, tasks: updatedTasks };
+    
+    // Update UI immediately
     setFactors(prevFactors => 
-      prevFactors.map(f => {
-        if (f.id === factorId) {
-          const updatedTasks = { ...f.tasks };
-          const tasks = [...updatedTasks[stage]];
-          tasks.splice(taskIndex, 1);
-          updatedTasks[stage] = tasks;
-          return { ...f, tasks: updatedTasks };
-        }
-        return f;
-      })
+      prevFactors.map(f => f.id === factorId ? newFactor : f)
     );
+    
+    // Then try to update via API (in background)
+    updateFactor(factorId, newFactor).catch(error => {
+      console.error(`Error deleting task for factor ${factorId}:`, error);
+    });
   };
 
   // Delete a factor
-  const handleDeleteFactor = () => {
+  const handleDeleteFactor = async () => {
     if (!selectedFactorId) return;
     
-    setFactors(prevFactors => prevFactors.filter(f => f.id !== selectedFactorId));
-    setSelectedFactorId(null);
-    setShowDeleteDialog(false);
-    
-    toast({
-      title: 'Factor deleted',
-      description: 'The success factor has been deleted.',
-      variant: 'default',
-    });
+    try {
+      // Use the deleteFactor API
+      const success = await deleteFactor(selectedFactorId);
+      
+      if (success) {
+        setFactors(prevFactors => prevFactors.filter(f => f.id !== selectedFactorId));
+        setSelectedFactorId(null);
+        
+        toast({
+          title: 'Success',
+          description: 'Success factor deleted.',
+          variant: 'default',
+        });
+      } else {
+        // Fall back to local deletion if API fails
+        setFactors(prevFactors => prevFactors.filter(f => f.id !== selectedFactorId));
+        setSelectedFactorId(null);
+        
+        toast({
+          title: 'Warning',
+          description: 'Deleted factor locally only. Save all factors to persist changes.',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting factor:', error);
+      // Fall back to local deletion
+      setFactors(prevFactors => prevFactors.filter(f => f.id !== selectedFactorId));
+      setSelectedFactorId(null);
+      
+      toast({
+        title: 'Warning',
+        description: 'Could not delete from server. Removed locally only.',
+        variant: 'default',
+      });
+    } finally {
+      setShowDeleteDialog(false);
+    }
   };
 
   // Import from Excel
