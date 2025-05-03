@@ -1,67 +1,104 @@
-import xlsx from 'xlsx';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as XLSX from 'xlsx';
 
-// Get current directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
-
-// Path to the Excel file
-const excelPath = path.join(projectRoot, 'attached_assets', 'tcof_factors.xlsx.xlsx');
-const outputPath = path.join(projectRoot, 'data', 'successFactors.json');
-
-console.log(`Looking for Excel file at: ${excelPath}`);
-console.log(`Will write JSON to: ${outputPath}`);
-
-// Check if file exists
-if (!fs.existsSync(excelPath)) {
-  console.error(`❌ Excel file not found at ${excelPath}`);
-  process.exit(1);
-}
-
-// Read and parse the Excel file
-try {
-  const wb = xlsx.readFile(excelPath);
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
-  
-  // Extract header and data rows
-  const [header, ...data] = rows;
-  const [TITLE, IDN, DEF, DEL, CLO] = header;
-  
-  // Transform data to JSON structure
-  const json = data.map(row => {
-    const [title, idn, def, del, clo] = row;
+/**
+ * Converts success factors data from Excel to JSON
+ * @param {string} excelPath - Path to the Excel file
+ * @param {string} outputPath - Path to save the JSON output
+ * @returns {Promise<Array>} - Parsed factor data
+ */
+async function convertExcelToJson(excelPath, outputPath) {
+  try {
+    console.log(`Reading Excel file from: ${excelPath}`);
     
-    // Split the title to separate ID and title text
-    const parts = title.split(' ');
-    const id = parts[0];
-    const titleText = parts.slice(1).join(' ').trim();
+    if (!fs.existsSync(excelPath)) {
+      throw new Error(`Excel file not found at ${excelPath}`);
+    }
     
-    return {
-      id,
-      title: titleText,
-      tasks: {
-        Identification: (idn || '').split('\n').filter(Boolean),
-        Definition: (def || '').split('\n').filter(Boolean),
-        Delivery: (del || '').split('\n').filter(Boolean),
-        Closure: (clo || '').split('\n').filter(Boolean)
-      }
-    };
-  });
-  
-  // Create data directory if it doesn't exist
-  const dataDir = path.dirname(outputPath);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+    // Read the Excel file
+    const workbook = XLSX.readFile(excelPath);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    
+    // Convert to JSON
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+    
+    // First row contains headers
+    const headers = data[0];
+    
+    // Find index of important columns (adjust as needed)
+    const idIndex = headers.findIndex(h => h.includes('Factor ID') || h.includes('ID'));
+    const titleIndex = headers.findIndex(h => h.includes('Title') || h.includes('Factor'));
+    const identificationIndex = headers.findIndex(h => h.includes('Identification'));
+    const definitionIndex = headers.findIndex(h => h.includes('Definition'));
+    const deliveryIndex = headers.findIndex(h => h.includes('Delivery'));
+    const closureIndex = headers.findIndex(h => h.includes('Closure'));
+    
+    if (idIndex === -1 || titleIndex === -1) {
+      throw new Error('Required columns (ID and Title) not found in Excel sheet');
+    }
+    
+    // Parse data rows (starting from row 2)
+    const factors = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      
+      // Skip empty rows
+      if (!row[idIndex] && !row[titleIndex]) continue;
+      
+      // Extract tasks from each stage, splitting by newlines
+      const extractTasks = (cellValue) => {
+        if (!cellValue) return [];
+        return cellValue.toString()
+          .split(/\n|\r\n|\r/)
+          .map(task => task.trim())
+          .filter(task => task.length > 0);
+      };
+      
+      const factor = {
+        id: row[idIndex].toString(),
+        title: row[titleIndex],
+        tasks: {
+          Identification: identificationIndex > -1 ? extractTasks(row[identificationIndex]) : [],
+          Definition: definitionIndex > -1 ? extractTasks(row[definitionIndex]) : [],
+          Delivery: deliveryIndex > -1 ? extractTasks(row[deliveryIndex]) : [],
+          Closure: closureIndex > -1 ? extractTasks(row[closureIndex]) : []
+        }
+      };
+      
+      factors.push(factor);
+    }
+    
+    // Save to JSON file if outputPath is provided
+    if (outputPath) {
+      const jsonData = JSON.stringify(factors, null, 2);
+      fs.writeFileSync(outputPath, jsonData);
+      console.log(`Saved ${factors.length} factors to ${outputPath}`);
+    }
+    
+    return factors;
+  } catch (error) {
+    console.error('Error converting Excel to JSON:', error);
+    throw error;
   }
-  
-  // Write the JSON file
-  fs.writeFileSync(outputPath, JSON.stringify(json, null, 2));
-  console.log(`✅ ${outputPath} generated with ${json.length} entries`);
-} catch (error) {
-  console.error('❌ Error processing Excel file:', error);
-  process.exit(1);
 }
+
+// Run conversion if script is executed directly
+if (typeof require !== 'undefined' && require.main === module) {
+  const args = process.argv.slice(2);
+  const excelPath = args[0] || 'attached_assets/tcof_factors.xlsx';
+  const jsonPath = args[1] || 'data/tcof_factors.json';
+  
+  convertExcelToJson(excelPath, jsonPath)
+    .then(factors => {
+      console.log(`Successfully converted ${factors.length} factors`);
+      process.exit(0);
+    })
+    .catch(error => {
+      console.error('Conversion failed:', error);
+      process.exit(1);
+    });
+}
+
+export default convertExcelToJson;

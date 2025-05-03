@@ -1,28 +1,42 @@
-import fs from 'fs';
-import xlsx from 'xlsx';
-import { Database } from '@replit/database';
+import excelToJsonToDB from './excel-to-json.js';
 
-const db = new Database();
-const wb = xlsx.readFile('/mnt/data/tcof_factors.xlsx.xlsx');
-const sheet = wb.Sheets[wb.SheetNames[0]];
-const rows = xlsx.utils.sheet_to_json(sheet, {header:1, blankrows:false});
-const [, ...data] = rows;          // skip header
-
-const factors = data.map(row => {
-  const [title, idn, def, del, clo] = row;
-  if(!title) return null;
-  const [id, ...rest] = title.trim().split(' ');
-  return {
-    id,
-    title: rest.join(' ').trim(),
-    tasks: {
-      Identification: (idn || '').split('\n').filter(Boolean),
-      Definition: (def || '').split('\n').filter(Boolean),
-      Delivery: (del || '').split('\n').filter(Boolean),
-      Closure: (clo || '').split('\n').filter(Boolean)
+/**
+ * Migrates success factors from Excel to Replit DB
+ */
+async function migrateFactorsToDB() {
+  try {
+    console.log('Starting migration of success factors from Excel to DB...');
+    
+    // Use the utility to convert Excel to JSON and save to DB
+    const factors = await excelToJsonToDB();
+    
+    if (!factors || factors.length === 0) {
+      console.error('No factors found to migrate');
+      return;
     }
-  };
-}).filter(Boolean);
+    
+    console.log(`Successfully migrated ${factors.length} factors to database`);
+    
+    // Return the factors for use by importers
+    return factors;
+  } catch (error) {
+    console.error('Error migrating factors to DB:', error);
+    throw error;
+  }
+}
 
-await db.set('factors', factors);
-console.log('✅ Migrated', factors.length, 'factors to Replit DB');
+// Run migration if this script is executed directly
+if (typeof require !== 'undefined' && require.main === module) {
+  migrateFactorsToDB()
+    .then(() => {
+      console.log('Migration completed successfully');
+      process.exit(0);
+    })
+    .catch(error => {
+      console.error('Migration failed:', error);
+      process.exit(1);
+    });
+}
+
+// Export for use in other modules
+export default migrateFactorsToDB;

@@ -10,7 +10,7 @@ import {
   CustomFramework
 } from './plan-db';
 import { v4 as uuidv4 } from 'uuid';
-import { loadFactors } from '@/utils/factorLoader';
+import { getFactors } from '@/utils/factorsDB';
 
 // Default preset heuristics types
 export interface PresetHeuristic {
@@ -189,11 +189,11 @@ export async function quickStartPlan(): Promise<string> {
       });
     }
     
-    // Load factors from Excel file using our new loader
-    const excelFactors = await loadFactors();
+    // Load factors from database
+    const factors = await getFactors();
     
-    if (!excelFactors || excelFactors.length === 0) {
-      console.error('No factors loaded from Excel, falling back to API');
+    if (!factors || factors.length === 0) {
+      console.error('No factors loaded from database, falling back to API');
       
       // Try the API as a fallback
       const tcofTasks = await loadSuccessFactorTasks();
@@ -347,8 +347,8 @@ export async function quickStartPlan(): Promise<string> {
         Closure: []
       };
       
-      // Process the Excel factors
-      excelFactors.forEach((factor, index) => {
+      // Process the factors from database
+      factors.forEach((factor: any, index: number) => {
         // Create a factor ID if one doesn't exist
         const factorId = factor.id || `factor-${index + 1}`;
         
@@ -398,7 +398,7 @@ export async function quickStartPlan(): Promise<string> {
       // Log success and statistics
       const taskTotal = Object.values(stageTasks).reduce((total, tasks) => total + tasks.length, 0);
       console.info('✅ Quick-Start loaded', {
-        factorCount: excelFactors.length,
+        factorCount: factors.length,
         taskTotal,
         ratingCount: Object.keys(successFactorRatings).length
       });
