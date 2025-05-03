@@ -166,3 +166,17 @@ export function getFactorTasks(factorId, stage) {
   
   return factor.tasks[stage];
 }
+
+/**
+ * Returns rating information for success factors
+ * @returns {Record<number, { emoji: string, description: string }>} Rating information
+ */
+export function getSuccessFactorRatingInfo() {
+  return {
+    1: { emoji: "😟", description: "Major issues present" },
+    2: { emoji: "🙁", description: "Some significant concerns" },
+    3: { emoji: "😐", description: "Neutral or average" },
+    4: { emoji: "🙂", description: "Working well with minor improvements possible" },
+    5: { emoji: "😄", description: "Excellent performance" }
+  };
+}
