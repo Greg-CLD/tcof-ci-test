@@ -57,7 +57,10 @@ export const factorsStorage = {
       const filteredDbKeys = dbKeys.filter(key => key.startsWith(prefix));
       
       // Combine and remove duplicates
-      return [...new Set([...browserKeys, ...filteredDbKeys])];
+      const uniqueKeys = new Set<string>();
+      browserKeys.forEach(key => uniqueKeys.add(key));
+      filteredDbKeys.forEach(key => uniqueKeys.add(key));
+      return Array.from(uniqueKeys);
     } catch (error) {
       console.error(`Error listing keys with prefix ${prefix}:`, error);
       return [];

@@ -4,24 +4,38 @@ import { apiRequest } from '@/lib/queryClient';
 // Cache the factor data to avoid repeated file reads
 let cachedFactors = null;
 
-// Default empty set of factors
-const defaultFactors = [
-  {
-    id: "1.1",
-    title: "Ask Why",
-    tasks: {
-      Identification: ["Consult key stakeholders", "Understand pains and wants"],
-      Definition: ["Document key business objectives"],
-      Delivery: ["Verify solution alignment with objectives"],
-      Closure: ["Measure outcomes against objectives"]
-    }
-  }
+// Official TCOF success factors - these are the ones we want to keep and merge duplicates into
+const officialFactorTitles = [
+  "Ask Why",
+  "Get Stakeholder Support",
+  "Choose Optimal Approach",
+  "Ensure Technical Feasibility",
+  "Grow and Develop the Team",
+  "Manage Scope",
+  "Track Progress",
+  "Exercise Control",
+  "Assign Clear Responsibilities",
+  "Deliver Quality",
+  "Create Buy-in",
+  "Transfer Product Ownership"
 ];
+
+// Default set of factors (basic implementation of the 12 official TCOF factors)
+const defaultFactors = officialFactorTitles.map((title, index) => ({
+  id: `sf-${index + 1}`,
+  title: title,
+  tasks: {
+    Identification: [],
+    Definition: [],
+    Delivery: [],
+    Closure: []
+  }
+}));
 
 /**
  * Ensures we have exactly 12 unique success factors
  * @param {Array} factors - Array of success factors
- * @returns {Array} 12 unique success factors
+ * @returns {Array} 12 unique success factors matching the official TCOF factors
  */
 function ensureUnique12Factors(factors) {
   if (!factors || factors.length === 0) {
@@ -30,42 +44,89 @@ function ensureUnique12Factors(factors) {
   }
   
   // Enforce 12 unique factors by deduplicating based on titles
-  const uniqueMap = {};
+  const dedupMap = {};
+  const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
   
-  // First pass - get unique factors by title
+  // Map of official titles to IDs for consistency
+  const officialIdMap = {};
+  
+  // First pass - identify official factors by exact title match
   factors.forEach(factor => {
-    const title = factor.title.trim();
-    if (!uniqueMap[title] || factor.id.startsWith("sf-")) {
-      uniqueMap[title] = factor;
+    const normalizedTitle = factor.title.trim();
+    
+    // If this is an official factor title, remember its ID
+    if (officialFactorTitles.includes(normalizedTitle)) {
+      officialIdMap[normalizedTitle] = factor.id;
     }
   });
   
-  // Get unique values
-  const uniqueFactors = Object.values(uniqueMap);
-  
-  // If we have more than 12, trim to first 12
-  if (uniqueFactors.length > 12) {
-    console.warn(`⚠ Too many unique factors (${uniqueFactors.length}), trimming to 12`);
-    return uniqueFactors.slice(0, 12);
-  }
-  
-  // If we have exactly 12, perfect!
-  if (uniqueFactors.length === 12) {
-    return uniqueFactors;
-  }
-  
-  // If we have less than 12, fill with defaults (this should rarely happen)
-  if (uniqueFactors.length < 12) {
-    console.warn(`⚠ Too few unique factors (${uniqueFactors.length}), adding defaults to reach 12`);
-    const extraNeeded = 12 - uniqueFactors.length;
-    const defaultsToAdd = defaultFactors.slice(0, extraNeeded).map((factor, idx) => ({
-      ...factor,
-      id: `missing-${idx + 1}`,
-      title: `Default Factor ${idx + 1}`
-    }));
+  // Process each factor
+  factors.forEach(item => {
+    const normalizedTitle = item.title.trim();
     
-    return [...uniqueFactors, ...defaultsToAdd];
+    // If this title already exists in our map, merge tasks
+    if (dedupMap[normalizedTitle]) {
+      // Merge tasks from all stages
+      stages.forEach(stage => {
+        const sourceTasks = item.tasks?.[stage] || [];
+        
+        for (const task of sourceTasks) {
+          // Only add unique tasks (avoid duplicates)
+          if (!dedupMap[normalizedTitle].tasks[stage].includes(task)) {
+            dedupMap[normalizedTitle].tasks[stage].push(task);
+          }
+        }
+      });
+    } 
+    // If this is a new title, add it to the map
+    else {
+      // Create a base entry
+      dedupMap[normalizedTitle] = { 
+        title: normalizedTitle, 
+        id: officialIdMap[normalizedTitle] || item.id, // Use official ID if available
+        tasks: {
+          Identification: [...(item.tasks?.Identification || [])],
+          Definition: [...(item.tasks?.Definition || [])],
+          Delivery: [...(item.tasks?.Delivery || [])],
+          Closure: [...(item.tasks?.Closure || [])]
+        }
+      };
+    }
+  });
+  
+  // Make sure all official factors exist
+  officialFactorTitles.forEach((title, index) => {
+    if (!dedupMap[title]) {
+      dedupMap[title] = {
+        title: title,
+        id: officialIdMap[title] || `sf-${index + 1}`,
+        tasks: {
+          Identification: [],
+          Definition: [],
+          Delivery: [],
+          Closure: []
+        }
+      };
+    }
+  });
+  
+  // Filter to keep only the official factors
+  const dedupFactors = officialFactorTitles.map(title => dedupMap[title]);
+  
+  // Verify we have exactly 12 factors
+  if (dedupFactors.length !== 12) {
+    console.error(`Error: Expected 12 deduplicated factors but found ${dedupFactors.length}`);
+    return defaultFactors;
   }
+  
+  // Assign consistent IDs
+  dedupFactors.forEach((factor, index) => {
+    if (!factor.id || factor.id.includes("duplicate")) {
+      factor.id = `sf-${index + 1}`;
+    }
+  });
+  
+  return dedupFactors;
 }
 
 /**

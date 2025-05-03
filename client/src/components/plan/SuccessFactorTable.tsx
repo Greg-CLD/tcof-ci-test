@@ -57,8 +57,8 @@ export default function SuccessFactorTable({
       setIsLoading(true);
       
       try {
-        // Get factors with bypassing cache (true) 
-        const factors = await getFactors(true);
+        // Get factors 
+        const factors = await getFactors();
         
         if (factors && Array.isArray(factors)) {
           if (factors.length !== 12) {
