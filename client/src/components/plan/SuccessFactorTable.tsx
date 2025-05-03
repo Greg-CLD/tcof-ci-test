@@ -21,7 +21,7 @@ import {
 import { SuccessFactorRating } from '@/lib/plan-db';
 
 import { getSuccessFactorRatingInfo } from '@/lib/tcofData';
-import tcofFactors from '@/data/tcofFactors';
+import { loadFactors, validateFactorTitles, TCOFFactor } from '@/utils/factorLoader';
 
 // Get rating information from tcofData utility with proper typing
 const ratingInfo: Record<number, { emoji: string; description: string }> = getSuccessFactorRatingInfo();

@@ -9,6 +9,7 @@ import {
   TaskItem
 } from './plan-db';
 import { v4 as uuidv4 } from 'uuid';
+import { loadFactors } from '@/utils/factorLoader';
 
 // Default preset heuristics types
 export interface PresetHeuristic {
@@ -187,93 +188,156 @@ export async function quickStartPlan(): Promise<string> {
       });
     }
     
-    // Load the TCOF success factor tasks from API
-    const tcofTasks = await loadSuccessFactorTasks();
+    // Load factors from Excel file using our new loader
+    const excelFactors = await loadFactors();
     
-    if (!tcofTasks || tcofTasks.length === 0) {
-      console.error('No TCOF tasks found from API, using defaults');
+    if (!excelFactors || excelFactors.length === 0) {
+      console.error('No factors loaded from Excel, falling back to API');
       
-      // Fall back to default factors if no API-loaded tasks are available
-      Object.keys(defaultHeuristics).forEach(stageName => {
-        const stageKey = stageName as keyof typeof defaultHeuristics;
-        const defaultStage = defaultHeuristics[stageKey];
-        const planStageKey = stageName as keyof typeof updatedPlan.stages;
+      // Try the API as a fallback
+      const tcofTasks = await loadSuccessFactorTasks();
+      
+      if (!tcofTasks || tcofTasks.length === 0) {
+        console.error('No TCOF tasks found from API, using defaults');
         
-        // Add default factors
-        if (defaultStage.factors) {
-          if (!updatedPlan.stages[planStageKey].factors) {
-            updatedPlan.stages[planStageKey].factors = [];
+        // Fall back to default factors if no Excel or API data available
+        Object.keys(defaultHeuristics).forEach(stageName => {
+          const stageKey = stageName as keyof typeof defaultHeuristics;
+          const defaultStage = defaultHeuristics[stageKey];
+          const planStageKey = stageName as keyof typeof updatedPlan.stages;
+          
+          // Add default factors
+          if (defaultStage.factors) {
+            if (!updatedPlan.stages[planStageKey].factors) {
+              updatedPlan.stages[planStageKey].factors = [];
+            }
+            
+            updatedPlan.stages[planStageKey].factors = defaultStage.factors;
           }
           
-          updatedPlan.stages[planStageKey].factors = defaultStage.factors;
-        }
-        
-        // Add default practice tasks
-        if (defaultStage.practiceTasks) {
-          if (!updatedPlan.stages[planStageKey].practiceTasks) {
-            updatedPlan.stages[planStageKey].practiceTasks = [];
+          // Add default practice tasks
+          if (defaultStage.practiceTasks) {
+            if (!updatedPlan.stages[planStageKey].practiceTasks) {
+              updatedPlan.stages[planStageKey].practiceTasks = [];
+            }
+            
+            updatedPlan.stages[planStageKey].practiceTasks = defaultStage.practiceTasks;
           }
           
-          updatedPlan.stages[planStageKey].practiceTasks = defaultStage.practiceTasks;
-        }
-        
-        // Add default heuristics if none were loaded from the API
-        if (presetHeuristics.length === 0 && defaultStage.heuristics) {
-          // Convert default heuristics to PersonalHeuristic format
-          updatedPlan.stages[planStageKey].personalHeuristics = defaultStage.heuristics.map(h => ({
-            id: h.id,
-            text: h.text,
-            notes: "",
-            favourite: false
-          }));
-        }
-        
-        // Create tasks from the factors
-        if (defaultStage.factors && defaultStage.factors.length > 0) {
-          if (!updatedPlan.stages[planStageKey].tasks) {
-            updatedPlan.stages[planStageKey].tasks = [];
-          }
-          
-          // Create new task items with proper typing
-          const factorTasks: TaskItem[] = defaultStage.factors.map(factor => ({
-            id: `task-${factor.id}`,
-            text: `Address ${factor.text}`,
-            completed: false,
-            origin: 'factor' as const,
-            stage: planStageKey as Stage
-          }));
-          
-          // Add the typed tasks to the plan
-          updatedPlan.stages[planStageKey].tasks = [
-            ...updatedPlan.stages[planStageKey].tasks || [],
-            ...factorTasks
-          ];
-        }
-      });
-      
-      // Ensure we have success factor ratings for all factors
-      const successFactorRatings: Record<string, any> = {};
-      
-      // Collect all factor IDs from all stages
-      Object.keys(defaultHeuristics).forEach(stageName => {
-        const stageKey = stageName as keyof typeof defaultHeuristics;
-        const defaultStage = defaultHeuristics[stageKey];
-        
-        if (defaultStage.factors) {
-          defaultStage.factors.forEach(factor => {
-            successFactorRatings[factor.id] = {
-              rating: 0,
-              notes: '',
+          // Add default heuristics if none were loaded from the API
+          if (presetHeuristics.length === 0 && defaultStage.heuristics) {
+            // Convert default heuristics to PersonalHeuristic format
+            updatedPlan.stages[planStageKey].personalHeuristics = defaultStage.heuristics.map(h => ({
+              id: h.id,
+              text: h.text,
+              notes: "",
               favourite: false
-            };
-          });
-        }
-      });
-      
-      // Add the success factor ratings to the Identification stage
-      updatedPlan.stages.Identification.successFactorRatings = successFactorRatings;
+            }));
+          }
+          
+          // Create tasks from the factors
+          if (defaultStage.factors && defaultStage.factors.length > 0) {
+            if (!updatedPlan.stages[planStageKey].tasks) {
+              updatedPlan.stages[planStageKey].tasks = [];
+            }
+            
+            // Create new task items with proper typing
+            const factorTasks: TaskItem[] = defaultStage.factors.map(factor => ({
+              id: `task-${factor.id}`,
+              text: `Address ${factor.text}`,
+              completed: false,
+              origin: 'factor' as const,
+              stage: planStageKey as Stage
+            }));
+            
+            // Add the typed tasks to the plan
+            updatedPlan.stages[planStageKey].tasks = [
+              ...updatedPlan.stages[planStageKey].tasks || [],
+              ...factorTasks
+            ];
+          }
+        });
+        
+        // Ensure we have success factor ratings for all factors
+        const successFactorRatings: Record<string, any> = {};
+        
+        // Collect all factor IDs from all stages
+        Object.keys(defaultHeuristics).forEach(stageName => {
+          const stageKey = stageName as keyof typeof defaultHeuristics;
+          const defaultStage = defaultHeuristics[stageKey];
+          
+          if (defaultStage.factors) {
+            defaultStage.factors.forEach(factor => {
+              successFactorRatings[factor.id] = {
+                rating: 0,
+                notes: '',
+                favourite: false
+              };
+            });
+          }
+        });
+        
+        // Add the success factor ratings to the Identification stage
+        updatedPlan.stages.Identification.successFactorRatings = successFactorRatings;
+      } else {
+        // Process TCOF tasks from the API response
+        const successFactorRatings: Record<string, any> = {};
+        const stageTasks: Record<string, TaskItem[]> = {
+          Identification: [],
+          Definition: [],
+          Delivery: [],
+          Closure: []
+        };
+        
+        // Create ratings for all factors and extract tasks for each stage
+        tcofTasks.forEach(task => {
+          // Create rating for this factor
+          successFactorRatings[task.id] = {
+            rating: 0,
+            notes: '',
+            favourite: false
+          };
+          
+          // Process tasks for each stage
+          if (task.tasks) {
+            // Add tasks for each stage
+            Object.keys(task.tasks).forEach(stageName => {
+              const stageKey = stageName as keyof typeof stageTasks;
+              if (task.tasks[stageName]) {
+                task.tasks[stageName].forEach((taskText: string) => {
+                  const newTask: TaskItem = {
+                    id: `task-${task.id}-${stageTasks[stageKey].length}`,
+                    text: taskText,
+                    completed: false,
+                    origin: 'factor' as const,
+                    stage: stageKey as Stage
+                  };
+                  stageTasks[stageKey].push(newTask);
+                });
+              }
+            });
+          }
+        });
+        
+        // Add success factor ratings to the Identification stage
+        updatedPlan.stages.Identification.successFactorRatings = successFactorRatings;
+        
+        // Add tasks to each stage
+        Object.keys(stageTasks).forEach(stageName => {
+          const stageKey = stageName as keyof typeof updatedPlan.stages;
+          if (!updatedPlan.stages[stageKey].tasks) {
+            updatedPlan.stages[stageKey].tasks = [];
+          }
+          
+          updatedPlan.stages[stageKey].tasks = [
+            ...updatedPlan.stages[stageKey].tasks || [],
+            ...stageTasks[stageName]
+          ];
+        });
+      }
     } else {
-      // Process TCOF tasks from the API response
+      // Success - we have Excel data!
+      // Create success factor ratings for all factors
       const successFactorRatings: Record<string, any> = {};
       const stageTasks: Record<string, TaskItem[]> = {
         Identification: [],
@@ -282,30 +346,31 @@ export async function quickStartPlan(): Promise<string> {
         Closure: []
       };
       
-      // Create ratings for all factors and extract tasks for each stage
-      tcofTasks.forEach(task => {
-        // Create rating for this factor
-        successFactorRatings[task.id] = {
+      // Process the Excel factors
+      excelFactors.forEach((factor, index) => {
+        // Create a factor ID if one doesn't exist
+        const factorId = factor.id || `factor-${index + 1}`;
+        
+        // Add rating entry for this factor
+        successFactorRatings[factorId] = {
           rating: 0,
           notes: '',
           favourite: false
         };
         
         // Process tasks for each stage
-        if (task.tasks) {
-          // Add tasks for each stage
-          Object.keys(task.tasks).forEach(stageName => {
-            const stageKey = stageName as keyof typeof stageTasks;
-            if (task.tasks[stageName]) {
-              task.tasks[stageName].forEach((taskText: string) => {
+        if (factor.tasks) {
+          Object.keys(factor.tasks).forEach(stageName => {
+            if (stageTasks[stageName] && factor.tasks[stageName]) {
+              factor.tasks[stageName].forEach((taskText, taskIndex) => {
                 const newTask: TaskItem = {
-                  id: `task-${task.id}-${stageTasks[stageKey].length}`,
+                  id: `task-${factorId}-${taskIndex}`,
                   text: taskText,
                   completed: false,
                   origin: 'factor' as const,
-                  stage: stageKey as Stage
+                  stage: stageName as Stage
                 };
-                stageTasks[stageKey].push(newTask);
+                stageTasks[stageName].push(newTask);
               });
             }
           });
@@ -326,6 +391,14 @@ export async function quickStartPlan(): Promise<string> {
           ...updatedPlan.stages[stageKey].tasks || [],
           ...stageTasks[stageName]
         ];
+      });
+      
+      // Log success and statistics
+      const taskTotal = Object.values(stageTasks).reduce((total, tasks) => total + tasks.length, 0);
+      console.info('✅ Quick-Start loaded', {
+        factorCount: excelFactors.length,
+        taskTotal,
+        ratingCount: Object.keys(successFactorRatings).length
       });
     }
     

@@ -1,0 +1,93 @@
+Replit Agent prompt – Success-Factor Data Validator & Fix
+Objective
+
+Guarantee that the 12 success-factor titles and every stage-task you see in the UI exactly match the spreadsheet /tcof_factors.xlsx.
+
+Add a dev-time validator that logs a mismatch immediately so this bug cannot recur.
+
+Tasks
+
+A. Robust Excel parser
+
+In utils/factorLoader.js create a single async loadFactors() that:
+
+Uses xlsx to read /tcof_factors.xlsx, Sheet 1.
+
+Assumes row 1 is a header: Title | Identification | Definition | Delivery | Closure.
+
+Trims whitespace from every cell.
+
+Returns an array of objects:
+
+js
+Copy
+Edit
+{ id:'1.1', title:'Ask Why', tasks:{Identification:[…], Definition:[…], Delivery:[…], Closure:[…]} }
+Cache the result in localStorage with a version hash (last-modified time of the Excel file) so it loads only once per session.
+
+B. Replace any stale JSON
+
+Delete data/tcofFactors.json (if present).
+
+Wherever the UI currently imports factor JSON, replace with:
+
+js
+Copy
+Edit
+import { useEffect, useState } from 'react';
+import { loadFactors } from '../utils/factorLoader';
+…
+const [factors,setFactors]=useState([]);
+useEffect(()=>{ loadFactors().then(setFactors); },[]);
+C. Auto-validator in dev mode
+
+In loadFactors(), after parsing, run:
+
+js
+Copy
+Edit
+const uiTitles = factors.map(f=>f.title).join('|');
+const tableTitles = document.querySelectorAll('.success-factor-row .title');
+if (tableTitles.length){
+  const ui = Array.from(tableTitles).map(el=>el.textContent.trim()).join('|');
+  if(ui!==uiTitles){ console.error('💥 Factor TITLE mismatch between Excel and UI'); }
+}
+Same for task counts per stage; log a console error if any factor has a different task total than the spreadsheet.
+
+D. Quick-Start plan builder
+
+Update quickStartPlan() to call loadFactors() and dynamically inject titles + tasks (no more hard-coded JSON).
+
+After creation, log console.info('✅ Quick-Start loaded', {factorCount:12, taskTotal}).
+
+E. UI refresh
+
+Block 1: render titles & numbering directly from factors state.
+
+Block 2: use the same data for mapping dropdown and pre-populated tasks.
+
+Checklist: ensure success-factor panels iterate over plan.stages[stage].tasks.filter(t=>t.origin==='factor').
+
+F. Dev test
+
+Add tests/factorLoader.test.js:
+
+Mock XLSX read, feed sample sheet with 12 titles, assert factors.length===12 and first title matches sheet.
+
+Run npm test inside CI.
+
+Deliverables
+
+utils/factorLoader.js (new)
+
+removal of stale tcofFactors.json import references
+
+modified Block1Discover.jsx, quickStartPlan.js, Block2Connect.jsx, ChecklistPage.jsx to rely on loadFactors()
+
+new test tests/factorLoader.test.js
+
+Expected outcome
+• On dev reload, console shows “✅ Quick-Start loaded …” followed by no red mismatch errors.
+• Block 1 lists the exact 12 titles from the spreadsheet.
+• Quick-Start checklist is fully populated with those factors + tasks.
+• If someone later edits the spreadsheet but forgets to push UI changes, the validator logs a console error immediately.

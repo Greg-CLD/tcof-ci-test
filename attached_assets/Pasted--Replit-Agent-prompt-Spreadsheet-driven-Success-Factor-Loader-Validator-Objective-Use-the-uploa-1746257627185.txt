@@ -1,0 +1,102 @@
+
+Replit Agent prompt – Spreadsheet-driven Success-Factor Loader & Validator
+Objective
+
+Use the uploaded spreadsheet /mnt/data/tcof_factors.xlsx.xlsx as the single source for all Success-Factor titles and stage-tasks.
+
+Replace every hard-coded list with live data from that sheet.
+
+Add a dev-time validator that logs a console error if UI titles/tasks ever drift from the spreadsheet.
+
+Tasks
+
+A. Build a robust Excel parser
+
+Create utils/factorLoader.js exporting async loadFactors().
+
+Use xlsx to read /mnt/data/tcof_factors.xlsx.xlsx, Sheet 1.
+
+Assume header row: Title | Identification | Definition | Delivery | Closure.
+
+Trim every cell.
+
+Return array:
+
+js
+Copy
+Edit
+[
+  { id:'1.1', title:'Ask Why',
+    tasks:{
+      Identification:['Consult key stakeholders','Understand pains and wants','Define goals'],
+      Definition:[/* … */],
+      Delivery:[/* … */],
+      Closure:[/* … */]
+    }
+  },
+  …
+]
+Cache the parsed array in localStorage keyed by the file’s last-modified timestamp so it loads once per session.
+
+B. Eliminate stale JSON
+
+Delete data/tcofFactors.json if present.
+
+Wherever code previously imported that JSON, replace with loadFactors() pattern:
+
+js
+Copy
+Edit
+const [factors,setFactors]=useState([]);
+useEffect(()=>{ loadFactors().then(setFactors); },[]);
+C. Dev-time validator
+
+Inside loadFactors(), after parsing, attach a window.__tcof_factors reference so any page can compare:
+
+js
+Copy
+Edit
+window.__tcof_factors = factors;
+In Block1Discover.jsx (inside useEffect that runs after factors rendered):
+
+Collect .success-factor-row .title text into an array.
+
+If array.join('|') !== window.__tcof_factors.map(f=>f.title).join('|'), console.error('💥 Title mismatch between spreadsheet and UI');.
+
+Do similar count check for tasks in Block 2.
+
+D. Quick-Start Plan builder
+
+Update quickStartPlan() to await loadFactors(); inject titles + tasks into the new plan record (no hard-coded JSON).
+
+Log console.info('✅ Quick-Start loaded', {factorCount:factors.length, taskTotal}).
+
+E. UI updates
+
+Block 1: iterate factors for the rating table (ensures correct numbering).
+
+Block 2: dropdowns and pre-populated tasks also come from factors.
+
+Checklist: render factor tasks with origin:'factor'.
+
+F. Tests
+
+Add tests/factorLoader.test.js – mock an XLSX sheet with three rows, call loadFactors(), assert array length & first title.
+
+Update quickStart.preload.test.jsx – expect plan.stages.Identification.successFactorRatings keys length === 12.
+
+Deliverables
+
+utils/factorLoader.js (new)
+
+Removal of any data/tcofFactors.json imports
+
+Changes in Block1Discover.jsx, Block2Connect.jsx, ChecklistPage.jsx, and quickStartPlan.js to rely on loadFactors()
+
+tests/factorLoader.test.js and updated existing tests
+
+Expected outcome
+• Browser console shows no red mismatch errors; “✅ Quick-Start loaded …” info appears.
+• Block 1 lists the exact 12 titles from the spreadsheet, in order.
+• Quick-Start checklist is fully populated with those titles and tasks.
+• Any future spreadsheet/UI drift triggers an immediate console error during development.
