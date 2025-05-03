@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +12,7 @@ import StageSelector from '@/components/plan/StageSelector';
 import FactorTaskEditor, { StageType } from '@/components/plan/FactorTaskEditor';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
-import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask, PolicyTask } from '@/lib/plan-db';
+import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask, PolicyTask, PersonalHeuristic, Mapping } from '@/lib/plan-db';
 import { getTcofFactorOptions } from '@/lib/tcofData';
 import { getTcofFactorsAsItems, getFactorTasks, getFactorNameById, initializeFactors } from '@/lib/factorTaskUtils';
 import { 
@@ -115,8 +116,8 @@ export default function Block2Design() {
   const policyTasks = stageData?.policyTasks || [];
   
   // Get only unmapped heuristics for Step 4
-  const unmappedHeuristics = personalHeuristics.filter(h => 
-    !mappings.some(m => m.heuristicId === h.id && m.factorId !== null)
+  const unmappedHeuristics = personalHeuristics.filter((h: PersonalHeuristic) => 
+    !mappings.some((m: Mapping) => m.heuristicId === h.id && m.factorId !== null)
   );
   
   const handleStageChange = (stage: Stage) => {
@@ -167,10 +168,13 @@ export default function Block2Design() {
   };
   
   // Handler for adding a task
-  const handleAddTask = async (factorId: string, stage: StageType) => {
+  const handleAddTask = async (heuristicId: string, stage: StageType) => {
     if (!planId) return;
     
     try {
+      // Check if the ID belongs to a user heuristic or TCOF factor
+      const isUserHeuristic = unmappedHeuristics.some((h: PersonalHeuristic) => h.id === heuristicId);
+      
       // Add empty task to UI first
       setFactorTasks(prev => {
         const stageTasks = [...prev[stage]];
@@ -184,19 +188,28 @@ export default function Block2Design() {
         updatedPlan.stages[currentStage].tasks = [];
       }
       
+      // Add task with appropriate data structure based on origin
       updatedPlan.stages[currentStage].tasks.push({
-        factorId,
-        stage,
+        id: uuidv4(), // Generate UUID for the task
         text: 'New task',
-        custom: true
+        stage: stage,
+        origin: isUserHeuristic ? 'userHeuristic' : 'factor',
+        heuristicId: isUserHeuristic ? heuristicId : undefined,
+        factorId: isUserHeuristic ? undefined : heuristicId,
+        completed: false
       });
       
       await savePlan(planId, updatedPlan);
       setRefreshTrigger(prev => prev + 1);
       
+      // Find appropriate description text based on item type
+      const itemName = isUserHeuristic
+        ? unmappedHeuristics.find((h: PersonalHeuristic) => h.id === heuristicId)?.text || heuristicId
+        : getFactorNameById(heuristicId);
+      
       toast({
         title: 'Task added',
-        description: `Added new task to ${stage} for ${getFactorNameById(factorId)}`,
+        description: `Added new task to ${stage} for "${itemName}"`,
       });
     } catch (error) {
       console.error('Error adding task:', error);
@@ -209,10 +222,13 @@ export default function Block2Design() {
   };
   
   // Handler for updating a task
-  const handleUpdateTask = async (factorId: string, stage: StageType, taskIndex: number, newText: string) => {
+  const handleUpdateTask = async (itemId: string, stage: StageType, taskIndex: number, newText: string) => {
     if (!planId) return;
     
     try {
+      // Check if this is a user heuristic task
+      const isUserHeuristic = unmappedHeuristics.some((h: PersonalHeuristic) => h.id === itemId);
+      
       // Update UI first
       setFactorTasks(prev => {
         const stageTasks = [...prev[stage]];
@@ -223,8 +239,13 @@ export default function Block2Design() {
       // Then update the plan data
       const updatedPlan = { ...planData };
       const taskToUpdate = updatedPlan.stages[currentStage].tasks.find(
-        (t: { factorId: string; stage: string; custom: boolean }) => 
-          t.factorId === factorId && t.stage === stage && t.custom === true
+        (t: any) => {
+          if (isUserHeuristic) {
+            return t.heuristicId === itemId && t.stage === stage && t.origin === 'userHeuristic';
+          } else {
+            return t.factorId === itemId && t.stage === stage;
+          }
+        }
       );
       
       if (taskToUpdate) {
@@ -243,10 +264,13 @@ export default function Block2Design() {
   };
   
   // Handler for deleting a task
-  const handleDeleteTask = async (factorId: string, stage: StageType, taskIndex: number) => {
+  const handleDeleteTask = async (itemId: string, stage: StageType, taskIndex: number) => {
     if (!planId) return;
     
     try {
+      // Check if this is a user heuristic task
+      const isUserHeuristic = unmappedHeuristics.some((h: PersonalHeuristic) => h.id === itemId);
+      
       // Update UI first
       setFactorTasks(prev => {
         const stageTasks = [...prev[stage]];
@@ -257,8 +281,13 @@ export default function Block2Design() {
       // Then update the plan data
       const updatedPlan = { ...planData };
       const taskIndex = updatedPlan.stages[currentStage].tasks.findIndex(
-        (t: { factorId: string; stage: string; custom: boolean }) => 
-          t.factorId === factorId && t.stage === stage && t.custom === true
+        (t: any) => {
+          if (isUserHeuristic) {
+            return t.heuristicId === itemId && t.stage === stage && t.origin === 'userHeuristic';
+          } else {
+            return t.factorId === itemId && t.stage === stage;
+          }
+        }
       );
       
       if (taskIndex !== -1) {
@@ -266,9 +295,14 @@ export default function Block2Design() {
         await savePlan(planId, updatedPlan);
         setRefreshTrigger(prev => prev + 1);
         
+        // Find appropriate description text for toast message
+        const itemName = isUserHeuristic
+          ? unmappedHeuristics.find((h: PersonalHeuristic) => h.id === itemId)?.text || 'heuristic'
+          : 'factor';
+          
         toast({
           title: 'Task deleted',
-          description: 'The task has been removed from your plan',
+          description: `The task has been removed from your ${itemName}`,
         });
       }
     } catch (error) {
@@ -493,19 +527,26 @@ export default function Block2Design() {
             </CardHeader>
             
             <CardContent>
-              {/* New FactorTaskEditor for creating and editing factor tasks */}
-              <FactorTaskEditor
-                items={getTcofFactorsAsItems()}
-                selectedItemId={selectedFactorId}
-                title="Factor Tasks"
-                description="Select a success factor from the list to view and edit its tasks."
-                tasks={factorTasks}
-                onAddTask={handleAddTask}
-                onUpdateTask={handleUpdateTask}
-                onDeleteTask={handleDeleteTask}
-                onSelectItem={handleSelectFactor}
-                isAutoSaving={false}
-              />
+              {unmappedHeuristics.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <p>All personal heuristics have been mapped to TCOF success factors in Step 3.</p>
+                  <p className="mt-2">If you want to add tasks for unmapped heuristics, please go back to Step 3 and unmap some heuristics.</p>
+                </div>
+              ) : (
+                /* FactorTaskEditor for creating tasks for unmapped heuristics */
+                <FactorTaskEditor
+                  items={unmappedHeuristics.map((h: PersonalHeuristic) => ({ id: h.id, title: h.text }))}
+                  selectedItemId={selectedFactorId}
+                  title="Heuristic Tasks"
+                  description="Select a personal heuristic from the list to add specific tasks for each stage."
+                  tasks={factorTasks}
+                  onAddTask={handleAddTask}
+                  onUpdateTask={handleUpdateTask}
+                  onDeleteTask={handleDeleteTask}
+                  onSelectItem={handleSelectFactor}
+                  isAutoSaving={false}
+                />
+              )}
             </CardContent>
             
             <div className="flex justify-center my-2">
