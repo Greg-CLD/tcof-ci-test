@@ -1,0 +1,75 @@
+Context
+• The file /tcof_factors.xlsx (Sheet 1) has just been uploaded.
+• Column A = the 12 official Success-Factor titles (including numbering e.g. “1.1 Ask Why”).
+• Columns B–E = tasks for Identification, Definition, Delivery, Closure.
+• We must replace all hard-coded titles/tasks with this data and show clear guidance + emoji key on Block 1.
+
+Tasks
+
+Parse Excel → JSON
+
+Read /tcof_factors.xlsx Sheet 1.
+
+Write data/tcofFactors.json in this structure:
+
+jsonc
+Copy
+Edit
+[
+  { "id":"1.1", "title":"Ask Why",
+    "tasks":{
+      "Identification":["Consult key stakeholders", "Understand pains and wants", "Define goals"],
+      "Definition":[], "Delivery":[], "Closure":[]
+    }
+  },
+  …
+]
+Delete/overwrite any earlier factor JSON so this is the single source of truth.
+
+Block 1 Step 1 / Step 2 guidance
+
+In pages/Block1Discover.jsx, insert two collapsible <details> elements above the rating table, each with the exact text you supplied (“Step 1 – Reflect on the TCOF Heuristics…” and “Step 2 – Add Your Own Heuristics”). Style using .guidance class (background:#fff5e7; border-left:4px solid #008080;).
+
+Render factor table from JSON
+
+Replace the current hard-coded list with tcofFactors.map(...), preserving the spreadsheet order.
+
+Emoji-rating key
+
+Add a small link “Rating key” next to the table heading. Clicking opens a modal (or <dialog>) that displays:
+
+css
+Copy
+Edit
+❌ Doesn’t land – I don’t feel this. It doesn’t match my experience.  
+🤔 Unfamiliar – I understand it, but I’ve never used it in action.  
+🟡 Seems true – I believe it’s useful, but I haven’t tested it myself.  
+✅ Proven – I’ve used this and it worked. It fits how I lead.  
+🔥 Hard-won truth – I’ve lived this. It’s burned into how I work.
+Each radio button keeps a title= attribute with the same description.
+
+Update Quick-Start util (quickStartPlan)
+
+Import tcofFactors.json instead of the old file.
+
+For each factor:
+
+create a default rating entry (rating 3, no notes).
+
+push every task in each stage into plan.stages[stage].tasks with origin:'factor'.
+
+Unit test tests/block1.factorTitles.test.jsx
+
+Mount Block 1, assert getByText('1.1 Ask Why') is in the document.
+
+Deliverables
+
+data/tcofFactors.json
+
+updated Block1Discover.jsx, modal component for key
+
+updated quickStartPlan.js
+
+new test file
+
+styles/block1.css (adds .guidance)
