@@ -10,7 +10,7 @@ import TaskList from '@/components/plan/TaskList';
 import StageSelector from '@/components/plan/StageSelector';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
-import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask } from '@/lib/plan-db';
+import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask, PolicyTask } from '@/lib/plan-db';
 import { 
   Card, 
   CardContent, 
@@ -392,7 +392,7 @@ export default function Block2Design() {
                     <div className="mt-4">
                       <h4 className="text-sm font-medium mb-2">Current Policy Tasks:</h4>
                       <ul className="space-y-2">
-                        {policyTasks.map(task => (
+                        {policyTasks.map((task: PolicyTask) => (
                           <li key={task.id} className="flex items-center justify-between p-2 bg-white rounded-md border">
                             <span>{task.text}</span>
                             <Button variant="ghost" size="sm" onClick={() => handleRemovePolicyTask(task.id)}>

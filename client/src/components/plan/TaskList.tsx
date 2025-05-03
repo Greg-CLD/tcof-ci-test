@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -17,9 +17,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Stage, TaskItem, addTask, updateTaskStatus, PolicyTask, addPolicyTask, removePolicyTask } from '@/lib/plan-db';
 import styles from '@/lib/styles/tasks.module.css';
-import { Plus, Trash2, Star } from 'lucide-react';
+import { Plus, Trash2, Star, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getFactorNameById } from '@/lib/tcofData';
+import { getFactorNameById, getFactorTasks } from '@/lib/tcofData';
 
 interface TaskListProps {
   planId: string;
@@ -27,6 +27,8 @@ interface TaskListProps {
   policyTasks: PolicyTask[];
   stage: Stage;
   onTasksChange: () => void;
+  mappings?: { heuristicId: string; factorId: string | null }[];
+  autoLoadFactorTasks?: boolean;
 }
 
 export default function TaskList({
@@ -34,11 +36,77 @@ export default function TaskList({
   tasks,
   policyTasks,
   stage,
-  onTasksChange
+  onTasksChange,
+  mappings = [],
+  autoLoadFactorTasks = false
 }: TaskListProps) {
   const [newPolicyTask, setNewPolicyTask] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const { toast } = useToast();
+  
+  // Auto-load factor tasks when mappings change
+  useEffect(() => {
+    async function loadFactorTasks() {
+      if (!autoLoadFactorTasks || !mappings || mappings.length === 0 || !planId) {
+        return;
+      }
+      
+      setIsLoadingTasks(true);
+      
+      try {
+        let taskCount = 0;
+        const validMappings = mappings.filter(m => m.factorId);
+        
+        // Process each mapping and add tasks if they don't already exist
+        for (const mapping of validMappings) {
+          if (!mapping.factorId) continue;
+          
+          // Get tasks for this factor and stage
+          const factorTasks = getFactorTasks(mapping.factorId, stage);
+          
+          // Check if these tasks already exist in the current task list
+          for (const taskText of factorTasks) {
+            // Skip if the task text is empty or just a dash
+            if (!taskText || taskText === '-') continue;
+            
+            // Check if this exact task already exists
+            const taskExists = tasks.some(t => 
+              t.text === taskText && 
+              t.origin === 'factor' && 
+              t.sourceId === mapping.factorId
+            );
+            
+            // If task doesn't exist, add it
+            if (!taskExists) {
+              await addTask(planId, {
+                text: taskText,
+                stage,
+                origin: 'factor',
+                sourceId: mapping.factorId,
+                completed: false
+              }, stage);
+              taskCount++;
+            }
+          }
+        }
+        
+        if (taskCount > 0) {
+          onTasksChange();
+          toast({
+            title: "Tasks added",
+            description: `${taskCount} tasks from success factors were added to your plan.`,
+          });
+        }
+      } catch (error) {
+        console.error('Error auto-loading factor tasks:', error);
+      } finally {
+        setIsLoadingTasks(false);
+      }
+    }
+    
+    loadFactorTasks();
+  }, [autoLoadFactorTasks, mappings, planId, stage, tasks, onTasksChange, toast]);
 
   const handleCheckboxChange = async (id: string, checked: boolean) => {
     try {
@@ -140,9 +208,17 @@ export default function TaskList({
   return (
     <Card className="mt-6">
       <CardHeader>
-        <CardTitle className="text-xl font-bold text-primary">Task List</CardTitle>
+        <CardTitle className="text-xl font-bold text-primary flex items-center">
+          Task List
+          {isLoadingTasks && <Loader2 className="ml-2 h-4 w-4 animate-spin text-muted-foreground" />}
+        </CardTitle>
         <CardDescription>
           Manage your tasks for the {stage} stage. Add custom policy tasks or import them from mapped success factors.
+          {autoLoadFactorTasks && mappings && mappings.length > 0 && 
+            <span className="block mt-1 text-xs text-teal-600">
+              Auto-loading tasks from your mapped success factors.
+            </span>
+          }
         </CardDescription>
       </CardHeader>
       <CardContent>
