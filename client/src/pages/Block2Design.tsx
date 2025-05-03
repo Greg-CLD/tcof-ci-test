@@ -144,10 +144,37 @@ export default function Block2Design() {
     loadFactors();
   }, []);
   
-  // Load the selected factor's tasks
+  // Load the selected item's tasks (either TCOF factor or user heuristic)
   useEffect(() => {
-    if (selectedFactorId) {
-      // Get the tasks for each stage from the API or local data
+    if (!selectedFactorId) return;
+    
+    // Check if this is a user heuristic or TCOF factor
+    const isUserHeuristic = unmappedHeuristics.some((h: PersonalHeuristic) => h.id === selectedFactorId);
+    
+    if (isUserHeuristic) {
+      // For user heuristics, get tasks from the plan data
+      if (planData && planData.stages) {
+        const userTasks: Record<StageType, string[]> = {
+          Identification: [],
+          Definition: [],
+          Delivery: [],
+          Closure: []
+        };
+        
+        // For each stage, find tasks associated with this heuristic
+        const stages: StageType[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
+        stages.forEach(stage => {
+          const tasks = planData.stages[currentStage].tasks?.filter(
+            (t: any) => t.heuristicId === selectedFactorId && t.stage === stage
+          ) || [];
+          
+          userTasks[stage as StageType] = tasks.map((t: any) => t.text);
+        });
+        
+        setFactorTasks(userTasks);
+      }
+    } else {
+      // For TCOF factors, get tasks from the success factors data
       const identificationTasks = getFactorTasks(selectedFactorId, 'Identification');
       const definitionTasks = getFactorTasks(selectedFactorId, 'Definition');
       const deliveryTasks = getFactorTasks(selectedFactorId, 'Delivery');
@@ -160,7 +187,7 @@ export default function Block2Design() {
         Closure: closureTasks
       });
     }
-  }, [selectedFactorId]);
+  }, [selectedFactorId, planData, currentStage, unmappedHeuristics]);
   
   // Handler for selecting a factor
   const handleSelectFactor = (factorId: string) => {
@@ -472,6 +499,18 @@ export default function Block2Design() {
             <li>Repeat for each project stage</li>
           </ol>
         </IntroAccordion>
+        
+        {/* Stage Selector */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg border">
+          <h3 className="text-lg font-medium mb-2">Select Project Stage</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Choose the project stage you want to work on. Each stage requires its own set of mappings and tasks.
+          </p>
+          <StageSelector
+            currentStage={currentStage}
+            onStageChange={handleStageChange}
+          />
+        </div>
         
         {personalHeuristics.length === 0 && (
           <Alert variant="destructive" className="mb-6">
