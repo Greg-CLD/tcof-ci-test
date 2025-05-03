@@ -6,18 +6,18 @@ let cachedFactors = null;
 
 // Official TCOF success factors - these are the ones we want to keep and merge duplicates into
 const officialFactorTitles = [
-  "Ask Why",
-  "Get Stakeholder Support",
-  "Choose Optimal Approach",
-  "Ensure Technical Feasibility",
-  "Grow and Develop the Team",
-  "Manage Scope",
-  "Track Progress",
-  "Exercise Control",
-  "Assign Clear Responsibilities",
-  "Deliver Quality",
-  "Create Buy-in",
-  "Transfer Product Ownership"
+  "1.1 Ask Why",
+  "1.2 Get a Masterbuilder",
+  "1.3 Get Your People on the Bus",
+  "1.4 Make Friends and Keep them Friendly",
+  "2.1 Recognise that your project is not unique",
+  "2.2 Look for Tried & Tested Options",
+  "3.1 Think Big, Start Small",
+  "3.2 Learn by Experimenting",
+  "3.3 Keep on top of risks",
+  "4.1 Adjust for optimism",
+  "4.2 Measure What Matters, Be Ready to Step Away",
+  "4.3 Be Ready to Adapt"
 ];
 
 // Default set of factors (basic implementation of the 12 official TCOF factors)

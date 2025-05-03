@@ -1,164 +1,133 @@
 /**
- * Browser Data Fix Script
+ * Fix Browser localStorage Success Factors
  * 
- * This script ensures the browser version of factorStore has the correct 12 unique factors.
- * It should be loaded as a module directly from the browser.
+ * This script generates code that can be pasted in the browser console
+ * to fix the localStorage data and ensure it uses the canonical factors.
  */
 
-// Official TCOF success factors - these are the ones we want to keep and merge duplicates into
+// The 12 official TCOF success factors
 const officialFactorTitles = [
-  "Ask Why",
-  "Get Stakeholder Support",
-  "Choose Optimal Approach",
-  "Ensure Technical Feasibility",
-  "Grow and Develop the Team",
-  "Manage Scope",
-  "Track Progress",
-  "Exercise Control",
-  "Assign Clear Responsibilities",
-  "Deliver Quality",
-  "Create Buy-in",
-  "Transfer Product Ownership"
+  "1.1 Ask Why",
+  "1.2 Get a Masterbuilder",
+  "1.3 Get Your People on the Bus",
+  "1.4 Make Friends and Keep them Friendly",
+  "2.1 Recognise that your project is not unique",
+  "2.2 Look for Tried & Tested Options",
+  "3.1 Think Big, Start Small",
+  "3.2 Learn by Experimenting",
+  "3.3 Keep on top of risks",
+  "4.1 Adjust for optimism",
+  "4.2 Measure What Matters, Be Ready to Step Away",
+  "4.3 Be Ready to Adapt"
 ];
 
-async function fixBrowserFactors() {
-  console.log('Starting browser factor fix...');
+function fixBrowserFactors() {
+  const browserFixCode = `
+// This code fixes the localStorage success factors in the browser
+
+// The 12 official TCOF success factors
+const officialFactorTitles = [
+  "1.1 Ask Why",
+  "1.2 Get a Masterbuilder",
+  "1.3 Get Your People on the Bus",
+  "1.4 Make Friends and Keep them Friendly",
+  "2.1 Recognise that your project is not unique",
+  "2.2 Look for Tried & Tested Options",
+  "3.1 Think Big, Start Small",
+  "3.2 Learn by Experimenting",
+  "3.3 Keep on top of risks",
+  "4.1 Adjust for optimism",
+  "4.2 Measure What Matters, Be Ready to Step Away",
+  "4.3 Be Ready to Adapt"
+];
+
+// Fix success factors in localStorage
+function fixSuccessFactors() {
+  console.log('Starting success factor fix in localStorage...');
   
-  try {
-    // First, get all factors from localStorage
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('factor-')) {
-        keys.push(key);
-      }
-    }
-    
-    console.log(`Found ${keys.length} factor keys in localStorage`);
-    
-    // Load all factors from localStorage
-    const rawFactors = [];
-    for (const key of keys) {
-      try {
-        const factorJson = localStorage.getItem(key);
-        if (factorJson) {
-          const factor = JSON.parse(factorJson);
-          rawFactors.push(factor);
-        }
-      } catch (err) {
-        console.error(`Error parsing factor from ${key}:`, err);
-      }
-    }
-    
-    console.log(`Loaded ${rawFactors.length} factors from localStorage`);
-    
-    // Deduplicate by factor title
-    const dedupMap = {};
-    const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
-    
-    // Map of official titles to IDs for consistency
-    const officialIdMap = {};
-    
-    // First pass - identify official factors by exact title match
-    rawFactors.forEach(factor => {
-      const normalizedTitle = factor.title.trim();
-      
-      // If this is an official factor title, remember its ID
-      if (officialFactorTitles.includes(normalizedTitle)) {
-        officialIdMap[normalizedTitle] = factor.id;
-      }
-    });
-    
-    // Process each raw factor
-    rawFactors.forEach(item => {
-      const normalizedTitle = item.title.trim();
-      
-      // If this title already exists in our map, merge tasks
-      if (dedupMap[normalizedTitle]) {
-        // Merge tasks from all stages
-        stages.forEach(stage => {
-          const sourceTasks = item.tasks?.[stage] || [];
-          
-          for (const task of sourceTasks) {
-            // Only add unique tasks (avoid duplicates)
-            if (!dedupMap[normalizedTitle].tasks[stage].includes(task)) {
-              dedupMap[normalizedTitle].tasks[stage].push(task);
-            }
-          }
-        });
-      } 
-      // If this is a new title, add it to the map
-      else {
-        // Create a base entry
-        dedupMap[normalizedTitle] = { 
-          title: normalizedTitle, 
-          id: officialIdMap[normalizedTitle] || item.id, // Use official ID if available
-          tasks: {
-            Identification: [...(item.tasks?.Identification || [])],
-            Definition: [...(item.tasks?.Definition || [])],
-            Delivery: [...(item.tasks?.Delivery || [])],
-            Closure: [...(item.tasks?.Closure || [])]
-          }
-        };
-      }
-    });
-    
-    // Make sure all official factors exist
-    officialFactorTitles.forEach((title, index) => {
-      if (!dedupMap[title]) {
-        dedupMap[title] = {
-          title: title,
-          id: officialIdMap[title] || `sf-${index + 1}`,
-          tasks: {
-            Identification: [],
-            Definition: [],
-            Delivery: [],
-            Closure: []
-          }
-        };
-      }
-    });
-    
-    // Filter to keep only the official factors
-    const dedupFactors = officialFactorTitles.map(title => dedupMap[title]);
-    
-    // Verify we have exactly 12 factors
-    if (dedupFactors.length !== 12) {
-      console.error(`Error: Expected 12 deduplicated factors but found ${dedupFactors.length}`);
-      return false;
-    }
-    
-    // Assign consistent IDs
-    dedupFactors.forEach((factor, index) => {
-      if (!factor.id || factor.id.includes("duplicate")) {
-        factor.id = `sf-${index + 1}`;
-      }
-    });
-    
-    // Clear existing factors from localStorage
-    for (const key of keys) {
-      localStorage.removeItem(key);
-    }
-    
-    // Save deduplicated factors to localStorage
-    dedupFactors.forEach(factor => {
-      const key = `factor-${factor.id}`;
-      localStorage.setItem(key, JSON.stringify(factor));
-    });
-    
-    console.log(`Successfully saved ${dedupFactors.length} deduplicated factors to localStorage`);
-    return true;
-  } catch (error) {
-    console.error('Error fixing browser factors:', error);
-    return false;
+  // Get current factors from localStorage
+  let successFactors = JSON.parse(localStorage.getItem('successFactors') || '[]');
+  
+  if (!successFactors || successFactors.length === 0) {
+    console.log('No success factors found in localStorage');
+    return;
   }
+  
+  console.log(\`Found \${successFactors.length} factors in localStorage\`);
+  
+  // Create mapping for tasks from existing factors
+  const taskMap = {};
+  const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
+  
+  // First, collect all tasks from existing factors
+  successFactors.forEach(factor => {
+    const title = factor.title.trim();
+    
+    if (!taskMap[title]) {
+      taskMap[title] = {
+        Identification: [...(factor.tasks?.Identification || [])],
+        Definition: [...(factor.tasks?.Definition || [])],
+        Delivery: [...(factor.tasks?.Delivery || [])],
+        Closure: [...(factor.tasks?.Closure || [])]
+      };
+    } else {
+      // Merge tasks if duplicate title found
+      stages.forEach(stage => {
+        const sourceTasks = factor.tasks?.[stage] || [];
+        for (const task of sourceTasks) {
+          if (!taskMap[title][stage].includes(task)) {
+            taskMap[title][stage].push(task);
+          }
+        }
+      });
+    }
+  });
+  
+  // Now create the 12 canonical factors
+  const fixedFactors = officialFactorTitles.map((title, index) => {
+    // Find matching tasks or partial match
+    let matchedTasks = taskMap[title];
+    
+    if (!matchedTasks) {
+      // Try to find by prefix or partial match
+      const prefix = title.split(' ')[0];
+      const keyword = title.split(' ').slice(1).join(' ').toLowerCase();
+      
+      // Find best matching title
+      const bestMatch = Object.keys(taskMap).find(t => 
+        t.startsWith(prefix) || 
+        t.toLowerCase().includes(keyword) ||
+        keyword.includes(t.toLowerCase())
+      );
+      
+      matchedTasks = bestMatch ? taskMap[bestMatch] : null;
+    }
+    
+    return {
+      id: \`sf-\${index + 1}\`,
+      title: title,
+      tasks: matchedTasks || {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      }
+    };
+  });
+  
+  // Save back to localStorage
+  localStorage.setItem('successFactors', JSON.stringify(fixedFactors));
+  console.log('Success factors fixed in localStorage. New factors:', fixedFactors.map(f => f.title));
 }
 
-// Run the fix function
-fixBrowserFactors().then(success => {
-  if (success) {
-    console.log('Browser factor fix complete!');
-  } else {
-    console.error('Browser factor fix failed.');
-  }
-});
+// Run the fix
+fixSuccessFactors();
+`;
+
+  console.log('Browser Fix Code Generator');
+  console.log('=========================');
+  console.log('Paste the following code in your browser console to fix localStorage factors:');
+  console.log(browserFixCode);
+}
+
+fixBrowserFactors();

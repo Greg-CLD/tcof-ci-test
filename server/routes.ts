@@ -812,18 +812,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Official TCOF success factors - these are the ones we want to keep and merge duplicates into
       const officialFactorTitles = [
-        "Ask Why",
-        "Get Stakeholder Support",
-        "Choose Optimal Approach",
-        "Ensure Technical Feasibility",
-        "Grow and Develop the Team",
-        "Manage Scope",
-        "Track Progress",
-        "Exercise Control",
-        "Assign Clear Responsibilities",
-        "Deliver Quality",
-        "Create Buy-in",
-        "Transfer Product Ownership"
+        "1.1 Ask Why",
+        "1.2 Get a Masterbuilder",
+        "1.3 Get Your People on the Bus",
+        "1.4 Make Friends and Keep them Friendly",
+        "2.1 Recognise that your project is not unique",
+        "2.2 Look for Tried & Tested Options",
+        "3.1 Think Big, Start Small",
+        "3.2 Learn by Experimenting",
+        "3.3 Keep on top of risks",
+        "4.1 Adjust for optimism",
+        "4.2 Measure What Matters, Be Ready to Step Away",
+        "4.3 Be Ready to Adapt"
       ];
       
       // Mapping of official factor titles to their actual database IDs
@@ -1063,6 +1063,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/admin/update-canonical-factors', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Only allow admin users to update canonical factors
+      if ((req.user as any).username !== 'greg@confluity.co.uk') {
+        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
+      }
+      
+      console.log('Starting canonical factor update via API endpoint...');
+      
+      // Get all existing factors
+      const rawFactors = await getFactors();
+      
+      if (!rawFactors || rawFactors.length === 0) {
+        return res.status(404).json({ message: 'No factors found to update' });
+      }
+      
+      console.log(`Found ${rawFactors.length} existing factors in database`);
+      
+      // The 12 official TCOF success factors to use
+      const officialFactorTitles = [
+        "1.1 Ask Why",
+        "1.2 Get a Masterbuilder",
+        "1.3 Get Your People on the Bus",
+        "1.4 Make Friends and Keep them Friendly",
+        "2.1 Recognise that your project is not unique",
+        "2.2 Look for Tried & Tested Options",
+        "3.1 Think Big, Start Small",
+        "3.2 Learn by Experimenting",
+        "3.3 Keep on top of risks",
+        "4.1 Adjust for optimism",
+        "4.2 Measure What Matters, Be Ready to Step Away",
+        "4.3 Be Ready to Adapt"
+      ];
+      
+      // Create the 12 canonical factors
+      type StageKey = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
+      const stages: StageKey[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
+      const canonicalFactors: FactorTask[] = [];
+      
+      for (let i = 0; i < officialFactorTitles.length; i++) {
+        const title = officialFactorTitles[i];
+        const factorId = `sf-${i + 1}`;
+        
+        // Try to find an existing factor with exact title match
+        let existingFactor = rawFactors.find(f => f.title.trim() === title);
+        
+        // If no exact match, try to find any factor with similar title
+        if (!existingFactor) {
+          // Extract number prefix (e.g., "1.1" from "1.1 Ask Why")
+          const prefix = title.split(' ')[0];
+          
+          // Look for factors that might match by prefix or keyword
+          existingFactor = rawFactors.find(f => 
+            f.title.includes(prefix) || 
+            title.toLowerCase().includes(f.title.toLowerCase()) ||
+            f.title.toLowerCase().includes(title.toLowerCase().split(' ').slice(1).join(' '))
+          );
+        }
+        
+        // If we found a matching factor, merge its tasks
+        if (existingFactor) {
+          canonicalFactors.push({
+            id: factorId,
+            title: title,
+            tasks: {
+              Identification: [...(existingFactor.tasks?.Identification || [])],
+              Definition: [...(existingFactor.tasks?.Definition || [])],
+              Delivery: [...(existingFactor.tasks?.Delivery || [])],
+              Closure: [...(existingFactor.tasks?.Closure || [])]
+            }
+          });
+        } else {
+          // If no match, create new factor with empty tasks
+          canonicalFactors.push({
+            id: factorId,
+            title: title,
+            tasks: {
+              Identification: [],
+              Definition: [],
+              Delivery: [],
+              Closure: []
+            }
+          });
+        }
+      }
+      
+      // Save the canonical factors to database
+      await saveFactors(canonicalFactors);
+      
+      console.log(`Successfully updated database with 12 canonical success factors`);
+      
+      res.json({ 
+        success: true, 
+        message: `Successfully updated to the 12 canonical TCOF success factors`,
+        factors: canonicalFactors.map(f => f.title)
+      });
+    } catch (error: any) {
+      console.error('Error updating canonical factors:', error);
+      res.status(500).json({ message: 'Failed to update canonical factors', error: error.message });
+    }
+  });
+  
   app.get('/api/admin/preset-heuristics', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const presetHeuristicsData = fs.readFileSync(path.join(process.cwd(), 'data', 'presetHeuristics.json'), 'utf8');
