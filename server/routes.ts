@@ -757,12 +757,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/admin/tcof-tasks', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/admin/tcof-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Only allow admin users to update success factors
-      if ((req.user as any).username !== 'greg@confluity.co.uk') {
-        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
-      }
       
       // Validate request data
       if (!Array.isArray(req.body)) {
@@ -793,7 +789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Success Factor Editor API endpoints
-  app.get('/api/admin/success-factors', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
       const factors = await getFactors();
       res.json(factors || []);
@@ -804,12 +800,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Endpoint to run factor deduplication (admin only)
-  app.post('/api/admin/deduplicate-factors', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/admin/deduplicate-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Only allow admin users to deduplicate
-      if ((req.user as any).username !== 'greg@confluity.co.uk') {
-        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
-      }
       
       console.log('Starting deduplication process via API endpoint...');
       
@@ -943,7 +935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/admin/success-factors/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/admin/success-factors/:id', isAdmin, async (req: Request, res: Response) => {
     try {
       const factorId = req.params.id;
       const factors = await getFactors();
@@ -965,12 +957,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/admin/success-factors', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Only allow admin users to create success factors
-      if ((req.user as any).username !== 'greg@confluity.co.uk') {
-        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
-      }
       
       const newFactor = req.body;
       
@@ -1000,12 +988,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put('/api/admin/success-factors/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.put('/api/admin/success-factors/:id', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Only allow admin users to update success factors
-      if ((req.user as any).username !== 'greg@confluity.co.uk') {
-        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
-      }
       
       const factorId = req.params.id;
       const updatedFactor = req.body;
@@ -1043,12 +1027,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/admin/success-factors/:id', isAuthenticated, async (req: Request, res: Response) => {
+  app.delete('/api/admin/success-factors/:id', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Only allow admin users to delete success factors
-      if ((req.user as any).username !== 'greg@confluity.co.uk') {
-        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
-      }
       
       const factorId = req.params.id;
       
@@ -1075,12 +1055,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/update-canonical-factors', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/admin/update-canonical-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Only allow admin users to update canonical factors
-      if ((req.user as any).username !== 'greg@confluity.co.uk') {
-        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
-      }
       
       console.log('Starting canonical factor update via API endpoint...');
       
@@ -1177,7 +1153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/admin/preset-heuristics', isAuthenticated, async (req: Request, res: Response) => {
+  app.get('/api/admin/preset-heuristics', isAdmin, async (req: Request, res: Response) => {
     try {
       const presetHeuristicsData = fs.readFileSync(path.join(process.cwd(), 'data', 'presetHeuristics.json'), 'utf8');
       res.json(JSON.parse(presetHeuristicsData));
@@ -1187,7 +1163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/preset-heuristics', isAuthenticated, async (req: Request, res: Response) => {
+  app.post('/api/admin/preset-heuristics', isAdmin, async (req: Request, res: Response) => {
     try {
       // Validate request data
       if (!Array.isArray(req.body)) {
