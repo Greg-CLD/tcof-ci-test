@@ -1,0 +1,37 @@
+	Fixing Success Factors
+	
+	The presentation of the 12 success factors across the site is not to performance, here is what I am expecting to see 
+
+	1. Within make-a-plan/admin, the 12 success factors in a table view which is correct, but I should also see the tasks presented in columns for the Stages i.e 1. Identification, 2. Definition, 3. Delivery and 4. Closure. I am expecting to see the tasks provided in the spreadsheet 'tcof-factors.xls. Shown there, essentially, the same layout as in the spreadsheet provided
+
+2. This table should then be shown in the Checklist, under the existing sub-heading  of TCOF Success Factors. There I should see the title of the success factor, and the relevant tasks, from the default
+
+3. Within /make-a-plan/full/block-1, under step 1, I expect to see this description text, to help the user understand what they need to do "
+	• What - Review each TCOF Success Factor, reflect on how strongly they resonate with you?
+	• Why - Some of these heuristics may feel deeply familiar. Others might not land at all. That’s normal. If you're not "feeling" some heuristics, it may simply be because you haven't experienced using this way of working before. 
+	• When - Do this now, use the scale below to reflect on how much each one feels true to you.
+	• How - Be honest, this helps you build your own working set
+	
+	4. Within /make-a-plan/full/block-1, under step 1, I expect the key and the ratings to follow this structure, not that shown in the current iteration "
+	How much do you feel this heuristic?
+	
+	❌ Doesn’t land – I don’t feel this. It doesn’t match my experience.  
+	🤔 Unfamiliar – I understand it, but I’ve never used it or seen it in action.  
+	🟡 Seems true – I believe it’s useful, but I haven’t tested it myself.  
+	✅ Proven – I’ve used this and it worked. It fits how I lead.  
+	🔥 Hard-won truth – I’ve lived this. It’s burned into how I work."
+	
+
+	5. Within /make-a-plan/full/block-1, under step 2 I expect to see these guidelines to help the user understand what to do "
+	What - Think about things you’ve learned through your experience.  What rules help you deliver change, projects or big ideas?
+	Why - You have important learned experience, that's wisdom. Writing this down using heuristics is going to allow you and others to ensure this hard won learning is applied. 
+	When - It's best to do this before we get into the detail of selecting good practice and the delivery approach, that can be confusing, whereas your wisdom in heuristics is a fast, frugal shortcut to success
+	How -  Write down 5–10 of your own. Keep them short, memorable, and practical. Follow these guidelines 
+		1. Be inspired, not copied: You may reflect on the TCOF goals, which are written as heuristics. It’s fine to be inspired by them—but don’t copy them. We’re looking for your original insights based on your own lived experience.
+		2. Your goal: Identify the personal rules of thumb you actually use to deliver results—your own heuristics for success.
+		3. How to write a heuristic:
+			○ Keep it short, clear, and easy to remember.
+			○ Think in phrases, not paragraphs.
+			○ Aim for 5 to 10 strong heuristics that reflect your real-world experience.
+			○ Test whether you could explain each one to a colleague in a sentence.
+"
