@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
-import { Redirect } from 'wouter';
+import { Redirect, Link } from 'wouter';
 import * as xlsx from 'xlsx';
 import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { apiRequest } from '@/lib/queryClient';
@@ -90,9 +90,28 @@ export default function AdminFactorEditor() {
     loadFactors();
   }, [toast]);
 
-  // Check if the user is authorized (admin)
-  if (!user || user.username !== 'greg@confluity.co.uk') {
-    return <Redirect to="/" />;
+  // Check if the user is authorized (admin) - case insensitive check
+  if (!user || user.username.toLowerCase() !== 'greg@confluity.co.uk') {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <SiteHeader />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center h-full">
+            <h1 className="text-3xl font-bold text-tcof-dark mb-6">Access Denied</h1>
+            <p className="text-lg text-gray-600 mb-6">
+              You do not have permission to access this admin area. 
+              This page is restricted to authorized personnel only.
+            </p>
+            <Link href="/">
+              <Button className="bg-tcof-teal hover:bg-tcof-teal/90">
+                Return to Home
+              </Button>
+            </Link>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
   }
 
   // Get the currently selected factor
@@ -561,61 +580,35 @@ export default function AdminFactorEditor() {
       <SiteHeader />
       
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-tcof-dark">Success Factor Editor</h1>
-          <div className="space-x-2">
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving}
-              className="bg-tcof-teal hover:bg-tcof-teal/90"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save All
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (fileInputRef.current) {
-                  fileInputRef.current.click();
-                }
-              }}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Import from Excel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleDeduplicate}
-              disabled={isSaving}
-              className="bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900"
-            >
-              <Filter className="mr-2 h-4 w-4" />
-              Deduplicate Factors
-            </Button>
+        <div className="flex flex-col mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold text-tcof-dark">Success Factor Editor</h1>
+          </div>
+          
+          {/* Always visible canonical factors update button */}
+          <div className="w-full bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6 flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold text-blue-900 mb-1">Canonical TCOF Factors</h2>
+              <p className="text-blue-700">
+                Ensure your success factors match the 12 official TCOF factors while preserving all tasks. 
+                Click the button to standardize all factors.
+              </p>
+            </div>
             <AlertDialog open={showFixFactorsDialog} onOpenChange={setShowFixFactorsDialog}>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
                   disabled={isFixingFactors || isSaving}
-                  className="bg-blue-50 hover:bg-blue-100 border-blue-300 text-blue-900"
+                  className="bg-blue-100 hover:bg-blue-200 border-blue-300 text-blue-900 h-12"
                 >
                   {isFixingFactors ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Fixing...
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Updating Canonical Factors...
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <RefreshCw className="mr-2 h-5 w-5" />
                       Update to Canonical Factors
                     </>
                   )}
@@ -635,13 +628,58 @@ export default function AdminFactorEditor() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".xlsx,.xls"
-              className="hidden"
-            />
+          </div>
+          
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-xl font-semibold text-tcof-dark">Manage Success Factors</h2>
+            </div>
+            <div className="space-x-2">
+              <Button 
+                onClick={handleSave} 
+                disabled={isSaving}
+                className="bg-tcof-teal hover:bg-tcof-teal/90"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save All
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.click();
+                  }
+                }}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import from Excel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDeduplicate}
+                disabled={isSaving}
+                className="bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900"
+              >
+                <Filter className="mr-2 h-4 w-4" />
+                Deduplicate Factors
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".xlsx,.xls"
+                className="hidden"
+              />
+            </div>
           </div>
         </div>
         

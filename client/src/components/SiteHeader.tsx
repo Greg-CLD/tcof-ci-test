@@ -23,7 +23,8 @@ import {
   Home,
   BookOpen,
   Monitor,
-  DollarSign
+  DollarSign,
+  Filter
 } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
@@ -156,6 +157,19 @@ export default function SiteHeader() {
                       <Key className="mr-2 h-4 w-4" />
                       <span>Upgrade Plan</span>
                     </DropdownMenuItem>
+                    {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setLocation("/make-a-plan/admin/factors")}>
+                          <Filter className="mr-2 h-4 w-4" />
+                          <span>Admin - Factors</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLocation("/make-a-plan/admin")}>
+                          <Filter className="mr-2 h-4 w-4" />
+                          <span>Admin - Presets</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
@@ -274,6 +288,25 @@ export default function SiteHeader() {
                     >
                       <History className="h-5 w-5 mr-2" /> View History
                     </Link>
+                    
+                    {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
+                      <>
+                        <Link 
+                          href="/make-a-plan/admin/factors"
+                          onClick={() => handleNavigation("/make-a-plan/admin/factors")}
+                          className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin/factors' ? 'bg-tcof-light' : ''} text-tcof-teal`}
+                        >
+                          <Filter className="h-5 w-5 mr-2" /> Admin - Factors
+                        </Link>
+                        <Link 
+                          href="/make-a-plan/admin"
+                          onClick={() => handleNavigation("/make-a-plan/admin")}
+                          className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin' ? 'bg-tcof-light' : ''} text-tcof-teal`}
+                        >
+                          <Filter className="h-5 w-5 mr-2" /> Admin - Presets
+                        </Link>
+                      </>
+                    )}
                     
                     <button 
                       onClick={handleSignOut}
