@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Star, StarOff, HelpCircle, Info } from 'lucide-react';
+import { Star, StarOff, Info } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { SuccessFactorRating } from '@/lib/plan-db';
 
-import { getFactors } from '@/utils/factorStore';
+import { getFactors } from '@/utils/factorStore.js';
 
 // Custom rating scale with new descriptions per requirements
 const RATING_SCALE = {
@@ -54,26 +48,19 @@ export default function SuccessFactorTable({
 }: SuccessFactorTableProps) {
   const { toast } = useToast();
   const [factorList, setFactorList] = useState<Array<{id: string, name: string}>>([]);
-  const [isRatingKeyOpen, setIsRatingKeyOpen] = useState(false);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Load TCOF factor data from database using our enhanced factorStore utility
+  // Load TCOF factor data from database - ensure we only show 12 unique factors
   useEffect(() => {
-    // Begin with sample data for immediate rendering
-    const sampleFactors = [
-      { id: 'H1', name: 'Loading success factors...' }
-    ];
-    
-    setFactorList(sampleFactors);
-    
-    // Load factors from database with our enhanced factorStore utility
-    async function loadDatabaseFactors() {
+    async function loadFactors() {
+      setIsLoading(true);
+      
       try {
-        // Always enforce exactly 12 unique factors
-        const factors = await getFactors(true, true);
+        // Get factors with bypassing cache (true) 
+        const factors = await getFactors(true);
         
-        if (factors && Array.isArray(factors) && factors.length > 0) {
-          // Verify we have exactly 12 factors
+        if (factors && Array.isArray(factors)) {
           if (factors.length !== 12) {
             console.warn(`Expected exactly 12 factors, but got ${factors.length}. Using available factors.`);
           }
@@ -85,30 +72,30 @@ export default function SuccessFactorTable({
           }));
           
           setFactorList(formattedFactors);
-          
           console.log(`Successfully loaded ${formattedFactors.length} unique success factors.`);
         } else {
-          // Show error if no factors found
-          console.error('No factors loaded from database.');
+          console.error('No factors loaded from database or invalid format');
           toast({
             title: "Error loading success factors",
-            description: "No success factors found in the database.",
+            description: "Could not load success factors. Please try again.",
             variant: "destructive"
           });
           setFactorList([]);
         }
       } catch (error) {
-        console.error('Error loading factors from database:', error);
+        console.error('Error loading factors:', error);
         toast({
           title: "Error loading success factors",
           description: "Could not load success factors from data source.",
           variant: "destructive"
         });
         setFactorList([]);
+      } finally {
+        setIsLoading(false);
       }
     }
     
-    loadDatabaseFactors();
+    loadFactors();
   }, [toast]);
   
   // Helper to get the current rating for display
@@ -156,7 +143,7 @@ export default function SuccessFactorTable({
     }
   };
   
-  // Get emoji for rating display using our consistent custom rating scale
+  // Get emoji for rating display
   const getRatingEmoji = (rating: number): string => {
     if (rating >= 1 && rating <= 5) {
       return RATING_SCALE[rating as keyof typeof RATING_SCALE]?.emoji || '';
@@ -164,12 +151,30 @@ export default function SuccessFactorTable({
     return '';
   };
 
-  // Render loading state if no factors are loaded yet
+  // Render loading state if factors are still loading
+  if (isLoading) {
+    return (
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4 text-tcof-dark">STEP 1 – Reflect on TCOF Heuristics</h2>
+        <div className="text-center py-8">Loading success factors...</div>
+      </div>
+    );
+  }
+
+  // If no factors are available after loading
   if (factorList.length === 0) {
     return (
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-tcof-dark">STEP 1 – Reflect on TCOF Heuristics</h2>
-        <div className="text-center py-8">Loading factors...</div>
+        <div className="text-center py-8 text-red-500">
+          Error: No success factors available. Please try reloading the page or contact support.
+        </div>
+        <Button 
+          onClick={() => window.location.reload()}
+          className="mx-auto block mt-4"
+        >
+          Reload Page
+        </Button>
       </div>
     );
   }
@@ -213,7 +218,7 @@ export default function SuccessFactorTable({
         <table className="w-full text-sm">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-700">Factor</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-700">Success Factor</th>
               <th className="px-4 py-3 text-left font-medium text-gray-700">Rating</th>
               <th className="px-4 py-3 text-left font-medium text-gray-700">Notes</th>
               <th className="px-4 py-3 text-left font-medium text-gray-700">Favourite</th>
@@ -227,7 +232,7 @@ export default function SuccessFactorTable({
               
               return (
                 <tr key={factor.id} className={rowClass}>
-                  <td className="px-4 py-3 font-medium">{factor.id} {factor.name}</td>
+                  <td className="px-4 py-3 font-medium">{factor.id}: {factor.name}</td>
                   <td className="px-4 py-3">
                     <RadioGroup 
                       value={currentRating.rating?.toString() || ""} 
