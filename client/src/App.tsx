@@ -12,6 +12,7 @@ import MakeAPlanLanding from "@/pages/MakeAPlanLanding";
 import MakeAPlanFullIntro from "@/pages/MakeAPlanFullIntro";
 import MakeAPlanFull from "@/pages/MakeAPlanFull";
 import AdminPresetEditor from "@/pages/AdminPresetEditor";
+import AdminFactorEditor from "@/pages/AdminFactorEditor";
 import Block1Discover from "@/pages/Block1Discover";
 import Block2Design from "@/pages/Block2Design";
 import Block3Deliver from "@/pages/Block3Deliver";
@@ -84,6 +85,7 @@ function Router() {
       <Route path="/make-a-plan/full/block-3" component={Block3Complete} />
       <Route path="/make-a-plan/full/:blockId" component={MakeAPlanFull} />
       <Route path="/make-a-plan/admin" component={AdminPresetEditor} />
+      <Route path="/make-a-plan/admin/factors" component={AdminFactorEditor} />
       <Route path="/checklist" component={Checklist} />
       
       {/* Dashboard route - protected like other tools */}

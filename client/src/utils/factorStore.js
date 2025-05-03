@@ -1,10 +1,21 @@
 import { storage } from '@/lib/storageAdapter';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 // Cache the factor data to avoid repeated file reads
 let cachedFactors = null;
+
+// Default empty set of factors
+const defaultFactors = [
+  {
+    id: "1.1",
+    title: "Ask Why",
+    tasks: {
+      Identification: ["Consult key stakeholders", "Understand pains and wants"],
+      Definition: ["Document key business objectives"],
+      Delivery: ["Verify solution alignment with objectives"],
+      Closure: ["Measure outcomes against objectives"]
+    }
+  }
+];
 
 /**
  * Gets all success factors from the JSON file or cache
@@ -23,18 +34,28 @@ export async function getFactors() {
       return dbFactors;
     }
 
-    // If not in DB, load from JSON file
-    // Dynamic import to load JSON data at runtime
-    const factorsData = await import('../../data/successFactors.json', { assert: { type: 'json' } });
-    cachedFactors = factorsData.default;
+    // If not in DB, fetch from API if we're in browser
+    try {
+      const response = await fetch('/api/admin/tcof-tasks');
+      if (response.ok) {
+        const data = await response.json();
+        cachedFactors = data;
+        // Store in Replit DB for future access
+        await storage.set('successFactors', cachedFactors);
+        return cachedFactors;
+      }
+    } catch (fetchError) {
+      console.warn('Could not fetch from API:', fetchError);
+    }
     
-    // Store in Replit DB for future access
+    // Fall back to default factors if all else fails
+    cachedFactors = defaultFactors;
     await storage.set('successFactors', cachedFactors);
     
     return cachedFactors;
   } catch (error) {
     console.error('Error loading success factors:', error);
-    return [];
+    return defaultFactors;
   }
 }
 
@@ -51,16 +72,22 @@ export async function saveFactors(updatedFactors) {
     // Save to Replit DB
     await storage.set('successFactors', updatedFactors);
     
-    // Try to save to file system in development mode
-    if (import.meta.env.DEV) {
-      try {
-        const __dirname = path.dirname(fileURLToPath(import.meta.url));
-        const jsonPath = path.resolve(__dirname, '../../data/successFactors.json');
-        await fs.writeFile(jsonPath, JSON.stringify(updatedFactors, null, 2));
-      } catch (fsError) {
-        console.warn('Could not save to file system:', fsError);
-        // Non-fatal error, we've already saved to Replit DB
+    // Also try to save via API
+    try {
+      const response = await fetch('/api/admin/tcof-tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedFactors),
+      });
+      
+      if (!response.ok) {
+        console.warn('Failed to save to API:', await response.text());
       }
+    } catch (apiError) {
+      console.warn('Could not save to API:', apiError);
+      // Non-fatal error, we've already saved to Replit DB
     }
     
     return true;
