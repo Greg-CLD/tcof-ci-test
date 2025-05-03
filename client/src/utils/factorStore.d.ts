@@ -43,3 +43,25 @@ export function getFactorTasks(factorId: string, stage: string): Promise<string[
  * @returns {Promise<string>} Formatted factor name with ID
  */
 export function getFactorNameById(factorId: string): Promise<string>;
+
+/**
+ * Creates a new success factor
+ * @param {SuccessFactor} factor - The factor data to create
+ * @returns {Promise<SuccessFactor|null>} The created factor or null if operation failed
+ */
+export function createFactor(factor: SuccessFactor): Promise<SuccessFactor | null>;
+
+/**
+ * Updates an existing success factor
+ * @param {string} factorId - ID of the factor to update
+ * @param {SuccessFactor} updatedFactor - The updated factor data
+ * @returns {Promise<SuccessFactor|null>} The updated factor or null if operation failed
+ */
+export function updateFactor(factorId: string, updatedFactor: SuccessFactor): Promise<SuccessFactor | null>;
+
+/**
+ * Deletes a success factor
+ * @param {string} factorId - ID of the factor to delete
+ * @returns {Promise<boolean>} True if deletion was successful
+ */
+export function deleteFactor(factorId: string): Promise<boolean>;
