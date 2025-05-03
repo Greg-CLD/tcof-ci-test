@@ -81,15 +81,24 @@ export async function loadDeliveryZones(): Promise<DeliveryZone[]> {
   return deliveryZonesRaw;
 }
 
-// Function to load TCOF factors from JSON with proper error handling
+// Function to load TCOF factors from the API
 export async function loadTCOFFactors(): Promise<TCOFFactorTask[]> {
   try {
-    // For now, we're only loading from the local JSON file
-    // In the future, this could be extended to load from an API endpoint
+    // First attempt to load from API
+    const response = await fetch('/api/admin/success-factors');
+    if (response.ok) {
+      const factors = await response.json();
+      // Cache the factors for use in synchronous functions
+      window._cachedFactors = factors;
+      return factors;
+    }
+    
+    // If API fails, use local data
+    console.warn('Failed to load TCOF factors from API, using local JSON data');
     return tcofFactorsRaw;
   } catch (error) {
     console.error('Error loading TCOF factors:', error);
-    return [];
+    return tcofFactorsRaw;
   }
 }
 
@@ -107,10 +116,18 @@ export function getSuccessFactorRatingInfo(): Record<number, { emoji: string; de
 // Helper function to convert TCOF tasks to select options for dropdowns
 export function getTcofFactorOptions(): Array<{ value: string; label: string }> {
   try {
-    // Transform the raw tasks into factor options
-    return tcofTasksRaw.map((task: TCOFTask) => ({
-      value: task.id,
-      label: `${task.id}: ${task.text}`
+    // First check if we have cached factors from the API
+    if (window._cachedFactors && window._cachedFactors.length > 0) {
+      return window._cachedFactors.map((factor: TCOFFactorTask) => ({
+        value: factor.id,
+        label: `${factor.id}: ${factor.title}`
+      }));
+    }
+    
+    // Fallback to using the local JSON data
+    return tcofFactorsRaw.map((factor: TCOFFactorTask) => ({
+      value: factor.id,
+      label: `${factor.id}: ${factor.title}`
     }));
   } catch (error) {
     console.error('Error generating TCOF factor options:', error);
@@ -122,8 +139,23 @@ export function getTcofFactorOptions(): Array<{ value: string; label: string }> 
 // Helper function to get factor name by ID
 export function getFactorNameById(factorId: string): string {
   try {
-    const factor = tcofTasksRaw.find((task: TCOFTask) => task.id === factorId);
-    return factor ? `${factor.id}: ${factor.text}` : factorId;
+    // First check if we have cached factors from the API
+    if (window._cachedFactors && window._cachedFactors.length > 0) {
+      const factor = window._cachedFactors.find(f => f.id === factorId);
+      if (factor) {
+        return `${factor.id}: ${factor.title}`;
+      }
+    }
+    
+    // Fallback to the local JSON data
+    const factor = tcofFactorsRaw.find((f: TCOFFactorTask) => f.id === factorId);
+    if (factor) {
+      return `${factor.id}: ${factor.title}`;
+    }
+    
+    // Last resort, look in the old format
+    const oldFormatFactor = tcofTasksRaw.find((task: TCOFTask) => task.id === factorId);
+    return oldFormatFactor ? `${oldFormatFactor.id}: ${oldFormatFactor.text}` : factorId;
   } catch (error) {
     console.error('Error getting factor name by ID:', error);
     return factorId;
@@ -133,13 +165,21 @@ export function getFactorNameById(factorId: string): string {
 // Helper function to get tasks for a specific factor and stage
 export function getFactorTasks(factorId: string, stage: string): string[] {
   try {
-    // First try to get from the TCOFFactorTask format
+    // First check if we have cached factors from the API
+    if (window._cachedFactors && window._cachedFactors.length > 0) {
+      const factor = window._cachedFactors.find(f => f.id === factorId);
+      if (factor && factor.tasks && factor.tasks[stage as keyof typeof factor.tasks]) {
+        return factor.tasks[stage as keyof typeof factor.tasks].filter((task: string) => task !== '-');
+      }
+    }
+    
+    // Fallback to the local JSON data
     const factor = tcofFactorsRaw.find((f: TCOFFactorTask) => f.id === factorId);
     if (factor && factor.tasks && factor.tasks[stage as keyof typeof factor.tasks]) {
       return factor.tasks[stage as keyof typeof factor.tasks].filter((task: string) => task !== '-');
     }
     
-    // Fallback to getting from the TCOFTask format
+    // Last resort, fallback to getting from the TCOFTask format
     const tasks = tcofTasksRaw.filter(
       (task: TCOFTask) => task.id === factorId && task.stage === stage
     );

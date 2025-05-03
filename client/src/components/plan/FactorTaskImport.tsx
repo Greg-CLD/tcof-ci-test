@@ -34,11 +34,8 @@ export default function FactorTaskImport({
   useEffect(() => {
     const loadFactors = async () => {
       try {
-        // Only show loading if we need to load the factors
-        // (the first time the component is rendered)
-        if (!window.cachedFactors) {
-          setIsLoadingFactors(true);
-        }
+        // Only show loading if needed
+        setIsLoadingFactors(true);
         
         // The API call is made through tcofData utility
         // We don't need to modify this code since tcofData handles the API call

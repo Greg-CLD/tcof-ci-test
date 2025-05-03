@@ -246,8 +246,8 @@ export default function Block2Design() {
             onMappingChange={handleMappingChange}
           />
           
-          {/* Excel Import */}
-          <ExcelImport 
+          {/* Factor Task Import */}
+          <FactorTaskImport 
             planId={planId || ''}
             stage={currentStage}
             onTasksImported={handleTasksChange}
