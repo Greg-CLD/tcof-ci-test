@@ -1,12 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
+import { getLatestPlanId, loadPlan, savePlan } from '@/lib/plan-db';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Block3Deliver() {
   const [_, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   
   // Define steps for the progress bar
   const steps: Step[] = [
@@ -25,6 +39,87 @@ export default function Block3Deliver() {
   
   const handleSkipToChecklist = () => {
     setLocation('/checklist');
+  };
+  
+  const handleClearBlockRequest = () => {
+    setClearConfirmOpen(true);
+  };
+  
+  const handleClearBlockConfirmed = async () => {
+    try {
+      // Get the current plan
+      const planId = await getLatestPlanId();
+      if (!planId) {
+        toast({
+          title: "Error",
+          description: "No active plan found",
+          variant: "destructive"
+        });
+        setClearConfirmOpen(false);
+        return;
+      }
+      
+      // Load plan data
+      const plan = await loadPlan(planId);
+      if (!plan) {
+        toast({
+          title: "Error",
+          description: "Failed to load plan data",
+          variant: "destructive"
+        });
+        setClearConfirmOpen(false);
+        return;
+      }
+      
+      // Clear Block 3 data
+      const updatedPlan = {
+        ...plan, 
+        stages: { 
+          ...plan.stages,
+          Delivery: {
+            ...plan.stages.Delivery,
+            mappings: [],
+            tasks: [],
+            policyTasks: [],
+            frameworkTasks: [],
+            customFrameworks: []
+          },
+          Closure: {
+            ...plan.stages.Closure,
+            mappings: [],
+            tasks: [],
+            policyTasks: [],
+            frameworkTasks: [],
+            customFrameworks: []
+          }
+        }
+      };
+      
+      // Save the updated plan
+      const success = await savePlan(planId, updatedPlan);
+      
+      if (success) {
+        toast({
+          title: "Block cleared",
+          description: "All data for Block 3 has been reset",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to clear block data",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing block:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear block data",
+        variant: "destructive"
+      });
+    } finally {
+      setClearConfirmOpen(false);
+    }
   };
 
   return (
@@ -54,9 +149,33 @@ export default function Block3Deliver() {
           onPrevious={handleBack}
           onNext={handleNext}
           onSkip={handleSkipToChecklist}
+          onClear={handleClearBlockRequest}
           showNext={true}
           showSkip={false}
+          showClear={true}
         />
+        
+        {/* Clear Block Confirmation Dialog */}
+        <AlertDialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear Block 3 Data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove all your tasks, mappings and framework customizations from Block 3.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleClearBlockConfirmed} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Clear Block
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

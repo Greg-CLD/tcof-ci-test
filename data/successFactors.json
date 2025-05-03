@@ -1,20 +1,15 @@
 [
   {
-    "title": "1.1 Ask Why",
     "id": "sf-1",
+    "title": "1.1 Ask Why",
     "tasks": {
       "Identification": [
-        "Consult key stakeholders"
+        "New taConsult key stakeholderssk",
+        "New task"
       ],
-      "Definition": [
-        "-"
-      ],
-      "Delivery": [
-        "-"
-      ],
-      "Closure": [
-        "-"
-      ]
+      "Definition": [],
+      "Delivery": [],
+      "Closure": []
     }
   },
   {
