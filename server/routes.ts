@@ -567,8 +567,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   }
   
-  // Initialize cache
-  let factorsCache: FactorTask[] | null = null;
+  // Initialize empty array to store factors (will be populated during initialization)
+  let factorsDb: FactorTask[] = [];
   
   // Initialize the database with default success factors
   async function initializeFactorsDatabase(): Promise<boolean> {
@@ -580,7 +580,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const data = fs.readFileSync(factorsPath, 'utf8');
           const parsed = JSON.parse(data) as FactorTask[];
           if (parsed && parsed.length > 0) {
-            factorsCache = parsed;
+            // Update the database
+            factorsDb = parsed;
             console.log(`Database already initialized with ${parsed.length} success factors`);
             return true;
           }
@@ -624,8 +625,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get factors from database or file system
   async function getFactors(): Promise<FactorTask[]> {
-    if (factorsCache) {
-      return factorsCache;
+    if (factorsDb.length > 0) {
+      return factorsDb;
     }
     
     try {
@@ -634,8 +635,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fs.existsSync(factorsPath)) {
         const data = fs.readFileSync(factorsPath, 'utf8');
         const parsed = JSON.parse(data) as FactorTask[];
-        factorsCache = parsed;
-        return factorsCache;
+        
+        // Update database
+        factorsDb = parsed;
+        
+        return factorsDb;
       }
       
       // Fall back to tcofTasks.json if needed
@@ -643,8 +647,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fs.existsSync(tasksPath)) {
         const data = fs.readFileSync(tasksPath, 'utf8');
         const parsed = JSON.parse(data) as FactorTask[];
-        factorsCache = parsed;
-        return factorsCache;
+        
+        // Update database
+        factorsDb = parsed;
+        
+        return factorsDb;
       }
       
       // Fall back to tcof_success_factors_v2.json if needed
@@ -678,14 +685,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'utf8'
         );
         
-        factorsCache = transformedFactors;
-        return factorsCache;
+        // Update database
+        factorsDb = transformedFactors;
+        
+        return factorsDb;
       }
       
-      return [];
+      return factorsDb;
     } catch (error) {
       console.error('Error loading factors:', error);
-      return [];
+      return factorsDb;
     }
   }
   
@@ -703,8 +712,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'utf8'
       );
       
-      // Update the cache
-      factorsCache = factors;
+      // Update the database
+      factorsDb = factors;
       
       return true;
     } catch (error) {
