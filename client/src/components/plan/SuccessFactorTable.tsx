@@ -4,6 +4,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Tooltip, 
   TooltipContent, 
@@ -51,6 +52,7 @@ export default function SuccessFactorTable({
   onChange,
   totalFavourites = 0
 }: SuccessFactorTableProps) {
+  const { toast } = useToast();
   const [factorList, setFactorList] = useState<Array<{id: string, name: string}>>([]);
   const [isRatingKeyOpen, setIsRatingKeyOpen] = useState(false);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
@@ -86,35 +88,28 @@ export default function SuccessFactorTable({
             validateFactorTitles(renderedTitles);
           }
         } else {
-          // Fallback to demo data if Excel loading fails
-          console.error('No factors loaded from Excel, using fallback data');
-          const demoFactors = [
-            { id: 'F1', name: 'Clear success criteria are defined' },
-            { id: 'F2', name: 'Stakeholders are properly engaged' },
-            { id: 'F3', name: 'Risks are managed appropriately' },
-            { id: 'F4', name: 'Delivery approach matches the context' },
-            { id: 'F5', name: 'Team has the right capabilities' }
-          ];
-          
-          setFactorList(demoFactors);
+          // Show error and empty list rather than fallback to demo data
+          console.error('No factors loaded from Excel. Please ensure the Excel file is properly uploaded.');
+          toast({
+            title: "Error loading success factors",
+            description: "Please ensure the Excel file is uploaded correctly.",
+            variant: "destructive"
+          });
+          setFactorList([]);
         }
       } catch (error) {
         console.error('Error loading factors from Excel:', error);
-        // Fallback data
-        const fallbackFactors = [
-          { id: 'F1', name: 'Clear success criteria are defined' },
-          { id: 'F2', name: 'Stakeholders are properly engaged' },
-          { id: 'F3', name: 'Risks are managed appropriately' },
-          { id: 'F4', name: 'Delivery approach matches the context' },
-          { id: 'F5', name: 'Team has the right capabilities' }
-        ];
-        
-        setFactorList(fallbackFactors);
+        toast({
+          title: "Error loading success factors",
+          description: "Could not load success factors from data source.",
+          variant: "destructive"
+        });
+        setFactorList([]);
       }
     }
     
     loadExcelFactors();
-  }, []);
+  }, [toast]);
   
   // Helper to get the current rating for display
   const getRating = (factorId: string): SuccessFactorRating => {

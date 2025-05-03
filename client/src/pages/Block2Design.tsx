@@ -29,29 +29,63 @@ export default function Block2Design() {
   
   // Load or create plan
   useEffect(() => {
-    // Try to load the active plan ID from localStorage
-    const savedPlanId = localStorage.getItem('activePlanId');
-    
-    if (savedPlanId) {
-      // Check if the plan exists
-      const plan = loadPlan(savedPlanId);
-      if (plan) {
-        setPlanId(savedPlanId);
+    async function initializePlan() {
+      try {
+        // Try to load the active plan ID from localStorage
+        const savedPlanId = localStorage.getItem('activePlanId');
+        
+        if (savedPlanId) {
+          // Check if the plan exists
+          const plan = await loadPlan(savedPlanId);
+          if (plan) {
+            setPlanId(savedPlanId);
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        // Create a new plan if none exists
+        const newPlanId = await createEmptyPlan();
+        setPlanId(newPlanId);
+        localStorage.setItem('activePlanId', newPlanId);
+      } catch (error) {
+        console.error('Error initializing plan:', error);
+        // Create a fallback plan in case of error
+        try {
+          const fallbackPlanId = await createEmptyPlan();
+          setPlanId(fallbackPlanId);
+          localStorage.setItem('activePlanId', fallbackPlanId);
+        } catch (fallbackError) {
+          console.error('Failed to create fallback plan:', fallbackError);
+        }
+      } finally {
         setIsLoading(false);
-        return;
       }
     }
     
-    // Create a new plan if none exists
-    const newPlanId = createEmptyPlan();
-    setPlanId(newPlanId);
-    localStorage.setItem('activePlanId', newPlanId);
-    setIsLoading(false);
+    initializePlan();
   }, []);
   
   // Get plan data for the current stage
-  const planData = planId ? loadPlan(planId) : null;
-  const stageData = planData?.stages[currentStage];
+  const [planData, setPlanData] = useState<any>(null);
+
+  // Load plan data whenever the planId or stage changes
+  useEffect(() => {
+    async function fetchPlanData() {
+      if (!planId) return;
+      
+      try {
+        const data = await loadPlan(planId);
+        setPlanData(data);
+      } catch (error) {
+        console.error('Error loading plan data:', error);
+      }
+    }
+    
+    fetchPlanData();
+  }, [planId, refreshTrigger]);
+  
+  const stageData = planData?.stages?.[currentStage] || {};
   
   // Get personal heuristics from Block 1
   const personalHeuristics = stageData?.personalHeuristics || [];
