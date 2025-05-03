@@ -1,0 +1,62 @@
+Prompt: Fix Block 2 to Align with Specified Workflow
+
+Please revise Block 2 (/make-a-plan/full/block-2) so that it fully reflects the intended three-step process and removes unnecessary confusion.
+
+🧱 Step 3 – Link Heuristics to Success Factors
+Display each user-created heuristic from Block 1.
+
+Allow mapping of each to one of the 12 official TCOF success factors.
+
+Add explanatory labels (“What”, “Why”, “How”) as per the original brief.
+
+Ensure “Skip this step” is clearly shown and functional.
+
+🧱 Step 4 – Identify Tasks per Heuristic
+Allow users to create up to 3 tasks per heuristic for each stage (Identification, Definition, Delivery, Closure).
+
+Ensure these tasks are auto-added to the checklist.
+
+Show a small explanation of the goal for this section (see provided copy).
+
+Remove the “Import Tasks from Database” button – it is not needed and confuses the user.
+
+Automatically display the default tasks linked to the 12 TCOF success factors from the admin database. These should always be visible in this step and editable.
+
+For clarity: users should see both their own tasks and the TCOF standard tasks side-by-side or grouped by source.
+
+🧱 Step 5 – Add Organisational Policy Tasks
+Keep this step as-is with manual input.
+
+Provide fields for users to write tasks and assign them to a delivery stage.
+
+Add brief instruction text.
+
+🧱 Other Fixes
+Visually separate Step 3, Step 4, and Step 5 (e.g. with cards, headers, or accordions).
+
+If possible, persist any edits to heuristics/tasks with autosave or a clear “Save Progress” button.
+
+All tasks created or added in Block 2 (user, TCOF, org policy) should be reflected in the checklist at the end.
+
+❗Fix Missing Personal Heuristics in Block 1 & 2
+Ensure that any heuristics created by the user in Block 1 Step 2 are:
+
+Immediately shown on screen after entry
+
+Saved automatically or via a clear Save/Continue button
+
+Persisted to localStorage or Replit DB as appropriate
+
+Passed through to Block 2 reliably
+
+In Block 1, show all user-created heuristics in a list with:
+
+Edit button
+
+Option to “⭐ favourite” top heuristics
+
+Optional delete button
+
+In Block 2, use the saved heuristics as the input for Step 3.
+
+This must not show “No heuristics found” if any have been added in Block 1.

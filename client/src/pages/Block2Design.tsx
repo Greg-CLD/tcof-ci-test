@@ -6,12 +6,19 @@ import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
 import SuccessFactorMapping from '@/components/plan/SuccessFactorMapping';
-import FactorTaskImport from '@/components/plan/FactorTaskImport';
 import TaskList from '@/components/plan/TaskList';
 import StageSelector from '@/components/plan/StageSelector';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertTriangle, Trash2 } from 'lucide-react';
-import { Stage, loadPlan, savePlan, createEmptyPlan } from '@/lib/plan-db';
+import { Loader2, AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
+import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask } from '@/lib/plan-db';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription,
+  CardFooter
+} from "@/components/ui/card";
 
 export default function Block2Design() {
   const [_, setLocation] = useLocation();
@@ -20,6 +27,7 @@ export default function Block2Design() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentStage, setCurrentStage] = useState<Stage>('Identification');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [newPolicyTask, setNewPolicyTask] = useState('');
   
   // Define steps for the progress bar
   const steps: Step[] = [
@@ -120,6 +128,51 @@ export default function Block2Design() {
   
   const handleSkipToChecklist = () => {
     setLocation('/checklist');
+  };
+  
+  // Add policy task
+  const handleAddPolicyTask = async () => {
+    if (!newPolicyTask.trim() || !planId) return;
+    
+    try {
+      await addPolicyTask(planId, newPolicyTask.trim(), currentStage);
+      setNewPolicyTask('');
+      setRefreshTrigger(prev => prev + 1);
+      
+      toast({
+        title: "Policy task added",
+        description: `Added "${newPolicyTask}" to ${currentStage} stage`,
+      });
+    } catch (error) {
+      console.error('Error adding policy task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add policy task",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Remove policy task
+  const handleRemovePolicyTask = async (taskId: string) => {
+    if (!planId) return;
+    
+    try {
+      await removePolicyTask(planId, taskId, currentStage);
+      setRefreshTrigger(prev => prev + 1);
+      
+      toast({
+        title: "Policy task removed",
+        description: "The task has been removed from your plan",
+      });
+    } catch (error) {
+      console.error('Error removing policy task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove policy task",
+        variant: "destructive"
+      });
+    }
   };
   
   // Clear Block 2 data
@@ -233,35 +286,127 @@ export default function Block2Design() {
           </Alert>
         )}
         
-        <div className="space-y-6 mb-8">
+        <div className="space-y-10 mb-8">
           {/* Stage selector */}
           <StageSelector currentStage={currentStage} onStageChange={handleStageChange} />
           
-          {/* Success Factor Mapping */}
-          <SuccessFactorMapping 
-            planId={planId || ''} 
-            stage={currentStage}
-            heuristics={personalHeuristics}
-            mappings={mappings}
-            onMappingChange={handleMappingChange}
-          />
+          {/* Step 3 – Link Heuristics to Success Factors */}
+          <Card className="border-t-4 border-t-blue-500">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl font-bold text-primary">
+                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3">3</div>
+                Link Heuristics to Success Factors
+              </CardTitle>
+              <CardDescription>
+                Connect your personal heuristics to the 12 official TCOF success factors.
+                This mapping helps identify which success factors are most relevant to your context.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              <SuccessFactorMapping 
+                planId={planId || ''} 
+                stage={currentStage}
+                heuristics={personalHeuristics}
+                mappings={mappings}
+                onMappingChange={handleMappingChange}
+              />
+            </CardContent>
+            
+            <div className="flex justify-center my-2">
+              <ArrowDown className="text-gray-400" />
+            </div>
+          </Card>
           
-          {/* Factor Task Import */}
-          <FactorTaskImport 
-            planId={planId || ''}
-            stage={currentStage}
-            onTasksImported={handleTasksChange}
-            mappings={mappings}
-          />
+          {/* Step 4 – Identify Tasks per Heuristic */}
+          <Card className="border-t-4 border-t-green-500">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl font-bold text-primary">
+                <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3">4</div>
+                Identify Tasks per Heuristic
+              </CardTitle>
+              <CardDescription>
+                Create up to 3 tasks per heuristic for each stage (Identification, Definition, Delivery, Closure).
+                These tasks will be automatically added to your checklist. The standard TCOF tasks are shown
+                alongside your custom tasks.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              {/* This component will automatically load and display tasks from mapped success factors */}
+              <TaskList 
+                planId={planId || ''}
+                tasks={tasks}
+                policyTasks={policyTasks}
+                stage={currentStage}
+                onTasksChange={handleTasksChange}
+                mappings={mappings}
+                autoLoadFactorTasks={true}
+              />
+            </CardContent>
+            
+            <div className="flex justify-center my-2">
+              <ArrowDown className="text-gray-400" />
+            </div>
+          </Card>
           
-          {/* Task List */}
-          <TaskList 
-            planId={planId || ''}
-            tasks={tasks}
-            policyTasks={policyTasks}
-            stage={currentStage}
-            onTasksChange={handleTasksChange}
-          />
+          {/* Step 5 – Add Organisational Policy Tasks */}
+          <Card className="border-t-4 border-t-purple-500">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl font-bold text-primary">
+                <div className="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3">5</div>
+                Add Organisational Policy Tasks
+              </CardTitle>
+              <CardDescription>
+                Add tasks specific to your organization's policies or governance requirements.
+                These will be included in your final checklist alongside TCOF tasks and your custom tasks.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              <div className="p-4 border-2 border-dashed rounded-md border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800">
+                <h3 className="text-lg font-medium mb-3">Organization-Specific Tasks</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Add tasks that are required by your organization's policies or governance frameworks.
+                  These might include approvals, documentation, or compliance checks specific to your context.
+                </p>
+                
+                <div className="space-y-3">
+                  {/* Policy Task Input */}
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium">Enter policy task for {currentStage} stage:</label>
+                    <div className="flex items-center space-x-2">
+                      <input 
+                        type="text" 
+                        placeholder="e.g., Get sign-off from Finance department" 
+                        className="flex-1 p-2 border rounded-md"
+                        value={newPolicyTask}
+                        onChange={(e) => setNewPolicyTask(e.target.value)}
+                      />
+                      <Button onClick={handleAddPolicyTask}>Add Task</Button>
+                    </div>
+                  </div>
+                  
+                  {/* Display existing policy tasks */}
+                  {policyTasks.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium mb-2">Current Policy Tasks:</h4>
+                      <ul className="space-y-2">
+                        {policyTasks.map(task => (
+                          <li key={task.id} className="flex items-center justify-between p-2 bg-white rounded-md border">
+                            <span>{task.text}</span>
+                            <Button variant="ghost" size="sm" onClick={() => handleRemovePolicyTask(task.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         
         <ActionButtons 
