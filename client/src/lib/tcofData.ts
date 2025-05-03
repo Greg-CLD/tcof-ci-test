@@ -96,11 +96,11 @@ export async function loadTCOFFactors(): Promise<TCOFFactorTask[]> {
 // Function to get success factor ratings with emoji descriptions
 export function getSuccessFactorRatingInfo(): Record<number, { emoji: string; description: string }> {
   return {
-    1: { emoji: '❌', description: "Doesn't land - I don't believe this factor is relevant" },
-    2: { emoji: '🤔', description: "Unfamiliar - I don't have enough context to judge" },
-    3: { emoji: '⚠️', description: "Needs attention - This is a blind spot we need to address" },
-    4: { emoji: '👍', description: "Important - This factor matters to our success" },
-    5: { emoji: '🌟', description: "Essential - This is a critical success factor" }
+    1: { emoji: '❌', description: "Doesn't land – I don't feel this. It doesn't match my experience." },
+    2: { emoji: '🤔', description: "Unfamiliar – I understand it, but I've never used it in action." },
+    3: { emoji: '🟡', description: "Seems true – I believe it's useful, but I haven't tested it myself." },
+    4: { emoji: '✅', description: "Proven – I've used this and it worked. It fits how I lead." },
+    5: { emoji: '🔥', description: "Hard-won truth – I've lived this. It's burned into how I work." }
   };
 }
 

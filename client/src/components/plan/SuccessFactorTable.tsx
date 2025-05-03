@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { SuccessFactorRating } from '@/lib/plan-db';
 
-import { getSuccessFactorRatingInfo, tcofFactors } from '@/lib/tcofData';
+import { getSuccessFactorRatingInfo } from '@/lib/tcofData';
+import tcofFactors from '@/data/tcofFactors';
 
 // Get rating information from tcofData utility with proper typing
 const ratingInfo: Record<number, { emoji: string; description: string }> = getSuccessFactorRatingInfo();
@@ -45,51 +46,40 @@ export default function SuccessFactorTable({
   onChange,
   totalFavourites = 0
 }: SuccessFactorTableProps) {
-  const [tcofFactors, setTcofFactors] = useState<Array<{id: string, name: string}>>([]);
+  const [factorList, setFactorList] = useState<Array<{id: string, name: string}>>([]);
   const [isRatingKeyOpen, setIsRatingKeyOpen] = useState(false);
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   
-  // Load TCOF factor data from API
+  // Load TCOF factor data from imported JSON
   useEffect(() => {
     // Begin with sample data for immediate rendering
     const sampleFactors = [
       { id: 'H1', name: 'Loading success factors...' }
     ];
     
-    setTcofFactors(sampleFactors);
+    setFactorList(sampleFactors);
     
-    // Create dummy data for demo purposes
-    const demoFactors = [
-      { id: 'F1', name: 'Clear success criteria are defined' },
-      { id: 'F2', name: 'Stakeholders are properly engaged' },
-      { id: 'F3', name: 'Risks are managed appropriately' },
-      { id: 'F4', name: 'Delivery approach matches the context' },
-      { id: 'F5', name: 'Team has the right capabilities' }
-    ];
-    
-    // Display demo data after short delay
-    setTimeout(() => {
-      setTcofFactors(demoFactors);
-    }, 500);
-    
-    // Attempt to load data from API
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/admin/tcof-tasks');
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setTcofFactors(data.map((factor: any) => ({
-              id: factor.id || '',
-              name: factor.text || ''
-            })));
-          }
-        }
-      } catch (error) {
-        console.error('Error loading TCOF tasks:', error);
-      }
-    };
-    
-    fetchData();
+    // Process the imported tcofFactors data
+    if (tcofFactorsRaw && Array.isArray(tcofFactorsRaw) && tcofFactorsRaw.length > 0) {
+      // Map the tcofFactors data to the required format
+      const formattedFactors = tcofFactorsRaw.map((factor: { id: string, title: string }) => ({
+        id: factor.id,
+        name: factor.title
+      }));
+      
+      setFactorList(formattedFactors);
+    } else {
+      // Fallback to demo data if tcofFactors is empty
+      const demoFactors = [
+        { id: 'F1', name: 'Clear success criteria are defined' },
+        { id: 'F2', name: 'Stakeholders are properly engaged' },
+        { id: 'F3', name: 'Risks are managed appropriately' },
+        { id: 'F4', name: 'Delivery approach matches the context' },
+        { id: 'F5', name: 'Team has the right capabilities' }
+      ];
+      
+      setFactorList(demoFactors);
+    }
   }, []);
   
   // Helper to get the current rating for display
@@ -146,7 +136,7 @@ export default function SuccessFactorTable({
   };
 
   // Render loading state if no factors are loaded yet
-  if (tcofFactors.length === 0) {
+  if (factorList.length === 0) {
     return (
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 text-tcof-dark">STEP 1 – Reflect on TCOF Heuristics</h2>
@@ -160,31 +150,34 @@ export default function SuccessFactorTable({
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-tcof-dark">STEP 1 – Reflect on TCOF Heuristics</h2>
         
-        <TooltipProvider>
-          <Tooltip open={isRatingKeyOpen} onOpenChange={setIsRatingKeyOpen}>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-gray-500 flex items-center gap-1"
-                onClick={() => setIsRatingKeyOpen(!isRatingKeyOpen)}
-              >
-                <HelpCircle className="h-4 w-4" />
-                <span className="text-xs">What do the emojis mean?</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="p-3 max-w-md">
-              <div className="text-sm mb-2 font-medium">Rating Key:</div>
-              <div className="grid grid-cols-1 gap-2">
-                {[1, 2, 3, 4, 5].map(rating => (
-                  <div key={rating} className="flex items-center gap-2">
-                    <span>{ratingInfo[rating].emoji} = {ratingInfo[rating].description}</span>
-                  </div>
-                ))}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Dialog open={isRatingModalOpen} onOpenChange={setIsRatingModalOpen}>
+          <DialogTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-tcof-teal flex items-center gap-1"
+            >
+              <Info className="h-4 w-4" />
+              <span className="text-xs">Rating key</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Rating Key</DialogTitle>
+              <DialogDescription>
+                Use these ratings to reflect on your experience with each heuristic
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              {[1, 2, 3, 4, 5].map(rating => (
+                <div key={rating} className="flex items-center gap-3 text-sm">
+                  <span className="text-xl">{ratingInfo[rating].emoji}</span>
+                  <span className="font-medium">{ratingInfo[rating].description}</span>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       
       <div className="border rounded-lg overflow-hidden">
@@ -198,7 +191,7 @@ export default function SuccessFactorTable({
             </tr>
           </thead>
           <tbody>
-            {tcofFactors.map((factor, index) => {
+            {factorList.map((factor: {id: string, name: string}, index: number) => {
               const currentRating = getRating(factor.id);
               const isStarred = currentRating.favourite;
               const rowClass = isStarred ? 'bg-tcof-bg' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
