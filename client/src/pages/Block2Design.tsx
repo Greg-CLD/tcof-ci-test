@@ -6,7 +6,7 @@ import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
 import SuccessFactorMapping from '@/components/plan/SuccessFactorMapping';
-import ExcelImport from '@/components/plan/ExcelImport';
+import FactorTaskImport from '@/components/plan/FactorTaskImport';
 import TaskList from '@/components/plan/TaskList';
 import StageSelector from '@/components/plan/StageSelector';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
