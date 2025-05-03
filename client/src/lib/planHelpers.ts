@@ -4,7 +4,9 @@ import {
   loadPlan, 
   PlanRecord, 
   planExists,
-  DeliveryApproachData
+  DeliveryApproachData,
+  Stage,
+  TaskItem
 } from './plan-db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -232,16 +234,20 @@ export async function quickStartPlan(): Promise<string> {
             updatedPlan.stages[planStageKey].tasks = [];
           }
           
-          // Add tasks derived from factors
-          defaultStage.factors.forEach(factor => {
-            updatedPlan.stages[planStageKey].tasks.push({
-              id: `task-${factor.id}`,
-              text: `Address ${factor.text}`,
-              completed: false,
-              origin: 'factor',
-              stage: planStageKey as Stage
-            });
-          });
+          // Create new task items with proper typing
+          const factorTasks: TaskItem[] = defaultStage.factors.map(factor => ({
+            id: `task-${factor.id}`,
+            text: `Address ${factor.text}`,
+            completed: false,
+            origin: 'factor' as const,
+            stage: planStageKey as Stage
+          }));
+          
+          // Add the typed tasks to the plan
+          updatedPlan.stages[planStageKey].tasks = [
+            ...updatedPlan.stages[planStageKey].tasks || [],
+            ...factorTasks
+          ];
         }
       });
       
@@ -269,7 +275,7 @@ export async function quickStartPlan(): Promise<string> {
     } else {
       // Process TCOF tasks from the API response
       const successFactorRatings: Record<string, any> = {};
-      const stageTasks: Record<string, any[]> = {
+      const stageTasks: Record<string, TaskItem[]> = {
         Identification: [],
         Definition: [],
         Delivery: [],
@@ -292,13 +298,14 @@ export async function quickStartPlan(): Promise<string> {
             const stageKey = stageName as keyof typeof stageTasks;
             if (task.tasks[stageName]) {
               task.tasks[stageName].forEach((taskText: string) => {
-                stageTasks[stageKey].push({
+                const newTask: TaskItem = {
                   id: `task-${task.id}-${stageTasks[stageKey].length}`,
                   text: taskText,
                   completed: false,
-                  origin: 'factor',
+                  origin: 'factor' as const,
                   stage: stageKey as Stage
-                });
+                };
+                stageTasks[stageKey].push(newTask);
               });
             }
           });
