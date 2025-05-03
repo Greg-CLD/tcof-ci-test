@@ -29,6 +29,13 @@ const officialFactorTitles = [
   "4.3 Be Ready to Adapt"
 ];
 
+// Official canonical IDs for the 12 TCOF success factors
+const officialFactorIds = [
+  "tcof-1", "tcof-2", "tcof-3", "tcof-4", 
+  "tcof-5", "tcof-6", "tcof-7", "tcof-8", 
+  "tcof-9", "tcof-10", "tcof-11", "tcof-12"
+];
+
 async function updateCanonicalFactors() {
   console.log('Starting canonical factor update...');
   
@@ -96,7 +103,7 @@ async function updateCanonicalFactors() {
       // If we found a matching factor, merge its tasks
       if (existingFactor) {
         return {
-          id: `sf-${index + 1}`,
+          id: officialFactorIds[index],
           title: title,
           tasks: {
             Identification: [...(existingFactor.tasks?.Identification || [])],
@@ -109,7 +116,7 @@ async function updateCanonicalFactors() {
       
       // If no match, create new factor with empty tasks
       return {
-        id: `sf-${index + 1}`,
+        id: officialFactorIds[index],
         title: title,
         tasks: {
           Identification: [],

@@ -20,9 +20,16 @@ const officialFactorTitles = [
   "4.3 Be Ready to Adapt"
 ];
 
+// Official canonical IDs for the 12 TCOF success factors
+const officialFactorIds = [
+  "tcof-1", "tcof-2", "tcof-3", "tcof-4", 
+  "tcof-5", "tcof-6", "tcof-7", "tcof-8", 
+  "tcof-9", "tcof-10", "tcof-11", "tcof-12"
+];
+
 // Default set of factors (basic implementation of the 12 official TCOF factors)
 const defaultFactors = officialFactorTitles.map((title, index) => ({
-  id: `sf-${index + 1}`,
+  id: officialFactorIds[index],
   title: title,
   tasks: {
     Identification: [],
@@ -99,7 +106,7 @@ function ensureUnique12Factors(factors) {
     if (!dedupMap[title]) {
       dedupMap[title] = {
         title: title,
-        id: officialIdMap[title] || `sf-${index + 1}`,
+        id: officialIdMap[title] || officialFactorIds[index],
         tasks: {
           Identification: [],
           Definition: [],
@@ -119,10 +126,10 @@ function ensureUnique12Factors(factors) {
     return defaultFactors;
   }
   
-  // Assign consistent IDs
+  // Assign consistent IDs for canonical factors
   dedupFactors.forEach((factor, index) => {
     if (!factor.id || factor.id.includes("duplicate")) {
-      factor.id = `sf-${index + 1}`;
+      factor.id = officialFactorIds[index];
     }
   });
   
