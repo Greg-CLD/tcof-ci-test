@@ -1,0 +1,64 @@
+Context
+
+Spreadsheet path: /mnt/data/tcof_factors.xlsx.xlsx (Sheet 1).
+
+We want every Success-Factor record (title + tasks per stage) stored once in Replit DB under key factors.
+
+All components will then import factors via a small helper, never touching Excel.
+
+Tasks
+
+Create migration script scripts/migrateFactorsToDB.js
+
+js
+Copy
+Edit
+import fs from 'fs';
+import xlsx from 'xlsx';
+import { Database } from '@replit/database';
+const db = new Database();
+const wb = xlsx.readFile('/mnt/data/tcof_factors.xlsx.xlsx');
+const sheet = wb.Sheets[wb.SheetNames[0]];
+const rows = xlsx.utils.sheet_to_json(sheet, {header:1, blankrows:false});
+const [, ...data] = rows;          // skip header
+const factors = data.map(row=>{
+  const [title, idn, def, del, clo] = row;
+  if(!title) return null;
+  const [id, ...rest] = title.trim().split(' ');
+  return {
+    id,
+    title: rest.join(' ').trim(),
+    tasks:{
+      Identification:(idn||'').split('\n').filter(Boolean),
+      Definition:(def||'').split('\n').filter(Boolean),
+      Delivery:(del||'').split('\n').filter(Boolean),
+      Closure:(clo||'').split('\n').filter(Boolean)
+    }
+  };
+}).filter(Boolean);
+await db.set('factors', factors);
+console.log('✅ Migrated', factors.length, 'factors to Replit DB');
+Add npm script "migrate:factors": "node scripts/migrateFactorsToDB.js" and execute it now (the Agent should run it once).
+
+Create factor helper utils/factorsDB.js
+
+js
+Copy
+Edit
+import { Database } from '@replit/database';
+const db = new Database();
+export async function getFactors(){
+  return (await db.get('factors')) || [];
+}
+export async function saveFactors(newList){
+  await db.set('factors', newList);
+}
+Delete runtime Excel loader
+Remove utils/factorLoader.js and any xlsx imports in client code.
+Remove localStorage cache logic tied to Excel.
+
+Provide fallback on cold DB
+Inside getFactors(), if array length === 0 run await import('../scripts/migrateFactorsToDB.js') automatically (so a fresh workspace still works).
+
+Unit test tests/factors.db.test.js
+Call getFactors(); expect array length ≥ 12 and first item .id === '1.1'.
