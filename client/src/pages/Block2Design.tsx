@@ -10,7 +10,7 @@ import FactorTaskImport from '@/components/plan/FactorTaskImport';
 import TaskList from '@/components/plan/TaskList';
 import StageSelector from '@/components/plan/StageSelector';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Trash2 } from 'lucide-react';
 import { Stage, loadPlan, savePlan, createEmptyPlan } from '@/lib/plan-db';
 
 export default function Block2Design() {

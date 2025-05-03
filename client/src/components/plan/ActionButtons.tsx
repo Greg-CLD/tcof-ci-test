@@ -1,8 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import styles from '@/lib/styles.module.css';
 import { ArrowLeft, ArrowRight, Save, SkipForward, ClipboardList, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ActionButtonsProps {
   onPrevious?: () => void;
@@ -37,6 +47,18 @@ export default function ActionButtons({
   isPreviousDisabled = false,
   isSaveDisabled = false
 }: ActionButtonsProps) {
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  
+  const handleClearClick = () => {
+    setShowClearDialog(true);
+  };
+  
+  const handleConfirmClear = () => {
+    setShowClearDialog(false);
+    if (onClear) {
+      onClear();
+    }
+  };
   return (
     <div className={styles.actionButtons}>
       <div className={styles.leftGroup}>
@@ -52,13 +74,36 @@ export default function ActionButtons({
         )}
         
         {showClear && (
-          <Button 
-            onClick={onClear}
-            variant="destructive"
-            className="flex items-center"
-          >
-            <Trash2 className="h-4 w-4 mr-2" /> Clear this Block
-          </Button>
+          <>
+            <Button 
+              onClick={handleClearClick}
+              variant="destructive"
+              className="flex items-center"
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Clear this Block
+            </Button>
+            
+            <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove all mappings and tasks for all stages in Block 2.
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleConfirmClear}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Yes, clear all data
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         )}
         
         {showSkip && (
