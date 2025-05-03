@@ -4,6 +4,7 @@
 import tcofTasksRaw from '../../data/tcofTasks.json';
 import presetHeuristicsRaw from '../../data/presetHeuristics.json';
 import deliveryZonesRaw from '../../data/deliveryZones.json';
+import tcofFactorsRaw from '../../data/tcofFactors.json';
 
 // Types for TCOF data
 export interface TCOFTask {
@@ -11,6 +12,17 @@ export interface TCOFTask {
   text: string;
   stage: 'Identification' | 'Definition' | 'Delivery' | 'Closure';
   impact: 'low' | 'medium' | 'high';
+}
+
+export interface TCOFFactorTask {
+  id: string;
+  title: string;
+  tasks: {
+    Identification: string[];
+    Definition: string[];
+    Delivery: string[];
+    Closure: string[];
+  };
 }
 
 export interface PresetHeuristic {
@@ -69,6 +81,18 @@ export async function loadDeliveryZones(): Promise<DeliveryZone[]> {
   return deliveryZonesRaw;
 }
 
+// Function to load TCOF factors from JSON with proper error handling
+export async function loadTCOFFactors(): Promise<TCOFFactorTask[]> {
+  try {
+    // For now, we're only loading from the local JSON file
+    // In the future, this could be extended to load from an API endpoint
+    return tcofFactorsRaw;
+  } catch (error) {
+    console.error('Error loading TCOF factors:', error);
+    return [];
+  }
+}
+
 // Function to get success factor ratings with emoji descriptions
 export function getSuccessFactorRatingInfo(): Record<number, { emoji: string; description: string }> {
   return {
@@ -99,3 +123,4 @@ export function getTcofFactorOptions(): Array<{ value: string; label: string }> 
 export const tcofTasks = tcofTasksRaw;
 export const presetHeuristics = presetHeuristicsRaw;
 export const deliveryZones = deliveryZonesRaw;
+export const tcofFactors = tcofFactorsRaw;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, StarOff, HelpCircle } from 'lucide-react';
+import { Star, StarOff, HelpCircle, Info } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,17 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { SuccessFactorRating } from '@/lib/plan-db';
 
-import { getSuccessFactorRatingInfo } from '@/lib/tcofData';
+import { getSuccessFactorRatingInfo, tcofFactors } from '@/lib/tcofData';
 
 // Get rating information from tcofData utility with proper typing
 const ratingInfo: Record<number, { emoji: string; description: string }> = getSuccessFactorRatingInfo();
