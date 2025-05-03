@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
-import { getLatestPlanId } from '@/lib/planHelpers';
+import { getLatestPlanId, quickStartPlan } from '@/lib/planHelpers';
 import { loadPlan, savePlan, SuccessFactorRating, PersonalHeuristic, PlanRecord } from '@/lib/plan-db';
 import IntroAccordion from '@/components/plan/IntroAccordion';
 import SuccessFactorTable from '@/components/plan/SuccessFactorTable';
@@ -42,17 +42,47 @@ export default function Block1Discover() {
   useEffect(() => {
     async function loadPlanData() {
       try {
-        const id = getLatestPlanId();
+        // Get the plan ID if it exists, or create a new one if not
+        let id = getLatestPlanId();
+        
+        // If we came from the intro page and don't have a plan yet, create one
         if (!id) {
-          // No plan found, redirect to /make-a-plan
-          setLocation('/make-a-plan');
-          return;
+          // Show a loading toast
+          toast({
+            title: "Creating new plan",
+            description: "Setting up your plan, please wait...",
+          });
+          
+          // Create a new quick start plan
+          id = await quickStartPlan();
+          
+          if (!id) {
+            // Failed to create a plan, redirect back
+            toast({
+              title: "Error",
+              description: "Failed to create a new plan. Please try again.",
+              variant: "destructive"
+            });
+            setLocation('/make-a-plan');
+            return;
+          }
+          
+          // Success toast for new plan
+          toast({
+            title: "Plan created!",
+            description: "Your new plan is ready to customize.",
+          });
         }
         
         setPlanId(id);
         const loadedPlan = await loadPlan(id);
         
         if (!loadedPlan) {
+          toast({
+            title: "Error",
+            description: "Could not load the plan data. Please try again.",
+            variant: "destructive"
+          });
           setLocation('/make-a-plan');
           return;
         }
@@ -80,7 +110,7 @@ export default function Block1Discover() {
     }
     
     loadPlanData();
-  }, []);
+  }, [setLocation, toast]);
   
   // Create a debounced save function
   // eslint-disable-next-line react-hooks/exhaustive-deps
