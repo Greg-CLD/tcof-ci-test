@@ -362,8 +362,9 @@ export async function quickStartPlan(): Promise<string> {
         // Process tasks for each stage
         if (factor.tasks) {
           Object.keys(factor.tasks).forEach(stageName => {
-            if (stageTasks[stageName] && factor.tasks[stageName]) {
-              factor.tasks[stageName].forEach((taskText, taskIndex) => {
+            const stageKey = stageName as Stage;
+            if (stageTasks[stageKey] && factor.tasks[stageKey]) {
+              factor.tasks[stageKey].forEach((taskText: string, taskIndex: number) => {
                 const newTask: TaskItem = {
                   id: `task-${factorId}-${taskIndex}`,
                   text: taskText,
@@ -522,6 +523,186 @@ export async function setDeliveryApproach(
     return await savePlan(planId, plan);
   } catch (error) {
     console.error('Error setting delivery approach:', error);
+    return false;
+  }
+}
+
+/**
+ * Create a new custom framework in the plan
+ * @param planId The ID of the plan
+ * @param name The name of the new framework
+ * @returns The ID of the new framework if successful, null otherwise
+ */
+export async function createCustomFramework(
+  planId: string,
+  name: string
+): Promise<string | null> {
+  try {
+    const plan = await loadPlan(planId);
+    
+    if (!plan) {
+      console.error('No plan found with ID:', planId);
+      return null;
+    }
+    
+    // Create an empty framework with a unique ID
+    const framework: CustomFramework = {
+      id: uuidv4(),
+      name,
+      tasks: {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      }
+    };
+    
+    // Ensure all stages have goodPractice with customFrameworks
+    Object.keys(plan.stages).forEach(stageName => {
+      const stage = stageName as Stage;
+      if (!plan.stages[stage].goodPractice) {
+        plan.stages[stage].goodPractice = {
+          zone: null,
+          frameworks: [],
+          tasks: [],
+          customFrameworks: []
+        };
+      }
+      
+      if (!plan.stages[stage].goodPractice!.customFrameworks) {
+        plan.stages[stage].goodPractice!.customFrameworks = [];
+      }
+      
+      // Add the new framework to the current stage
+      plan.stages[stage].goodPractice!.customFrameworks!.push(framework);
+    });
+    
+    // Save the updated plan
+    const success = await savePlan(planId, plan);
+    return success ? framework.id : null;
+  } catch (error) {
+    console.error('Error creating custom framework:', error);
+    return null;
+  }
+}
+
+/**
+ * Add a task to a custom framework in the plan
+ * @param planId The ID of the plan
+ * @param frameworkId The ID of the custom framework
+ * @param stage The stage to add the task to
+ * @param taskText The text of the task
+ * @returns True if successful, false otherwise
+ */
+export async function addTaskToCustomFramework(
+  planId: string,
+  frameworkId: string,
+  stage: Stage,
+  taskText: string
+): Promise<boolean> {
+  try {
+    const plan = await loadPlan(planId);
+    if (!plan) return false;
+    
+    // Ensure custom frameworks exist
+    const stageData = plan.stages[stage];
+    if (!stageData.goodPractice?.customFrameworks) return false;
+    
+    // Find the framework
+    const frameworkIndex = stageData.goodPractice.customFrameworks.findIndex(f => f.id === frameworkId);
+    if (frameworkIndex === -1) return false;
+    
+    // Add the task
+    stageData.goodPractice.customFrameworks[frameworkIndex].tasks[stage].push(taskText);
+    
+    // Save the updated plan
+    return await savePlan(planId, plan);
+  } catch (error) {
+    console.error('Error adding task to custom framework:', error);
+    return false;
+  }
+}
+
+/**
+ * Remove a task from a custom framework in the plan
+ * @param planId The ID of the plan
+ * @param frameworkId The ID of the custom framework
+ * @param stage The stage to remove the task from
+ * @param taskIndex The index of the task in the array
+ * @returns True if successful, false otherwise
+ */
+export async function removeTaskFromCustomFramework(
+  planId: string,
+  frameworkId: string,
+  stage: Stage,
+  taskIndex: number
+): Promise<boolean> {
+  try {
+    const plan = await loadPlan(planId);
+    if (!plan) return false;
+    
+    // Ensure custom frameworks exist
+    const stageData = plan.stages[stage];
+    if (!stageData.goodPractice?.customFrameworks) return false;
+    
+    // Find the framework
+    const frameworkIndex = stageData.goodPractice.customFrameworks.findIndex(f => f.id === frameworkId);
+    if (frameworkIndex === -1) return false;
+    
+    // Ensure the task exists
+    const tasks = stageData.goodPractice.customFrameworks[frameworkIndex].tasks[stage];
+    if (taskIndex < 0 || taskIndex >= tasks.length) return false;
+    
+    // Remove the task
+    tasks.splice(taskIndex, 1);
+    
+    // Save the updated plan
+    return await savePlan(planId, plan);
+  } catch (error) {
+    console.error('Error removing task from custom framework:', error);
+    return false;
+  }
+}
+
+/**
+ * Remove a custom framework from the plan
+ * @param planId The ID of the plan
+ * @param frameworkId The ID of the custom framework
+ * @returns True if successful, false otherwise
+ */
+export async function removeCustomFramework(
+  planId: string,
+  frameworkId: string
+): Promise<boolean> {
+  try {
+    const plan = await loadPlan(planId);
+    if (!plan) return false;
+    
+    // Remove the framework from all stages
+    let removed = false;
+    Object.keys(plan.stages).forEach(stageName => {
+      const stage = stageName as Stage;
+      const stageData = plan.stages[stage];
+      
+      if (stageData.goodPractice?.customFrameworks) {
+        const initialLength = stageData.goodPractice.customFrameworks.length;
+        stageData.goodPractice.customFrameworks = stageData.goodPractice.customFrameworks.filter(
+          f => f.id !== frameworkId
+        );
+        
+        if (stageData.goodPractice.customFrameworks.length < initialLength) {
+          removed = true;
+        }
+      }
+    });
+    
+    // If nothing was removed, return false
+    if (!removed) return false;
+    
+    // Save the updated plan
+    return await savePlan(planId, plan);
+  } catch (error) {
+    console.error('Error removing custom framework:', error);
     return false;
   }
 }

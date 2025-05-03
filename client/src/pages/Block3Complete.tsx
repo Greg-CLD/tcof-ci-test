@@ -5,10 +5,27 @@ import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
 import DeliveryApproachTool, { DeliveryApproachData } from '@/components/DeliveryApproachTool';
 import FrameworkPicker from '@/components/plan/FrameworkPicker';
+import CustomFrameworkEditor from '@/components/plan/CustomFrameworkEditor';
 import ReviewCard from '@/components/plan/ReviewCard';
-import { Stage, loadPlan, savePlan, createEmptyPlan, setZone, toggleFramework, toggleGpTask, markPlanComplete } from '@/lib/plan-db';
+import { 
+  Stage, 
+  loadPlan, 
+  savePlan, 
+  createEmptyPlan, 
+  setZone, 
+  toggleFramework, 
+  toggleGpTask, 
+  markPlanComplete,
+  CustomFramework
+} from '@/lib/plan-db';
 import { getFrameworkByCode } from '@/lib/goodPracticeData';
-import { setDeliveryApproach } from '@/lib/planHelpers';
+import { 
+  setDeliveryApproach,
+  createCustomFramework,
+  addTaskToCustomFramework,
+  removeTaskFromCustomFramework,
+  removeCustomFramework
+} from '@/lib/planHelpers';
 import styles from '@/lib/styles/gp.module.css';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +47,7 @@ export default function Block3Complete() {
   const [praxisZone, setPraxisZone] = useState<string | null>(null);
   const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<Record<string, Record<Stage, string[]>>>({});
+  const [customFrameworks, setCustomFrameworks] = useState<CustomFramework[]>([]);
   const { toast } = useToast();
   
   // Define steps for the progress bar
@@ -84,6 +102,13 @@ export default function Block3Complete() {
                       tasksMap[task.frameworkCode][task.stage as Stage].push(task.text);
                     }
                   });
+                }
+                
+                // Load custom frameworks if they exist
+                if (stageGoodPractice?.customFrameworks) {
+                  setCustomFrameworks(stageGoodPractice.customFrameworks);
+                  // Only need to load from one stage since they're the same across all stages
+                  return;
                 }
               });
               
@@ -298,6 +323,111 @@ export default function Block3Complete() {
   };
   
   // Handler for clearing block 3 data
+  // Custom framework handlers
+  const handleCreateCustomFramework = async (name: string): Promise<string | null> => {
+    if (!planId) return null;
+    
+    try {
+      const frameworkId = await createCustomFramework(planId, name);
+      
+      if (frameworkId) {
+        // Refresh custom frameworks
+        const updatedPlan = await loadPlan(planId);
+        if (updatedPlan && updatedPlan.stages.Identification.goodPractice?.customFrameworks) {
+          setCustomFrameworks(updatedPlan.stages.Identification.goodPractice.customFrameworks);
+        }
+        
+        setRefreshTrigger(prev => prev + 1);
+        return frameworkId;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error creating custom framework:', error);
+      return null;
+    }
+  };
+  
+  const handleAddTaskToCustomFramework = async (
+    frameworkId: string,
+    stage: Stage,
+    taskText: string
+  ): Promise<boolean> => {
+    if (!planId) return false;
+    
+    try {
+      const success = await addTaskToCustomFramework(planId, frameworkId, stage, taskText);
+      
+      if (success) {
+        // Refresh custom frameworks
+        const updatedPlan = await loadPlan(planId);
+        if (updatedPlan && updatedPlan.stages.Identification.goodPractice?.customFrameworks) {
+          setCustomFrameworks(updatedPlan.stages.Identification.goodPractice.customFrameworks);
+        }
+        
+        setRefreshTrigger(prev => prev + 1);
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error adding task to custom framework:', error);
+      return false;
+    }
+  };
+  
+  const handleRemoveTaskFromCustomFramework = async (
+    frameworkId: string,
+    stage: Stage,
+    taskIndex: number
+  ): Promise<boolean> => {
+    if (!planId) return false;
+    
+    try {
+      const success = await removeTaskFromCustomFramework(planId, frameworkId, stage, taskIndex);
+      
+      if (success) {
+        // Refresh custom frameworks
+        const updatedPlan = await loadPlan(planId);
+        if (updatedPlan && updatedPlan.stages.Identification.goodPractice?.customFrameworks) {
+          setCustomFrameworks(updatedPlan.stages.Identification.goodPractice.customFrameworks);
+        }
+        
+        setRefreshTrigger(prev => prev + 1);
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error removing task from custom framework:', error);
+      return false;
+    }
+  };
+  
+  const handleRemoveCustomFramework = async (frameworkId: string): Promise<boolean> => {
+    if (!planId) return false;
+    
+    try {
+      const success = await removeCustomFramework(planId, frameworkId);
+      
+      if (success) {
+        // Refresh custom frameworks
+        const updatedPlan = await loadPlan(planId);
+        if (updatedPlan && updatedPlan.stages.Identification.goodPractice?.customFrameworks) {
+          setCustomFrameworks(updatedPlan.stages.Identification.goodPractice.customFrameworks);
+        } else {
+          // If no custom frameworks left
+          setCustomFrameworks([]);
+        }
+        
+        setRefreshTrigger(prev => prev + 1);
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error removing custom framework:', error);
+      return false;
+    }
+  };
+
   const handleClearBlock = async () => {
     if (!planId) return;
     
@@ -327,6 +457,7 @@ export default function Block3Complete() {
         setPraxisZone(null);
         setSelectedFrameworks([]);
         setSelectedTasks({});
+        setCustomFrameworks([]);
         
         // Show success message
         toast({
@@ -483,6 +614,17 @@ export default function Block3Complete() {
               selectedTasks={selectedTasks}
               onSkip={handleSkipFrameworks}
             />
+            
+            {/* Custom Framework Editor */}
+            <div className="mt-8">
+              <CustomFrameworkEditor
+                customFrameworks={customFrameworks}
+                onCreateFramework={handleCreateCustomFramework}
+                onAddTask={handleAddTaskToCustomFramework}
+                onRemoveTask={handleRemoveTaskFromCustomFramework}
+                onRemoveFramework={handleRemoveCustomFramework}
+              />
+            </div>
           </>
         )}
         
