@@ -23,16 +23,22 @@ import { SuccessFactorRating } from '@/lib/plan-db';
 import { getSuccessFactorRatingInfo } from '@/lib/tcofData';
 import { loadFactors, validateFactorTitles, TCOFFactor } from '@/utils/factorLoader';
 
-// Get rating information from tcofData utility with proper typing
-const ratingInfo: Record<number, { emoji: string; description: string }> = getSuccessFactorRatingInfo();
+// Custom rating scale with new descriptions per requirements
+const RATING_SCALE = {
+  1: { emoji: "❌", description: "Doesn't land – I don't feel this. It doesn't match my experience." },
+  2: { emoji: "🤔", description: "Unfamiliar – I understand it, but I've never used it or seen it in action." },
+  3: { emoji: "🟡", description: "Seems true – I believe it's useful, but I haven't tested it myself." },
+  4: { emoji: "✅", description: "Proven – I've used this and it worked. It fits how I lead." },
+  5: { emoji: "🔥", description: "Hard-won truth – I've lived this. It's burned into how I work." }
+};
 
 // Rating descriptions for tooltips
 const RATING_DESCRIPTIONS = {
-  1: ratingInfo[1].description,
-  2: ratingInfo[2].description,
-  3: ratingInfo[3].description,
-  4: ratingInfo[4].description,
-  5: ratingInfo[5].description
+  1: RATING_SCALE[1].description,
+  2: RATING_SCALE[2].description,
+  3: RATING_SCALE[3].description,
+  4: RATING_SCALE[4].description,
+  5: RATING_SCALE[5].description
 };
 
 interface SuccessFactorTableProps {
@@ -156,10 +162,10 @@ export default function SuccessFactorTable({
     }
   };
   
-  // Get emoji for rating display using the rating info from tcofData
+  // Get emoji for rating display using our custom rating scale
   const getRatingEmoji = (rating: number): string => {
     if (rating >= 1 && rating <= 5) {
-      return ratingInfo[rating]?.emoji || '';
+      return RATING_SCALE[rating as keyof typeof RATING_SCALE]?.emoji || '';
     }
     return '';
   };
@@ -200,8 +206,8 @@ export default function SuccessFactorTable({
             <div className="grid gap-4 py-4">
               {[1, 2, 3, 4, 5].map(rating => (
                 <div key={rating} className="flex items-center gap-3 text-sm">
-                  <span className="text-xl">{ratingInfo[rating].emoji}</span>
-                  <span className="font-medium">{ratingInfo[rating].description}</span>
+                  <span className="text-xl">{RATING_SCALE[rating as keyof typeof RATING_SCALE].emoji}</span>
+                  <span className="font-medium">{RATING_SCALE[rating as keyof typeof RATING_SCALE].description}</span>
                 </div>
               ))}
             </div>
