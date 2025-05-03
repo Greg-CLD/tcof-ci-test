@@ -57,7 +57,7 @@ export default function AdminFactorEditor() {
   const [factors, setFactors] = useState<SuccessFactor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('Identification');
+  const [activeTab, setActiveTab] = useState<StageType>('Identification');
   const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -171,7 +171,7 @@ export default function AdminFactorEditor() {
   };
 
   // Add a new task to a factor
-  const handleAddTask = (factorId: string, stage: string) => {
+  const handleAddTask = (factorId: string, stage: StageType) => {
     setFactors(prevFactors => 
       prevFactors.map(f => {
         if (f.id === factorId) {
@@ -185,7 +185,7 @@ export default function AdminFactorEditor() {
   };
 
   // Update a task text
-  const handleUpdateTask = (factorId: string, stage: string, taskIndex: number, newText: string) => {
+  const handleUpdateTask = (factorId: string, stage: StageType, taskIndex: number, newText: string) => {
     setFactors(prevFactors => 
       prevFactors.map(f => {
         if (f.id === factorId) {
@@ -201,7 +201,7 @@ export default function AdminFactorEditor() {
   };
 
   // Delete a task
-  const handleDeleteTask = (factorId: string, stage: string, taskIndex: number) => {
+  const handleDeleteTask = (factorId: string, stage: StageType, taskIndex: number) => {
     setFactors(prevFactors => 
       prevFactors.map(f => {
         if (f.id === factorId) {
@@ -440,7 +440,11 @@ export default function AdminFactorEditor() {
               {selectedFactor ? (
                 <>
                   <CardContent>
-                    <Tabs defaultValue="Identification" value={activeTab} onValueChange={setActiveTab}>
+                    <Tabs 
+                      defaultValue="Identification" 
+                      value={activeTab} 
+                      onValueChange={(value) => setActiveTab(value as StageType)}
+                    >
                       <TabsList className="grid grid-cols-4 mb-4">
                         <TabsTrigger value="Identification">Identification</TabsTrigger>
                         <TabsTrigger value="Definition">Definition</TabsTrigger>
@@ -457,7 +461,7 @@ export default function AdminFactorEditor() {
                                 No tasks for this stage. Add your first task below.
                               </div>
                             ) : (
-                              selectedFactor.tasks[stage].map((task, index) => (
+                              selectedFactor.tasks[stage].map((task: string, index: number) => (
                                 <div key={index} className="flex items-start space-x-2">
                                   <Input
                                     value={task}

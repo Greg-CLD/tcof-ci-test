@@ -546,11 +546,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin preset editor API endpoints
   app.get('/api/admin/tcof-tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
+      // First try to load the success factors
+      try {
+        const successFactorsData = fs.readFileSync(path.join(process.cwd(), 'data', 'successFactors.json'), 'utf8');
+        return res.json(JSON.parse(successFactorsData));
+      } catch (sfError) {
+        console.warn('successFactors.json not found, falling back to tcofTasks.json');
+      }
+      
+      // Fall back to the old format if needed
       const coreTasksData = fs.readFileSync(path.join(process.cwd(), 'data', 'tcofTasks.json'), 'utf8');
       res.json(JSON.parse(coreTasksData));
     } catch (error: any) {
-      console.error('Error loading tcofTasks.json:', error);
+      console.error('Error loading tasks data:', error);
       res.status(500).json({ message: 'Failed to load core tasks data' });
+    }
+  });
+  
+  app.post('/api/admin/tcof-tasks', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Only allow admin users to update success factors
+      if ((req.user as any).username !== 'greg@confluity.co.uk') {
+        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
+      }
+      
+      // Validate request data
+      if (!Array.isArray(req.body)) {
+        return res.status(400).json({ message: 'Invalid data format. Expected an array of success factors.' });
+      }
+      
+      // Ensure data directory exists
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      
+      // Save the updated success factors to the file
+      fs.writeFileSync(
+        path.join(dataDir, 'successFactors.json'), 
+        JSON.stringify(req.body, null, 2),
+        'utf8'
+      );
+      
+      res.json({ success: true, message: 'Success factors saved successfully' });
+    } catch (error: any) {
+      console.error('Error saving successFactors.json:', error);
+      res.status(500).json({ message: 'Failed to save success factors data' });
     }
   });
 

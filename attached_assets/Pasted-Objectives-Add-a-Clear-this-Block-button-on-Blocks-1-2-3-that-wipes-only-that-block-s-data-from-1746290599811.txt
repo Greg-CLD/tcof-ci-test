@@ -1,0 +1,70 @@
+Objectives
+
+Add a “Clear this Block” button on Blocks 1, 2, 3 that wipes only that block’s data from the current plan.
+
+Add undo-delete to the Checklist (single-level “Undo” after any delete/close).
+
+Make Email via App open the default mail client with the checklist body.
+
+Tasks
+
+A Clear-Block buttons
+In pages/Block1Discover.jsx, Block2Connect.jsx, Block3Complete.jsx add a secondary button in the <ActionButtons> row:
+
+jsx
+Copy
+Edit
+<button className="btn-secondary" onClick={clearBlock}>Clear this Block</button>
+Implement clearBlock for each page:
+
+js
+Copy
+Edit
+import { savePlan, currentPlanId } from '../utils/planHelpers';
+const clearBlock = ()=>{
+  const plan = loadPlan(currentPlanId());
+  switch(blockNumber){            // 1, 2, or 3
+    case 1:
+      plan.stages.Identification = {
+        successFactorRatings:{}, personalHeuristics:[], mappings:{}, tasks:[], policyTasks:[]
+      };
+      break;
+    case 2: /* wipe mappings, tasks, policyTasks */ …  
+    case 3: /* wipe goodPractice object */ …
+  }
+  savePlan(currentPlanId(), plan);
+  toast.success('Block cleared');
+  forceRefresh();
+};
+B Checklist undo-delete
+In ChecklistPage.jsx maintain const [history,setHistory] = useState([]);
+
+When a task is deleted or unchecked “closed”, push a deep copy of the current plan onto history.
+
+Show an Undo snackbar at bottom-left (MUI Snackbar or custom) with “Undo” button.
+
+Clicking Undo pops the last snapshot and savePlan() again.
+Limit history to last 10 actions.
+
+C Email via App
+Fix emailChecklist() in exportUtils.js:
+
+js
+Copy
+Edit
+import { generatePlaintextChecklist } from './exportUtils';
+const mailto = `mailto:?subject=TCOF%20Checklist&body=${encodeURIComponent(generatePlaintextChecklist(plan))}`;
+window.location.href = mailto;
+If window.open blocked, show toast “Couldn’t open email client – copy text instead” and copy to clipboard.
+
+D Tests
+tests/clearBlock.test.jsx – call clearBlock on Block 1, expect Identification fields empty.
+
+tests/undoDelete.test.jsx – delete task, click Undo, expect task visible again.
+
+Deliverables
+Updated three Block pages
+
+Updated ChecklistPage.jsx and exportUtils.js
+
+New tests
