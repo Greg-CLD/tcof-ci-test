@@ -19,12 +19,65 @@ const defaultFactors = [
 ];
 
 /**
+ * Ensures we have exactly 12 unique success factors
+ * @param {Array} factors - Array of success factors
+ * @returns {Array} 12 unique success factors
+ */
+function ensureUnique12Factors(factors) {
+  if (!factors || factors.length === 0) {
+    console.error('No factors found, returning default');
+    return defaultFactors;
+  }
+  
+  // Enforce 12 unique factors by deduplicating based on titles
+  const uniqueMap = {};
+  
+  // First pass - get unique factors by title
+  factors.forEach(factor => {
+    const title = factor.title.trim();
+    if (!uniqueMap[title] || factor.id.startsWith("sf-")) {
+      uniqueMap[title] = factor;
+    }
+  });
+  
+  // Get unique values
+  const uniqueFactors = Object.values(uniqueMap);
+  
+  // If we have more than 12, trim to first 12
+  if (uniqueFactors.length > 12) {
+    console.warn(`⚠ Too many unique factors (${uniqueFactors.length}), trimming to 12`);
+    return uniqueFactors.slice(0, 12);
+  }
+  
+  // If we have exactly 12, perfect!
+  if (uniqueFactors.length === 12) {
+    return uniqueFactors;
+  }
+  
+  // If we have less than 12, fill with defaults (this should rarely happen)
+  if (uniqueFactors.length < 12) {
+    console.warn(`⚠ Too few unique factors (${uniqueFactors.length}), adding defaults to reach 12`);
+    const extraNeeded = 12 - uniqueFactors.length;
+    const defaultsToAdd = defaultFactors.slice(0, extraNeeded).map((factor, idx) => ({
+      ...factor,
+      id: `missing-${idx + 1}`,
+      title: `Default Factor ${idx + 1}`
+    }));
+    
+    return [...uniqueFactors, ...defaultsToAdd];
+  }
+}
+
+/**
  * Gets all success factors from the JSON file or cache
+ * @param {boolean} bypassCache - Whether to bypass the cache
+ * @param {boolean} enforceUnique - Whether to enforce 12 unique factors
  * @returns {Promise<Array>} Array of success factor objects
  */
-export async function getFactors() {
-  if (cachedFactors) {
-    return cachedFactors;
+export async function getFactors(bypassCache = false, enforceUnique = true) {
+  if (cachedFactors && !bypassCache) {
+    // Even when using cache, enforce 12 unique factors if requested
+    return enforceUnique ? ensureUnique12Factors(cachedFactors) : cachedFactors;
   }
 
   try {
@@ -33,11 +86,14 @@ export async function getFactors() {
       const response = await apiRequest('GET', '/api/admin/success-factors');
       if (response.ok) {
         const data = await response.json();
-        cachedFactors = data;
+        
+        // Apply uniqueness enforcement if requested
+        const processedData = enforceUnique ? ensureUnique12Factors(data) : data;
+        cachedFactors = processedData;
         
         // Check if we have the expected 12 factors
-        if (cachedFactors.length !== 12) {
-          console.warn(`⚠ Unexpected factor count: ${cachedFactors.length} (expected 12). Consider running deduplication.`);
+        if (data.length !== 12) {
+          console.warn(`⚠ Unexpected factor count: ${data.length} (expected 12). Consider running deduplication.`);
         }
         
         // Store in local cache for future access
@@ -52,11 +108,14 @@ export async function getFactors() {
         const response = await apiRequest('GET', '/api/admin/tcof-tasks');
         if (response.ok) {
           const data = await response.json();
-          cachedFactors = data;
+          
+          // Apply uniqueness enforcement if requested
+          const processedData = enforceUnique ? ensureUnique12Factors(data) : data;
+          cachedFactors = processedData;
           
           // Check if we have the expected 12 factors
-          if (cachedFactors.length !== 12) {
-            console.warn(`⚠ Unexpected factor count: ${cachedFactors.length} (expected 12). Consider running deduplication.`);
+          if (data.length !== 12) {
+            console.warn(`⚠ Unexpected factor count: ${data.length} (expected 12). Consider running deduplication.`);
           }
           
           // Store in local cache for future access
@@ -71,14 +130,16 @@ export async function getFactors() {
     // If API fails, try to load from local storage
     const dbFactors = await storage.get('successFactors');
     if (dbFactors && dbFactors.length > 0) {
-      cachedFactors = dbFactors;
+      // Apply uniqueness enforcement if requested
+      const processedData = enforceUnique ? ensureUnique12Factors(dbFactors) : dbFactors;
+      cachedFactors = processedData;
       
       // Check if we have the expected 12 factors
-      if (cachedFactors.length !== 12) {
-        console.warn(`⚠ Unexpected factor count: ${cachedFactors.length} (expected 12). Consider running deduplication.`);
+      if (dbFactors.length !== 12) {
+        console.warn(`⚠ Unexpected factor count: ${dbFactors.length} (expected 12). Consider running deduplication.`);
       }
       
-      return dbFactors;
+      return cachedFactors;
     }
     
     // Fall back to default factors if all else fails

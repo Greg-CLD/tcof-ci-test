@@ -810,17 +810,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Found ${rawFactors.length} factors to deduplicate`);
       
+      // Official TCOF success factors - these are the ones we want to keep and merge duplicates into
+      const officialFactorTitles = [
+        "Ask Why",
+        "Get Stakeholder Support",
+        "Choose Optimal Approach",
+        "Ensure Technical Feasibility",
+        "Grow and Develop the Team",
+        "Manage Scope",
+        "Track Progress",
+        "Exercise Control",
+        "Assign Clear Responsibilities",
+        "Deliver Quality",
+        "Create Buy-in",
+        "Transfer Product Ownership"
+      ];
+      
+      // Mapping of official factor titles to their actual database IDs
+      const officialFactorIdMap: Record<string, string> = {};
+      
+      // First pass - identify official factors by exact title match
+      rawFactors.forEach(factor => {
+        const normalizedTitle = factor.title.trim();
+        
+        // If this is an official factor title, remember its ID
+        if (officialFactorTitles.includes(normalizedTitle)) {
+          officialFactorIdMap[normalizedTitle] = factor.id;
+        }
+      });
+      
       // Deduplicate by factor title
       const dedupMap: Record<string, FactorTask> = {};
       
+      type StageKey = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
+      const stages: StageKey[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
+      
+      // Process each raw factor
       rawFactors.forEach(item => {
-        const key = item.title.trim();
+        const normalizedTitle = item.title.trim();
         
-        if (!dedupMap[key]) {
-          // Create a base entry with empty task arrays
-          dedupMap[key] = { 
-            title: item.title, 
-            id: item.id, 
+        // If this title already exists in our map, merge tasks
+        if (dedupMap[normalizedTitle]) {
+          // Merge tasks from all stages
+          stages.forEach(stage => {
+            const sourceTasks = item.tasks?.[stage] || [];
+            
+            for (const task of sourceTasks) {
+              // Only add unique tasks (avoid duplicates)
+              if (!dedupMap[normalizedTitle].tasks[stage].includes(task)) {
+                dedupMap[normalizedTitle].tasks[stage].push(task);
+              }
+            }
+          });
+        } 
+        // If this is a new title, add it to the map
+        else {
+          // Create a base entry
+          dedupMap[normalizedTitle] = { 
+            title: normalizedTitle, 
+            id: officialFactorIdMap[normalizedTitle] || item.id, // Use official ID if available
+            tasks: {
+              Identification: [...(item.tasks?.Identification || [])],
+              Definition: [...(item.tasks?.Definition || [])],
+              Delivery: [...(item.tasks?.Delivery || [])],
+              Closure: [...(item.tasks?.Closure || [])]
+            }
+          };
+        }
+      });
+
+      // Make sure all official factors exist
+      officialFactorTitles.forEach((title, index) => {
+        if (!dedupMap[title]) {
+          dedupMap[title] = {
+            title: title,
+            id: officialFactorIdMap[title] || `sf-${index + 1}`,
             tasks: {
               Identification: [],
               Definition: [],
@@ -829,31 +893,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           };
         }
-        
-        // Merge tasks from all stages
-        type StageKey = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
-        const stages: StageKey[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
-        
-        stages.forEach(stage => {
-          const sourceTasks = item.tasks?.[stage] || [];
-          
-          for (const task of sourceTasks) {
-            // Only add unique tasks (avoid duplicates)
-            if (!dedupMap[key].tasks[stage].includes(task)) {
-              dedupMap[key].tasks[stage].push(task);
-            }
-          }
-        });
       });
-
-      // Convert map back to array
-      const dedupFactors = Object.values(dedupMap);
       
+      // Filter to keep only the official factors
+      const dedupFactors = officialFactorTitles.map(title => dedupMap[title]);
+      
+      // Verify we have exactly 12 factors
       if (dedupFactors.length !== 12) {
-        console.warn(`Warning: Expected 12 unique factors, but found ${dedupFactors.length}`);
+        return res.status(500).json({
+          message: `Error: Expected 12 deduplicated factors but found ${dedupFactors.length}`,
+          factors: dedupFactors.map(f => f.title)
+        });
       }
       
-      // Assign ids consistently if needed
+      // Assign consistent IDs
       dedupFactors.forEach((factor, index) => {
         if (!factor.id || factor.id.includes("duplicate")) {
           factor.id = `sf-${index + 1}`;
@@ -863,11 +916,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save to database
       await saveFactors(dedupFactors);
       
-      console.log(`Deduplicated ${rawFactors.length} factors to ${dedupFactors.length} unique factors`);
+      console.log(`Successfully deduplicated ${rawFactors.length} factors to 12 official TCOF success factors`);
       
       res.json({ 
         success: true, 
-        message: `Deduplicated ${rawFactors.length} factors to ${dedupFactors.length} unique factors`,
+        message: `Deduplicated ${rawFactors.length} factors to 12 official TCOF success factors`,
         originalCount: rawFactors.length,
         newCount: dedupFactors.length,
         factors: dedupFactors.map(f => `${f.id}: ${f.title}`)

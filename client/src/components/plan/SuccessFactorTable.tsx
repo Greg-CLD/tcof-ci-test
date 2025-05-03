@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { SuccessFactorRating } from '@/lib/plan-db';
 
-import { loadFactors, validateFactorTitles, TCOFFactor } from '@/utils/factorLoader';
+import { getFactors } from '@/utils/factorStore';
 
 // Custom rating scale with new descriptions per requirements
 const RATING_SCALE = {
@@ -57,7 +57,7 @@ export default function SuccessFactorTable({
   const [isRatingKeyOpen, setIsRatingKeyOpen] = useState(false);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   
-  // Load TCOF factor data from database using factorLoader
+  // Load TCOF factor data from database using our enhanced factorStore utility
   useEffect(() => {
     // Begin with sample data for immediate rendering
     const sampleFactors = [
@@ -66,13 +66,19 @@ export default function SuccessFactorTable({
     
     setFactorList(sampleFactors);
     
-    // Load factors from database
+    // Load factors from database with our enhanced factorStore utility
     async function loadDatabaseFactors() {
       try {
-        const factors = await loadFactors();
+        // Always enforce exactly 12 unique factors
+        const factors = await getFactors(true, true);
         
         if (factors && Array.isArray(factors) && factors.length > 0) {
-          // Map the database factors to the required format
+          // Verify we have exactly 12 factors
+          if (factors.length !== 12) {
+            console.warn(`Expected exactly 12 factors, but got ${factors.length}. Using available factors.`);
+          }
+          
+          // Map the database factors to the required format (id and name only, no tasks)
           const formattedFactors = factors.map(factor => ({
             id: factor.id,
             name: factor.title
@@ -80,13 +86,7 @@ export default function SuccessFactorTable({
           
           setFactorList(formattedFactors);
           
-          // Store rendered titles for validation
-          const renderedTitles = formattedFactors.map(f => f.name);
-          
-          // Dev-time validation that the titles match our source data
-          if (process.env.NODE_ENV === 'development') {
-            validateFactorTitles(renderedTitles);
-          }
+          console.log(`Successfully loaded ${formattedFactors.length} unique success factors.`);
         } else {
           // Show error if no factors found
           console.error('No factors loaded from database.');

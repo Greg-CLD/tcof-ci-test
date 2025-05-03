@@ -1,0 +1,31 @@
+We are experiencing a persistent issue: although our deduplication functionality (triggered via the "Deduplicate Factors" button in the Admin Factor Editor) was supposed to reduce the success factors from 32 to 12, Step 1 still shows 32 items (each with attached tasks) instead of just the 12 unique official TCOF success factors. In addition, the Admin interface still displays 32 rows even after deduplication, which is confusing.
+
+Please implement the following changes:
+
+1. **Data Verification:**
+   - Ensure that our deduplication endpoint truly writes a deduplicated list of only 12 unique success factors to the database under the key "factors".
+   - If the DB has more than 12 factors, log an error and display an admin warning.
+   - In our factor store utility (e.g., `utils/factorStore.js`), update `getFactors()` to check for the expected length (12) and return only those 12 factors.
+
+2. **Step 1 (Block1Discover.jsx) UI Update:**
+   - Modify the Step 1 page so that it only displays the unique factor titles.
+   - Instead of mapping over an array that might contain 32 rows (including duplicate tasks), the component should call `getFactors()` from our factor store and then render a simple list (or table) of the 12 factors' titles (and their unique IDs if needed).
+   - Remove any display logic that includes the associated tasks in Step 1. Step 1 is only for displaying the success factor titles for rating (with the emoji rating selectors).
+
+3. **Admin Factor Editor UI Update:**
+   - Update the Admin Factor Editor component so that it only shows the deduplicated 12 factors.
+   - The editor should present a list or table with one row per unique factor (displaying only the "title" field) and provide controls (e.g., edit, delete, add custom task) for updating the tasks assigned to each factor.
+   - Ensure that when the admin uploads new JSON or triggers deduplication, the DB is reloaded and the UI refreshes to show only 12 rows.
+
+4. **Sanity Check and Error Reporting:**
+   - Add a check (e.g., in `getFactors()`) to log an error or display a console warning if the number of factors retrieved from the DB is not exactly 12.
+   - Optionally, display a visible notice in the Admin UI if deduplication did not succeed.
+
+Please confirm that the changes result in:
+- **Step 1**: Only 12 success factor titles displayed (with emoji rating controls) and no tasks.
+- **Admin Area**: Only 12 factors listed with options to edit tasks.
+- A clear console log when the factor count does not equal 12.
+
+Return a summary of the files updated and any new code added. 
+
+End of prompt.
