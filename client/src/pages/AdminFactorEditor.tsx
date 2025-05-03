@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { Redirect } from 'wouter';
 import * as xlsx from 'xlsx';
+import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { apiRequest } from '@/lib/queryClient';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +40,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
-import { Filter, Loader2, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { Filter, Loader2, Plus, Save, Trash2, Upload, RefreshCw } from 'lucide-react';
 import { getFactors, saveFactors, createFactor, updateFactor, deleteFactor } from '@/utils/factorStore';
 
 // Types for the success factor
@@ -62,6 +64,8 @@ export default function AdminFactorEditor() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importedFactors, setImportedFactors] = useState<SuccessFactor[]>([]);
+  const [isFixingFactors, setIsFixingFactors] = useState(false);
+  const [showFixFactorsDialog, setShowFixFactorsDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load factors on mount
@@ -414,6 +418,41 @@ export default function AdminFactorEditor() {
     }
   };
   
+  // Update to canonical factor titles and preserve tasks
+  const handleFixFactors = async () => {
+    try {
+      setIsFixingFactors(true);
+      
+      const response = await apiRequest('POST', '/api/admin/update-canonical-factors');
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      // Reload factors after update
+      const updatedFactors = await getFactors();
+      setFactors(updatedFactors);
+      
+      toast({
+        title: 'Factors Updated',
+        description: result.message || 'Successfully updated to the 12 official TCOF success factors',
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error updating canonical factors:', error);
+      toast({
+        title: 'Update Failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFixingFactors(false);
+      setShowFixFactorsDialog(false);
+    }
+  };
+  
   // Import from Excel
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -562,6 +601,40 @@ export default function AdminFactorEditor() {
               <Filter className="mr-2 h-4 w-4" />
               Deduplicate Factors
             </Button>
+            <AlertDialog open={showFixFactorsDialog} onOpenChange={setShowFixFactorsDialog}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={isFixingFactors || isSaving}
+                  className="bg-blue-50 hover:bg-blue-100 border-blue-300 text-blue-900"
+                >
+                  {isFixingFactors ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Fixing...
+                    </>
+                  ) : (
+                    <>
+                      <Filter className="mr-2 h-4 w-4" />
+                      Update to Canonical Factors
+                    </>
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Update to Canonical TCOF Factors</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will update all success factors to the 12 official TCOF success factors while preserving all tasks.
+                    Any duplicates will be combined into the official factors. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleFixFactors}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <input
               type="file"
               ref={fileInputRef}
