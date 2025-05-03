@@ -8,6 +8,7 @@ import session from "express-session";
 import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
+import { factorsDb, type FactorTask } from './factorsDb';
 import { 
   insertUserSchema, 
   insertGoalMapSchema, 
@@ -553,22 +554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Set up utilities for success factors using file system
-  
-  // Simple server-side factors database
-  // Define our factor interface
-  interface FactorTask {
-    id: string;
-    title: string;
-    tasks: {
-      Identification: string[];
-      Definition: string[];
-      Delivery: string[];
-      Closure: string[];
-    };
-  }
-  
-  // Initialize empty array to store factors (will be populated during initialization)
-  let factorsDb: FactorTask[] = [];
+  // factorsDb is imported from './factorsDb'
   
   // Initialize the database with default success factors
   async function initializeFactorsDatabase(): Promise<boolean> {
@@ -581,7 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const parsed = JSON.parse(data) as FactorTask[];
           if (parsed && parsed.length > 0) {
             // Update the database
-            factorsDb = parsed;
+            factorsDb.setAll(parsed);
             console.log(`Database already initialized with ${parsed.length} success factors`);
             return true;
           }
@@ -626,7 +612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get factors from database or file system
   async function getFactors(): Promise<FactorTask[]> {
     if (factorsDb.length > 0) {
-      return factorsDb;
+      return factorsDb.getAll();
     }
     
     try {
@@ -637,9 +623,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const parsed = JSON.parse(data) as FactorTask[];
         
         // Update database
-        factorsDb = parsed;
+        factorsDb.setAll(parsed);
         
-        return factorsDb;
+        return factorsDb.getAll();
       }
       
       // Fall back to tcofTasks.json if needed
@@ -649,9 +635,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const parsed = JSON.parse(data) as FactorTask[];
         
         // Update database
-        factorsDb = parsed;
+        factorsDb.setAll(parsed);
         
-        return factorsDb;
+        return factorsDb.getAll();
       }
       
       // Fall back to tcof_success_factors_v2.json if needed
@@ -686,15 +672,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         
         // Update database
-        factorsDb = transformedFactors;
+        factorsDb.setAll(transformedFactors);
         
-        return factorsDb;
+        return factorsDb.getAll();
       }
       
-      return factorsDb;
+      return factorsDb.getAll();
     } catch (error) {
       console.error('Error loading factors:', error);
-      return factorsDb;
+      return factorsDb.getAll();
     }
   }
   
