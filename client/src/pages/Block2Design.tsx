@@ -392,7 +392,7 @@ export default function Block2Design() {
                     <div className="mt-4">
                       <h4 className="text-sm font-medium mb-2">Current Policy Tasks:</h4>
                       <ul className="space-y-2">
-                        {policyTasks.map((task: PolicyTask) => (
+                        {policyTasks.map((task) => (
                           <li key={task.id} className="flex items-center justify-between p-2 bg-white rounded-md border">
                             <span>{task.text}</span>
                             <Button variant="ghost" size="sm" onClick={() => handleRemovePolicyTask(task.id)}>
