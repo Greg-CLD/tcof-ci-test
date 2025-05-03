@@ -1,25 +1,15 @@
 /**
- * Excel-based loader for TCOF success factors
- * Reads directly from the tcof_factors.xlsx file and parses it into a structured format
+ * Database-based loader for TCOF success factors
+ * Loads from the backend API and local storage cache
  */
-import * as XLSX from 'xlsx';
-
-// Constants for Excel parsing
-const SHEET_NAME = "Sheet1";
-const COLUMN_MAPPING = {
-  TITLE: 0, // Column A: Success factor title
-  IDENTIFICATION: 1, // Column B: Tasks for Identification stage
-  DEFINITION: 2, // Column C: Tasks for Definition stage
-  DELIVERY: 3, // Column D: Tasks for Delivery stage
-  CLOSURE: 4 // Column E: Tasks for Closure stage
-};
+import { getFactors as getFactorsFromDB } from './factorsDB';
 
 // Cache keys for localStorage
 const CACHE_KEY = 'tcof_factors_data';
 const TIMESTAMP_KEY = 'tcof_factors_timestamp';
 
 /**
- * Loads TCOF success factors from Excel file
+ * Loads TCOF success factors from database
  * @returns {Promise<Array>} Array of factor objects with tasks by stage
  */
 export async function loadFactors() {
@@ -31,47 +21,14 @@ export async function loadFactors() {
       return cachedData;
     }
 
-    console.info('📊 Loading factors from Excel...');
+    console.info('📊 Loading factors from database...');
     
-    // Fetch the Excel file
-    const response = await fetch('/tcof_factors.xlsx');
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Excel file: ${response.status}`);
+    // Fetch factors from database
+    const factors = await getFactorsFromDB();
+    
+    if (!factors || factors.length === 0) {
+      throw new Error('No factors found in database');
     }
-    
-    const arrayBuffer = await response.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    
-    // Get the first sheet
-    const worksheet = workbook.Sheets[SHEET_NAME];
-    if (!worksheet) {
-      throw new Error(`Sheet "${SHEET_NAME}" not found in workbook`);
-    }
-    
-    // Convert sheet to JSON
-    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-    
-    // Skip header row (first row)
-    const dataRows = rawData.slice(1);
-    
-    // Process rows into structured format
-    const factors = dataRows.map((row, index) => {
-      // For auto-numbering if needed
-      const factorId = `${Math.floor(index / 2) + 1}.${(index % 2) + 1}`;
-      
-      // Get the title from column A, trim whitespace
-      const title = row[COLUMN_MAPPING.TITLE]?.toString().trim() || '';
-      
-      // Extract tasks for each stage
-      const tasks = {
-        Identification: extractTasks(row[COLUMN_MAPPING.IDENTIFICATION]),
-        Definition: extractTasks(row[COLUMN_MAPPING.DEFINITION]),
-        Delivery: extractTasks(row[COLUMN_MAPPING.DELIVERY]),
-        Closure: extractTasks(row[COLUMN_MAPPING.CLOSURE])
-      };
-      
-      return { id: factorId, title, tasks };
-    }).filter(factor => factor.title); // Filter out empty rows
     
     // Cache the results
     cacheResults(factors);
@@ -90,20 +47,20 @@ export async function loadFactors() {
         factor.tasks.Closure.length;
     }, 0);
     
-    console.info('✅ Factors loaded from Excel', { 
+    console.info('✅ Factors loaded from database', { 
       factorCount: factors.length, 
       taskTotal 
     });
     
     return factors;
   } catch (error) {
-    console.error('Error loading factors from Excel:', error);
+    console.error('Error loading factors from database:', error);
     // In case of error, try to return cached data even if expired
     const cachedData = localStorage.getItem(CACHE_KEY);
     if (cachedData) {
       try {
         const parsedData = JSON.parse(cachedData);
-        console.warn('⚠️ Using expired cache due to Excel load failure');
+        console.warn('⚠️ Using expired cache due to database load failure');
         return parsedData;
       } catch (parseError) {
         console.error('Error parsing cached data:', parseError);

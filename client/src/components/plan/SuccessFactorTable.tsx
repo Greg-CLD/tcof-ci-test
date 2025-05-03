@@ -57,7 +57,7 @@ export default function SuccessFactorTable({
   const [isRatingKeyOpen, setIsRatingKeyOpen] = useState(false);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   
-  // Load TCOF factor data from Excel using factorLoader
+  // Load TCOF factor data from database using factorLoader
   useEffect(() => {
     // Begin with sample data for immediate rendering
     const sampleFactors = [
@@ -66,13 +66,13 @@ export default function SuccessFactorTable({
     
     setFactorList(sampleFactors);
     
-    // Load factors from Excel
-    async function loadExcelFactors() {
+    // Load factors from database
+    async function loadDatabaseFactors() {
       try {
         const factors = await loadFactors();
         
         if (factors && Array.isArray(factors) && factors.length > 0) {
-          // Map the Excel factors to the required format
+          // Map the database factors to the required format
           const formattedFactors = factors.map(factor => ({
             id: factor.id,
             name: factor.title
@@ -88,17 +88,17 @@ export default function SuccessFactorTable({
             validateFactorTitles(renderedTitles);
           }
         } else {
-          // Show error and empty list rather than fallback to demo data
-          console.error('No factors loaded from Excel. Please ensure the Excel file is properly uploaded.');
+          // Show error if no factors found
+          console.error('No factors loaded from database.');
           toast({
             title: "Error loading success factors",
-            description: "Please ensure the Excel file is uploaded correctly.",
+            description: "No success factors found in the database.",
             variant: "destructive"
           });
           setFactorList([]);
         }
       } catch (error) {
-        console.error('Error loading factors from Excel:', error);
+        console.error('Error loading factors from database:', error);
         toast({
           title: "Error loading success factors",
           description: "Could not load success factors from data source.",
@@ -108,7 +108,7 @@ export default function SuccessFactorTable({
       }
     }
     
-    loadExcelFactors();
+    loadDatabaseFactors();
   }, [toast]);
   
   // Helper to get the current rating for display
