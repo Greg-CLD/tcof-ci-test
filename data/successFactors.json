@@ -1,7 +1,7 @@
 [
   {
-    "id": "1.1",
-    "title": "Ask Why",
+    "id": "tcof-1",
+    "title": "1.1 Ask Why",
     "tasks": {
       "Identification": [
         "Consult key stakeholders"
@@ -18,8 +18,8 @@
     }
   },
   {
-    "id": "1.1",
-    "title": "Ask Why",
+    "id": "tcof-2",
+    "title": "1.1 Ask Why",
     "tasks": {
       "Identification": [
         "Understand pains and wants"
@@ -36,8 +36,8 @@
     }
   },
   {
-    "id": "1.1",
-    "title": "Ask Why",
+    "id": "tcof-3",
+    "title": "1.1 Ask Why",
     "tasks": {
       "Identification": [
         "Define goals"
@@ -54,8 +54,8 @@
     }
   },
   {
-    "id": "1.2",
-    "title": "Get a Masterbuilder",
+    "id": "tcof-4",
+    "title": "1.2 Get a Masterbuilder",
     "tasks": {
       "Identification": [
         "Define the type of person you need"
@@ -72,8 +72,8 @@
     }
   },
   {
-    "id": "1.2",
-    "title": "Get a Masterbuilder",
+    "id": "tcof-5",
+    "title": "1.2 Get a Masterbuilder",
     "tasks": {
       "Identification": [
         "Find a leader"
@@ -90,8 +90,8 @@
     }
   },
   {
-    "id": "1.2",
-    "title": "Get a Masterbuilder",
+    "id": "tcof-6",
+    "title": "1.2 Get a Masterbuilder",
     "tasks": {
       "Identification": [
         "Get access to additional support (if needed)"
@@ -108,8 +108,8 @@
     }
   },
   {
-    "id": "1.3",
-    "title": "Get Your People on the Bus",
+    "id": "tcof-7",
+    "title": "1.3 Get Your People on the Bus",
     "tasks": {
       "Identification": [
         "Get a team that has worked with your masterbuilder (if possible)"
@@ -126,8 +126,8 @@
     }
   },
   {
-    "id": "1.3",
-    "title": "Get Your People on the Bus",
+    "id": "tcof-8",
+    "title": "1.3 Get Your People on the Bus",
     "tasks": {
       "Identification": [
         "Identify early champions (if there is business change)"
@@ -144,8 +144,8 @@
     }
   },
   {
-    "id": "1.3",
-    "title": "Get Your People on the Bus",
+    "id": "tcof-9",
+    "title": "1.3 Get Your People on the Bus",
     "tasks": {
       "Identification": [
         "Run team development workshops"
@@ -162,8 +162,8 @@
     }
   },
   {
-    "id": "1.4",
-    "title": "Make Friends and Keep them Friendly",
+    "id": "tcof-10",
+    "title": "1.4 Make Friends and Keep them Friendly",
     "tasks": {
       "Identification": [
         "Create a plan to engage with other stakeholders"
@@ -180,8 +180,8 @@
     }
   },
   {
-    "id": "1.4",
-    "title": "Make Friends and Keep them Friendly",
+    "id": "tcof-11",
+    "title": "1.4 Make Friends and Keep them Friendly",
     "tasks": {
       "Identification": [
         "Engage stakeholders, customers, and users"
@@ -198,8 +198,8 @@
     }
   },
   {
-    "id": "1.4",
-    "title": "Make Friends and Keep them Friendly",
+    "id": "tcof-12",
+    "title": "1.4 Make Friends and Keep them Friendly",
     "tasks": {
       "Identification": [
         "Develop a mechanism to foster transparency and involve stakeholders in key decisions"
@@ -216,8 +216,8 @@
     }
   },
   {
-    "id": "2.1",
-    "title": "Recognise that your project is not unique",
+    "id": "tcof-13",
+    "title": "2.1 Recognise that your project is not unique",
     "tasks": {
       "Identification": [
         "Identify and learn lessons from three people or projects that have achieved similar outcomes"
@@ -234,8 +234,8 @@
     }
   },
   {
-    "id": "2.1",
-    "title": "Recognise that your project is not unique",
+    "id": "tcof-14",
+    "title": "2.1 Recognise that your project is not unique",
     "tasks": {
       "Identification": [
         "Find out how long their projects took, what they cost, and whether the expected value was delivered"
@@ -252,8 +252,8 @@
     }
   },
   {
-    "id": "2.1",
-    "title": "Recognise that your project is not unique",
+    "id": "tcof-15",
+    "title": "2.1 Recognise that your project is not unique",
     "tasks": {
       "Identification": [
         "Apply these insights to your plan"
@@ -270,8 +270,8 @@
     }
   },
   {
-    "id": "2.2",
-    "title": "Look for Tried & Tested Options",
+    "id": "tcof-16",
+    "title": "2.2 Look for Tried & Tested Options",
     "tasks": {
       "Identification": [
         "Identify three delivery methods using tried and tested techniques"
@@ -288,8 +288,8 @@
     }
   },
   {
-    "id": "2.2",
-    "title": "Look for Tried & Tested Options",
+    "id": "tcof-17",
+    "title": "2.2 Look for Tried & Tested Options",
     "tasks": {
       "Identification": [
         "Validate your best option through prototyping and customer or user feedback"
@@ -306,16 +306,11 @@
     }
   },
   {
-    "id": "2.2",
-    "title": "Look for Tried & Tested Options",
+    "id": "tcof-18",
+    "title": "2.2 Look for Tried & Tested Options",
     "tasks": {
       "Identification": [
-        "Complete a pros and cons list for each option. Rate against:\r",
-        "- Use of tried and tested methods\r",
-        "- Likelihood of delivering goals\r",
-        "- Modularity and scalability\r",
-        "- Ease of building a minimum or maximum viable product\r",
-        "Include metrics where possible"
+        "Complete a pros and cons list for each option. Rate against:\n- Use of tried and tested methods\n- Likelihood of delivering goals\n- Modularity and scalability\n- Ease of building a minimum or maximum viable product\nInclude metrics where possible"
       ],
       "Definition": [
         "-"
@@ -329,8 +324,8 @@
     }
   },
   {
-    "id": "3.1",
-    "title": "Think Big, Start Small",
+    "id": "tcof-19",
+    "title": "3.1 Think Big, Start Small",
     "tasks": {
       "Identification": [
         "Break your preferred solution into small, modular parts"
@@ -347,8 +342,8 @@
     }
   },
   {
-    "id": "3.1",
-    "title": "Think Big, Start Small",
+    "id": "tcof-20",
+    "title": "3.1 Think Big, Start Small",
     "tasks": {
       "Identification": [
         "Ask the question: what is my Lego?"
@@ -365,8 +360,8 @@
     }
   },
   {
-    "id": "3.1",
-    "title": "Think Big, Start Small",
+    "id": "tcof-21",
+    "title": "3.1 Think Big, Start Small",
     "tasks": {
       "Identification": [
         "Ensure people and plans are in place to develop the solution in Phase 2"
@@ -383,8 +378,8 @@
     }
   },
   {
-    "id": "3.2",
-    "title": "Learn by Experimenting",
+    "id": "tcof-22",
+    "title": "3.2 Learn by Experimenting",
     "tasks": {
       "Identification": [
         "Create a plan to develop an MVP or MXVP in Stage 2"
@@ -401,8 +396,8 @@
     }
   },
   {
-    "id": "3.2",
-    "title": "Learn by Experimenting",
+    "id": "tcof-23",
+    "title": "3.2 Learn by Experimenting",
     "tasks": {
       "Identification": [
         "Start regular reflection sessions: weekly, fortnightly, or monthly"
@@ -419,8 +414,8 @@
     }
   },
   {
-    "id": "3.3",
-    "title": "Keep on top of risks",
+    "id": "tcof-24",
+    "title": "3.3 Keep on top of risks",
     "tasks": {
       "Identification": [
         "List your top five risks now"
@@ -437,8 +432,8 @@
     }
   },
   {
-    "id": "3.3",
-    "title": "Keep on top of risks",
+    "id": "tcof-25",
+    "title": "3.3 Keep on top of risks",
     "tasks": {
       "Identification": [
         "Create a mitigation plan for each one"
@@ -455,8 +450,8 @@
     }
   },
   {
-    "id": "3.3",
-    "title": "Keep on top of risks",
+    "id": "tcof-26",
+    "title": "3.3 Keep on top of risks",
     "tasks": {
       "Identification": [
         "Review and update your risk plan monthly (or more often)"
@@ -473,8 +468,8 @@
     }
   },
   {
-    "id": "4.1",
-    "title": "Adjust for optimism",
+    "id": "tcof-27",
+    "title": "4.1 Adjust for optimism",
     "tasks": {
       "Identification": [
         "Compare how long similar projects took in Stage 2 and 3 versus their original estimates"
@@ -491,8 +486,8 @@
     }
   },
   {
-    "id": "4.1",
-    "title": "Adjust for optimism",
+    "id": "tcof-28",
+    "title": "4.1 Adjust for optimism",
     "tasks": {
       "Identification": [
         "Adjust your forecast based on this optimism allowance and include contingency"
@@ -509,8 +504,8 @@
     }
   },
   {
-    "id": "4.2",
-    "title": "Measure What Matters, Be Ready to Step Away",
+    "id": "tcof-29",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
     "tasks": {
       "Identification": [
         "Identify the success measures for your solution in Stage 2"
@@ -527,8 +522,8 @@
     }
   },
   {
-    "id": "4.2",
-    "title": "Measure What Matters, Be Ready to Step Away",
+    "id": "tcof-30",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
     "tasks": {
       "Identification": [
         "Confirm the business case do the benefits outweigh the costs?"
@@ -545,8 +540,8 @@
     }
   },
   {
-    "id": "4.2",
-    "title": "Measure What Matters, Be Ready to Step Away",
+    "id": "tcof-31",
+    "title": "4.2 Measure What Matters, Be Ready to Step Away",
     "tasks": {
       "Identification": [
         "-"
@@ -563,8 +558,8 @@
     }
   },
   {
-    "id": "4.3",
-    "title": "Be Ready to Adapt",
+    "id": "tcof-32",
+    "title": "4.3 Be Ready to Adapt",
     "tasks": {
       "Identification": [
         "Set up regular meetings with key people to adapt to a changing world"

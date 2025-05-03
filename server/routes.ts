@@ -158,6 +158,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
   setupAuth(app);
 
+  // Initialize the factors database
+  try {
+    console.log('Initializing factors database during registerRoutes...');
+    await initializeFactorsDatabase();
+    console.log('Factors database initialized successfully');
+  } catch (error) {
+    console.error('Error initializing factors database:', error);
+  }
+
   // Setup basic health check endpoint
   app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
@@ -558,16 +567,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   }
   
+  // Initialize cache
   let factorsCache: FactorTask[] | null = null;
   
   // Initialize the database with default success factors
   async function initializeFactorsDatabase(): Promise<boolean> {
     try {
-      // Check if we already have factors in the database
-      const existingFactors = await getFactors();
-      if (existingFactors && existingFactors.length > 0) {
-        console.log(`Database already initialized with ${existingFactors.length} success factors`);
-        return true;
+      // First check if we already have factors file
+      const factorsPath = path.join(process.cwd(), 'data', 'successFactors.json');
+      if (fs.existsSync(factorsPath)) {
+        try {
+          const data = fs.readFileSync(factorsPath, 'utf8');
+          const parsed = JSON.parse(data) as FactorTask[];
+          if (parsed && parsed.length > 0) {
+            factorsCache = parsed;
+            console.log(`Database already initialized with ${parsed.length} success factors`);
+            return true;
+          }
+        } catch (error) {
+          console.warn('Error reading existing success factors:', error);
+        }
       }
       
       // No existing factors, load from default file
@@ -631,15 +650,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fall back to tcof_success_factors_v2.json if needed
       const v2FactorsPath = path.join(process.cwd(), 'data', 'tcof_success_factors_v2.json');
       if (fs.existsSync(v2FactorsPath)) {
-        await initializeFactorsDatabase();
+        // Direct load from v2 JSON to avoid circular references
+        const rawData = fs.readFileSync(v2FactorsPath, 'utf8');
+        const v2Factors = JSON.parse(rawData);
         
-        // Try again after initialization
-        if (fs.existsSync(factorsPath)) {
-          const data = fs.readFileSync(factorsPath, 'utf8');
-          const parsed = JSON.parse(data) as FactorTask[];
-          factorsCache = parsed;
-          return factorsCache;
+        // Transform the data to match our expected format if needed
+        const transformedFactors: FactorTask[] = v2Factors.map((factor: any) => ({
+          id: factor.id,
+          title: factor.title,
+          tasks: {
+            Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
+            Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],
+            Delivery: Array.isArray(factor.tasks?.Delivery) ? factor.tasks.Delivery : [],
+            Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
+          }
+        }));
+        
+        // Save to file
+        const dataDir = path.join(process.cwd(), 'data');
+        if (!fs.existsSync(dataDir)) {
+          fs.mkdirSync(dataDir, { recursive: true });
         }
+        
+        fs.writeFileSync(
+          path.join(dataDir, 'successFactors.json'), 
+          JSON.stringify(transformedFactors, null, 2),
+          'utf8'
+        );
+        
+        factorsCache = transformedFactors;
+        return factorsCache;
       }
       
       return [];
