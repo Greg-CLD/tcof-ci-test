@@ -1,0 +1,145 @@
+Replit Agent prompt – “Migrate to JSON & add Success-Factor Editor”
+Goals
+
+Convert the uploaded spreadsheet /mnt/data/tcof_factors.xlsx.xlsx once → data/successFactors.json.
+
+Make every page load factors/tasks from that JSON, not from Excel.
+
+Provide an admin UI to view/edit factors and tasks (or re-import a new Excel) without touching code.
+
+Quick-Start must preload those factors + tasks for every new plan.
+
+A One-time migration script
+Create scripts/convertFactors.js (Node script):
+
+js
+Copy
+Edit
+import xlsx from 'xlsx';
+import fs from 'fs';
+const wb = xlsx.readFile('/mnt/data/tcof_factors.xlsx.xlsx');
+const sheet = wb.Sheets[wb.SheetNames[0]];
+const rows = xlsx.utils.sheet_to_json(sheet, {header:1, blankrows:false});
+const [header, ...data] = rows;
+const [TITLE, IDN, DEF, DEL, CLO] = header;
+const json = data.map(row => {
+  const [title, idn, def, del, clo] = row;
+  const [id, ...rest] = title.split(' ');
+  return {
+    id,
+    title: rest.join(' ').trim(),
+    tasks:{
+      Identification:  (idn||'').split('\n').filter(Boolean),
+      Definition:      (def||'').split('\n').filter(Boolean),
+      Delivery:        (del||'').split('\n').filter(Boolean),
+      Closure:         (clo||'').split('\n').filter(Boolean)
+    }
+  };
+});
+fs.writeFileSync('data/successFactors.json', JSON.stringify(json, null, 2));
+console.log('✅ successFactors.json generated with', json.length, 'entries');
+Add an npm script "convert:factors": "node scripts/convertFactors.js" and run it once inside Replit so data/successFactors.json is committed.
+
+B Factor store utility
+Create utils/factorStore.js:
+
+js
+Copy
+Edit
+import factors from '../data/successFactors.json' assert { type:'json' };
+export function getFactors(){ return factors; }
+export function saveFactors(updated){
+  // For now write to file system (works in Replit dev).
+  // Later you can switch to Replit DB with the same API.
+  await fs.promises.writeFile('data/successFactors.json', JSON.stringify(updated, null, 2));
+}
+C Replace Excel loads
+Update Block 1 table, Block 2 mapping, Quick-Start plan builder, Checklist:
+
+diff
+Copy
+Edit
+-import { loadFactors } from '../utils/factorLoader';
+-const [factors,setFactors]=…
+-useEffect(()=> loadFactors().then(setFactors),[]);
++import { getFactors } from '../utils/factorStore';
++const factors = getFactors();
+Remove the old factorLoader code entirely.
+
+Quick-Start:
+
+js
+Copy
+Edit
+const factors = getFactors();
+factors.forEach(f=>{
+  plan.stages.Identification.successFactorRatings[f.id] = {rating:3,notes:'',favourite:false};
+  Object.entries(f.tasks).forEach(([stage,arr])=>{
+    arr.forEach(text=>{
+      plan.stages[stage].tasks.push({id:crypto.randomUUID(),text,stage,origin:'factor',sourceId:f.id,done:false});
+    });
+  });
+});
+D Admin “Success-Factor Editor” page
+Route /admin/factors (visible only for Greg@Confluity.co.uk):
+
+php-template
+Copy
+Edit
+<h1>Success-Factor Editor</h1>
+<table class="grid">
+  ID | Title | Stage | Task | (add/delete rows)
+</table>
+<button>+ Add Factor</button>
+<button onClick=save>Save All</button>
+<hr>
+<h2>Bulk import from Excel</h2>
+<input type="file" accept=".xlsx" onChange={importExcel}/>
+Behaviours
+
+save → saveFactors(updated), toast “Saved”.
+
+importExcel → run the same parse logic as the Node script in browser (using xlsx), show diff preview, then saveFactors.
+
+E Emoji-rating key (Block 1)
+If not already: Place a small “Rating key” link → modal showing:
+
+arduino
+Copy
+Edit
+❌ Doesn’t land
+🤔 Unfamiliar
+🟡 Seems true
+✅ Proven
+🔥 Hard-won truth
+Tooltips remain on each radio button.
+
+F Remove spreadsheet dependency
+Delete any runtime reference to /mnt/data/tcof_factors.xlsx.xlsx.
+If it’s missing, the app still runs from data/successFactors.json.
+
+G Tests
+tests/factorStore.test.js – import getFactors(), expect .length === 12 and first .title matches "Ask Why" (or whatever is row 1).
+
+Update Quick-Start test to assert tasks.length > 0.
+
+H Deliverables
+data/successFactors.json (committed)
+
+scripts/convertFactors.js and npm script
+
+utils/factorStore.js (new)
+
+Admin editor page & route
+
+Remove old factorLoader imports
+
+Updated components & tests
+
+Result
+
+No more runtime Excel parsing errors.
+
+You can edit factors/tasks through a friendly table or replace them via a new Excel.
+
+Quick-Start and all blocks always show the exact, up-to-date factors.

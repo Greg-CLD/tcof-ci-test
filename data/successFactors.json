@@ -1,0 +1,583 @@
+[
+  {
+    "id": "1.1",
+    "title": "Ask Why",
+    "tasks": {
+      "Identification": [
+        "Consult key stakeholders"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.1",
+    "title": "Ask Why",
+    "tasks": {
+      "Identification": [
+        "Understand pains and wants"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.1",
+    "title": "Ask Why",
+    "tasks": {
+      "Identification": [
+        "Define goals"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.2",
+    "title": "Get a Masterbuilder",
+    "tasks": {
+      "Identification": [
+        "Define the type of person you need"
+      ],
+      "Definition": [
+        "Confirm you have access to a master builder ready for the next stage"
+      ],
+      "Delivery": [
+        "Confirm you have access to a master builder ready for the next stage"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.2",
+    "title": "Get a Masterbuilder",
+    "tasks": {
+      "Identification": [
+        "Find a leader"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.2",
+    "title": "Get a Masterbuilder",
+    "tasks": {
+      "Identification": [
+        "Get access to additional support (if needed)"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.3",
+    "title": "Get Your People on the Bus",
+    "tasks": {
+      "Identification": [
+        "Get a team that has worked with your masterbuilder (if possible)"
+      ],
+      "Definition": [
+        "Build support with Change Champions"
+      ],
+      "Delivery": [
+        "Support champions to influence others"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.3",
+    "title": "Get Your People on the Bus",
+    "tasks": {
+      "Identification": [
+        "Identify early champions (if there is business change)"
+      ],
+      "Definition": [
+        "Enable team productivity"
+      ],
+      "Delivery": [
+        "Enable team productivity"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.3",
+    "title": "Get Your People on the Bus",
+    "tasks": {
+      "Identification": [
+        "Run team development workshops"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.4",
+    "title": "Make Friends and Keep them Friendly",
+    "tasks": {
+      "Identification": [
+        "Create a plan to engage with other stakeholders"
+      ],
+      "Definition": [
+        "Stakeholder communications, training and engagement"
+      ],
+      "Delivery": [
+        "Stakeholder communications, training and engagement"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.4",
+    "title": "Make Friends and Keep them Friendly",
+    "tasks": {
+      "Identification": [
+        "Engage stakeholders, customers, and users"
+      ],
+      "Definition": [
+        "Empower stakeholders, users, customers to support decision making"
+      ],
+      "Delivery": [
+        "Empower stakeholders, users, customers to support decision making"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "1.4",
+    "title": "Make Friends and Keep them Friendly",
+    "tasks": {
+      "Identification": [
+        "Develop a mechanism to foster transparency and involve stakeholders in key decisions"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "2.1",
+    "title": "Recognise that your project is not unique",
+    "tasks": {
+      "Identification": [
+        "Identify and learn lessons from three people or projects that have achieved similar outcomes"
+      ],
+      "Definition": [
+        "Re-engage with past projects to learn new lessons about the next stage"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "2.1",
+    "title": "Recognise that your project is not unique",
+    "tasks": {
+      "Identification": [
+        "Find out how long their projects took, what they cost, and whether the expected value was delivered"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "2.1",
+    "title": "Recognise that your project is not unique",
+    "tasks": {
+      "Identification": [
+        "Apply these insights to your plan"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "2.2",
+    "title": "Look for Tried & Tested Options",
+    "tasks": {
+      "Identification": [
+        "Identify three delivery methods using tried and tested techniques"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "2.2",
+    "title": "Look for Tried & Tested Options",
+    "tasks": {
+      "Identification": [
+        "Validate your best option through prototyping and customer or user feedback"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "2.2",
+    "title": "Look for Tried & Tested Options",
+    "tasks": {
+      "Identification": [
+        "Complete a pros and cons list for each option. Rate against:\r",
+        "- Use of tried and tested methods\r",
+        "- Likelihood of delivering goals\r",
+        "- Modularity and scalability\r",
+        "- Ease of building a minimum or maximum viable product\r",
+        "Include metrics where possible"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "3.1",
+    "title": "Think Big, Start Small",
+    "tasks": {
+      "Identification": [
+        "Break your preferred solution into small, modular parts"
+      ],
+      "Definition": [
+        "Re-engage with past projects to learn new lessons about the next stage"
+      ],
+      "Delivery": [
+        "Scale up and go big. Roll out sections / modular solution to other areas"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "3.1",
+    "title": "Think Big, Start Small",
+    "tasks": {
+      "Identification": [
+        "Ask the question: what is my Lego?"
+      ],
+      "Definition": [
+        "Validate that the solution will achieve the goals."
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "3.1",
+    "title": "Think Big, Start Small",
+    "tasks": {
+      "Identification": [
+        "Ensure people and plans are in place to develop the solution in Phase 2"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "3.2",
+    "title": "Learn by Experimenting",
+    "tasks": {
+      "Identification": [
+        "Create a plan to develop an MVP or MXVP in Stage 2"
+      ],
+      "Definition": [
+        "Develop module as a minimum viable product, if possible. Otherwise, develop a maximum virtual product."
+      ],
+      "Delivery": [
+        "Continue regular learning and reflection sessions (at least monthly)"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "3.2",
+    "title": "Learn by Experimenting",
+    "tasks": {
+      "Identification": [
+        "Start regular reflection sessions: weekly, fortnightly, or monthly"
+      ],
+      "Definition": [
+        "Continue regular learning and reflection sessions (at least monthly)"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "3.3",
+    "title": "Keep on top of risks",
+    "tasks": {
+      "Identification": [
+        "List your top five risks now"
+      ],
+      "Definition": [
+        "Continuously identify and mittigate risks (review at least monthly)"
+      ],
+      "Delivery": [
+        "Continuously identify and mitigate risks (review at least monthly)"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "3.3",
+    "title": "Keep on top of risks",
+    "tasks": {
+      "Identification": [
+        "Create a mitigation plan for each one"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "3.3",
+    "title": "Keep on top of risks",
+    "tasks": {
+      "Identification": [
+        "Review and update your risk plan monthly (or more often)"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "4.1",
+    "title": "Adjust for optimism",
+    "tasks": {
+      "Identification": [
+        "Compare how long similar projects took in Stage 2 and 3 versus their original estimates"
+      ],
+      "Definition": [
+        "Look to previous projects to identify level of optimism for Stage 3, apply this contingency % to your estimate for time / cost / resources required for stage 3"
+      ],
+      "Delivery": [
+        "Build optimism allowances into all forecasts."
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "4.1",
+    "title": "Adjust for optimism",
+    "tasks": {
+      "Identification": [
+        "Adjust your forecast based on this optimism allowance and include contingency"
+      ],
+      "Definition": [
+        "-"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "4.2",
+    "title": "Measure What Matters, Be Ready to Step Away",
+    "tasks": {
+      "Identification": [
+        "Identify the success measures for your solution in Stage 2"
+      ],
+      "Definition": [
+        "Identify the measurable success measures for your solution in Stage 3"
+      ],
+      "Delivery": [
+        "Confirm the built solution meets your goals. Measure this with metrics."
+      ],
+      "Closure": [
+        "Record results for posterity"
+      ]
+    }
+  },
+  {
+    "id": "4.2",
+    "title": "Measure What Matters, Be Ready to Step Away",
+    "tasks": {
+      "Identification": [
+        "Confirm the business case do the benefits outweigh the costs?"
+      ],
+      "Definition": [
+        "Confirm the business case do the benefits outweigh the costs?"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "4.2",
+    "title": "Measure What Matters, Be Ready to Step Away",
+    "tasks": {
+      "Identification": [
+        "-"
+      ],
+      "Definition": [
+        "Confirm you've used data to validate your chosen option and plan, including optimism bias"
+      ],
+      "Delivery": [
+        "-"
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  },
+  {
+    "id": "4.3",
+    "title": "Be Ready to Adapt",
+    "tasks": {
+      "Identification": [
+        "Set up regular meetings with key people to adapt to a changing world"
+      ],
+      "Definition": [
+        "Adapt the requirements / plan / scope based as new information comes to light."
+      ],
+      "Delivery": [
+        "Adapt the requirements / plan / scope based as new information comes to light."
+      ],
+      "Closure": [
+        "-"
+      ]
+    }
+  }
+]
