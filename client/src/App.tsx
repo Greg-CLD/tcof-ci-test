@@ -9,6 +9,7 @@ import StarterAccess from "@/pages/StarterAccess";
 import GetYourBearings from "@/pages/GetYourBearings";
 import MakeAPlan from "@/pages/MakeAPlan";
 import MakeAPlanLanding from "@/pages/MakeAPlanLanding";
+import MakeAPlanFullIntro from "@/pages/MakeAPlanFullIntro";
 import MakeAPlanFull from "@/pages/MakeAPlanFull";
 import AdminPresetEditor from "@/pages/AdminPresetEditor";
 import Block1Discover from "@/pages/Block1Discover";
@@ -34,10 +35,9 @@ import SiteFooter from "@/components/SiteFooter";
 import GlobalNav from "@/components/GlobalNav";
 import Breadcrumb from "@/components/Breadcrumb";
 
-// Tool components wrapped with layout
+// Tool components wrapped with layout (without SiteHeader since it's now part of GlobalNav)
 const GoalMappingPage = () => (
   <div className="min-h-screen flex flex-col bg-white">
-    <SiteHeader />
     <main className="flex-grow container mx-auto px-4 py-12">
       <GoalMappingTool />
     </main>
@@ -47,7 +47,6 @@ const GoalMappingPage = () => (
 
 const CynefinOrientationPage = () => (
   <div className="min-h-screen flex flex-col bg-white">
-    <SiteHeader />
     <main className="flex-grow container mx-auto px-4 py-12">
       <CynefinOrientationTool />
     </main>
@@ -57,7 +56,6 @@ const CynefinOrientationPage = () => (
 
 const TCOFJourneyPage = () => (
   <div className="min-h-screen flex flex-col bg-white">
-    <SiteHeader />
     <main className="flex-grow container mx-auto px-4 py-12">
       <TCOFJourneyTool />
     </main>
@@ -80,6 +78,7 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/get-your-bearings" component={GetYourBearings} />
       <Route path="/make-a-plan" component={MakeAPlanLanding} />
+      <Route path="/make-a-plan/full/intro" component={MakeAPlanFullIntro} />
       <Route path="/make-a-plan/full/block-1" component={Block1Discover} />
       <Route path="/make-a-plan/full/block-2" component={Block2Design} />
       <Route path="/make-a-plan/full/block-3" component={Block3Complete} />
@@ -93,7 +92,6 @@ function Router() {
           <Dashboard />
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
-            <SiteHeader />
             <main className="flex-grow container mx-auto px-4 py-12">
               <div className="max-w-2xl mx-auto text-center">
                 <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
@@ -123,7 +121,6 @@ function Router() {
           <GoalMappingPage />
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
-            <SiteHeader />
             <main className="flex-grow container mx-auto px-4 py-12">
               <div className="max-w-2xl mx-auto text-center">
                 <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
@@ -152,7 +149,6 @@ function Router() {
           <CynefinOrientationPage />
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
-            <SiteHeader />
             <main className="flex-grow container mx-auto px-4 py-12">
               <div className="max-w-2xl mx-auto text-center">
                 <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
@@ -181,7 +177,6 @@ function Router() {
           <TCOFJourneyPage />
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
-            <SiteHeader />
             <main className="flex-grow container mx-auto px-4 py-12">
               <div className="max-w-2xl mx-auto text-center">
                 <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
