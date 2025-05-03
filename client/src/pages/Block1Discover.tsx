@@ -224,6 +224,53 @@ export default function Block1Discover() {
     setLocation('/checklist');
   };
   
+  // Clear Block 1 data
+  const handleClearBlock = async () => {
+    if (!planId || !plan) return;
+    
+    try {
+      // Create a copy of the plan with empty Identification stage data
+      const updatedPlan = { 
+        ...plan, 
+        stages: { 
+          ...plan.stages,
+          Identification: {
+            ...plan.stages.Identification,
+            successFactorRatings: {},
+            personalHeuristics: []
+          }
+        }
+      };
+      
+      // Save the updated plan
+      const success = await savePlan(planId, updatedPlan);
+      
+      if (success) {
+        // Update local state
+        setSuccessFactorRatings({});
+        setPersonalHeuristics([]);
+        
+        toast({
+          title: "Block cleared",
+          description: "All data for Block 1 has been reset",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to clear block data",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing block:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear block data",
+        variant: "destructive"
+      });
+    }
+  };
+  
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -318,7 +365,9 @@ export default function Block1Discover() {
           onNext={handleNext}
           onSave={handleSave}
           onSkip={handleSkipToChecklist}
+          onClear={handleClearBlock}
           showSkip={true}
+          showClear={true}
           isNextDisabled={!canProceed}
         />
       </div>

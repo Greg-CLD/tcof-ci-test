@@ -2,17 +2,19 @@ import React from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import styles from '@/lib/styles.module.css';
-import { ArrowLeft, ArrowRight, Save, SkipForward, ClipboardList } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, SkipForward, ClipboardList, Trash2 } from 'lucide-react';
 
 interface ActionButtonsProps {
   onPrevious?: () => void;
   onNext?: () => void;
   onSave?: () => void;
   onSkip?: () => void;
+  onClear?: () => void;
   showPrevious?: boolean;
   showNext?: boolean;
   showSave?: boolean;
   showSkip?: boolean;
+  showClear?: boolean;
   showSkipToSummary?: boolean;
   isNextDisabled?: boolean;
   isPreviousDisabled?: boolean;
@@ -24,10 +26,12 @@ export default function ActionButtons({
   onNext,
   onSave,
   onSkip,
+  onClear,
   showPrevious = true,
   showNext = true,
   showSave = true,
   showSkip = false,
+  showClear = false,
   showSkipToSummary = true,
   isNextDisabled = false,
   isPreviousDisabled = false,
@@ -44,6 +48,16 @@ export default function ActionButtons({
             className="flex items-center"
           >
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          </Button>
+        )}
+        
+        {showClear && (
+          <Button 
+            onClick={onClear}
+            variant="destructive"
+            className="flex items-center"
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> Clear this Block
           </Button>
         )}
         
