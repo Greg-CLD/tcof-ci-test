@@ -615,7 +615,7 @@ export default function AdminFactorEditor() {
                     </>
                   ) : (
                     <>
-                      <Filter className="mr-2 h-4 w-4" />
+                      <RefreshCw className="mr-2 h-4 w-4" />
                       Update to Canonical Factors
                     </>
                   )}
