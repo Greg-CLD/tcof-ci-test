@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Star, StarOff } from 'lucide-react';
+import { Star, StarOff, HelpCircle } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 import { SuccessFactorRating } from '@/lib/plan-db';
+import { getTcofData } from '@/lib/tcofData';
 
-// TCOF success factors
-export const TCOF_FACTORS = [
-  { id: '1.1', text: 'Ask Why' },
-  { id: '1.2', text: 'Get a Masterbuilder' },
-  { id: '1.3', text: 'Share the Air' },
-  { id: '2.1', text: 'Write Down Your Goal' },
-  { id: '2.2', text: 'Define the Difference' },
-  { id: '2.3', text: 'Make Room for Change' },
-  { id: '3.1', text: 'Get Skin in the Game' },
-  { id: '3.2', text: 'Manage the Clock' },
-  { id: '3.3', text: 'Have Two Conversations' },
-  { id: '4.1', text: 'Involve Everyone' },
-  { id: '4.2', text: 'Stay in School' },
-  { id: '4.3', text: 'Be Ready to Adapt' },
-];
+// Rating descriptions for tooltips
+const RATING_DESCRIPTIONS = {
+  1: 'Doesn\'t land',
+  2: 'Unfamiliar',
+  3: 'Seems true',
+  4: 'Proven',
+  5: 'Hard-won truth'
+};
 
 interface SuccessFactorTableProps {
   ratings: Record<string, SuccessFactorRating>;
@@ -33,6 +33,17 @@ export default function SuccessFactorTable({
   onChange,
   totalFavourites = 0
 }: SuccessFactorTableProps) {
+  const [tcofFactors, setTcofFactors] = useState<Array<{id: string, name: string}>>([]);
+  const [isRatingKeyOpen, setIsRatingKeyOpen] = useState(false);
+  
+  // Load TCOF factor data
+  useEffect(() => {
+    const data = getTcofData();
+    setTcofFactors(data.map(factor => ({
+      id: factor.id,
+      name: factor.name
+    })));
+  }, []);
   
   // Helper to get the current rating for display
   const getRating = (factorId: string): SuccessFactorRating => {
@@ -93,7 +104,45 @@ export default function SuccessFactorTable({
 
   return (
     <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-4 text-tcof-dark">STEP 1 – Reflect on TCOF Heuristics</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-tcof-dark">STEP 1 – Reflect on TCOF Heuristics</h2>
+        
+        <TooltipProvider>
+          <Tooltip open={isRatingKeyOpen} onOpenChange={setIsRatingKeyOpen}>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-500 flex items-center gap-1"
+                onClick={() => setIsRatingKeyOpen(!isRatingKeyOpen)}
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span className="text-xs">What do the emojis mean?</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="p-3 max-w-md">
+              <div className="text-sm mb-2 font-medium">Rating Key:</div>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center gap-2">
+                  <span>❌ = Doesn't land</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>🤔 = Unfamiliar</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>🟡 = Seems true</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>✅ = Proven</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>🔥 = Hard-won truth</span>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
       
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
@@ -106,14 +155,14 @@ export default function SuccessFactorTable({
             </tr>
           </thead>
           <tbody>
-            {TCOF_FACTORS.map((factor, index) => {
+            {tcofFactors.map((factor, index) => {
               const currentRating = getRating(factor.id);
               const isStarred = currentRating.favourite;
               const rowClass = isStarred ? 'bg-tcof-bg' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
               
               return (
                 <tr key={factor.id} className={rowClass}>
-                  <td className="px-4 py-3 font-medium">{factor.text}</td>
+                  <td className="px-4 py-3 font-medium">{factor.id} {factor.name}</td>
                   <td className="px-4 py-3">
                     <RadioGroup 
                       value={currentRating.rating?.toString() || ""} 
@@ -122,8 +171,16 @@ export default function SuccessFactorTable({
                     >
                       {[1, 2, 3, 4, 5].map((num) => (
                         <div key={num} className="flex items-center space-x-1">
-                          <RadioGroupItem id={`${factor.id}-${num}`} value={num.toString()} />
-                          <Label htmlFor={`${factor.id}-${num}`} className="cursor-pointer">
+                          <RadioGroupItem 
+                            id={`${factor.id}-${num}`} 
+                            value={num.toString()} 
+                            title={RATING_DESCRIPTIONS[num as keyof typeof RATING_DESCRIPTIONS]}
+                          />
+                          <Label 
+                            htmlFor={`${factor.id}-${num}`} 
+                            className="cursor-pointer"
+                            title={RATING_DESCRIPTIONS[num as keyof typeof RATING_DESCRIPTIONS]}
+                          >
                             {num} {getRatingEmoji(num)}
                           </Label>
                         </div>
