@@ -487,7 +487,8 @@ export const toggleGpTask = async (
     plan.stages[stage].goodPractice = {
       zone: null,
       frameworks: [],
-      tasks: []
+      tasks: [],
+      customFrameworks: []
     };
   }
   
