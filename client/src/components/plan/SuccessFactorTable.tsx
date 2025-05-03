@@ -50,7 +50,7 @@ export default function SuccessFactorTable({
   const [isRatingKeyOpen, setIsRatingKeyOpen] = useState(false);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   
-  // Load TCOF factor data from imported JSON
+  // Load TCOF factor data from Excel using factorLoader
   useEffect(() => {
     // Begin with sample data for immediate rendering
     const sampleFactors = [
@@ -59,27 +59,56 @@ export default function SuccessFactorTable({
     
     setFactorList(sampleFactors);
     
-    // Process the imported tcofFactors data
-    if (tcofFactors && Array.isArray(tcofFactors) && tcofFactors.length > 0) {
-      // Map the tcofFactors data to the required format
-      const formattedFactors = tcofFactors.map(factor => ({
-        id: factor.id,
-        name: factor.title
-      }));
-      
-      setFactorList(formattedFactors);
-    } else {
-      // Fallback to demo data if tcofFactors is empty
-      const demoFactors = [
-        { id: 'F1', name: 'Clear success criteria are defined' },
-        { id: 'F2', name: 'Stakeholders are properly engaged' },
-        { id: 'F3', name: 'Risks are managed appropriately' },
-        { id: 'F4', name: 'Delivery approach matches the context' },
-        { id: 'F5', name: 'Team has the right capabilities' }
-      ];
-      
-      setFactorList(demoFactors);
+    // Load factors from Excel
+    async function loadExcelFactors() {
+      try {
+        const factors = await loadFactors();
+        
+        if (factors && Array.isArray(factors) && factors.length > 0) {
+          // Map the Excel factors to the required format
+          const formattedFactors = factors.map(factor => ({
+            id: factor.id,
+            name: factor.title
+          }));
+          
+          setFactorList(formattedFactors);
+          
+          // Store rendered titles for validation
+          const renderedTitles = formattedFactors.map(f => f.name);
+          
+          // Dev-time validation that the titles match our source data
+          if (process.env.NODE_ENV === 'development') {
+            validateFactorTitles(renderedTitles);
+          }
+        } else {
+          // Fallback to demo data if Excel loading fails
+          console.error('No factors loaded from Excel, using fallback data');
+          const demoFactors = [
+            { id: 'F1', name: 'Clear success criteria are defined' },
+            { id: 'F2', name: 'Stakeholders are properly engaged' },
+            { id: 'F3', name: 'Risks are managed appropriately' },
+            { id: 'F4', name: 'Delivery approach matches the context' },
+            { id: 'F5', name: 'Team has the right capabilities' }
+          ];
+          
+          setFactorList(demoFactors);
+        }
+      } catch (error) {
+        console.error('Error loading factors from Excel:', error);
+        // Fallback data
+        const fallbackFactors = [
+          { id: 'F1', name: 'Clear success criteria are defined' },
+          { id: 'F2', name: 'Stakeholders are properly engaged' },
+          { id: 'F3', name: 'Risks are managed appropriately' },
+          { id: 'F4', name: 'Delivery approach matches the context' },
+          { id: 'F5', name: 'Team has the right capabilities' }
+        ];
+        
+        setFactorList(fallbackFactors);
+      }
     }
+    
+    loadExcelFactors();
   }, []);
   
   // Helper to get the current rating for display

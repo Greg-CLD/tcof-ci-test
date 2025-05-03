@@ -4,17 +4,18 @@
  */
 import * as XLSX from 'xlsx';
 
-// Constants for Excel column mapping
-const SHEET_NAME = 'Sheet1';
+// Constants for Excel parsing
+const SHEET_NAME = "Sheet1";
 const COLUMN_MAPPING = {
-  TITLE: 0,        // Column A - Title
-  IDENTIFICATION: 1, // Column B - Identification
-  DEFINITION: 2,     // Column C - Definition
-  DELIVERY: 3,       // Column D - Delivery
-  CLOSURE: 4         // Column E - Closure
+  TITLE: 0, // Column A: Success factor title
+  IDENTIFICATION: 1, // Column B: Tasks for Identification stage
+  DEFINITION: 2, // Column C: Tasks for Definition stage
+  DELIVERY: 3, // Column D: Tasks for Delivery stage
+  CLOSURE: 4 // Column E: Tasks for Closure stage
 };
 
-const CACHE_KEY = 'tcof_factors_cache';
+// Cache keys for localStorage
+const CACHE_KEY = 'tcof_factors_data';
 const TIMESTAMP_KEY = 'tcof_factors_timestamp';
 
 /**
@@ -23,7 +24,7 @@ const TIMESTAMP_KEY = 'tcof_factors_timestamp';
  */
 export async function loadFactors() {
   try {
-    // Check if we have cached data that's still valid
+    // Check if we have cached data
     const cachedData = checkCache();
     if (cachedData) {
       console.info('✅ Using cached factors data');
@@ -33,7 +34,7 @@ export async function loadFactors() {
     console.info('📊 Loading factors from Excel...');
     
     // Fetch the Excel file
-    const response = await fetch('/attached_assets/tcof_factors.xlsx');
+    const response = await fetch('/tcof_factors.xlsx');
     if (!response.ok) {
       throw new Error(`Failed to fetch Excel file: ${response.status}`);
     }
@@ -124,7 +125,7 @@ function extractTasks(cellValue) {
   
   // Convert to string and split by newlines
   const tasks = cellValue.toString()
-    .split(/\\n|\\r\\n|\\r|[\\n]/)  // Split on various newline formats
+    .split(/\n|\r\n|\r|[\n]/)  // Split on various newline formats
     .map(task => task.trim())
     .filter(task => task.length > 0);
   
