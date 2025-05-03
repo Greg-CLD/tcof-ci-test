@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
@@ -14,6 +15,7 @@ import { Stage, loadPlan, savePlan, createEmptyPlan } from '@/lib/plan-db';
 
 export default function Block2Design() {
   const [_, setLocation] = useLocation();
+  const { toast } = useToast();
   const [planId, setPlanId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentStage, setCurrentStage] = useState<Stage>('Identification');
@@ -118,6 +120,61 @@ export default function Block2Design() {
   
   const handleSkipToChecklist = () => {
     setLocation('/checklist');
+  };
+  
+  // Clear Block 2 data
+  const handleClearBlock = async () => {
+    if (!planId || !planData) return;
+    
+    try {
+      // Create a copy of the plan with empty data for all stages
+      const updatedPlan = { 
+        ...planData,
+        stages: {
+          ...planData.stages,
+          Identification: {
+            ...planData.stages.Identification,
+            mappings: [],
+            tasks: [],
+            policyTasks: []
+          },
+          Definition: {
+            ...planData.stages.Definition,
+            mappings: [],
+            tasks: [],
+            policyTasks: []
+          },
+          Delivery: {
+            ...planData.stages.Delivery,
+            mappings: [],
+            tasks: [],
+            policyTasks: []
+          },
+          Closure: {
+            ...planData.stages.Closure,
+            mappings: [],
+            tasks: [],
+            policyTasks: []
+          }
+        }
+      };
+      
+      // Save the updated plan
+      const success = await savePlan(planId, updatedPlan);
+      
+      if (success) {
+        // Trigger refresh to update the UI
+        setRefreshTrigger(prev => prev + 1);
+        
+        // Show success message
+        alert("Block cleared. All mappings and tasks have been removed.");
+      } else {
+        alert("Failed to clear block data");
+      }
+    } catch (error) {
+      console.error('Error clearing block:', error);
+      alert("Failed to clear block data");
+    }
   };
 
   if (isLoading) {
