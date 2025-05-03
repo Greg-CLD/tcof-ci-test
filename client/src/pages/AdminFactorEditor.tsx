@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
@@ -6,6 +6,7 @@ import { Redirect, Link } from 'wouter';
 import * as xlsx from 'xlsx';
 import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { apiRequest } from '@/lib/queryClient';
+import debounce from 'lodash.debounce';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +60,7 @@ export default function AdminFactorEditor() {
   const [factors, setFactors] = useState<SuccessFactor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false); // New state for auto-save indicator
   const [activeTab, setActiveTab] = useState<StageType>('Identification');
   const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -302,11 +304,48 @@ export default function AdminFactorEditor() {
       prevFactors.map(f => f.id === factorId ? newFactor : f)
     );
     
-    // Then try to update via API (in background)
-    updateFactor(factorId, newFactor).catch(error => {
+    // Save to server with immediate feedback
+    try {
+      await updateFactor(factorId, newFactor);
+      toast({
+        title: 'Task added',
+        description: 'New task added successfully',
+        variant: 'default',
+      });
+    } catch (error) {
       console.error(`Error adding task for factor ${factorId}:`, error);
-    });
+      toast({
+        title: 'Save error',
+        description: 'Failed to save new task to the server',
+        variant: 'destructive',
+      });
+    }
   };
+
+  // Create a debounced save function that will be created once and persisted
+  const debouncedSave = useCallback(
+    debounce(async (factorId: string, updatedFactor: SuccessFactor) => {
+      try {
+        setIsAutoSaving(true);
+        await updateFactor(factorId, updatedFactor);
+        toast({
+          title: 'Task saved',
+          description: 'Changes saved automatically',
+          variant: 'default',
+        });
+      } catch (error) {
+        console.error(`Error saving task for factor ${factorId}:`, error);
+        toast({
+          title: 'Save error',
+          description: 'Failed to save changes to the server',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsAutoSaving(false);
+      }
+    }, 1000), // 1 second debounce
+    [toast]
+  );
 
   // Update a task text
   const handleUpdateTask = async (factorId: string, stage: StageType, taskIndex: number, newText: string) => {
@@ -325,9 +364,8 @@ export default function AdminFactorEditor() {
       prevFactors.map(f => f.id === factorId ? newFactor : f)
     );
     
-    // Debounce the API update - don't try to update on every keystroke
-    // We can just let them update the task text and then update the API
-    // when they navigate away or perform another action
+    // Save to server with debounce (won't trigger API call on every keystroke)
+    debouncedSave(factorId, newFactor);
   };
 
   // Delete a task
@@ -347,10 +385,22 @@ export default function AdminFactorEditor() {
       prevFactors.map(f => f.id === factorId ? newFactor : f)
     );
     
-    // Then try to update via API (in background)
-    updateFactor(factorId, newFactor).catch(error => {
+    // Save to server with immediate feedback
+    try {
+      await updateFactor(factorId, newFactor);
+      toast({
+        title: 'Task deleted',
+        description: 'Task removed successfully',
+        variant: 'default',
+      });
+    } catch (error) {
       console.error(`Error deleting task for factor ${factorId}:`, error);
-    });
+      toast({
+        title: 'Save error',
+        description: 'Failed to delete task on the server',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Delete a factor
@@ -738,11 +788,19 @@ export default function AdminFactorEditor() {
             {/* Editor for selected factor */}
             <Card className="col-span-8">
               <CardHeader>
-                <CardTitle>
-                  {selectedFactor 
-                    ? `Editing: ${selectedFactor.id} - ${selectedFactor.title}` 
-                    : 'Select a success factor to edit'}
-                </CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle>
+                    {selectedFactor 
+                      ? `Editing: ${selectedFactor.id} - ${selectedFactor.title}` 
+                      : 'Select a success factor to edit'}
+                  </CardTitle>
+                  {isAutoSaving && (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Auto-saving...
+                    </div>
+                  )}
+                </div>
                 {selectedFactor && (
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
