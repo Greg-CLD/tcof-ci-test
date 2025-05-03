@@ -5,9 +5,13 @@
  * preserving any existing tasks but ensuring the canonical titles are used.
  */
 
-const { factorsDb } = require('../server/factorsDb');
-const fs = require('fs');
-const path = require('path');
+import { factorsDb } from '../server/factorsDb.ts';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // The 12 official TCOF success factors to use
 const officialFactorTitles = [

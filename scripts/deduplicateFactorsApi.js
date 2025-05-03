@@ -4,147 +4,76 @@
  * This script reduces the 32 factors in the database to 12 unique factors,
  * combining tasks from duplicates with the same title.
  */
-import fs from 'fs';
-import path from 'path';
-import http from 'http';
 
-// Helper function to make API requests
+import fetch from 'node-fetch';
+
 async function apiRequest(method, path, body = null) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'localhost',
-      port: 5000,
-      path,
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    };
-
-    const req = http.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      res.on('end', () => {
-        try {
-          const parsedData = data ? JSON.parse(data) : null;
-          resolve({ status: res.statusCode, data: parsedData });
-        } catch (error) {
-          reject(new Error(`Failed to parse response: ${error.message}`));
-        }
-      });
-    });
-
-    req.on('error', (error) => {
-      reject(error);
-    });
-
-    if (body) {
-      req.write(JSON.stringify(body));
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cookie': 'connect.sid=your_session_cookie_here' // Replace with actual cookie if needed
     }
+  };
 
-    req.end();
-  });
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  const baseUrl = 'http://localhost:5000'; // Adjust if your server runs on a different port
+  const url = `${baseUrl}${path}`;
+  
+  try {
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error ${method} ${path}:`, error.message);
+    throw error;
+  }
 }
 
 async function deduplicateFactors() {
-  console.log('Starting factor deduplication process using API...');
+  console.log('Starting Factor deduplication via API...');
   
   try {
-    // First, get all factors from the API
-    console.log('Fetching factors from API...');
-    const response = await apiRequest('GET', '/api/admin/tcof-tasks');
+    // Get the current factors first
+    const existingFactors = await apiRequest('GET', '/api/admin/success-factors');
+    console.log(`Found ${existingFactors.length} existing factors`);
     
-    if (response.status !== 200 || !response.data || !Array.isArray(response.data)) {
-      throw new Error(`Failed to fetch factors from API: ${response.status}`);
-    }
+    // Call the API endpoint to update canonical factors
+    const result = await apiRequest('POST', '/api/admin/update-canonical-factors');
     
-    const rawFactors = response.data;
-    console.log(`Fetched ${rawFactors.length} factors from API`);
+    console.log('Deduplication complete!');
+    console.log('Result:', result);
     
-    // Deduplicate by factor title
-    const dedupMap = {};
-    
-    rawFactors.forEach(item => {
-      const key = item.title.trim();
-      
-      if (!dedupMap[key]) {
-        // Create a base entry with empty task arrays
-        dedupMap[key] = { 
-          title: item.title, 
-          id: item.id, 
-          tasks: {
-            Identification: [],
-            Definition: [],
-            Delivery: [],
-            Closure: []
-          }
-        };
-      }
-      
-      // Merge tasks from all stages
-      ['Identification', 'Definition', 'Delivery', 'Closure'].forEach(stage => {
-        const sourceTasks = item.tasks?.[stage] || [];
-        
-        sourceTasks.forEach(task => {
-          // Only add unique tasks (avoid duplicates)
-          if (!dedupMap[key].tasks[stage].includes(task)) {
-            dedupMap[key].tasks[stage].push(task);
-          }
-        });
-      });
+    // Get the updated factors
+    const updatedFactors = await apiRequest('GET', '/api/admin/success-factors');
+    console.log(`Now have ${updatedFactors.length} factors after deduplication`);
+    console.log('New factor titles:');
+    updatedFactors.forEach(factor => {
+      console.log(`- ${factor.title}`);
     });
-
-    // Convert map back to array
-    const dedupFactors = Object.values(dedupMap);
-    console.log(`Deduplicated to ${dedupFactors.length} unique factors`);
     
-    if (dedupFactors.length !== 12) {
-      console.warn(`Warning: Expected 12 unique factors, but found ${dedupFactors.length}`);
-    }
-    
-    // Assign ids consistently if needed
-    dedupFactors.forEach((factor, index) => {
-      if (!factor.id || factor.id.includes("duplicate")) {
-        factor.id = `sf-${index + 1}`;
-      }
-    });
-
-    // Save to file for backup
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    
-    fs.writeFileSync(
-      path.join(dataDir, 'dedupFactors.json'), 
-      JSON.stringify(dedupFactors, null, 2),
-      'utf8'
-    );
-    
-    // Save back to API
-    console.log('Saving deduplicated factors back to API...');
-    const saveResponse = await apiRequest('POST', '/api/admin/tcof-tasks', dedupFactors);
-    
-    if (saveResponse.status !== 200) {
-      throw new Error(`Failed to save deduplicated factors: ${saveResponse.status}`);
-    }
-    
-    console.log('✅ Deduplicated factors saved successfully!');
     return true;
   } catch (error) {
-    console.error('Error deduplicating factors:', error);
+    console.error('Deduplication failed:', error);
     return false;
   }
 }
 
-// Run the deduplication function
+// Run the deduplication process
 deduplicateFactors().then(success => {
   if (success) {
-    console.log('Factor deduplication complete!');
+    console.log('Success factor deduplication via API completed successfully!');
+    process.exit(0);
   } else {
-    console.error('Factor deduplication failed.');
+    console.error('Success factor deduplication via API failed.');
     process.exit(1);
   }
 });
