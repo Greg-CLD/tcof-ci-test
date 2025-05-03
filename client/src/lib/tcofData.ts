@@ -6,6 +6,13 @@ import presetHeuristicsRaw from '../../data/presetHeuristics.json';
 import deliveryZonesRaw from '../../data/deliveryZones.json';
 import tcofFactorsRaw from '../../data/tcofFactors.json';
 
+// TypeScript declaration for global window object with cached factors
+declare global {
+  interface Window {
+    _cachedFactors?: TCOFFactorTask[];
+  }
+}
+
 // Types for TCOF data
 export interface TCOFTask {
   id: string;
@@ -131,6 +138,29 @@ export function getTcofFactorOptions(): Array<{ value: string; label: string }> 
     }));
   } catch (error) {
     console.error('Error generating TCOF factor options:', error);
+    // Return empty array as fallback
+    return [];
+  }
+}
+
+// Helper function to convert TCOF factors to Item format for the FactorTaskEditor
+export function getTcofFactorsAsItems(): Array<{ id: string; title: string }> {
+  try {
+    // First check if we have cached factors from the API
+    if (window._cachedFactors && window._cachedFactors.length > 0) {
+      return window._cachedFactors.map((factor: TCOFFactorTask) => ({
+        id: factor.id,
+        title: factor.title
+      }));
+    }
+    
+    // Fallback to using the local JSON data
+    return tcofFactorsRaw.map((factor: TCOFFactorTask) => ({
+      id: factor.id,
+      title: factor.title
+    }));
+  } catch (error) {
+    console.error('Error generating TCOF factor items:', error);
     // Return empty array as fallback
     return [];
   }

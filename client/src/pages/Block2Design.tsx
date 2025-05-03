@@ -12,7 +12,8 @@ import FactorTaskEditor, { StageType } from '@/components/plan/FactorTaskEditor'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
 import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask, PolicyTask } from '@/lib/plan-db';
-import { getTcofFactors } from '@/lib/tcofData';
+import { getTcofFactorOptions } from '@/lib/tcofData';
+import { getTcofFactorsAsItems, getFactorTasks, getFactorNameById, initializeFactors } from '@/lib/factorTaskUtils';
 import { 
   Card, 
   CardContent, 
@@ -125,6 +126,154 @@ export default function Block2Design() {
   const handleTasksChange = () => {
     // Trigger refresh when tasks change
     setRefreshTrigger(prev => prev + 1);
+  };
+  
+  // Initialize TCOF factors on component mount
+  useEffect(() => {
+    const loadFactors = async () => {
+      // This will load and cache the factors for synchronous access
+      await initializeFactors();
+    };
+    
+    loadFactors();
+  }, []);
+  
+  // Load the selected factor's tasks
+  useEffect(() => {
+    if (selectedFactorId) {
+      // Get the tasks for each stage from the API or local data
+      const identificationTasks = getFactorTasks(selectedFactorId, 'Identification');
+      const definitionTasks = getFactorTasks(selectedFactorId, 'Definition');
+      const deliveryTasks = getFactorTasks(selectedFactorId, 'Delivery');
+      const closureTasks = getFactorTasks(selectedFactorId, 'Closure');
+      
+      setFactorTasks({
+        Identification: identificationTasks,
+        Definition: definitionTasks,
+        Delivery: deliveryTasks,
+        Closure: closureTasks
+      });
+    }
+  }, [selectedFactorId]);
+  
+  // Handler for selecting a factor
+  const handleSelectFactor = (factorId: string) => {
+    setSelectedFactorId(factorId);
+  };
+  
+  // Handler for adding a task
+  const handleAddTask = async (factorId: string, stage: StageType) => {
+    if (!planId) return;
+    
+    try {
+      // Add empty task to UI first
+      setFactorTasks(prev => {
+        const stageTasks = [...prev[stage]];
+        stageTasks.push('New task');
+        return { ...prev, [stage]: stageTasks };
+      });
+      
+      // Then update the plan data
+      const updatedPlan = { ...planData };
+      if (!updatedPlan.stages[currentStage].tasks) {
+        updatedPlan.stages[currentStage].tasks = [];
+      }
+      
+      updatedPlan.stages[currentStage].tasks.push({
+        factorId,
+        stage,
+        text: 'New task',
+        custom: true
+      });
+      
+      await savePlan(planId, updatedPlan);
+      setRefreshTrigger(prev => prev + 1);
+      
+      toast({
+        title: 'Task added',
+        description: `Added new task to ${stage} for ${getFactorNameById(factorId)}`,
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add task',
+        variant: 'destructive'
+      });
+    }
+  };
+  
+  // Handler for updating a task
+  const handleUpdateTask = async (factorId: string, stage: StageType, taskIndex: number, newText: string) => {
+    if (!planId) return;
+    
+    try {
+      // Update UI first
+      setFactorTasks(prev => {
+        const stageTasks = [...prev[stage]];
+        stageTasks[taskIndex] = newText;
+        return { ...prev, [stage]: stageTasks };
+      });
+      
+      // Then update the plan data
+      const updatedPlan = { ...planData };
+      const taskToUpdate = updatedPlan.stages[currentStage].tasks.find(
+        (t: { factorId: string; stage: string; custom: boolean }) => 
+          t.factorId === factorId && t.stage === stage && t.custom === true
+      );
+      
+      if (taskToUpdate) {
+        taskToUpdate.text = newText;
+        await savePlan(planId, updatedPlan);
+        setRefreshTrigger(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task',
+        variant: 'destructive'
+      });
+    }
+  };
+  
+  // Handler for deleting a task
+  const handleDeleteTask = async (factorId: string, stage: StageType, taskIndex: number) => {
+    if (!planId) return;
+    
+    try {
+      // Update UI first
+      setFactorTasks(prev => {
+        const stageTasks = [...prev[stage]];
+        stageTasks.splice(taskIndex, 1);
+        return { ...prev, [stage]: stageTasks };
+      });
+      
+      // Then update the plan data
+      const updatedPlan = { ...planData };
+      const taskIndex = updatedPlan.stages[currentStage].tasks.findIndex(
+        (t: { factorId: string; stage: string; custom: boolean }) => 
+          t.factorId === factorId && t.stage === stage && t.custom === true
+      );
+      
+      if (taskIndex !== -1) {
+        updatedPlan.stages[currentStage].tasks.splice(taskIndex, 1);
+        await savePlan(planId, updatedPlan);
+        setRefreshTrigger(prev => prev + 1);
+        
+        toast({
+          title: 'Task deleted',
+          description: 'The task has been removed from your plan',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete task',
+        variant: 'destructive'
+      });
+    }
   };
   
   const handleBack = () => {
@@ -342,15 +491,18 @@ export default function Block2Design() {
             </CardHeader>
             
             <CardContent>
-              {/* This component will automatically load and display tasks from mapped success factors */}
-              <TaskList 
-                planId={planId || ''}
-                tasks={tasks}
-                policyTasks={policyTasks}
-                stage={currentStage}
-                onTasksChange={handleTasksChange}
-                mappings={mappings}
-                autoLoadFactorTasks={true}
+              {/* New FactorTaskEditor for creating and editing factor tasks */}
+              <FactorTaskEditor
+                items={getTcofFactorsAsItems()}
+                selectedItemId={selectedFactorId}
+                title="Factor Tasks"
+                description="Select a success factor from the list to view and edit its tasks."
+                tasks={factorTasks}
+                onAddTask={handleAddTask}
+                onUpdateTask={handleUpdateTask}
+                onDeleteTask={handleDeleteTask}
+                onSelectItem={handleSelectFactor}
+                isAutoSaving={false}
               />
             </CardContent>
             
@@ -401,7 +553,7 @@ export default function Block2Design() {
                     <div className="mt-4">
                       <h4 className="text-sm font-medium mb-2">Current Policy Tasks:</h4>
                       <ul className="space-y-2">
-                        {policyTasks.map((task) => (
+                        {policyTasks.map((task: PolicyTask) => (
                           <li key={task.id} className="flex items-center justify-between p-2 bg-white rounded-md border">
                             <span>{task.text}</span>
                             <Button variant="ghost" size="sm" onClick={() => handleRemovePolicyTask(task.id)}>
