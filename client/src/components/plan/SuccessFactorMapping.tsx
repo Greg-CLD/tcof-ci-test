@@ -16,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PersonalHeuristic, Stage, addMapping } from '@/lib/plan-db';
-import { getTcofFactorOptions } from '@/lib/tcofData';
 import styles from '@/lib/styles/tasks.module.css';
 import { ChevronRight } from 'lucide-react';
 

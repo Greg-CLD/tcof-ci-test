@@ -11,15 +11,23 @@ import {
   TooltipTrigger 
 } from "@/components/ui/tooltip";
 import { SuccessFactorRating } from '@/lib/plan-db';
-import { getTcofData } from '@/lib/tcofData';
+
+// Define rating information directly with proper typing
+const ratingInfo: Record<number, { emoji: string; description: string }> = {
+  1: { emoji: '❌', description: "Doesn't land - I don't believe this factor is relevant" },
+  2: { emoji: '🤔', description: "Unfamiliar - I don't have enough context to judge" },
+  3: { emoji: '⚠️', description: "Needs attention - This is a blind spot we need to address" },
+  4: { emoji: '👍', description: "Important - This factor matters to our success" },
+  5: { emoji: '🌟', description: "Essential - This is a critical success factor" }
+};
 
 // Rating descriptions for tooltips
 const RATING_DESCRIPTIONS = {
-  1: 'Doesn\'t land',
-  2: 'Unfamiliar',
-  3: 'Seems true',
-  4: 'Proven',
-  5: 'Hard-won truth'
+  1: ratingInfo[1].description,
+  2: ratingInfo[2].description,
+  3: ratingInfo[3].description,
+  4: ratingInfo[4].description,
+  5: ratingInfo[5].description
 };
 
 interface SuccessFactorTableProps {
@@ -36,13 +44,48 @@ export default function SuccessFactorTable({
   const [tcofFactors, setTcofFactors] = useState<Array<{id: string, name: string}>>([]);
   const [isRatingKeyOpen, setIsRatingKeyOpen] = useState(false);
   
-  // Load TCOF factor data
+  // Load TCOF factor data from API
   useEffect(() => {
-    const data = getTcofData();
-    setTcofFactors(data.map(factor => ({
-      id: factor.id,
-      name: factor.name
-    })));
+    // Begin with sample data for immediate rendering
+    const sampleFactors = [
+      { id: 'H1', name: 'Loading success factors...' }
+    ];
+    
+    setTcofFactors(sampleFactors);
+    
+    // Create dummy data for demo purposes
+    const demoFactors = [
+      { id: 'F1', name: 'Clear success criteria are defined' },
+      { id: 'F2', name: 'Stakeholders are properly engaged' },
+      { id: 'F3', name: 'Risks are managed appropriately' },
+      { id: 'F4', name: 'Delivery approach matches the context' },
+      { id: 'F5', name: 'Team has the right capabilities' }
+    ];
+    
+    // Display demo data after short delay
+    setTimeout(() => {
+      setTcofFactors(demoFactors);
+    }, 500);
+    
+    // Attempt to load data from API
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/admin/tcof-tasks');
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setTcofFactors(data.map((factor: any) => ({
+              id: factor.id || '',
+              name: factor.text || ''
+            })));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading TCOF tasks:', error);
+      }
+    };
+    
+    fetchData();
   }, []);
   
   // Helper to get the current rating for display
@@ -90,16 +133,12 @@ export default function SuccessFactorTable({
     }
   };
   
-  // Get emoji for rating display
+  // Get emoji for rating display using the rating info from tcofData
   const getRatingEmoji = (rating: number): string => {
-    switch(rating) {
-      case 1: return '❌'; // Very negative
-      case 2: return '🤔'; // Somewhat negative
-      case 3: return '🟡'; // Neutral
-      case 4: return '✅'; // Positive
-      case 5: return '🔥'; // Very positive
-      default: return '';
+    if (rating >= 1 && rating <= 5) {
+      return ratingInfo[rating]?.emoji || '';
     }
+    return '';
   };
 
   // Render loading state if no factors are loaded yet
@@ -133,21 +172,11 @@ export default function SuccessFactorTable({
             <TooltipContent side="bottom" className="p-3 max-w-md">
               <div className="text-sm mb-2 font-medium">Rating Key:</div>
               <div className="grid grid-cols-1 gap-2">
-                <div className="flex items-center gap-2">
-                  <span>❌ = Doesn't land</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span>🤔 = Unfamiliar</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span>🟡 = Seems true</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span>✅ = Proven</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span>🔥 = Hard-won truth</span>
-                </div>
+                {[1, 2, 3, 4, 5].map(rating => (
+                  <div key={rating} className="flex items-center gap-2">
+                    <span>{ratingInfo[rating].emoji} = {ratingInfo[rating].description}</span>
+                  </div>
+                ))}
               </div>
             </TooltipContent>
           </Tooltip>
