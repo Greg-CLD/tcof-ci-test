@@ -11,7 +11,6 @@ import StageSelector from '@/components/plan/StageSelector';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Stage, loadPlan, savePlan, createEmptyPlan } from '@/lib/plan-db';
-import { getTcofData } from '@/lib/tcofData';
 
 export default function Block2Design() {
   const [_, setLocation] = useLocation();
