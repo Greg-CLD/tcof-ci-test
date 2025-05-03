@@ -14,6 +14,13 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import '../styles/approach.css';
 
+// Define interface for good practice task
+interface GPTask {
+  frameworkCode: string;
+  stage: Stage;
+  text: string;
+}
+
 export default function Block3Complete() {
   const [_, setLocation] = useLocation();
   const [planId, setPlanId] = useState<string | null>(null);
@@ -62,7 +69,7 @@ export default function Block3Complete() {
                 
                 if (stageGoodPractice?.tasks) {
                   // Group tasks by framework code
-                  stageGoodPractice.tasks.forEach((task: any) => {
+                  stageGoodPractice.tasks.forEach((task: GPTask) => {
                     if (!tasksMap[task.frameworkCode]) {
                       tasksMap[task.frameworkCode] = {
                         'Identification': [],
@@ -72,7 +79,10 @@ export default function Block3Complete() {
                       };
                     }
                     
-                    tasksMap[task.frameworkCode][task.stage].push(task.text);
+                    // Check if the stage is a valid Stage type before accessing
+                    if (Object.prototype.hasOwnProperty.call(tasksMap[task.frameworkCode], task.stage)) {
+                      tasksMap[task.frameworkCode][task.stage as Stage].push(task.text);
+                    }
                   });
                 }
               });
@@ -287,6 +297,59 @@ export default function Block3Complete() {
     setLocation('/checklist');
   };
   
+  // Handler for clearing block 3 data
+  const handleClearBlock = async () => {
+    if (!planId) return;
+    
+    try {
+      // Load current plan data
+      const currentPlan = await loadPlan(planId);
+      if (!currentPlan) return;
+      
+      // Create a new plan object with block 3 data cleared
+      const updatedPlan = {
+        ...currentPlan,
+        praxisZone: null,
+        frameworks: {},
+        gpTasks: {},
+        deliveryApproach: null
+      };
+      
+      // Save the updated plan
+      const success = await savePlan(planId, updatedPlan);
+      
+      if (success) {
+        // Trigger refresh to update the UI
+        setRefreshTrigger(prev => prev + 1);
+        
+        // Reset state
+        setZoneSelected(false);
+        setPraxisZone(null);
+        setSelectedFrameworks([]);
+        setSelectedTasks({});
+        
+        // Show success message
+        toast({
+          title: "Block cleared",
+          description: "All delivery approach and framework data have been removed",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to clear block data",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing block:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear block data",
+        variant: "destructive"
+      });
+    }
+  };
+  
   // Handler for the delivery approach tool
   const handleDeliveryApproachSave = async (data: DeliveryApproachData) => {
     if (!planId) return;
@@ -443,7 +506,9 @@ export default function Block3Complete() {
           onNext={handleSkipToChecklist}
           onSave={handleSave}
           onSkip={handleSkipToChecklist}
+          onClear={handleClearBlock}
           showSkip={false}
+          showClear={true}
           isNextDisabled={false}
         />
       </div>
