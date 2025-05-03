@@ -1,0 +1,66 @@
+Fix navigation from Full-intro → Block 1 and preload Quick-Start defaults
+
+Full-Configuration routing
+
+In pages/FullIntro.jsx (or the page that shows the explainer + “Start Block 1” button) change the button’s onClick to navigate('/make-a-plan/full/block-1').
+
+Verify that the router actually has /make-a-plan/full/block-1; if the file is Block1Discover.jsx, ensure the route path matches exactly.
+
+Add an integration test tests/fullIntro.nav.test.jsx that clicks the button via Testing-Library and asserts that the Block 1 heading is on screen.
+
+Quick-Start preload logic
+
+Open utils/quickStart.js (or wherever quickStartPlan lives):
+
+Load tcofTasks.json synchronously with import tcof from '../../data/tcofTasks.json' assert { type: 'json' };
+
+Load presetHeuristics.json the same way.
+
+On plan creation:
+
+js
+Copy
+Edit
+plan.stages.Identification.successFactorRatings = {};
+tcof.forEach(f => {
+  plan.stages.Identification.successFactorRatings[f.id] = { rating: 3, notes:'', favourite:false };
+  Object.entries(f.tasks).forEach(([stage, arr])=>{
+    arr.forEach(text=>{
+      plan.stages[stage].tasks.push({ id: crypto.randomUUID(), text, stage, origin:'factor', sourceId:f.id, done:false });
+    });
+  });
+});
+plan.stages.Identification.personalHeuristics = [...presetHeuristics];
+Save plan, then navigate to /checklist.
+
+Add try/catch – if either JSON import fails, toast “Preset data not found” and abort plan creation.
+
+Checklist fallback display
+
+In ChecklistPage.jsx, if a stage panel has zero tasks, show a line “— No tasks for this stage —” instead of a blank accordion.
+
+Add Quick-Start test tests/quickStart.preload.test.jsx
+
+Mock quickStartPlan, call it, assert that plan.stages.Identification.successFactorRatings has 12 keys and that tasks.length is ≥ total tasks in JSON.
+
+Summary
+
+Files touched/added:
+
+pages/FullIntro.jsx (button fix)
+
+utils/quickStart.js (preload fix)
+
+ChecklistPage.jsx (no-tasks placeholder)
+
+tests/fullIntro.nav.test.jsx
+
+tests/quickStart.preload.test.jsx
+
+Run npm test — both tests must pass.
+
+Manual QA:
+
+Full-intro → Start Block 1 now lands on Block 1.
+
+Quick-Start → checklist displays all 12 factors + tasks.
