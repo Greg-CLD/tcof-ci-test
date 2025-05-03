@@ -119,6 +119,17 @@ export function getTcofFactorOptions(): Array<{ value: string; label: string }> 
   }
 }
 
+// Helper function to get factor name by ID
+export function getFactorNameById(factorId: string): string {
+  try {
+    const factor = tcofTasksRaw.find((task: TCOFTask) => task.id === factorId);
+    return factor ? `${factor.id}: ${factor.text}` : factorId;
+  } catch (error) {
+    console.error('Error getting factor name by ID:', error);
+    return factorId;
+  }
+}
+
 // Export the raw data as well for direct access
 export const tcofTasks = tcofTasksRaw;
 export const presetHeuristics = presetHeuristicsRaw;

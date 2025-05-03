@@ -80,6 +80,17 @@ export default function TaskList({
   // Split tasks by origin
   const factorTasks = tasks.filter(task => task.origin === 'factor');
   const heuristicTasks = tasks.filter(task => task.origin === 'heuristic');
+  const policyOriginTasks = tasks.filter(task => task.origin === 'policy');
+  
+  // Group factor tasks by sourceId (factorId)
+  const factorTasksBySource: Record<string, TaskItem[]> = {};
+  factorTasks.forEach(task => {
+    const sourceId = task.sourceId || 'unknown';
+    if (!factorTasksBySource[sourceId]) {
+      factorTasksBySource[sourceId] = [];
+    }
+    factorTasksBySource[sourceId].push(task);
+  });
   
   // Get displayed tasks based on active tab
   let displayedTasks: TaskItem[] = [];
@@ -90,7 +101,7 @@ export default function TaskList({
   } else if (activeTab === 'heuristic') {
     displayedTasks = heuristicTasks;
   } else if (activeTab === 'policy') {
-    displayedTasks = tasks.filter(task => task.origin === 'policy');
+    displayedTasks = policyOriginTasks;
   }
 
   return (
@@ -186,20 +197,30 @@ export default function TaskList({
                 No factor tasks found. Import tasks from mapped success factors.
               </div>
             ) : (
-              factorTasks.map(task => (
-                <div key={task.id} className={styles.taskRow}>
-                  <Checkbox
-                    id={`task-${task.id}`}
-                    checked={task.completed}
-                    onCheckedChange={(checked) => handleCheckboxChange(task.id, checked === true)}
-                    className={styles.checkbox}
-                  />
-                  <label 
-                    htmlFor={`task-${task.id}`} 
-                    className={`${styles.text} ${task.completed ? 'line-through text-muted-foreground' : ''}`}
-                  >
-                    {task.text}
-                  </label>
+              // Group tasks by success factor
+              Object.entries(factorTasksBySource).map(([factorId, tasks]) => (
+                <div key={factorId} className="mb-6">
+                  <h3 className="text-sm font-semibold text-tcof-dark mb-2 border-b pb-1">
+                    Success Factor: {factorId}
+                  </h3>
+                  <div className="pl-4">
+                    {tasks.map(task => (
+                      <div key={task.id} className={styles.taskRow}>
+                        <Checkbox
+                          id={`task-${task.id}`}
+                          checked={task.completed}
+                          onCheckedChange={(checked) => handleCheckboxChange(task.id, checked === true)}
+                          className={styles.checkbox}
+                        />
+                        <label 
+                          htmlFor={`task-${task.id}`} 
+                          className={`${styles.text} ${task.completed ? 'line-through text-muted-foreground' : ''}`}
+                        >
+                          {task.text}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))
             )}
