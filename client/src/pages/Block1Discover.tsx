@@ -9,6 +9,16 @@ import HeuristicList from '@/components/plan/HeuristicList';
 import ActionButtons from '@/components/plan/ActionButtons';
 import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import debounce from 'lodash.debounce';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Block1Discover() {
   const [_, setLocation] = useLocation();
@@ -20,6 +30,7 @@ export default function Block1Discover() {
   const [successFactorRatings, setSuccessFactorRatings] = useState<Record<string, SuccessFactorRating>>({});
   const [personalHeuristics, setPersonalHeuristics] = useState<PersonalHeuristic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   
   // Track total favourites across both lists
   const totalSuccessFactorFavourites = Object.values(successFactorRatings).filter(r => r.favourite).length;
@@ -224,8 +235,13 @@ export default function Block1Discover() {
     setLocation('/checklist');
   };
   
-  // Clear Block 1 data
-  const handleClearBlock = async () => {
+  // Open confirmation dialog for clearing Block 1
+  const handleClearBlockRequest = () => {
+    setClearConfirmOpen(true);
+  };
+  
+  // Clear Block 1 data after confirmation
+  const handleClearBlockConfirmed = async () => {
     if (!planId || !plan) return;
     
     try {
@@ -268,6 +284,8 @@ export default function Block1Discover() {
         description: "Failed to clear block data",
         variant: "destructive"
       });
+    } finally {
+      setClearConfirmOpen(false);
     }
   };
   
@@ -365,11 +383,30 @@ export default function Block1Discover() {
           onNext={handleNext}
           onSave={handleSave}
           onSkip={handleSkipToChecklist}
-          onClear={handleClearBlock}
+          onClear={handleClearBlockRequest}
           showSkip={true}
           showClear={true}
           isNextDisabled={!canProceed}
         />
+        
+        {/* Clear Block Confirmation Dialog */}
+        <AlertDialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear Block 1 Data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove all your success factor ratings and personal heuristics from Block 1.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleClearBlockConfirmed} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Clear Block
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
