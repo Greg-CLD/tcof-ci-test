@@ -6,6 +6,8 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import { z } from "zod";
+import fs from 'fs';
+import path from 'path';
 import { 
   insertUserSchema, 
   insertGoalMapSchema, 
@@ -538,6 +540,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating project:", error);
       res.status(500).json({ message: "Error updating project" });
+    }
+  });
+
+  // Admin preset editor API endpoints
+  app.get('/api/admin/tcof-tasks', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const coreTasksData = fs.readFileSync(path.join(process.cwd(), 'data', 'tcofTasks.json'), 'utf8');
+      res.json(JSON.parse(coreTasksData));
+    } catch (error: any) {
+      console.error('Error loading tcofTasks.json:', error);
+      res.status(500).json({ message: 'Failed to load core tasks data' });
+    }
+  });
+
+  app.get('/api/admin/preset-heuristics', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const presetHeuristicsData = fs.readFileSync(path.join(process.cwd(), 'data', 'presetHeuristics.json'), 'utf8');
+      res.json(JSON.parse(presetHeuristicsData));
+    } catch (error: any) {
+      console.error('Error loading presetHeuristics.json:', error);
+      res.status(500).json({ message: 'Failed to load preset heuristics data' });
+    }
+  });
+
+  app.post('/api/admin/preset-heuristics', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Validate request data
+      if (!Array.isArray(req.body)) {
+        return res.status(400).json({ message: 'Invalid data format. Expected an array of heuristics.' });
+      }
+      
+      // Save the updated heuristics to the file
+      fs.writeFileSync(
+        path.join(process.cwd(), 'data', 'presetHeuristics.json'), 
+        JSON.stringify(req.body, null, 2),
+        'utf8'
+      );
+      
+      res.json({ success: true, message: 'Preset heuristics saved successfully' });
+    } catch (error: any) {
+      console.error('Error saving presetHeuristics.json:', error);
+      res.status(500).json({ message: 'Failed to save preset heuristics data' });
     }
   });
 

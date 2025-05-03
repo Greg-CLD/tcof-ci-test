@@ -12,10 +12,18 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Card } from '@/components/ui/card';
-import { Download, Upload, Trash2, Plus, Save, LogOut } from 'lucide-react';
+import { 
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter
+} from '@/components/ui/card';
+import { Download, Upload, Trash2, Plus, Save, LogOut, RefreshCw, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isAdmin, login, logout, ADMIN_EMAIL } from '@/lib/auth';
+import { apiRequest } from '@/lib/queryClient';
 
 interface PresetHeuristic {
   id: string;
@@ -23,44 +31,74 @@ interface PresetHeuristic {
   notes: string;
 }
 
+interface CoreHeuristic {
+  id: string;
+  name: string;
+}
+
 export default function AdminPresetEditor() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
   const [heuristics, setHeuristics] = useState<PresetHeuristic[]>([]);
+  const [coreHeuristics, setCoreHeuristics] = useState<CoreHeuristic[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
-
-  // Default preset heuristics
-  const defaultPresets = [
-    { id: "H1", text: "Start slow to go fast", notes: "" },
-    { id: "H2", text: "Test it small before you scale it big", notes: "" }
-  ];
 
   useEffect(() => {
     // Check if user is already logged in as admin
     const admin = isAdmin();
     setIsLoggedIn(admin);
     
-    // Load preset heuristics
+    // Load data if logged in as admin
     if (admin) {
-      try {
-        // In a production environment, this would fetch from an API
-        // For now, we'll use default presets
-        setHeuristics([...defaultPresets]);
-      } catch (error) {
-        console.error('Error loading preset heuristics:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load preset heuristics.",
-          variant: "destructive"
-        });
-        setHeuristics([]);
-      }
+      loadData();
     }
-  }, [toast]);
+  }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      // Load core heuristics from tcofTasks.json
+      const coreTasksResponse = await apiRequest('GET', '/api/admin/tcof-tasks');
+      const coreTasks = await coreTasksResponse.json();
+      
+      // Format the core heuristics
+      const formattedCoreTasks = coreTasks.map((task: any) => ({
+        id: task.id,
+        name: task.name
+      }));
+      setCoreHeuristics(formattedCoreTasks);
+      
+      // Load preset heuristics from presetHeuristics.json
+      const presetsResponse = await apiRequest('GET', '/api/admin/preset-heuristics');
+      const presets = await presetsResponse.json();
+      setHeuristics(presets);
+      
+      toast({
+        title: "Data Loaded",
+        description: "Loaded core tasks and preset heuristics successfully."
+      });
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive"
+      });
+      // Set defaults if loading fails
+      setHeuristics([
+        { id: "H1", text: "Start slow to go fast", notes: "" },
+        { id: "H2", text: "Test it small before you scale it big", notes: "" }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (login(email)) {
       setIsLoggedIn(true);
@@ -69,6 +107,7 @@ export default function AdminPresetEditor() {
         title: "Success",
         description: "Logged in successfully as admin.",
       });
+      await loadData();
     } else {
       toast({
         title: "Access Denied",
@@ -124,22 +163,26 @@ export default function AdminPresetEditor() {
       return;
     }
 
-    // In a production environment, this would make an API call to update the file
-    // For now, we'll simulate saving
+    setIsLoading(true);
     try {
-      // TODO: Replace with actual API call in production
-      console.log('Saving heuristics:', heuristics);
+      // Make the API call to save presetHeuristics.json
+      const response = await apiRequest('POST', '/api/admin/preset-heuristics', heuristics);
+      const result = await response.json();
       
-      setSaveMessage('Changes saved successfully!');
-      toast({
-        title: "Success",
-        description: "Preset heuristics saved successfully!",
-      });
-      
-      // Clear the message after 3 seconds
-      setTimeout(() => {
-        setSaveMessage('');
-      }, 3000);
+      if (result.success) {
+        setSaveMessage('Changes saved successfully!');
+        toast({
+          title: "Success",
+          description: "Preset heuristics saved successfully!",
+        });
+        
+        // Clear the message after 3 seconds
+        setTimeout(() => {
+          setSaveMessage('');
+        }, 3000);
+      } else {
+        throw new Error(result.message || 'Failed to save heuristics');
+      }
     } catch (error) {
       console.error('Error saving heuristics:', error);
       toast({
@@ -147,15 +190,27 @@ export default function AdminPresetEditor() {
         description: "Failed to save preset heuristics.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const downloadTcofJSON = () => {
-    // This would download the tcofTasks.json file
+    // Create a JSON string from the core heuristics
+    const dataStr = JSON.stringify(coreHeuristics, null, 2);
+    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
+    
+    // Create a download link and trigger it
+    const downloadLink = document.createElement('a');
+    downloadLink.setAttribute('href', dataUri);
+    downloadLink.setAttribute('download', `tcof_core_heuristics_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    
     toast({
-      title: "Not Implemented",
-      description: "This feature is not yet implemented.",
-      variant: "destructive"
+      title: "Download Complete",
+      description: "Core heuristics downloaded successfully.",
     });
   };
 
@@ -184,6 +239,10 @@ export default function AdminPresetEditor() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const togglePreview = () => {
+    setIsPreviewVisible(!isPreviewVisible);
   };
 
   // If not logged in, show the login form
@@ -225,6 +284,31 @@ export default function AdminPresetEditor() {
         </Button>
       </div>
 
+      {/* Core Heuristics (Read-only) */}
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Core Heuristics (Read-only)</h2>
+        <Table>
+          <TableCaption>
+            Core heuristics from TCOF tasks - these are displayed for reference only
+          </TableCaption>
+          <TableHeader>
+            <TableRow className="bg-gray-100">
+              <TableHead className="w-1/12">ID</TableHead>
+              <TableHead className="w-11/12">Heuristic</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {coreHeuristics.map((heuristic) => (
+              <TableRow key={heuristic.id} className="bg-gray-50">
+                <TableCell className="font-medium">{heuristic.id}</TableCell>
+                <TableCell>{heuristic.name}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </section>
+
+      {/* Editable User-Defined Heuristics */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Default Personal Heuristics (Quick-Start)</h2>
         <Table>
@@ -234,7 +318,7 @@ export default function AdminPresetEditor() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-1/12">ID</TableHead>
-              <TableHead className="w-7/12">Text</TableHead>
+              <TableHead className="w-7/12">Heuristic</TableHead>
               <TableHead className="w-3/12">Notes</TableHead>
               <TableHead className="w-1/12 text-right">Actions</TableHead>
             </TableRow>
@@ -273,14 +357,35 @@ export default function AdminPresetEditor() {
           </TableBody>
         </Table>
         
-        <div className="flex mt-4 gap-4 items-center">
+        <div className="flex mt-4 gap-4 items-center flex-wrap">
           <Button onClick={handleAddRow} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add Heuristic
           </Button>
-          <Button onClick={saveHeuristics} className="flex items-center gap-2 bg-tcof-teal hover:bg-tcof-teal/90">
+          <Button 
+            onClick={saveHeuristics} 
+            className="flex items-center gap-2 bg-tcof-teal hover:bg-tcof-teal/90"
+            disabled={isLoading}
+          >
             <Save className="h-4 w-4" />
             Save Changes
+          </Button>
+          <Button 
+            onClick={togglePreview} 
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            {isPreviewVisible ? 'Hide Preview' : 'Show Preview'}
+          </Button>
+          <Button 
+            onClick={loadData} 
+            variant="outline" 
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Reload Data
           </Button>
           {saveMessage && (
             <span className="text-green-600 text-sm">{saveMessage}</span>
@@ -288,6 +393,32 @@ export default function AdminPresetEditor() {
         </div>
       </section>
 
+      {/* Preview Section */}
+      {isPreviewVisible && (
+        <section className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick-Start Preview</CardTitle>
+              <CardDescription>This is how your heuristics will appear in Quick-Start plans</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <h3 className="text-lg font-semibold mb-2">Personal Heuristics</h3>
+              <ul className="space-y-2">
+                {heuristics.map((heuristic) => (
+                  <li key={heuristic.id} className="p-3 border rounded-md bg-gray-50">
+                    <div className="font-medium">{heuristic.text}</div>
+                    {heuristic.notes && (
+                      <div className="text-sm text-gray-600 mt-1">{heuristic.notes}</div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* TCOF Success-Factor Tasks Section */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">TCOF Success-Factor Tasks</h2>
         <p className="mb-4">You can download the JSON, edit offline, and re-upload.</p>
