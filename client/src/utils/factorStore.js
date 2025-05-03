@@ -34,6 +34,12 @@ export async function getFactors() {
       if (response.ok) {
         const data = await response.json();
         cachedFactors = data;
+        
+        // Check if we have the expected 12 factors
+        if (cachedFactors.length !== 12) {
+          console.warn(`⚠ Unexpected factor count: ${cachedFactors.length} (expected 12). Consider running deduplication.`);
+        }
+        
         // Store in local cache for future access
         await storage.set('successFactors', cachedFactors);
         return cachedFactors;
@@ -47,6 +53,12 @@ export async function getFactors() {
         if (response.ok) {
           const data = await response.json();
           cachedFactors = data;
+          
+          // Check if we have the expected 12 factors
+          if (cachedFactors.length !== 12) {
+            console.warn(`⚠ Unexpected factor count: ${cachedFactors.length} (expected 12). Consider running deduplication.`);
+          }
+          
           // Store in local cache for future access
           await storage.set('successFactors', cachedFactors);
           return cachedFactors;
@@ -60,6 +72,12 @@ export async function getFactors() {
     const dbFactors = await storage.get('successFactors');
     if (dbFactors && dbFactors.length > 0) {
       cachedFactors = dbFactors;
+      
+      // Check if we have the expected 12 factors
+      if (cachedFactors.length !== 12) {
+        console.warn(`⚠ Unexpected factor count: ${cachedFactors.length} (expected 12). Consider running deduplication.`);
+      }
+      
       return dbFactors;
     }
     

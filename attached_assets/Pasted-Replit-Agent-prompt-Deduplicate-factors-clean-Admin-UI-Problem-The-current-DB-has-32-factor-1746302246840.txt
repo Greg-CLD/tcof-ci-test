@@ -1,0 +1,148 @@
+Replit-Agent prompt – “Deduplicate factors + clean Admin UI”
+Problem
+• The current DB has 32 “factors” because every spreadsheet row was imported as a separate factor.
+• Step 1 therefore lists titles + tasks (wrong) instead of the 12 unique factor titles only.
+• The Admin page shows 32 rows, making maintenance confusing.
+
+Goal
+
+Store exactly 12 unique Success Factors in Replit DB, each with an array of tasks per stage.
+
+Step 1 must render only those 12 factor titles for rating.
+
+Quick-Start / checklist still preload all tasks.
+
+Admin page becomes a two-panel interface:
+– Left: clickable list of 12 factors (title only)
+– Right: editable task lists for the selected factor, grouped by stage
+– Buttons: + Add Task • Delete Task • Save Factor
+
+1 Data migration script
+Create scripts/deduplicateFactors.js
+
+js
+Copy
+Edit
+import { Database } from '@replit/database';
+const db = new Database();
+const raw = await db.get('factors') || [];
+
+/* Collapse duplicates by factor title */
+const dedup = {};
+raw.forEach(item=>{
+  const key = item.title.trim();
+  if(!dedup[key]){
+    dedup[key] = { title:item.title, id:item.id, tasks:{
+      Identification:[], Definition:[], Delivery:[], Closure:[]
+    }};
+  }
+  /* merge tasks */
+  ['Identification','Definition','Delivery','Closure'].forEach(stage=>{
+    const srcTasks = item.tasks?.[stage] || [];
+    srcTasks.forEach(t=>{
+      if(!dedup[key].tasks[stage].includes(t)) dedup[key].tasks[stage].push(t);
+    });
+  });
+});
+
+const factors = Object.values(dedup);        // should be 12
+await db.set('factors', factors);
+console.log('✅ Deduplicated:', factors.length, 'factors saved');
+Add npm script "migrate:dedup": "node scripts/deduplicateFactors.js" and run once.
+
+2 Factor store helper
+utils/factorStore.js already exists.
+Replace getFactors() with:
+
+js
+Copy
+Edit
+export async function getFactors(){
+  const dbFactors = await db.get('factors') || [];
+  if(dbFactors.length !== 12){
+    console.warn('⚠ Unexpected factor count. Run migrate:dedup.');
+  }
+  return dbFactors;
+}
+3 Step 1 page fix
+Block1Discover.jsx:
+
+diff
+Copy
+Edit
+- const factors = getFactors();   // already fetched
+- /* map over factors AND tasks */
++ const factors = await getFactors();
++ /* Render only factor.title rows for rating */
+Remove any .tasks references in Step 1.
+
+4 Admin page overhaul
+Layout
+
+php-template
+Copy
+Edit
+<div class="admin-container">
+  <aside class="factor-list">
+     {factors.map(f=> <button onClick={()=>setCurrent(f)}>{f.title}</button>)}
+  </aside>
+  <section class="factor-editor">
+     <h2>{current.title}</h2>
+     {['Identification','Definition','Delivery','Closure'].map(stage=>(
+        <TaskStageEditor stage={stage} tasks={current.tasks[stage]} />
+     ))}
+     <button onClick={saveFactor}>Save Factor</button>
+  </section>
+</div>
+TaskStageEditor component:
+
+javascript
+Copy
+Edit
+<ul>
+  {tasks.map((t,i)=>
+     <li>{t} <span onClick={()=>removeTask(i)}>🗑</span></li>
+  )}
+</ul>
+<input value={newTask} onChange… /><button onClick={addTask}>+ Add</button>
+saveFactor()
+
+js
+Copy
+Edit
+const factors = await getFactors();
+const idx = factors.findIndex(f=>f.id===current.id);
+factors[idx] = current;
+await saveFactors(factors);
+toast.success('Factor saved');
+Import/Reset JSON
+
+Keep the existing “Upload JSON” button but when a file is chosen:
+
+js
+Copy
+Edit
+const json = JSON.parse(await file.text());
+await saveFactors(json);
+toast.success('JSON imported');
+5 Quick-Start & checklist stay the same
+They already call getFactors() and build tasks from .tasks arrays—no change needed.
+
+6 Tests
+tests/dedup.test.js – after migration, expect getFactors().length === 12.
+
+tests/block1.render.test.js – render Block 1, ensure only 12 rows.
+
+7 Deliverables
+scripts/deduplicateFactors.js
+
+updated utils/factorStore.js
+
+updated Block1Discover.jsx
+
+overhauled AdminFactorEditor.jsx (+ TaskStageEditor component)
+
+CSS .admin-container (flex)
+
+new tests
+

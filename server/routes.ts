@@ -699,7 +699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Update the database
-      factorsDb = factors;
+      factorsDb.setAll(factors);
       
       return true;
     } catch (error) {
