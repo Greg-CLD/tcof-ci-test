@@ -1,4 +1,4 @@
-// TCOF Success Factor data imported from Excel
+// TCOF Success Factor data from the database
 
 export interface TCOFFactorTask {
   id: string;
@@ -11,7 +11,7 @@ export interface TCOFFactorTask {
   };
 }
 
-// Data has been parsed from the Excel file
+// Data comes from the database system
 const tcofFactors: TCOFFactorTask[] = [
   {
     "id": "1.1",

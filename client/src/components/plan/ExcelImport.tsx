@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -9,32 +9,28 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileSpreadsheet, X, Check } from 'lucide-react';
+import { Loader2, Database, Check } from 'lucide-react';
 import { Stage, addTask } from '@/lib/plan-db';
-import { getFactorTasks } from '@/lib/tcofData';
+import { getFactorTasks } from '../../lib/tcofData';
 
-interface ExcelImportProps {
+interface FactorTaskImportProps {
   planId: string;
   stage: Stage;
   onTasksImported: () => void;
   mappings: { heuristicId: string; factorId: string | null }[];
 }
 
-export default function ExcelImport({
+export default function FactorTaskImport({
   planId,
   stage,
   onTasksImported,
   mappings
-}: ExcelImportProps) {
+}: FactorTaskImportProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [fileSelected, setFileSelected] = useState(false);
-  const [fileName, setFileName] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // This is a simulated import since we're not using a real Excel parser
-  // In a real implementation, you would use a library like SheetJS (xlsx)
-  const simulateExcelImport = () => {
+  // Import tasks from the database
+  const importTasks = () => {
     setIsLoading(true);
     
     // For each mapping with a factorId, get tasks for that factor
@@ -70,97 +66,58 @@ export default function ExcelImport({
       });
     });
     
-    // Simulate a network delay for visual feedback
+    // Short delay for visual feedback
     setTimeout(() => {
       setIsLoading(false);
-      setFileSelected(false);
-      setFileName('');
       
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      if (taskCount > 0) {
+        toast({
+          title: "Tasks imported successfully",
+          description: `${taskCount} tasks were imported for the ${stage} stage.`,
+          variant: "default",
+        });
+        
+        onTasksImported();
+      } else {
+        toast({
+          title: "No tasks imported",
+          description: "No tasks were found for the selected factors in this stage.",
+          variant: "destructive",
+        });
       }
-      
-      toast({
-        title: "Tasks imported successfully",
-        description: `${taskCount} tasks were imported for the ${stage} stage.`,
-        variant: "default",
-      });
-      
-      onTasksImported();
-    }, 1500);
-  };
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFileSelected(true);
-      setFileName(file.name);
-    } else {
-      setFileSelected(false);
-      setFileName('');
-    }
-  };
-  
-  const clearFile = () => {
-    setFileSelected(false);
-    setFileName('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    }, 1000);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-bold text-primary">Import Tasks from Excel</CardTitle>
+        <CardTitle className="text-xl font-bold text-primary">Import Tasks from Database</CardTitle>
         <CardDescription>
-          Import tasks directly from the TCOF Success Factor Tasks Excel spreadsheet.
+          Import tasks directly from the TCOF Success Factor database.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-md border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800">
-          <FileSpreadsheet className="w-12 h-12 text-primary mb-2" />
+          <Database className="w-12 h-12 text-primary mb-2" />
           
-          {!fileSelected ? (
-            <>
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Click to select or drag and drop an Excel file
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading}
-              >
-                Select Excel File
-              </Button>
-              <input 
-                type="file" 
-                className="hidden" 
-                ref={fileInputRef}
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileChange}
-                disabled={isLoading}
-              />
-            </>
-          ) : (
-            <div className="flex items-center p-2 bg-white dark:bg-gray-700 rounded shadow-sm w-full">
-              <FileSpreadsheet className="w-5 h-5 text-primary mr-2" />
-              <span className="text-sm flex-1 truncate">{fileName}</span>
-              <button 
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                onClick={clearFile}
-                disabled={isLoading}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Import tasks from the database for your selected success factors
+          </p>
+          
+          <div className="text-center">
+            <p className="text-sm font-medium mb-2">Importing will:</p>
+            <ul className="text-sm text-left space-y-1 mb-4">
+              <li>• Load tasks for the factors you've mapped</li>
+              <li>• Add them to your plan for the {stage} stage</li>
+              <li>• Allow you to edit or delete them later</li>
+            </ul>
+          </div>
         </div>
       </CardContent>
       <CardFooter className="flex justify-end space-x-2">
         <Button
-          onClick={simulateExcelImport}
-          disabled={!fileSelected || isLoading}
+          onClick={importTasks}
+          disabled={isLoading}
         >
           {isLoading ? (
             <>

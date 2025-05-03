@@ -130,6 +130,27 @@ export function getFactorNameById(factorId: string): string {
   }
 }
 
+// Helper function to get tasks for a specific factor and stage
+export function getFactorTasks(factorId: string, stage: string): string[] {
+  try {
+    // First try to get from the TCOFFactorTask format
+    const factor = tcofFactorsRaw.find((f: TCOFFactorTask) => f.id === factorId);
+    if (factor && factor.tasks && factor.tasks[stage as keyof typeof factor.tasks]) {
+      return factor.tasks[stage as keyof typeof factor.tasks].filter((task: string) => task !== '-');
+    }
+    
+    // Fallback to getting from the TCOFTask format
+    const tasks = tcofTasksRaw.filter(
+      (task: TCOFTask) => task.id === factorId && task.stage === stage
+    );
+    
+    return tasks.map((task: TCOFTask) => task.text);
+  } catch (error) {
+    console.error(`Error getting tasks for factor ${factorId} and stage ${stage}:`, error);
+    return [];
+  }
+}
+
 // Export the raw data as well for direct access
 export const tcofTasks = tcofTasksRaw;
 export const presetHeuristics = presetHeuristicsRaw;
