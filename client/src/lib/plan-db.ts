@@ -83,11 +83,25 @@ export type StageData = {
   goodPractice?: GoodPractice;
 };
 
+export type DeliveryApproachData = {
+  scope: 'Small' | 'Medium' | 'Large';
+  uncertainty: 'Low' | 'Medium' | 'High';
+  zone: string;
+  methods: string[];
+  tools: string[];
+};
+
+export type PlanGoodPractice = {
+  deliveryApproach?: DeliveryApproachData;
+  [key: string]: any;
+};
+
 export type PlanRecord = {
   id: string;
   created: string;
   lastUpdated?: string;
   stages: Record<Stage, StageData>;
+  goodPractice?: PlanGoodPractice;
 };
 
 // Initialize empty stage data

@@ -1,4 +1,11 @@
-import { createEmptyPlan, savePlan, loadPlan, PlanRecord, planExists } from './plan-db';
+import { 
+  createEmptyPlan, 
+  savePlan, 
+  loadPlan, 
+  PlanRecord, 
+  planExists,
+  DeliveryApproachData
+} from './plan-db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Default preset heuristics types
@@ -120,7 +127,7 @@ export async function quickStartPlan(): Promise<string> {
       ...plan,
       stages: {
         ...plan.stages,
-        ...defaultHeuristics
+        ...defaultHeuristics as any // Type cast to avoid TypeScript errors
       }
     };
     
@@ -133,7 +140,7 @@ export async function quickStartPlan(): Promise<string> {
     const presetHeuristics = await loadPresetHeuristics();
     
     // Convert the preset heuristics to the correct format and add them
-    const formattedHeuristics = presetHeuristics.map(h => ({
+    const formattedHeuristics = presetHeuristics.map((h: PresetHeuristic) => ({
       id: h.id,
       text: h.text,
       notes: h.notes || "",
@@ -142,24 +149,27 @@ export async function quickStartPlan(): Promise<string> {
     
     // Add preset heuristics to the plan
     updatedPlan.stages.Identification.personalHeuristics = [
-      ...updatedPlan.stages.Identification.personalHeuristics,
+      ...updatedPlan.stages.Identification.personalHeuristics || [],
       ...formattedHeuristics
     ];
     
     // Make sure all 12 success factors are included
     Object.keys(defaultHeuristics).forEach(stageName => {
-      const stageFactors = defaultHeuristics[stageName as keyof typeof defaultHeuristics].factors;
+      const stageKey = stageName as keyof typeof defaultHeuristics;
+      const stageFactors = defaultHeuristics[stageKey].factors;
       if (stageFactors) {
+        const planStageKey = stageName as keyof typeof updatedPlan.stages;
+        
         // Ensure the factors array exists in this stage
-        if (!updatedPlan.stages[stageName as keyof typeof updatedPlan.stages].factors) {
-          updatedPlan.stages[stageName as keyof typeof updatedPlan.stages].factors = [];
+        if (!updatedPlan.stages[planStageKey].factors) {
+          updatedPlan.stages[planStageKey].factors = [];
         }
         
         // Add any missing factors
         stageFactors.forEach(factor => {
-          const existingFactorIndex = updatedPlan.stages[stageName as keyof typeof updatedPlan.stages].factors.findIndex(f => f.id === factor.id);
+          const existingFactorIndex = updatedPlan.stages[planStageKey].factors.findIndex(f => f.id === factor.id);
           if (existingFactorIndex === -1) {
-            updatedPlan.stages[stageName as keyof typeof updatedPlan.stages].factors.push(factor);
+            updatedPlan.stages[planStageKey].factors.push(factor);
           }
         });
       }
@@ -262,29 +272,28 @@ export async function getAllPlans(): Promise<string[]> {
  */
 export async function setDeliveryApproach(
   planId: string, 
-  data: {
-    scope: 'Small' | 'Medium' | 'Large',
-    uncertainty: 'Low' | 'Medium' | 'High',
-    zone: string,
-    methods: string[],
-    tools: string[]
-  }
+  data: DeliveryApproachData
 ): Promise<boolean> {
-  const plan = await loadPlan(planId);
-  
-  if (!plan) {
-    console.error('No plan found with ID:', planId);
+  try {
+    const plan = await loadPlan(planId);
+    
+    if (!plan) {
+      console.error('No plan found with ID:', planId);
+      return false;
+    }
+    
+    // Initialize goodPractice if it doesn't exist
+    if (!plan.goodPractice) {
+      plan.goodPractice = {};
+    }
+    
+    // Update the delivery approach
+    plan.goodPractice.deliveryApproach = data;
+    
+    // Save the updated plan
+    return await savePlan(planId, plan);
+  } catch (error) {
+    console.error('Error setting delivery approach:', error);
     return false;
   }
-  
-  // Initialize goodPractice if it doesn't exist
-  if (!plan.goodPractice) {
-    plan.goodPractice = {};
-  }
-  
-  // Update the delivery approach
-  plan.goodPractice.deliveryApproach = data;
-  
-  // Save the updated plan
-  return await savePlan(planId, plan);
 }
