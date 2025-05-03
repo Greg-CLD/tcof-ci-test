@@ -114,6 +114,11 @@ export default function Block2Design() {
   const tasks = stageData?.tasks || [];
   const policyTasks = stageData?.policyTasks || [];
   
+  // Get only unmapped heuristics for Step 4
+  const unmappedHeuristics = personalHeuristics.filter(h => 
+    !mappings.some(m => m.heuristicId === h.id && m.factorId !== null)
+  );
+  
   const handleStageChange = (stage: Stage) => {
     setCurrentStage(stage);
   };
@@ -445,9 +450,6 @@ export default function Block2Design() {
         )}
         
         <div className="space-y-10 mb-8">
-          {/* Stage selector */}
-          <StageSelector currentStage={currentStage} onStageChange={handleStageChange} />
-          
           {/* Step 3 – Link Heuristics to Success Factors */}
           <Card className="border-t-4 border-t-blue-500">
             <CardHeader>

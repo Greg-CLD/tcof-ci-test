@@ -1,0 +1,56 @@
+Please apply the following fixes to Block 2 so it matches the expected workflow and corrects current issues.
+
+───────────────────────────────
+1. ❌ REMOVE "Stage" SELECTION DROPDOWN
+
+• On Block 2, remove the standalone “Stage” dropdown at the top of the page unless it's required for functionality.
+• This was not part of the spec and adds confusion.
+• Do not break any task stage-assignment logic.
+
+───────────────────────────────
+2. ✅ STEP 3 – FIX USER HEURISTICS NOT LOADING
+
+• Source: Use plan.personalHeuristics saved from Block 1 → Step 2.
+• This should be an array of { id, text, favourite }.
+• Display each heuristic as an option in a multi-select dropdown for mapping to the 12 canonical TCOF success factors.
+• Store mapped results in plan.heuristicLinks = { heuristicId: [factorId,…] }
+
+───────────────────────────────
+3. ✅ STEP 4 – CORRECT TARGETS FOR TASK ENTRY
+
+• Currently, Step 4 shows **TCOF success factors** as the base for task entry — this is incorrect.
+• Instead, Step 4 should:
+   – Only display **user heuristics** that have NOT been mapped in Step 3.
+   – For each, allow user to add tasks per stage (Identification, Definition, Delivery, Closure).
+• UI should reuse the same admin-style FactorTaskEditor (e.g. used in /admin/factors) but apply it to these user heuristics.
+• Do not show TCOF heuristics here — they are already handled separately.
+
+───────────────────────────────
+4. 💾 TASK STORAGE
+
+• All tasks entered in Step 4 should be stored in:
+   plan.stages[stage].tasks[] where each task has:
+   {
+     origin: 'userHeuristic',
+     heuristicId: 'user-h1',
+     text: 'Run stakeholder workshop',
+     stage: 'Identification'
+   }
+
+───────────────────────────────
+5. 🧪 TEST CASES TO CONFIRM
+
+• Block 1: Add 3 personal heuristics.
+• Block 2 Step 3: Map 1 of them to a TCOF factor.
+• Step 4: Only 2 unlinked heuristics should show.
+• Add tasks to 1 of the 2 → Confirm they appear in the checklist.
+• Confirm mapped heuristic from Step 3 does NOT appear in Step 4.
+
+───────────────────────────────
+FILES LIKELY TO TOUCH
+• pages/Block2Connect.tsx
+• components/FactorTaskEditor.tsx
+• utils/planHelpers.ts (for stage + heuristic linking)
+• planStore or localStorage handler
+
+End of prompt.
