@@ -88,6 +88,10 @@ export default function MakeAPlanLanding() {
   const handleAdminEditor = () => {
     setLocation('/make-a-plan/admin');
   };
+  
+  const handleFactorEditor = () => {
+    setLocation('/make-a-plan/admin/factors');
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -173,6 +177,26 @@ export default function MakeAPlanLanding() {
               </p>
               <Button 
                 onClick={handleAdminEditor}
+                className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                disabled={isLoading}
+              >
+                Open Editor
+              </Button>
+            </div>
+          </article>
+          
+          {/* Admin Success Factor Editor Card */}
+          <article className={styles.card} aria-labelledby="factor-editor-title">
+            <div className="flex flex-col h-full">
+              <div className="flex items-center mb-4 text-tcof-teal">
+                <Filter className="h-6 w-6 mr-2" aria-hidden="true" />
+                <h2 id="factor-editor-title" className="text-xl font-semibold">Manage Success Factors & Tasks</h2>
+              </div>
+              <p className="text-gray-700 mb-6 flex-grow">
+                Edit the TCOF success factors and their associated tasks.
+              </p>
+              <Button 
+                onClick={handleFactorEditor}
                 className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
                 disabled={isLoading}
               >
