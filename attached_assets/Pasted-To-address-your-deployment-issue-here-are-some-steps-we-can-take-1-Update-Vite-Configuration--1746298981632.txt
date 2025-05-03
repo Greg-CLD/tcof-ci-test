@@ -1,0 +1,68 @@
+To address your deployment issue, here are some steps we can take:
+
+1. Update Vite Configuration
+Ensure your Vite configuration file (vite.config.ts) includes support for top-level await and properly excludes @replit/database. This seems to have been addressed, but let's ensure the modifications are fully applied. Here's the updated configuration:
+
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-overlay";
+export default defineConfig({
+  plugins: [
+    react(),
+    runtimeErrorOverlay(),
+    ...(process.env.NODE_ENV !== "production" &&
+    process.env.REPL_ID !== undefined
+      ? [
+          await import("@replit/vite-plugin-cartographer").then((m) =>
+            m.cartographer(),
+          ),
+        ]
+      : []),
+  ],
+  resolve: {
+    alias: {
+      "@db": path.resolve(import.meta.dirname, "db"),
+      "@": path.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path.resolve(import.meta.dirname, "shared"),
+      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+    },
+  },
+  root: path.resolve(import.meta.dirname, "client"),
+  build: {
+    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    emptyOutDir: true,
+    rollupOptions: {
+      external: ['@replit/database', 'fs'],
+    },
+    target: 'esnext'
+  },
+  optimizeDeps: {
+    exclude: ['@replit/database']
+  },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
+  },
+  esbuild: {
+    supported: {
+      'top-level-await': true
+    }
+  }
+});
+2. Modify Code for Environment-Specific Imports
+Ensure the database is only imported server-side to avoid client-side issues. Here's a suggested change for your code that imports the database (e.g., storageAdapter.ts):
+
+let db: any = null;
+if (typeof window === 'undefined') {
+  import('@replit/database').then(({ default: Database }) => {
+    db = new Database();
+  });
+} else {
+  // Implement a localStorage-based alternative or leave db as null
+}
+Next Steps:
+Ensure that all your environment variables are correctly set in the Deployments pane for production.
+Verify that your build and start scripts are properly defined in your package.json.
+Attempt a new deployment after confirming these changes.
+If the deployment still fails, check the deployment logs for specific error messages and adjust the configuration or code accordingly. Let me know if you need further assistance!
+
