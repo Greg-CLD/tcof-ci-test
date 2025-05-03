@@ -5,7 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
-import { getLatestPlanId, loadPlan, savePlan } from '@/lib/plan-db';
+import { loadPlan, savePlan } from '@/lib/plan-db';
+import { getLatestPlanId } from '@/lib/planHelpers';
 import {
   AlertDialog,
   AlertDialogAction,
