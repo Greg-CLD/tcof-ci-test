@@ -15,21 +15,36 @@ export interface PresetHeuristic {
   notes: string;
 }
 
-// Async function to load presetHeuristics from JSON
+// Async function to load presetHeuristics from API
 async function loadPresetHeuristics(): Promise<PresetHeuristic[]> {
   try {
-    const response = await fetch('/data/presetHeuristics.json');
+    const response = await fetch('/api/admin/preset-heuristics');
     if (!response.ok) {
       throw new Error(`Failed to load preset heuristics: ${response.status}`);
     }
     return await response.json();
   } catch (error) {
     console.error('Error loading preset heuristics:', error);
-    // Fallback default heuristics if JSON fails to load
+    // Fallback default heuristics if API call fails
     return [
       { id: "H1", text: "Start slow to go fast", notes: "" },
       { id: "H2", text: "Test it small before you scale it big", notes: "" }
     ];
+  }
+}
+
+// Async function to load success factors from API
+async function loadSuccessFactorTasks(): Promise<any[]> {
+  try {
+    const response = await fetch('/api/admin/tcof-tasks');
+    if (!response.ok) {
+      throw new Error(`Failed to load TCOF tasks: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error loading TCOF tasks:', error);
+    // Return empty array if API call fails - will fall back to defaults
+    return [];
   }
 }
 
@@ -136,8 +151,11 @@ export async function quickStartPlan(): Promise<string> {
       updatedPlan.stages.Identification.personalHeuristics = [];
     }
     
-    // Load preset heuristics from JSON file
+    // Load preset heuristics from API
     const presetHeuristics = await loadPresetHeuristics();
+    if (!presetHeuristics || presetHeuristics.length === 0) {
+      throw new Error('No preset heuristics found');
+    }
     
     // Convert the preset heuristics to the correct format and add them
     const formattedHeuristics = presetHeuristics.map((h: PresetHeuristic) => ({
@@ -153,27 +171,68 @@ export async function quickStartPlan(): Promise<string> {
       ...formattedHeuristics
     ];
     
-    // Make sure all 12 success factors are included
-    Object.keys(defaultHeuristics).forEach(stageName => {
-      const stageKey = stageName as keyof typeof defaultHeuristics;
-      const stageFactors = defaultHeuristics[stageKey].factors;
-      if (stageFactors) {
-        const planStageKey = stageName as keyof typeof updatedPlan.stages;
-        
-        // Ensure the factors array exists in this stage
-        if (!updatedPlan.stages[planStageKey].factors) {
-          updatedPlan.stages[planStageKey].factors = [];
+    // Load the TCOF success factor tasks from API
+    const tcofTasks = await loadSuccessFactorTasks();
+    
+    // If we have success factor tasks, use them; otherwise use default factors
+    if (tcofTasks && tcofTasks.length > 0) {
+      // Organize tasks by category (Identification, Definition, Delivery, Closure)
+      const tasksByStage: Record<string, any[]> = {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      };
+      
+      // Group tasks by stage
+      tcofTasks.forEach(task => {
+        if (task.stage && tasksByStage[task.stage]) {
+          tasksByStage[task.stage].push({
+            id: task.id,
+            text: task.text,
+            impact: task.impact || 'medium'
+          });
         }
-        
-        // Add any missing factors
-        stageFactors.forEach(factor => {
-          const existingFactorIndex = updatedPlan.stages[planStageKey].factors.findIndex(f => f.id === factor.id);
-          if (existingFactorIndex === -1) {
-            updatedPlan.stages[planStageKey].factors.push(factor);
+      });
+      
+      // Update each stage's factors with the API-loaded tasks
+      Object.keys(tasksByStage).forEach(stageName => {
+        const stageTasks = tasksByStage[stageName];
+        if (stageTasks && stageTasks.length > 0) {
+          const planStageKey = stageName as keyof typeof updatedPlan.stages;
+          
+          // Ensure the factors array exists in this stage
+          if (!updatedPlan.stages[planStageKey].factors) {
+            updatedPlan.stages[planStageKey].factors = [];
           }
-        });
-      }
-    });
+          
+          // Replace with the API-loaded tasks
+          updatedPlan.stages[planStageKey].factors = stageTasks;
+        }
+      });
+    } else {
+      // Fall back to default factors if no API-loaded tasks are available
+      Object.keys(defaultHeuristics).forEach(stageName => {
+        const stageKey = stageName as keyof typeof defaultHeuristics;
+        const stageFactors = defaultHeuristics[stageKey].factors;
+        if (stageFactors) {
+          const planStageKey = stageName as keyof typeof updatedPlan.stages;
+          
+          // Ensure the factors array exists in this stage
+          if (!updatedPlan.stages[planStageKey].factors) {
+            updatedPlan.stages[planStageKey].factors = [];
+          }
+          
+          // Add any missing factors
+          stageFactors.forEach(factor => {
+            const existingFactorIndex = updatedPlan.stages[planStageKey].factors.findIndex(f => f.id === factor.id);
+            if (existingFactorIndex === -1) {
+              updatedPlan.stages[planStageKey].factors.push(factor);
+            }
+          });
+        }
+      });
+    }
     
     // Save the updated plan
     const success = await savePlan(planId, updatedPlan);
@@ -188,7 +247,7 @@ export async function quickStartPlan(): Promise<string> {
     return planId;
   } catch (error) {
     console.error('Error in quickStartPlan:', error);
-    throw new Error('Quick-Start failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    throw new Error('Quick-Start failed – presets not found');
   }
 }
 

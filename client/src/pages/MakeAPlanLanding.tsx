@@ -28,7 +28,7 @@ export default function MakeAPlanLanding() {
   }, []);
 
   const handleFullConfiguration = () => {
-    setLocation('/make-a-plan/full/block-1');
+    setLocation('/make-a-plan/full/intro');
   };
 
   const handleQuickStart = async () => {
