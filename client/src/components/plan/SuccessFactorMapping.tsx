@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PersonalHeuristic, Stage, addMapping } from '@/lib/plan-db';
+import { getTcofFactorOptions } from '@/lib/tcofData';
 import styles from '@/lib/styles/tasks.module.css';
 import { ChevronRight } from 'lucide-react';
 
@@ -37,18 +38,64 @@ export default function SuccessFactorMapping({
   const [factorOptions, setFactorOptions] = useState<Array<{ value: string; label: string }>>([]);
   
   useEffect(() => {
-    // Get TCOF factor options
+    // Get factor options from tcofData utility
     const options = getTcofFactorOptions();
-    setFactorOptions([
-      { value: '', label: 'Select a success factor...' },
-      ...options
-    ]);
+    if (options.length > 0) {
+      // Use the options if available
+      setFactorOptions([
+        { value: '', label: 'Select a success factor...' },
+        ...options
+      ]);
+    } else {
+      // Fall back to default options if utility returns empty array
+      const defaultOptions = [
+        { value: 'F1', label: 'F1: Clear success criteria are defined' },
+        { value: 'F2', label: 'F2: Stakeholders are properly engaged' },
+        { value: 'F3', label: 'F3: Risks are managed appropriately' },
+        { value: 'F4', label: 'F4: Delivery approach matches the context' },
+        { value: 'F5', label: 'F5: Team has the right capabilities' }
+      ];
+      
+      setFactorOptions([
+        { value: '', label: 'Select a success factor...' },
+        ...defaultOptions
+      ]);
+    }
+    
+    // Also try to fetch from API
+    const fetchFactors = async () => {
+      try {
+        const response = await fetch('/api/admin/tcof-tasks');
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            const apiOptions = data.map((factor: any) => ({
+              value: factor.id || '',
+              label: `${factor.id}: ${factor.text || ''}`
+            }));
+            
+            setFactorOptions([
+              { value: '', label: 'Select a success factor...' },
+              ...apiOptions
+            ]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching factor options:', error);
+      }
+    };
+    
+    fetchFactors();
   }, []);
 
-  const handleFactorChange = (heuristicId: string, factorId: string | null) => {
-    const success = addMapping(planId, heuristicId, factorId, stage);
-    if (success) {
+  const handleFactorChange = async (heuristicId: string, factorId: string | null) => {
+    try {
+      // Try to add the mapping
+      await addMapping(planId, heuristicId, factorId, stage);
+      // Notify parent component that mapping has changed
       onMappingChange();
+    } catch (error) {
+      console.error('Error adding mapping:', error);
     }
   };
 

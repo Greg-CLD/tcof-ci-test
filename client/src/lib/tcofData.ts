@@ -80,6 +80,21 @@ export function getSuccessFactorRatingInfo(): Record<number, { emoji: string; de
   };
 }
 
+// Helper function to convert TCOF tasks to select options for dropdowns
+export function getTcofFactorOptions(): Array<{ value: string; label: string }> {
+  try {
+    // Transform the raw tasks into factor options
+    return tcofTasksRaw.map((task: TCOFTask) => ({
+      value: task.id,
+      label: `${task.id}: ${task.text}`
+    }));
+  } catch (error) {
+    console.error('Error generating TCOF factor options:', error);
+    // Return empty array as fallback
+    return [];
+  }
+}
+
 // Export the raw data as well for direct access
 export const tcofTasks = tcofTasksRaw;
 export const presetHeuristics = presetHeuristicsRaw;

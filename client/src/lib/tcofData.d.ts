@@ -16,4 +16,9 @@ declare module '@/lib/tcofData' {
   }>;
 
   export function getFactorTasks(factorId: string, stage: string): string[];
+  
+  export function getSuccessFactorRatingInfo(): Record<number, { 
+    emoji: string; 
+    description: string 
+  }>;
 }

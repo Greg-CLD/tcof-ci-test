@@ -12,14 +12,10 @@ import {
 } from "@/components/ui/tooltip";
 import { SuccessFactorRating } from '@/lib/plan-db';
 
-// Define rating information directly with proper typing
-const ratingInfo: Record<number, { emoji: string; description: string }> = {
-  1: { emoji: '❌', description: "Doesn't land - I don't believe this factor is relevant" },
-  2: { emoji: '🤔', description: "Unfamiliar - I don't have enough context to judge" },
-  3: { emoji: '⚠️', description: "Needs attention - This is a blind spot we need to address" },
-  4: { emoji: '👍', description: "Important - This factor matters to our success" },
-  5: { emoji: '🌟', description: "Essential - This is a critical success factor" }
-};
+import { getSuccessFactorRatingInfo } from '@/lib/tcofData';
+
+// Get rating information from tcofData utility with proper typing
+const ratingInfo: Record<number, { emoji: string; description: string }> = getSuccessFactorRatingInfo();
 
 // Rating descriptions for tooltips
 const RATING_DESCRIPTIONS = {
