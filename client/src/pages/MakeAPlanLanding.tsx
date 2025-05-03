@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import styles from '@/lib/styles.module.css';
 import { quickStartPlan, hasExistingPlan, getAllPlans } from '@/lib/planHelpers';
-import { Layers, FastForward, History, Settings } from 'lucide-react';
+import { Layers, FastForward, History, Settings, FilterIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function MakeAPlanLanding() {
@@ -189,7 +189,7 @@ export default function MakeAPlanLanding() {
           <article className={styles.card} aria-labelledby="factor-editor-title">
             <div className="flex flex-col h-full">
               <div className="flex items-center mb-4 text-tcof-teal">
-                <Filter className="h-6 w-6 mr-2" aria-hidden="true" />
+                <FilterIcon className="h-6 w-6 mr-2" aria-hidden="true" />
                 <h2 id="factor-editor-title" className="text-xl font-semibold">Manage Success Factors & Tasks</h2>
               </div>
               <p className="text-gray-700 mb-6 flex-grow">

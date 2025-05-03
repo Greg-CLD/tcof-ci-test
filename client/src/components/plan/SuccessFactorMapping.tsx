@@ -122,11 +122,6 @@ export default function SuccessFactorMapping({
           <div className="space-y-3">
             {heuristics.map(heuristic => (
               <div key={heuristic.id} className={styles.mappingRow}>
-                <div className={styles.heuristicText}>
-                  <Label className="block text-sm font-medium mb-1">Personal Heuristic</Label>
-                  <div>{heuristic.text}</div>
-                </div>
-                <ChevronRight className="mx-4 text-muted-foreground" />
                 <div className={styles.factorSelect}>
                   <Label className="block text-sm font-medium mb-1">TCOF Success Factor</Label>
                   <Select
@@ -144,6 +139,11 @@ export default function SuccessFactorMapping({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <ChevronRight className="mx-4 text-muted-foreground" />
+                <div className={styles.heuristicText}>
+                  <Label className="block text-sm font-medium mb-1">Personal Heuristic</Label>
+                  <div>{heuristic.text}</div>
                 </div>
               </div>
             ))}
