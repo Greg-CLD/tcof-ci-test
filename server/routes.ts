@@ -791,6 +791,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint to run factor deduplication (admin only)
+  app.post('/api/admin/deduplicate-factors', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Only allow admin users to deduplicate
+      if ((req.user as any).username !== 'greg@confluity.co.uk') {
+        return res.status(403).json({ message: 'Unauthorized. Admin access required.' });
+      }
+      
+      console.log('Starting deduplication process via API endpoint...');
+      
+      // Get all existing factors
+      const rawFactors = await getFactors();
+      
+      if (!rawFactors || rawFactors.length === 0) {
+        return res.status(404).json({ message: 'No factors found to deduplicate' });
+      }
+      
+      console.log(`Found ${rawFactors.length} factors to deduplicate`);
+      
+      // Deduplicate by factor title
+      const dedupMap: Record<string, FactorTask> = {};
+      
+      rawFactors.forEach(item => {
+        const key = item.title.trim();
+        
+        if (!dedupMap[key]) {
+          // Create a base entry with empty task arrays
+          dedupMap[key] = { 
+            title: item.title, 
+            id: item.id, 
+            tasks: {
+              Identification: [],
+              Definition: [],
+              Delivery: [],
+              Closure: []
+            }
+          };
+        }
+        
+        // Merge tasks from all stages
+        const stages = ['Identification', 'Definition', 'Delivery', 'Closure'] as const;
+        stages.forEach(stage => {
+          const sourceTasks = item.tasks?.[stage] || [];
+          
+          sourceTasks.forEach((task: string) => {
+            // Only add unique tasks (avoid duplicates)
+            const stageTasks = dedupMap[key].tasks[stage];
+            if (!stageTasks.includes(task)) {
+              stageTasks.push(task);
+            }
+          });
+        });
+      });
+
+      // Convert map back to array
+      const dedupFactors = Object.values(dedupMap);
+      
+      if (dedupFactors.length !== 12) {
+        console.warn(`Warning: Expected 12 unique factors, but found ${dedupFactors.length}`);
+      }
+      
+      // Assign ids consistently if needed
+      dedupFactors.forEach((factor, index) => {
+        if (!factor.id || factor.id.includes("duplicate")) {
+          factor.id = `sf-${index + 1}`;
+        }
+      });
+      
+      // Save to database
+      await saveFactors(dedupFactors);
+      
+      console.log(`Deduplicated ${rawFactors.length} factors to ${dedupFactors.length} unique factors`);
+      
+      res.json({ 
+        success: true, 
+        message: `Deduplicated ${rawFactors.length} factors to ${dedupFactors.length} unique factors`,
+        originalCount: rawFactors.length,
+        newCount: dedupFactors.length,
+        factors: dedupFactors.map(f => `${f.id}: ${f.title}`)
+      });
+    } catch (error: any) {
+      console.error('Error deduplicating factors:', error);
+      res.status(500).json({ message: 'Failed to deduplicate factors', error: error.message });
+    }
+  });
+  
   app.get('/api/admin/success-factors/:id', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const factorId = req.params.id;

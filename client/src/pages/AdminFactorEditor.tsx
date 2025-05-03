@@ -38,7 +38,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
-import { Loader2, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { Filter, Loader2, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { getFactors, saveFactors, createFactor, updateFactor, deleteFactor } from '@/utils/factorStore';
 
 // Types for the success factor
@@ -374,6 +374,46 @@ export default function AdminFactorEditor() {
     }
   };
 
+  // Deduplicate factors
+  const handleDeduplicate = async () => {
+    try {
+      setIsSaving(true);
+      
+      const response = await fetch('/api/admin/deduplicate-factors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      // Reload factors after deduplication
+      const updatedFactors = await getFactors();
+      setFactors(updatedFactors);
+      
+      toast({
+        title: 'Deduplication Successful',
+        description: result.message,
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error deduplicating factors:', error);
+      toast({
+        title: 'Deduplication Failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
   // Import from Excel
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -512,6 +552,15 @@ export default function AdminFactorEditor() {
             >
               <Upload className="mr-2 h-4 w-4" />
               Import from Excel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDeduplicate}
+              disabled={isSaving}
+              className="bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900"
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              Deduplicate Factors
             </Button>
             <input
               type="file"

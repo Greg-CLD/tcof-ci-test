@@ -1,35 +1,68 @@
 /**
- * Deduplicate Success Factors script
+ * Deduplicate Success Factors script using the API
  * 
  * This script reduces the 32 factors in the database to 12 unique factors,
  * combining tasks from duplicates with the same title.
  */
-import { factorsDb } from '../server/factorsDb.ts';
 import fs from 'fs';
 import path from 'path';
+import http from 'http';
 
-async function deduplicateFactors() {
-  console.log('Starting factor deduplication process...');
-  
-  try {
-    // Get all factors from the database or file
-    const factorsPath = path.join(process.cwd(), 'data', 'successFactors.json');
-    let rawFactors = [];
-    
-    if (fs.existsSync(factorsPath)) {
-      const data = fs.readFileSync(factorsPath, 'utf8');
-      rawFactors = JSON.parse(data);
-      console.log(`Loaded ${rawFactors.length} factors from successFactors.json`);
-    } else {
-      console.log('successFactors.json not found, falling back to factorsDb');
-      if (factorsDb.length === 0) {
-        console.error('No factors found in database. Please initialize the database first.');
-        return false;
-      }
-      rawFactors = factorsDb.getAll();
-      console.log(`Loaded ${rawFactors.length} factors from database`);
+// Helper function to make API requests
+async function apiRequest(method, path, body = null) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'localhost',
+      port: 5000,
+      path,
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        try {
+          const parsedData = data ? JSON.parse(data) : null;
+          resolve({ status: res.statusCode, data: parsedData });
+        } catch (error) {
+          reject(new Error(`Failed to parse response: ${error.message}`));
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    if (body) {
+      req.write(JSON.stringify(body));
     }
 
+    req.end();
+  });
+}
+
+async function deduplicateFactors() {
+  console.log('Starting factor deduplication process using API...');
+  
+  try {
+    // First, get all factors from the API
+    console.log('Fetching factors from API...');
+    const response = await apiRequest('GET', '/api/admin/tcof-tasks');
+    
+    if (response.status !== 200 || !response.data || !Array.isArray(response.data)) {
+      throw new Error(`Failed to fetch factors from API: ${response.status}`);
+    }
+    
+    const rawFactors = response.data;
+    console.log(`Fetched ${rawFactors.length} factors from API`);
+    
     // Deduplicate by factor title
     const dedupMap = {};
     
@@ -78,20 +111,25 @@ async function deduplicateFactors() {
       }
     });
 
-    // Save to file
+    // Save to file for backup
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
     
     fs.writeFileSync(
-      path.join(dataDir, 'successFactors.json'), 
+      path.join(dataDir, 'dedupFactors.json'), 
       JSON.stringify(dedupFactors, null, 2),
       'utf8'
     );
     
-    // Update the database
-    factorsDb.setAll(dedupFactors);
+    // Save back to API
+    console.log('Saving deduplicated factors back to API...');
+    const saveResponse = await apiRequest('POST', '/api/admin/tcof-tasks', dedupFactors);
+    
+    if (saveResponse.status !== 200) {
+      throw new Error(`Failed to save deduplicated factors: ${saveResponse.status}`);
+    }
     
     console.log('✅ Deduplicated factors saved successfully!');
     return true;
