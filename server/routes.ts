@@ -831,17 +831,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Merge tasks from all stages
-        const stages = ['Identification', 'Definition', 'Delivery', 'Closure'] as const;
+        type StageKey = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
+        const stages: StageKey[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
+        
         stages.forEach(stage => {
           const sourceTasks = item.tasks?.[stage] || [];
           
-          sourceTasks.forEach((task: string) => {
+          for (const task of sourceTasks) {
             // Only add unique tasks (avoid duplicates)
-            const stageTasks = dedupMap[key].tasks[stage];
-            if (!stageTasks.includes(task)) {
-              stageTasks.push(task);
+            if (!dedupMap[key].tasks[stage].includes(task)) {
+              dedupMap[key].tasks[stage].push(task);
             }
-          });
+          }
         });
       });
 
