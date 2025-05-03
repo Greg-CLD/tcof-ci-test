@@ -1,7 +1,7 @@
 /**
  * Helper functions for accessing TCOF data
  */
-import tcofTasksData from '../../data/tcofTasks.json';
+import { tcofTasks } from './data';
 
 // Define types for TCOF data
 interface TcofTask {
@@ -19,7 +19,7 @@ interface TcofTask {
  * Get TCOF data from the JSON file
  */
 export const getTcofData = (): TcofTask[] => {
-  return tcofTasksData as TcofTask[];
+  return tcofTasks as TcofTask[];
 };
 
 /**
