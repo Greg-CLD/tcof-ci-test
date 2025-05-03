@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { SuccessFactorRating } from '@/lib/plan-db';
 
-import { getSuccessFactorRatingInfo } from '@/lib/tcofData';
 import { loadFactors, validateFactorTitles, TCOFFactor } from '@/utils/factorLoader';
 
 // Custom rating scale with new descriptions per requirements
@@ -162,7 +161,7 @@ export default function SuccessFactorTable({
     }
   };
   
-  // Get emoji for rating display using our custom rating scale
+  // Get emoji for rating display using our consistent custom rating scale
   const getRatingEmoji = (rating: number): string => {
     if (rating >= 1 && rating <= 5) {
       return RATING_SCALE[rating as keyof typeof RATING_SCALE]?.emoji || '';

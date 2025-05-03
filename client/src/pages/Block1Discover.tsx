@@ -260,6 +260,19 @@ export default function Block1Discover() {
         </IntroAccordion>
         
         <div className="bg-white p-6 rounded-lg border mb-8">
+          {/* Step 1 - Rate TCOF Success Factors */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-tcof-dark mb-3">Step 1: Rate TCOF Success Factors</h3>
+            <div className="bg-tcof-bg p-4 rounded-md mb-4">
+              <ul className="list-disc pl-5 space-y-2">
+                <li><strong>What</strong> - Review each TCOF Success Factor, reflect on how strongly they resonate with you?</li>
+                <li><strong>Why</strong> - Some of these heuristics may feel deeply familiar. Others might not land at all. That's normal. If you're not "feeling" some heuristics, it may simply be because you haven't experienced using this way of working before.</li>
+                <li><strong>When</strong> - Do this now, use the scale below to reflect on how much each one feels true to you.</li>
+                <li><strong>How</strong> - Be honest, this helps you build your own working set</li>
+              </ul>
+            </div>
+          </div>
+          
           <SuccessFactorTable 
             ratings={successFactorRatings} 
             onChange={handleSuccessFactorChange}
@@ -267,6 +280,31 @@ export default function Block1Discover() {
           />
           
           <hr className="my-8" />
+          
+          {/* Step 2 - Add Personal Heuristics */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-tcof-dark mb-3">Step 2: Add Your Personal Heuristics</h3>
+            <div className="bg-tcof-bg p-4 rounded-md mb-4">
+              <ul className="list-disc pl-5 space-y-2">
+                <li><strong>What</strong> - Think about things you've learned through your experience. What rules help you deliver change, projects or big ideas?</li>
+                <li><strong>Why</strong> - You have important learned experience, that's wisdom. Writing this down using heuristics is going to allow you and others to ensure this hard won learning is applied.</li>
+                <li><strong>When</strong> - It's best to do this before we get into the detail of selecting good practice and the delivery approach, that can be confusing, whereas your wisdom in heuristics is a fast, frugal shortcut to success</li>
+                <li><strong>How</strong> - Write down 5–10 of your own. Keep them short, memorable, and practical. Follow these guidelines:</li>
+              </ul>
+              <ol className="list-decimal pl-8 mt-2 space-y-2">
+                <li><strong>Be inspired, not copied:</strong> You may reflect on the TCOF goals, which are written as heuristics. It's fine to be inspired by them—but don't copy them. We're looking for your original insights based on your own lived experience.</li>
+                <li><strong>Your goal:</strong> Identify the personal rules of thumb you actually use to deliver results—your own heuristics for success.</li>
+                <li><strong>How to write a heuristic:</strong>
+                  <ul className="list-disc pl-8 mt-1">
+                    <li>Keep it short, clear, and easy to remember.</li>
+                    <li>Think in phrases, not paragraphs.</li>
+                    <li>Aim for 5 to 10 strong heuristics that reflect your real-world experience.</li>
+                    <li>Test whether you could explain each one to a colleague in a sentence.</li>
+                  </ul>
+                </li>
+              </ol>
+            </div>
+          </div>
           
           <HeuristicList 
             heuristics={personalHeuristics}
