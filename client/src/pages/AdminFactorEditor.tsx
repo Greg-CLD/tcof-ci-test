@@ -674,39 +674,7 @@ export default function AdminFactorEditor() {
     }
   };
 
-  // Update success factor tasks from CSV
-  const handleUpdateTasksFromCsv = async () => {
-    try {
-      setIsSaving(true);
-      
-      const response = await apiRequest('POST', '/api/admin/update-factor-tasks');
-      
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      
-      // Reload factors with tasks from CSV
-      const updatedFactors = await getFactors(true);
-      setFactors(updatedFactors);
-      
-      toast({
-        title: 'Tasks Updated',
-        description: result.message || 'Successfully updated tasks from CSV',
-        variant: 'default',
-      });
-    } catch (error) {
-      console.error('Error updating tasks from CSV:', error);
-      toast({
-        title: 'Update Failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
+
   
   // Import from Excel
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -873,15 +841,6 @@ export default function AdminFactorEditor() {
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isFixingFactors ? 'animate-spin' : ''}`} />
               Update to Canonical Factors
-            </Button>
-            
-            <Button
-              onClick={handleUpdateTasksFromCsv}
-              disabled={isSaving}
-              variant="outline"
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${isSaving ? 'animate-spin' : ''}`} />
-              Update Tasks from CSV
             </Button>
           </div>
         </div>

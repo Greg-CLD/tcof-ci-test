@@ -4,7 +4,9 @@
     "title": "1.1 Ask Why",
     "tasks": {
       "Identification": [
-        "1.1 Task 1"
+        "Consult key stakeholders",
+        "Define goals",
+        "Understand pains and wants"
       ],
       "Definition": [],
       "Delivery": [],
@@ -16,7 +18,9 @@
     "id": "sf-2",
     "tasks": {
       "Identification": [
-        "Define the type of person you need"
+        "Define the type of person you need",
+        "Find a leader",
+        "Get access to additional support (if needed)"
       ],
       "Definition": [
         "Confirm you have access to a master builder ready for the next stage"
@@ -24,9 +28,7 @@
       "Delivery": [
         "Confirm you have access to a master builder ready for the next stage"
       ],
-      "Closure": [
-        "-"
-      ]
+      "Closure": []
     }
   },
   {
@@ -34,17 +36,19 @@
     "id": "sf-3",
     "tasks": {
       "Identification": [
-        "Get a team that has worked with your masterbuilder (if possible)"
+        "Get a team that has worked with your masterbuilder (if possible)",
+        "Identify early champions (if there is business change)",
+        "Run team development workshops"
       ],
       "Definition": [
-        "Build support with Change Champions"
+        "Build support with Change Champions",
+        "Enable team productivity"
       ],
       "Delivery": [
+        "Enable team productivity",
         "Support champions to influence others"
       ],
-      "Closure": [
-        "-"
-      ]
+      "Closure": []
     }
   },
   {
@@ -52,17 +56,19 @@
     "id": "sf-4",
     "tasks": {
       "Identification": [
-        "Create a plan to engage with other stakeholders"
+        "Create a plan to engage with other stakeholders",
+        "Develop a mechanism to foster transparency and involve stakeholders in key decisions",
+        "Engage stakeholders, customers, and users"
       ],
       "Definition": [
+        "Empower stakeholders, users, customers to support decision making",
         "Stakeholder communications, training and engagement"
       ],
       "Delivery": [
+        "Empower stakeholders, users, customers to support decision making",
         "Stakeholder communications, training and engagement"
       ],
-      "Closure": [
-        "-"
-      ]
+      "Closure": []
     }
   },
   {
@@ -70,17 +76,15 @@
     "id": "sf-5",
     "tasks": {
       "Identification": [
+        "Apply these insights to your plan",
+        "Find out how long their projects took, what they cost, and whether the expected value was delivered",
         "Identify and learn lessons from three people or projects that have achieved similar outcomes"
       ],
       "Definition": [
-        "Re-engage with past projects to learn new lessons about the next stage"
+        "Reengage with past projects to learn new lessons about the next stage"
       ],
-      "Delivery": [
-        "-"
-      ],
-      "Closure": [
-        "-"
-      ]
+      "Delivery": [],
+      "Closure": []
     }
   },
   {
@@ -88,17 +92,13 @@
     "id": "sf-6",
     "tasks": {
       "Identification": [
-        "Identify three delivery methods using tried and tested techniques"
+        "Complete a pros and cons list for each option. Rate against:\nUse of tried and tested methods\nLikelihood of delivering goals\nModularity and scalability\nEase of building a minimum or maximum viable product\nInclude metrics where possible",
+        "Identify three delivery methods using tried and tested techniques",
+        "Validate your best option through prototyping and customer or user feedback"
       ],
-      "Definition": [
-        "-"
-      ],
-      "Delivery": [
-        "-"
-      ],
-      "Closure": [
-        "-"
-      ]
+      "Definition": [],
+      "Delivery": [],
+      "Closure": []
     }
   },
   {
@@ -106,17 +106,18 @@
     "id": "sf-7",
     "tasks": {
       "Identification": [
-        "Break your preferred solution into small, modular parts"
+        "Ask the question: what is my Lego?",
+        "Break your preferred solution into small, modular parts",
+        "Ensure people and plans are in place to develop the solution in Phase 2"
       ],
       "Definition": [
-        "Re-engage with past projects to learn new lessons about the next stage"
+        "Reengage with past projects to learn new lessons about the next stage",
+        "Validate that the solution will achieve the goals."
       ],
       "Delivery": [
         "Scale up and go big. Roll out sections / modular solution to other areas"
       ],
-      "Closure": [
-        "-"
-      ]
+      "Closure": []
     }
   },
   {
@@ -124,17 +125,17 @@
     "id": "sf-8",
     "tasks": {
       "Identification": [
-        "Create a plan to develop an MVP or MXVP in Stage 2"
+        "Create a plan to develop an MVP or MXVP in Stage 2",
+        "Start regular reflection sessions: weekly, fortnightly, or monthly"
       ],
       "Definition": [
+        "Continue regular learning and reflection sessions (at least monthly)",
         "Develop module as a minimum viable product, if possible. Otherwise, develop a maximum virtual product."
       ],
       "Delivery": [
         "Continue regular learning and reflection sessions (at least monthly)"
       ],
-      "Closure": [
-        "-"
-      ]
+      "Closure": []
     }
   },
   {
@@ -142,7 +143,9 @@
     "id": "sf-9",
     "tasks": {
       "Identification": [
-        "List your top five risks now"
+        "Create a mitigation plan for each one",
+        "List your top five risks now",
+        "Review and update your risk plan monthly (or more often)"
       ],
       "Definition": [
         "Continuously identify and mittigate risks (review at least monthly)"
@@ -150,9 +153,7 @@
       "Delivery": [
         "Continuously identify and mitigate risks (review at least monthly)"
       ],
-      "Closure": [
-        "-"
-      ]
+      "Closure": []
     }
   },
   {
@@ -160,6 +161,7 @@
     "id": "sf-10",
     "tasks": {
       "Identification": [
+        "Adjust your forecast based on this optimism allowance and include contingency",
         "Compare how long similar projects took in Stage 2 and 3 versus their original estimates"
       ],
       "Definition": [
@@ -168,9 +170,7 @@
       "Delivery": [
         "Build optimism allowances into all forecasts."
       ],
-      "Closure": [
-        "-"
-      ]
+      "Closure": []
     }
   },
   {
@@ -178,9 +178,12 @@
     "id": "sf-11",
     "tasks": {
       "Identification": [
+        "Confirm the business case do the benefits outweigh the costs?",
         "Identify the success measures for your solution in Stage 2"
       ],
       "Definition": [
+        "Confirm the business case do the benefits outweigh the costs?",
+        "Confirm you've used data to validate your chosen option and plan, including optimism bias",
         "Identify the measurable success measures for your solution in Stage 3"
       ],
       "Delivery": [
@@ -204,9 +207,7 @@
       "Delivery": [
         "Adapt the requirements / plan / scope based as new information comes to light."
       ],
-      "Closure": [
-        "-"
-      ]
+      "Closure": []
     }
   }
 ]
