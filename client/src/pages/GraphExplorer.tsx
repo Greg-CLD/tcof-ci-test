@@ -29,7 +29,7 @@ interface GraphData {
 
 export default function GraphExplorer() {
   const [, navigate] = useLocation();
-  const [projectId, setProjectId] = useState<string>('');
+  const [projectId, setProjectId] = useState<string>('all_projects');
   const [relTypeFilter, setRelTypeFilter] = useState<string>('all');
   const [nodeId, setNodeId] = useState<string | null>(null);
   const { projects } = useProjects();
@@ -58,15 +58,20 @@ export default function GraphExplorer() {
         ? `/api/admin/graph/neighbours/${nodeId}`
         : '/api/admin/graph';
 
-      if (projectId) {
+      if (projectId && projectId !== 'all_projects') {
         url += `?projectId=${projectId}`;
       }
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch graph data: ${response.statusText}`);
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch graph data: ${response.statusText}`);
+        }
+        return await response.json();
+      } catch (err) {
+        console.error('Error fetching graph data:', err);
+        return { nodes: [], links: [] };
       }
-      return response.json();
     },
     enabled: true,
   });
@@ -131,6 +136,7 @@ export default function GraphExplorer() {
 
   const handleReset = () => {
     setNodeId(null);
+    setProjectId('all_projects');
     setRelTypeFilter('all');
     // Center and zoom reset - assuming graphRef is available
     if (graphRef.current) {
@@ -144,6 +150,27 @@ export default function GraphExplorer() {
       console.warn(`Large graph with ${graphData.links.length} links. Consider filtering by project.`);
     }
   }, [graphData]);
+  
+  // Handle window resize to redraw the graph
+  useEffect(() => {
+    const handleResize = () => {
+      if (graphRef.current) {
+        const chargeForce = graphRef.current.d3Force('charge');
+        if (chargeForce && typeof chargeForce.distanceMax === 'function') {
+          chargeForce.distanceMax(500);
+        }
+        
+        setTimeout(() => {
+          if (graphRef.current) {
+            graphRef.current.zoomToFit(400);
+          }
+        }, 300);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (isError) {
     return (
@@ -177,7 +204,7 @@ export default function GraphExplorer() {
                   <SelectValue placeholder="All Projects" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Projects</SelectItem>
+                  <SelectItem value="all_projects">All Projects</SelectItem>
                   {projects && projects.map(project => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
@@ -253,9 +280,11 @@ export default function GraphExplorer() {
                 onNodeClick={handleNodeClick}
                 cooldownTicks={100}
                 onEngineStop={() => {
-                  if (graphRef.current) {
-                    graphRef.current.zoomToFit(400);
-                  }
+                  setTimeout(() => {
+                    if (graphRef.current) {
+                      graphRef.current.zoomToFit(400);
+                    }
+                  }, 500);
                 }}
               />
             ) : (
