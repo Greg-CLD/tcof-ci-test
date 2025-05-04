@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
-import { relationsDb, createRelation } from './relationsDb';
+import { relationsDb, createRelation, loadRelations } from './relationsDb';
 import { 
   insertUserSchema, 
   insertGoalMapSchema, 

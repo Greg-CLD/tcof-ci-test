@@ -40,8 +40,10 @@ if (!fs.existsSync(RELATIONS_FILE)) {
 
 /**
  * Load all relations from the data file
+ * 
+ * @returns Array of all relations
  */
-function loadRelations(): Relation[] {
+export function loadRelations(): Relation[] {
   try {
     const data = fs.readFileSync(RELATIONS_FILE, 'utf8');
     return JSON.parse(data);
