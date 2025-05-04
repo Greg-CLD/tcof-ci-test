@@ -36,6 +36,7 @@ export default function ReviewCard({ planId, onGenerateChecklist }: ReviewCardPr
     if (!planId) return;
     setIsExporting(true);
     try {
+      // exportPlanPDF function takes a planId as string
       await exportPlanPDF(planId);
     } catch (error) {
       console.error('Error exporting PDF:', error);
@@ -48,7 +49,19 @@ export default function ReviewCard({ planId, onGenerateChecklist }: ReviewCardPr
     if (!planId) return;
     setIsExporting(true);
     try {
-      await exportCSV(planId);
+      const plan = getPlan(planId);
+      if (!plan) {
+        throw new Error('Plan not found');
+      }
+      const { url, filename } = exportCSV(plan);
+      // Download the file
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error('Error exporting CSV:', error);
     } finally {
