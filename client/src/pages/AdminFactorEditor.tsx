@@ -195,9 +195,36 @@ export default function AdminFactorEditor() {
   }
 
   // Get the currently selected factor
-  const selectedFactor = selectedFactorId 
+  const rawSelectedFactor = selectedFactorId 
     ? factors.find(f => f.id === selectedFactorId) 
     : null;
+    
+  // Ensure the selected factor has all required task arrays to prevent UI errors
+  const selectedFactor = rawSelectedFactor ? {
+    ...rawSelectedFactor,
+    tasks: {
+      Identification: Array.isArray(rawSelectedFactor.tasks?.Identification) ? rawSelectedFactor.tasks.Identification : [],
+      Definition: Array.isArray(rawSelectedFactor.tasks?.Definition) ? rawSelectedFactor.tasks.Definition : [],
+      Delivery: Array.isArray(rawSelectedFactor.tasks?.Delivery) ? rawSelectedFactor.tasks.Delivery : [],
+      Closure: Array.isArray(rawSelectedFactor.tasks?.Closure) ? rawSelectedFactor.tasks.Closure : []
+    }
+  } : null;
+  
+  // Debug tasks for the selected factor
+  useEffect(() => {
+    if (selectedFactor) {
+      console.log('Selected factor tasks:', {
+        id: selectedFactor.id,
+        title: selectedFactor.title,
+        taskCounts: {
+          Identification: selectedFactor.tasks.Identification.length,
+          Definition: selectedFactor.tasks.Definition.length,
+          Delivery: selectedFactor.tasks.Delivery.length,
+          Closure: selectedFactor.tasks.Closure.length
+        }
+      });
+    }
+  }, [selectedFactor]);
 
   // Handle saving all factors
   const handleSave = async () => {
