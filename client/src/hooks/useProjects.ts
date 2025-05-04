@@ -118,6 +118,59 @@ export function useProjects() {
     },
   });
   
+  /**
+   * Checks if a project's profile is complete with all required fields
+   * @param project The project to check
+   * @returns boolean indicating if the project profile is complete
+   */
+  const isProjectProfileComplete = (project: Project): boolean => {
+    // Check for required fields
+    if (!project.name || project.name.trim() === '') {
+      return false;
+    }
+    
+    if (!project.sector || project.sector.trim() === '') {
+      return false;
+    }
+    
+    // For 'other' sector, customSector is required
+    if (project.sector === 'other' && (!project.customSector || project.customSector.trim() === '')) {
+      return false;
+    }
+    
+    if (!project.orgType || project.orgType.trim() === '') {
+      return false;
+    }
+    
+    if (!project.currentStage || project.currentStage.trim() === '') {
+      return false;
+    }
+    
+    return true;
+  };
+  
+  /**
+   * Get the currently selected project from localStorage
+   * @returns The selected project or undefined if none selected
+   */
+  const getSelectedProject = (): Project | undefined => {
+    const selectedProjectId = localStorage.getItem('selectedProjectId');
+    if (!selectedProjectId) return undefined;
+    
+    return projects.find(p => p.id === selectedProjectId);
+  };
+  
+  /**
+   * Checks if the selected project has a complete profile
+   * @returns boolean indicating if the selected project's profile is complete
+   */
+  const isSelectedProjectProfileComplete = (): boolean => {
+    const selectedProject = getSelectedProject();
+    if (!selectedProject) return false;
+    
+    return isProjectProfileComplete(selectedProject);
+  };
+  
   return {
     projects,
     isLoading,
@@ -125,5 +178,8 @@ export function useProjects() {
     createProject,
     updateProject,
     deleteProject,
+    isProjectProfileComplete,
+    getSelectedProject,
+    isSelectedProjectProfileComplete,
   };
 }

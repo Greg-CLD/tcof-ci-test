@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useProjects, Project } from '@/hooks/useProjects';
+import { useProjects, Project, CreateProjectData } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,14 +34,19 @@ const projectFormSchema = z.object({
   description: z.string().optional(),
   sector: z.string().min(1, 'Please select a sector'),
   customSector: z.string().optional()
-    .refine((value, ctx) => {
+    .superRefine((value, ctx) => {
       // If sector is "other", customSector is required
-      if (ctx.parent.sector === 'other' && (!value || value.trim() === '')) {
+      // Access parent data safely through the path
+      // Get the form data to check sector value
+  const data: any = ctx.path.length ? ctx.getData() : undefined;
+  if (data && data.sector === 'other' && (!value || value.trim() === '')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Please describe your sector'
+        });
         return false;
       }
       return true;
-    }, {
-      message: 'Please describe your sector'
     }),
   orgType: z.string().min(1, 'Please select an organization type'),
   teamSize: z.string().optional(),
@@ -119,7 +124,8 @@ export default function ProjectProfile() {
   // Form submission handler
   const onSubmit = async (data: ProjectFormValues) => {
     try {
-      const projectData = {
+      // Create project data with proper typing
+      const projectData: CreateProjectData = {
         name: data.name,
         description: data.description,
         sector: data.sector,
