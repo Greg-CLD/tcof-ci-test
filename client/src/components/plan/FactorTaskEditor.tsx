@@ -150,11 +150,24 @@ export default function FactorTaskEditor({
                       ) : (
                         tasks[stage].map((task: string, index: number) => (
                           <div key={index} className="flex items-start space-x-2">
-                            <Input
-                              value={task}
-                              onChange={(e) => selectedItemId && debouncedUpdateTask(selectedItemId, stage, index, e.target.value)}
-                              className="flex-1"
-                            />
+                            <div className="flex-1 relative">
+                              <Input
+                                value={task}
+                                onChange={(e) => selectedItemId && handleTaskChange(selectedItemId, stage, index, e.target.value)}
+                                className="flex-1"
+                              />
+                              {savingTaskIndex === index && (
+                                <div className="absolute right-2 top-2 text-sm text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
+                                  Saving...
+                                </div>
+                              )}
+                              {savedTaskIndex === index && (
+                                <div className="absolute right-2 top-2 text-sm text-tcof-teal animate-fadeOut">
+                                  ✅ Saved
+                                </div>
+                              )}
+                            </div>
                             <Button
                               variant="ghost"
                               size="icon"
