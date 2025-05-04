@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, KeyboardEvent } from 'react';
 import { 
   Tabs, 
   TabsContent, 
@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import debounce from 'lodash.debounce';
+import { getUserHeuristicTaskDisplayName, isTaskAlreadyFormatted } from '@/lib/taskDisplayName';
 
 export type StageType = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 
@@ -64,8 +65,32 @@ export default function FactorTaskEditor({
     [onUpdateTask]
   );
   
-  // Handle immediate input changes
+  // Create a reference for active input field
+  const inputRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
+  
+  // Handle input changes - but only save on specific events, not continuous typing
   const handleTaskChange = (itemId: string, stage: StageType, taskIndex: number, newText: string) => {
+    // Don't trigger automatic save while typing - we'll save on blur, Enter, or button click
+  };
+  
+  // Handle key press events in task inputs
+  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>, itemId: string, stage: StageType, taskIndex: number) => {
+    if (e.key === 'Enter') {
+      // Save on Enter key
+      setSavingTaskIndex(taskIndex);
+      
+      const input = e.currentTarget;
+      const newText = input.value;
+      
+      debouncedUpdateTask(itemId, stage, taskIndex, newText);
+      
+      // Move focus to next input or blur if it's the last one
+      input.blur();
+    }
+  };
+  
+  // Handle blur events to save when user clicks away
+  const handleBlur = (itemId: string, stage: StageType, taskIndex: number, newText: string) => {
     setSavingTaskIndex(taskIndex);
     debouncedUpdateTask(itemId, stage, taskIndex, newText);
   };
@@ -153,8 +178,16 @@ export default function FactorTaskEditor({
                             <div className="flex-1 relative">
                               <Input
                                 value={task}
-                                onChange={(e) => selectedItemId && handleTaskChange(selectedItemId, stage, index, e.target.value)}
+                                onChange={(e) => e.currentTarget.value}
+                                onBlur={(e) => selectedItemId && handleBlur(selectedItemId, stage, index, e.target.value)}
+                                onKeyDown={(e) => selectedItemId && handleKeyPress(e, selectedItemId, stage, index)}
+                                ref={(el) => inputRefs.current[`${stage}_${index}`] = el}
                                 className="flex-1"
+                                placeholder={getUserHeuristicTaskDisplayName(
+                                  items.findIndex(item => item.id === selectedItemId) + 1,
+                                  stage,
+                                  index + 1
+                                )}
                               />
                               {savingTaskIndex === index && (
                                 <div className="absolute right-2 top-2 text-sm text-muted-foreground">
