@@ -1,0 +1,66 @@
+🚨 Current Issues
+1. Tasks still do not render in /make-a-plan/admin/factors (blank panel).
+2. /make-a-plan/admin (root admin page) shows a second “TCOF Success-Factor Tasks”
+   table that references an Excel source. This duplicate panel is confusing
+   and may be masking the real data-binding bug.
+
+🎯 What We Need
+A. **Single source of truth**: keep factor + task editing ONLY on
+   /make-a-plan/admin/factors.  Remove the tasks panel from the root admin page.
+B. Ensure tasks actually load and persist in /admin/factors.
+C. Eliminate all references in the UI to Excel/CSV upload — this import was
+   one-time only.
+
+────────────────────────────────────────────
+1️⃣  Remove Duplicate Panel
+• In AdminPresetEditor (root admin page) remove or hide the entire section
+  titled **“TCOF Success-Factor Tasks”**.
+• The root admin page should now only contain:
+    – Core heuristics (read-only list)
+    – Default personal heuristics for Quick-Start
+    – Save buttons / preview
+
+────────────────────────────────────────────
+2️⃣  Normalise Data Contract for /admin/factors
+• API route GET /api/admin/success-factors must return factors with a
+  consistent payload:
+
+{
+  id: "sf-1.1",
+  title: "1.1 Ask Why",
+  tasksByStage: {
+     Identification: [ { id, text } ],
+     Definition:     [ … ],
+     Delivery:       [ … ],
+     Closure:        [ … ]
+  }
+}
+
+• Update factorStore / AdminFactorEditor to rely on tasksByStage.
+• When a stage array is empty, show “No tasks yet” instead of blank screen.
+
+────────────────────────────────────────────
+3️⃣  One-Time CSV Back-fill Safety Net
+• If any tasksByStage array is empty for any canonical factor, read
+  `attached_assets/tcof_factors_clean.csv` and insert the missing tasks
+  into the DB (do **not** create a UI button).
+• After import, log “Factor sf-X now has N tasks”.
+
+────────────────────────────────────────────
+4️⃣  Verification Steps
+1. Restart server; console shows factor/task counts.
+2. Log in as greg@confluity.co.uk and open /make-a-plan/admin:
+   – Duplicate tasks panel is gone.
+3. Navigate to /make-a-plan/admin/factors:
+   – Click each factor → tasks render under each stage.
+4. Refresh page → tasks persist.
+5. Generate checklist → tasks appear under their success factor.
+
+────────────────────────────────────────────
+❌ Do NOT
+• Do not restore any CSV upload UI.
+• Do not recreate the tasks panel on the root admin page.
+
+Please implement and confirm with a short console excerpt of factor counts.
+
+End of prompt

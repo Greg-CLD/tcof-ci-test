@@ -41,7 +41,6 @@ export default function AdminPresetEditor() {
   const [email, setEmail] = useState('');
   const [heuristics, setHeuristics] = useState<PresetHeuristic[]>([]);
   const [coreHeuristics, setCoreHeuristics] = useState<CoreHeuristic[]>([]);
-  const [successFactors, setSuccessFactors] = useState<any[]>([]);
   const [saveMessage, setSaveMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
@@ -78,24 +77,9 @@ export default function AdminPresetEditor() {
       const presets = await presetsResponse.json();
       setHeuristics(presets);
       
-      // Load success factors from Excel
-      try {
-        // Using the factorLoader utility to load Excel data
-        const { loadFactors } = await import('@/utils/factorLoader');
-        const factors = await loadFactors();
-        setSuccessFactors(factors);
-      } catch (excelError) {
-        console.error('Error loading factors from Excel:', excelError);
-        toast({
-          title: "Warning",
-          description: "Could not load success factors from Excel. Some data may be missing.",
-          variant: "destructive"
-        });
-      }
-      
       toast({
         title: "Data Loaded",
-        description: "Loaded core tasks, preset heuristics, and success factors successfully."
+        description: "Loaded core tasks and preset heuristics successfully."
       });
     } catch (error) {
       console.error('Error loading data:', error);
