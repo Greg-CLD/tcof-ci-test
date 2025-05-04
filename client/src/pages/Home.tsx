@@ -33,7 +33,8 @@ export default function Home() {
   const { 
     projects, 
     isLoading, 
-    createProject
+    createProject,
+    deleteProject
   } = useProjects();
   const queryClient = useQueryClient();
 
@@ -118,16 +119,23 @@ export default function Home() {
   const handleDeleteProject = async () => {
     if (!projectToDelete) return;
     
-    // TODO: Implement project deletion
-    // This will be implemented in a future update
-
-    setDeleteDialogOpen(false);
-    setProjectToDelete(null);
-    
-    toast({
-      title: "Project Deletion",
-      description: "Project deletion is coming soon in a future update",
-    });
+    try {
+      // Call the delete mutation from useProjects hook
+      await deleteProject.mutateAsync(projectToDelete);
+      
+      // Clear selected project from localStorage if it was the deleted one
+      const selectedProjectId = localStorage.getItem('selectedProjectId');
+      if (selectedProjectId === projectToDelete) {
+        localStorage.removeItem('selectedProjectId');
+      }
+      
+      // Close the dialog and clear state
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      // Toast is already handled by the mutation
+    }
   };
 
   // Handle generating a PDF export (for current project)
