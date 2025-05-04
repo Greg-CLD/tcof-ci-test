@@ -1,15 +1,39 @@
 .da-card { 
-  background:#fff5e7;
-  padding:1.5rem;
-  border:2px solid #008080;
-  border-radius:8px;
-  margin-top:1rem;
+  background: #ffffff;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
 }
-.da-card h3 { 
-  color:#008080;
-  margin:0 0 .5rem 0;
+
+.da-grid { 
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
 }
+
 .da-grid svg { 
-  max-width:300px;
-  margin:auto;
+  max-width: 400px;
+  margin: auto;
+  filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Highlight effect for the zone matrix cells */
+.da-grid svg rect[fill="#008080"] {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    filter: drop-shadow(0 0 0px rgba(0, 128, 128, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 5px rgba(0, 128, 128, 0.8));
+  }
+  100% {
+    filter: drop-shadow(0 0 0px rgba(0, 128, 128, 0.8));
+  }
 }

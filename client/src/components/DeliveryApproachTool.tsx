@@ -78,22 +78,23 @@ const DeliveryApproachTool: React.FC<DeliveryApproachToolProps> = ({ initial, on
   const [uncertainty, setUncertainty] = useState<'Low' | 'Medium' | 'High' | null>(initial?.uncertainty || null);
   const [selectedZone, setSelectedZone] = useState<DeliveryZone | null>(null);
 
-  // Zone mapping matrix
+  // Zone mapping matrix - Flipped to match Praxis Framework with X-axis representing Scope
+  // and Y-axis representing Uncertainty (High at top, Low at bottom)
   const zoneMatrix = {
     Small: {
-      Low: 'Zone A',
-      Medium: 'Zone B',
-      High: 'Zone F'
+      Low: 'Zone A',    // Small scope, Low uncertainty
+      Medium: 'Zone B', // Small scope, Medium uncertainty
+      High: 'Zone F'    // Small scope, High uncertainty
     },
     Medium: {
-      Low: 'Zone B',
-      Medium: 'Zone C',
-      High: 'Zone D'
+      Low: 'Zone B',    // Medium scope, Low uncertainty
+      Medium: 'Zone C', // Medium scope, Medium uncertainty
+      High: 'Zone D'    // Medium scope, High uncertainty
     },
     Large: {
-      Low: 'Zone C',
-      Medium: 'Zone D',
-      High: 'Zone E'
+      Low: 'Zone C',    // Large scope, Low uncertainty
+      Medium: 'Zone D', // Large scope, Medium uncertainty
+      High: 'Zone E'    // Large scope, High uncertainty
     }
   };
 
@@ -219,7 +220,7 @@ const DeliveryApproachTool: React.FC<DeliveryApproachToolProps> = ({ initial, on
             </div>
           </div>
           
-          {/* Praxis Quadrant Visualization */}
+          {/* Praxis Quadrant Visualization - Flipped to match Praxis Framework */}
           {(scope || uncertainty) && (
             <div className="da-grid mt-8">
               <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
@@ -231,32 +232,32 @@ const DeliveryApproachTool: React.FC<DeliveryApproachToolProps> = ({ initial, on
                 <line x1="200" y1="0" x2="200" y2="300" stroke="#ddd" strokeWidth="1" />
                 
                 {/* Zone labels */}
-                <text x="50" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone A</text>
-                <text x="150" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone B</text>
-                <text x="250" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone F</text>
+                <text x="50" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone A</text>
+                <text x="150" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone B</text>
+                <text x="250" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone C</text>
                 <text x="50" y="150" textAnchor="middle" fontSize="14" fill="#555">Zone B</text>
                 <text x="150" y="150" textAnchor="middle" fontSize="14" fill="#555">Zone C</text>
                 <text x="250" y="150" textAnchor="middle" fontSize="14" fill="#555">Zone D</text>
-                <text x="50" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone C</text>
-                <text x="150" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone D</text>
-                <text x="250" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone E</text>
+                <text x="50" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone F</text>
+                <text x="150" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone D</text>
+                <text x="250" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone E</text>
                 
-                {/* X and Y axis labels */}
-                <text x="150" y="295" textAnchor="middle" fontSize="12" fill="#333">Uncertainty</text>
-                <text x="50" y="295" textAnchor="middle" fontSize="10" fill="#666">Low</text>
+                {/* X and Y axis labels - Flipped with Scope on X-axis */}
+                <text x="150" y="295" textAnchor="middle" fontSize="12" fill="#333">Scope</text>
+                <text x="50" y="295" textAnchor="middle" fontSize="10" fill="#666">Small</text>
                 <text x="150" y="295" textAnchor="middle" fontSize="10" fill="#666">Medium</text>
-                <text x="250" y="295" textAnchor="middle" fontSize="10" fill="#666">High</text>
+                <text x="250" y="295" textAnchor="middle" fontSize="10" fill="#666">Large</text>
                 
-                <text x="5" y="150" textAnchor="middle" fontSize="12" fill="#333" transform="rotate(-90, 5, 150)">Scope</text>
-                <text x="20" y="50" textAnchor="middle" fontSize="10" fill="#666">Small</text>
+                <text x="5" y="150" textAnchor="middle" fontSize="12" fill="#333" transform="rotate(-90, 5, 150)">Uncertainty</text>
+                <text x="20" y="250" textAnchor="middle" fontSize="10" fill="#666">Low</text>
                 <text x="20" y="150" textAnchor="middle" fontSize="10" fill="#666">Medium</text>
-                <text x="20" y="250" textAnchor="middle" fontSize="10" fill="#666">Large</text>
+                <text x="20" y="50" textAnchor="middle" fontSize="10" fill="#666">High</text>
                 
-                {/* Highlight selected cell */}
+                {/* Highlight selected cell - Flipped coordinates */}
                 {scope && uncertainty && (
                   <rect
-                    x={uncertainty === 'Low' ? 0 : uncertainty === 'Medium' ? 100 : 200}
-                    y={scope === 'Small' ? 0 : scope === 'Medium' ? 100 : 200}
+                    x={scope === 'Small' ? 0 : scope === 'Medium' ? 100 : 200}
+                    y={uncertainty === 'Low' ? 200 : uncertainty === 'Medium' ? 100 : 0}
                     width="100"
                     height="100"
                     fill="#008080"
