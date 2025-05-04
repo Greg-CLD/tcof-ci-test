@@ -16,6 +16,7 @@ import { Loader2, AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
 import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask, PolicyTask, PersonalHeuristic, Mapping } from '@/lib/plan-db';
 import { getTcofFactorOptions } from '@/lib/tcofData';
 import { getTcofFactorsAsItems, getFactorTasks, getFactorNameById, initializeFactors } from '@/lib/factorTaskUtils';
+import { getUserHeuristicTaskDisplayName, getPolicyTaskDisplayName, isTaskAlreadyFormatted } from '@/lib/taskDisplayName';
 import { 
   Card, 
   CardContent, 
@@ -219,10 +220,31 @@ export default function Block2Design() {
       // Check if the ID belongs to a user heuristic or TCOF factor
       const isUserHeuristic = unmappedHeuristics.some((h: PersonalHeuristic) => h.id === heuristicId);
       
-      // Add empty task to UI first
+      // Create a friendly task name based on type
+      const heuristicIndex = unmappedHeuristics.findIndex((h: PersonalHeuristic) => h.id === heuristicId) + 1;
+      let taskDisplayName;
+      
+      if (isUserHeuristic) {
+        // For user heuristics, use UH format
+        const taskIndex = (planData.stages[currentStage].tasks?.filter(
+          (t: any) => t.heuristicId === heuristicId && t.stage === stage
+        ).length || 0) + 1;
+        
+        taskDisplayName = getUserHeuristicTaskDisplayName(heuristicIndex, stage, taskIndex);
+      } else {
+        // For TCOF factors, use factor name
+        const factorName = getFactorNameById(heuristicId);
+        const taskIndex = (planData.stages[currentStage].tasks?.filter(
+          (t: any) => t.factorId === heuristicId && t.stage === stage
+        ).length || 0) + 1;
+        
+        taskDisplayName = `${factorName} - ${stage} - Task ${taskIndex}`;
+      }
+      
+      // Add task with friendly name to UI first
       setFactorTasks(prev => {
         const stageTasks = [...prev[stage]];
-        stageTasks.push('New task');
+        stageTasks.push(taskDisplayName);
         return { ...prev, [stage]: stageTasks };
       });
       
@@ -235,7 +257,7 @@ export default function Block2Design() {
       // Add task with appropriate data structure based on origin
       updatedPlan.stages[currentStage].tasks.push({
         id: uuidv4(), // Generate UUID for the task
-        text: 'New task',
+        text: taskDisplayName,
         stage: stage,
         origin: isUserHeuristic ? 'userHeuristic' : 'factor',
         heuristicId: isUserHeuristic ? heuristicId : undefined,

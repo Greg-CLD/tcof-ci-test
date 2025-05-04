@@ -177,17 +177,21 @@ export default function FactorTaskEditor({
                           <div key={index} className="flex items-start space-x-2">
                             <div className="flex-1 relative">
                               <Input
-                                value={task}
-                                onChange={(e) => e.currentTarget.value}
-                                onBlur={(e) => selectedItemId && handleBlur(selectedItemId, stage, index, e.target.value)}
-                                onKeyDown={(e) => selectedItemId && handleKeyPress(e, selectedItemId, stage, index)}
-                                ref={(el) => inputRefs.current[`${stage}_${index}`] = el}
-                                className="flex-1"
-                                placeholder={getUserHeuristicTaskDisplayName(
+                                value={isTaskAlreadyFormatted(task) ? task : task || getUserHeuristicTaskDisplayName(
                                   items.findIndex(item => item.id === selectedItemId) + 1,
                                   stage,
                                   index + 1
                                 )}
+                                onChange={(e) => {
+                                  if (selectedItemId) {
+                                    // Just update the UI value without saving
+                                    inputRefs.current[`${stage}_${index}`]?.setAttribute('value', e.target.value);
+                                  }
+                                }}
+                                onBlur={(e) => selectedItemId && handleBlur(selectedItemId, stage, index, e.target.value)}
+                                onKeyDown={(e) => selectedItemId && handleKeyPress(e, selectedItemId, stage, index)}
+                                ref={(el) => inputRefs.current[`${stage}_${index}`] = el}
+                                className="flex-1"
                               />
                               {savingTaskIndex === index && (
                                 <div className="absolute right-2 top-2 text-sm text-muted-foreground">
@@ -215,7 +219,26 @@ export default function FactorTaskEditor({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => selectedItemId && onAddTask(selectedItemId, stage)}
+                        onClick={() => {
+                          if (selectedItemId) {
+                            // Show saving indicator
+                            const nextIndex = tasks[stage].length;
+                            setSavingTaskIndex(nextIndex);
+                            
+                            // Call add task with the proper formatting
+                            onAddTask(selectedItemId, stage);
+                            
+                            // After a brief delay, show saved indicator then clear it
+                            setTimeout(() => {
+                              setSavingTaskIndex(null);
+                              setSavedTaskIndex(nextIndex);
+                              
+                              setTimeout(() => {
+                                setSavedTaskIndex(null);
+                              }, 1500);
+                            }, 400);
+                          }
+                        }}
                         disabled={!selectedItemId}
                       >
                         <Plus className="mr-2 h-4 w-4" />
