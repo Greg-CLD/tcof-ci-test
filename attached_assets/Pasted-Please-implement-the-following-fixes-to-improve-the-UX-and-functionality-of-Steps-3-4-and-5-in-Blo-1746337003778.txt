@@ -1,0 +1,59 @@
+Please implement the following fixes to improve the UX and functionality of Steps 3, 4, and 5 in Block 2 (/make-a-plan/full/block-2).
+
+───────────────────────────────
+✅ STEP 3 – ADD "DOES NOT APPLY" OPTION
+
+• Add an option to the TCOF Success Factor selector labelled:
+   → “❓ No Match / Doesn’t Apply”
+• This should allow users to intentionally skip mapping a heuristic.
+• Internally, store this as `null` or a special flag like `none` so the heuristic is handled correctly in Step 4 (i.e. still appears for task assignment).
+
+───────────────────────────────
+✅ STEP 4 – FIX DISPLAY & TEXT ENTRY
+
+1. **Remove Database ID from Heuristic Label**
+• In the "Select Item" dropdown (left panel), remove the long ID prefix.
+• Only show the heuristic's plain title as written by the user.
+
+2. **Fix Text Input Field for Tasks**
+• Currently, when users begin typing in the task entry field, the text disappears or behaves erratically.
+• Expected: Typing should behave normally, with input visible and usable from the start.
+
+3. **Implement Autosave Indicator**
+• After typing and clicking away or hitting Enter, auto-save the task.
+• Display a small confirmation (e.g. ✅ “Saved”) that briefly appears near the field or in the corner and fades after 1.5s.
+• This will help reassure users that their input has been captured.
+
+───────────────────────────────
+✅ STEP 5 – REBUILD ORGANISATIONAL POLICY TASKS
+
+• Allow the user to define one or more policy "buckets" or categories (e.g. "Change Process", "Risk Guidelines").
+
+1. **Left Panel: Policy Selector**
+• User should be able to:
+   – Create a new policy group
+   – See existing policies (with edit/delete option)
+
+2. **Right Panel: Add Tasks per Policy**
+• Once a policy is selected, allow the user to add tasks by stage, using the same UI pattern as Step 4.
+• These tasks should be stored under:
+   → plan.orgPolicies[policyId].tasks = [{ stage, text }]
+
+3. **Consistency**
+• Use the same FactorTaskEditor UI pattern as used in Step 4 and /admin/factors for visual consistency.
+
+───────────────────────────────
+NOTES ON STORAGE
+
+• Ensure heuristic-task and policy-task data is stored in plan.tasks or plan.orgPolicies in a format that allows them to be exported into the final checklist.
+
+───────────────────────────────
+FILES LIKELY TO UPDATE
+
+• Block2Connect.tsx or Block2Editor
+• Step3MapHeuristics.tsx
+• Step4TaskBuilder.tsx
+• Step5OrgPolicies.tsx (or create if missing)
+• factorTaskUtils.ts
+
+End of prompt.

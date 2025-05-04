@@ -44,6 +44,7 @@ export default function SuccessFactorMapping({
       // Use the options if available
       setFactorOptions([
         { value: 'none', label: 'Select a success factor...' },
+        { value: 'no_match', label: '❓ No Match / Doesn\'t Apply' },
         ...options
       ]);
     } else {
@@ -58,6 +59,7 @@ export default function SuccessFactorMapping({
       
       setFactorOptions([
         { value: 'none', label: 'Select a success factor...' },
+        { value: 'no_match', label: '❓ No Match / Doesn\'t Apply' },
         ...defaultOptions
       ]);
     }
@@ -76,6 +78,7 @@ export default function SuccessFactorMapping({
             
             setFactorOptions([
               { value: 'none', label: 'Select a success factor...' },
+              { value: 'no_match', label: '❓ No Match / Doesn\'t Apply' },
               ...apiOptions
             ]);
           }
@@ -90,8 +93,8 @@ export default function SuccessFactorMapping({
 
   const handleFactorChange = async (heuristicId: string, factorId: string | null) => {
     try {
-      // Convert 'none' value to null for unmapping
-      const actualFactorId = factorId === 'none' ? null : factorId;
+      // Convert 'none' or 'no_match' value to null for unmapping
+      const actualFactorId = (factorId === 'none' || factorId === 'no_match') ? null : factorId;
       
       // Try to add the mapping
       await addMapping(planId, heuristicId, actualFactorId, stage);

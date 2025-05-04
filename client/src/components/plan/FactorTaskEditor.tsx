@@ -46,15 +46,29 @@ export default function FactorTaskEditor({
   onSelectItem
 }: TaskEditorProps) {
   const [activeTab, setActiveTab] = useState<StageType>('Identification');
+  const [savingTaskIndex, setSavingTaskIndex] = useState<number | null>(null);
+  const [savedTaskIndex, setSavedTaskIndex] = useState<number | null>(null);
   const { toast } = useToast();
   
   // Create a debounced task update function
   const debouncedUpdateTask = useCallback(
     debounce((itemId: string, stage: StageType, taskIndex: number, newText: string) => {
       onUpdateTask(itemId, stage, taskIndex, newText);
-    }, 1000), // 1 second debounce
+      setSavingTaskIndex(null);
+      setSavedTaskIndex(taskIndex);
+      // Clear saved indicator after 1.5 seconds
+      setTimeout(() => {
+        setSavedTaskIndex(null);
+      }, 1500);
+    }, 800), // 800ms debounce
     [onUpdateTask]
   );
+  
+  // Handle immediate input changes
+  const handleTaskChange = (itemId: string, stage: StageType, taskIndex: number, newText: string) => {
+    setSavingTaskIndex(taskIndex);
+    debouncedUpdateTask(itemId, stage, taskIndex, newText);
+  };
 
   // Get the currently selected item
   const selectedItem = selectedItemId ? items.find(item => item.id === selectedItemId) : null;
@@ -100,8 +114,7 @@ export default function FactorTaskEditor({
                           }`}
                           onClick={() => onSelectItem(item.id)}
                         >
-                          <div className="font-medium">{item.id}</div>
-                          <div className="text-sm text-gray-700">{item.title}</div>
+                          <div className="font-medium">{item.title}</div>
                         </div>
                       ))}
                     </div>
