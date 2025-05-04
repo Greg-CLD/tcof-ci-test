@@ -418,108 +418,17 @@ export default function AdminPresetEditor() {
         </section>
       )}
 
-      {/* TCOF Success-Factor Tasks Section */}
+      {/* Admin section navigation and links */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">TCOF Success-Factor Tasks</h2>
-        <p className="mb-4">The table below shows the 12 official TCOF Success Factors with their tasks organized by stage.</p>
-        
-        {successFactors.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableCaption>
-                Success factors and tasks loaded from Excel spreadsheet
-              </TableCaption>
-              <TableHeader>
-                <TableRow className="bg-gray-100">
-                  <TableHead className="w-1/6">Factor ID</TableHead>
-                  <TableHead className="w-1/4">Success Factor</TableHead>
-                  <TableHead className="w-1/6">Identification Tasks</TableHead>
-                  <TableHead className="w-1/6">Definition Tasks</TableHead>
-                  <TableHead className="w-1/6">Delivery Tasks</TableHead>
-                  <TableHead className="w-1/6">Closure Tasks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {successFactors.map((factor) => (
-                  <TableRow key={factor.id} className="border-b">
-                    <TableCell className="font-medium align-top">{factor.id}</TableCell>
-                    <TableCell className="align-top">{factor.title}</TableCell>
-                    <TableCell className="align-top">
-                      {factor.tasks?.Identification?.length > 0 ? (
-                        <ul className="list-disc pl-5 text-sm">
-                          {factor.tasks.Identification.map((task, idx) => (
-                            <li key={`${factor.id}-ident-${idx}`} className="mb-2">{task}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <span className="text-gray-400 italic">— No tasks —</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      {factor.tasks?.Definition?.length > 0 ? (
-                        <ul className="list-disc pl-5 text-sm">
-                          {factor.tasks.Definition.map((task, idx) => (
-                            <li key={`${factor.id}-def-${idx}`} className="mb-2">{task}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <span className="text-gray-400 italic">— No tasks —</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      {factor.tasks?.Delivery?.length > 0 ? (
-                        <ul className="list-disc pl-5 text-sm">
-                          {factor.tasks.Delivery.map((task, idx) => (
-                            <li key={`${factor.id}-del-${idx}`} className="mb-2">{task}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <span className="text-gray-400 italic">— No tasks —</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      {factor.tasks?.Closure?.length > 0 ? (
-                        <ul className="list-disc pl-5 text-sm">
-                          {factor.tasks.Closure.map((task, idx) => (
-                            <li key={`${factor.id}-clo-${idx}`} className="mb-2">{task}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <span className="text-gray-400 italic">— No tasks —</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="p-6 border border-gray-200 rounded-lg bg-gray-50 text-center">
-            <p className="text-gray-500">Loading success factors...</p>
-          </div>
-        )}
-        
-        <div className="flex mt-4 gap-4 items-center">
-          <Button onClick={downloadTcofJSON} className="flex items-center gap-2" variant="outline">
-            <Download className="h-4 w-4" />
-            Export JSON
+        <div className="flex items-center gap-4 mb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation('/make-a-plan/admin/factors')}
+            className="flex items-center gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            Manage Success Factors
           </Button>
-          
-          <div className="flex items-center gap-2">
-            <Button className="flex items-center gap-2" variant="outline" asChild>
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Upload className="h-4 w-4" />
-                Upload JSON
-              </label>
-            </Button>
-            <input 
-              id="file-upload" 
-              type="file" 
-              accept=".json" 
-              onChange={uploadTcofJSON}
-              className="hidden"
-            />
-          </div>
         </div>
       </section>
     </div>
