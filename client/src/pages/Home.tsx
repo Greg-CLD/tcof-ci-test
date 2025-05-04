@@ -85,7 +85,7 @@ export default function Home() {
       });
       
       // Refresh project list
-      await loadProjects();
+      await queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
 
       // Show success toast
       toast({

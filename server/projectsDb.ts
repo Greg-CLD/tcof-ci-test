@@ -18,9 +18,10 @@ export interface Project {
   name: string;
   description?: string;
   sector?: string;
+  customSector?: string;
   orgType?: string;
   teamSize?: string;
-  deliveryStage?: string;
+  currentStage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,9 +79,10 @@ export const projectsDb = {
       name: string; 
       description?: string;
       sector?: string;
+      customSector?: string;
       orgType?: string;
       teamSize?: string;
-      deliveryStage?: string;
+      currentStage?: string;
     }
   ): Promise<Project | null> => {
     try {
@@ -91,9 +93,10 @@ export const projectsDb = {
         name: data.name,
         description: data.description || '',
         sector: data.sector,
+        customSector: data.customSector,
         orgType: data.orgType,
         teamSize: data.teamSize,
-        deliveryStage: data.deliveryStage,
+        currentStage: data.currentStage,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -172,9 +175,10 @@ export const projectsDb = {
       name?: string; 
       description?: string;
       sector?: string;
+      customSector?: string;
       orgType?: string;
       teamSize?: string;
-      deliveryStage?: string;
+      currentStage?: string;
     }
   ): Promise<Project | null> => {
     try {
