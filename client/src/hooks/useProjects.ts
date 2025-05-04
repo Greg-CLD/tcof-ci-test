@@ -68,7 +68,7 @@ export function useProjects() {
   // Update an existing project
   const updateProject = useMutation({
     mutationFn: async ({ id, data }: UpdateProjectParams): Promise<Project> => {
-      const response = await apiRequest('PATCH', `/api/projects/${id}`, data);
+      const response = await apiRequest('PUT', `/api/projects/${id}`, data);
       
       if (!response.ok) {
         const errorData = await response.json();
