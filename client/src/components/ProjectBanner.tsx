@@ -12,6 +12,7 @@ import { PlusCircle, Briefcase } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuthProtection } from '@/hooks/use-auth-protection';
 import { useAuth } from '@/hooks/use-auth';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function ProjectBanner() {
   const [location, navigate] = useLocation();
