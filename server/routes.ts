@@ -591,6 +591,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error updating project" });
     }
   });
+  
+  // DELETE project endpoint
+  app.delete("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const projectId = req.params.id;
+      
+      // Get the project to verify ownership
+      const existingProject = await projectsDb.getProject(projectId);
+      if (!existingProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Ensure user owns this project
+      if (existingProject.userId !== (req.user as any).id) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      // Delete the project
+      const deleted = await projectsDb.deleteProject(projectId);
+      
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete project" });
+      }
+      
+      res.status(200).json({ message: "Project deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting project:", error);
+      res.status(500).json({ message: "Error deleting project" });
+    }
+  });
 
   // Set up utilities for success factors using file system
   // factorsDb is imported from './factorsDb'

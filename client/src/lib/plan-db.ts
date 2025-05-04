@@ -113,6 +113,7 @@ export type PlanGoodPractice = {
 
 export type PlanRecord = {
   id: string;
+  projectId: string; // Associate with a specific project
   name?: string;
   description?: string;
   created: string;
@@ -140,8 +141,9 @@ const createEmptyStageData = (): StageData => ({
 });
 
 // Create empty plan record
-const createEmptyPlanRecord = (name?: string, description?: string): PlanRecord => ({
+const createEmptyPlanRecord = (name?: string, description?: string, projectId?: string): PlanRecord => ({
   id: uuidv4(),
+  projectId: projectId || 'default', // Use default if no project ID provided
   name,
   description,
   created: new Date().toISOString(),
@@ -160,9 +162,13 @@ const plans: Record<string, PlanRecord> = {};
  * Creates an empty plan and returns its ID
  * @param name Optional name for the plan
  * @param description Optional description for the plan
+ * @param projectId ID of the project this plan belongs to
  */
-export const createEmptyPlan = async (name?: string, description?: string): Promise<string> => {
-  const newPlan = createEmptyPlanRecord(name, description);
+export const createEmptyPlan = async (name?: string, description?: string, projectId?: string): Promise<string> => {
+  // Get the project ID from parameter, localStorage, or use default
+  const selectedProjectId = projectId || localStorage.getItem('selectedProjectId') || 'default';
+  
+  const newPlan = createEmptyPlanRecord(name, description, selectedProjectId);
   plans[newPlan.id] = newPlan;
   
   try {
@@ -224,8 +230,13 @@ export const savePlan = async (id: string, data: Partial<PlanRecord>): Promise<b
       } else {
         // If the plan doesn't exist yet, initialize it
         console.log(`Creating new plan record for ID ${id} as it doesn't exist in storage`);
+        
+        // Get the project ID from data, localStorage, or use default
+        const projectId = data.projectId || localStorage.getItem('selectedProjectId') || 'default';
+        
         plans[id] = {
           id,
+          projectId, // Ensure we set the projectId
           created: new Date().toISOString(),
           stages: {
             Identification: createEmptyStageData(),
