@@ -514,7 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const { name, description, sector, orgType, teamSize, deliveryStage } = req.body;
+      const { name, description, sector, customSector, orgType, teamSize, currentStage } = req.body;
       
       if (!name) {
         return res.status(400).json({ message: "Project name is required" });
@@ -526,9 +526,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name,
           description: description || '',
           sector,
+          customSector,
           orgType,
           teamSize,
-          deliveryStage
+          currentStage
         }
       );
       
@@ -547,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const projectId = req.params.id;
-      const { name, description, sector, orgType, teamSize, deliveryStage } = req.body;
+      const { name, description, sector, customSector, orgType, teamSize, currentStage } = req.body;
       
       // Get the project to verify ownership
       const existingProject = await projectsDb.getProject(projectId);
@@ -564,17 +565,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name?: string; 
         description?: string;
         sector?: string;
+        customSector?: string;
         orgType?: string;
         teamSize?: string;
-        deliveryStage?: string;
+        currentStage?: string;
       } = {};
       
       if (name !== undefined) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (sector !== undefined) updateData.sector = sector;
+      if (customSector !== undefined) updateData.customSector = customSector;
       if (orgType !== undefined) updateData.orgType = orgType;
       if (teamSize !== undefined) updateData.teamSize = teamSize;
-      if (deliveryStage !== undefined) updateData.deliveryStage = deliveryStage;
+      if (currentStage !== undefined) updateData.currentStage = currentStage;
       
       const updatedProject = await projectsDb.updateProject(projectId, updateData);
       
