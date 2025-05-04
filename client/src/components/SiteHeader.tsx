@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
+import ProjectBanner from "@/components/ProjectBanner";
 import logoImage from "../assets/logo.png";
 
 export default function SiteHeader() {

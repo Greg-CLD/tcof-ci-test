@@ -7,6 +7,10 @@ export interface Project {
   userId: number;
   name: string;
   description?: string;
+  sector?: string;
+  orgType?: string;
+  teamSize?: string;
+  deliveryStage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,7 +31,14 @@ export function useProjects() {
 
   // Create a new project
   const createProject = useMutation({
-    mutationFn: async (data: { name: string; description?: string }) => {
+    mutationFn: async (data: { 
+      name: string; 
+      description?: string;
+      sector?: string;
+      orgType?: string;
+      teamSize?: string;
+      deliveryStage?: string;
+    }) => {
       const response = await fetch('/api/projects', {
         method: 'POST',
         headers: {
@@ -70,7 +81,14 @@ export function useProjects() {
       data,
     }: {
       id: string;
-      data: { name?: string; description?: string };
+      data: { 
+        name?: string; 
+        description?: string;
+        sector?: string;
+        orgType?: string;
+        teamSize?: string;
+        deliveryStage?: string;
+      };
     }) => {
       const response = await fetch(`/api/projects/${id}`, {
         method: 'PUT',
