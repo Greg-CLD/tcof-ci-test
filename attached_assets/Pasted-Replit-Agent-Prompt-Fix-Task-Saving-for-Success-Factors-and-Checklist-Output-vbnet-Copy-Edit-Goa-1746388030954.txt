@@ -1,0 +1,46 @@
+Replit Agent Prompt: Fix Task Saving for Success Factors and Checklist Output
+vbnet
+Copy
+Edit
+🎯 Goal  
+Fix issues with saving and retrieving default tasks from TCOF Success Factors, and ensure these display in the final project checklist as expected.
+
+────────────────────────────────
+🛠️ 1. Task Saving Bug in /make-a-plan/admin/factors  
+• When I add a task to a Success Factor, the UI shows “Auto-saving” – but when I refresh the page, the task disappears.  
+→ Please fix this so that task entries **persist to the database** reliably.
+
+• Confirm the following:
+  – Task is correctly linked to the selected Success Factor (by factorId)
+  – Task is correctly linked to a Stage (Identification, Definition, Delivery, Closure)
+  – Task is saved in the correct data structure for inclusion in the user’s checklist
+
+────────────────────────────────
+📋 2. Fix Final Checklist Logic  
+• When a user generates their checklist at /make-a-plan/checklist, I expect the following:
+
+✅ All 12 official TCOF Success Factors listed  
+✅ All associated default tasks (from admin area) shown under each factor  
+✅ All personal heuristics + user-added tasks  
+✅ All custom framework tasks from Step 7  
+✅ All organisational policy tasks from Step 5
+
+Currently, TCOF tasks are not appearing – please ensure the checklist query correctly loads them by factorId and stage.
+
+────────────────────────────────
+🔍 3. Expected Behavior Recap  
+• Tasks added in /make-a-plan/admin/factors should persist and appear:
+  – In Step 1 (as read-only heuristics)
+  – In the checklist as default tasks linked to Success Factors
+
+• Any failure to save means these tasks silently disappear from the user’s flow.  
+→ Please implement a fail-safe: if a save fails, show an inline error and **do not silently proceed**.
+
+────────────────────────────────
+✅ Test Criteria  
+• Go to /make-a-plan/admin/factors  
+• Add a task to a Success Factor under a specific stage  
+• Refresh the page → the task should persist  
+• Generate a checklist for a project → the TCOF factor and this task should appear
+
+End of prompt

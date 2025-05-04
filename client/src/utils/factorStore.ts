@@ -270,13 +270,25 @@ export async function createFactor(factor: FactorTask): Promise<FactorTask | nul
  */
 export async function updateFactor(factorId: string, updatedFactor: FactorTask): Promise<FactorTask | null> {
   try {
-    const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+    // Ensure tasks property has all required stage arrays
+    const validatedFactor = {
+      ...updatedFactor,
+      tasks: {
+        Identification: Array.isArray(updatedFactor.tasks?.Identification) ? updatedFactor.tasks.Identification : [],
+        Definition: Array.isArray(updatedFactor.tasks?.Definition) ? updatedFactor.tasks.Definition : [],
+        Delivery: Array.isArray(updatedFactor.tasks?.Delivery) ? updatedFactor.tasks.Delivery : [],
+        Closure: Array.isArray(updatedFactor.tasks?.Closure) ? updatedFactor.tasks.Closure : []
+      }
+    };
+    
+    // Make the API request
+    const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, validatedFactor);
     
     if (response.ok) {
       const savedFactor = await response.json();
       
       // Update the local cache
-      const currentFactors = await getFactors();
+      const currentFactors = await getFactors(true); // Force refresh from server
       cachedFactors = currentFactors.map(f => 
         f.id === factorId ? savedFactor : f
       );
@@ -285,11 +297,11 @@ export async function updateFactor(factorId: string, updatedFactor: FactorTask):
       return savedFactor;
     } else {
       console.error('Failed to update factor:', await response.text());
-      return null;
+      throw new Error(`Failed to update factor: ${response.status} ${response.statusText}`);
     }
   } catch (error) {
     console.error('Error updating factor:', error);
-    return null;
+    throw error; // Rethrow error to be handled by the caller
   }
 }
 
