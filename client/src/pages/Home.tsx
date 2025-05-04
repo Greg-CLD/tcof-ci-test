@@ -18,6 +18,7 @@ import { formatDistanceToNow } from "date-fns";
 import { generateCompletePDF } from "@/lib/pdf-utils";
 import vitruvianMan from "../assets/vitruvian-man.png";
 import { useProjects, Project } from "@/hooks/useProjects";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Home() {
   const [location, navigate] = useLocation();
@@ -32,9 +33,9 @@ export default function Home() {
   const { 
     projects, 
     isLoading, 
-    refetch: loadProjects,
     createProject
   } = useProjects();
+  const queryClient = useQueryClient();
 
   // Handle creating a new project
   const handleCreateProject = async () => {
@@ -183,7 +184,7 @@ export default function Home() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => loadProjects()}
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/projects'] })}
               className="text-tcof-dark border-tcof-teal hover:bg-tcof-teal/10"
               disabled={isLoading}
             >

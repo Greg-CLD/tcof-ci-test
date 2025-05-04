@@ -100,7 +100,7 @@ export default function ProjectBanner() {
             {selectedProject && (
               <div className="text-xs text-gray-500">
                 {selectedProject.sector && `${selectedProject.sector}`}
-                {selectedProject.deliveryStage && ` • ${selectedProject.deliveryStage} stage`}
+                {selectedProject.currentStage && ` • ${selectedProject.currentStage} stage`}
               </div>
             )}
             

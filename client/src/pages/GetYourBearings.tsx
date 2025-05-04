@@ -130,8 +130,8 @@ export default function GetYourBearings() {
                           {project.sector && (
                             <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">{project.sector}</span>
                           )}
-                          {project.deliveryStage && (
-                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">{project.deliveryStage}</span>
+                          {project.currentStage && (
+                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">{project.currentStage}</span>
                           )}
                         </div>
                         
