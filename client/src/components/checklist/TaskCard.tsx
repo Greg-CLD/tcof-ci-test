@@ -4,9 +4,12 @@ import {
   Circle, 
   CheckCircle, 
   Edit, 
-  Clock, 
+  Save,
+  X, 
   MoreHorizontal,
-  Calendar
+  Calendar,
+  GripVertical,
+  User
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -14,23 +17,36 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { TaskPriority } from '@/lib/plan-db';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export interface TaskUpdates {
+  title?: string;
   completed?: boolean;
   notes?: string;
   priority?: TaskPriority | undefined;
   dueDate?: string | undefined;
+  owner?: string;
+  status?: 'To Do' | 'Working On It' | 'Done';
 }
 
 interface TaskCardProps {
@@ -40,12 +56,15 @@ interface TaskCardProps {
   notes?: string;
   priority?: TaskPriority;
   dueDate?: string;
+  owner?: string;
+  status?: 'To Do' | 'Working On It' | 'Done';
   stage: string;
   source: 'heuristic' | 'factor' | 'custom' | 'framework';
   sourceName?: string;
   frameworkCode?: string;
   isGoodPractice?: boolean;
   onUpdate: (id: string, updates: TaskUpdates, isGoodPractice?: boolean) => void;
+  dragHandleProps?: any;
 }
 
 export default function TaskCard({
@@ -55,19 +74,52 @@ export default function TaskCard({
   notes = '',
   priority,
   dueDate,
+  owner = '',
+  status = 'To Do',
   stage,
   source,
   sourceName,
   frameworkCode,
   isGoodPractice = false,
-  onUpdate
+  onUpdate,
+  dragHandleProps
 }: TaskCardProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [noteText, setNoteText] = useState(notes);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [editedTaskTitle, setEditedTaskTitle] = useState(text);
+  const [editedNotes, setEditedNotes] = useState(notes);
+  const [editedOwner, setEditedOwner] = useState(owner);
+  const [editedStatus, setEditedStatus] = useState<'To Do' | 'Working On It' | 'Done'>(
+    completed ? 'Done' : (status || 'To Do')
+  );
+  
+  // Extract the actual task title without auto-IDs or prefixes
+  const getCleanTaskTitle = (taskText: string): string => {
+    // Check if the task has an auto-id prefix like "Auto-id-1746387431125-512"
+    if (taskText.startsWith('Auto-id-')) {
+      const lastDashIndex = taskText.lastIndexOf('-');
+      if (lastDashIndex > 0 && lastDashIndex < taskText.length - 1) {
+        const possibleEndOfAutoId = taskText.indexOf(':', lastDashIndex);
+        if (possibleEndOfAutoId > lastDashIndex) {
+          return taskText.substring(possibleEndOfAutoId + 1).trim();
+        }
+      }
+    }
+    
+    // If it doesn't match the auto-id pattern, return the original text
+    return taskText;
+  };
+  
+  // Get the clean task title
+  const cleanTaskTitle = getCleanTaskTitle(text);
   
   // Handle task completion toggle
   const handleToggleCompleted = () => {
-    onUpdate(id, { completed: !completed }, isGoodPractice);
+    const newStatus = !completed ? 'Done' : 'To Do';
+    setEditedStatus(newStatus);
+    onUpdate(id, { 
+      completed: !completed,
+      status: newStatus
+    }, isGoodPractice);
   };
   
   // Handle priority change
@@ -82,10 +134,28 @@ export default function TaskCard({
     onUpdate(id, { dueDate: dateString }, isGoodPractice);
   };
   
-  // Handle notes update
-  const handleNotesUpdate = () => {
-    onUpdate(id, { notes: noteText }, isGoodPractice);
-    setIsEditing(false);
+  // Handle save all edited details
+  const handleSaveEdits = () => {
+    const isCompletedStatus = editedStatus === 'Done';
+    
+    onUpdate(id, {
+      title: editedTaskTitle,
+      notes: editedNotes,
+      owner: editedOwner,
+      status: editedStatus,
+      completed: isCompletedStatus
+    }, isGoodPractice);
+    
+    setIsExpanded(false);
+  };
+  
+  // Handle cancel edits
+  const handleCancelEdits = () => {
+    setEditedTaskTitle(text);
+    setEditedNotes(notes);
+    setEditedOwner(owner);
+    setEditedStatus(completed ? 'Done' : (status || 'To Do'));
+    setIsExpanded(false);
   };
   
   const getPriorityColor = (priorityValue?: TaskPriority): string => {
@@ -131,81 +201,237 @@ export default function TaskCard({
     }
   };
   
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case 'Done':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'Working On It':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      default: // 'To Do'
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+  };
+  
   return (
     <div className={cn(
       'p-4 border rounded-md transition-colors',
-      completed ? 'bg-gray-50' : 'bg-white'
+      completed || status === 'Done' ? 'bg-gray-50' : 'bg-white',
+      isExpanded && 'ring-2 ring-tcof-teal/30'
     )}>
-      <div className="flex gap-3">
-        <div className="flex-shrink-0 pt-1">
-          <button
-            onClick={handleToggleCompleted}
-            className="text-gray-400 hover:text-gray-600"
-            aria-label={completed ? "Mark as incomplete" : "Mark as complete"}
-          >
-            {completed ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
-            ) : (
-              <Circle className="h-5 w-5" />
-            )}
-          </button>
+      {/* Collapsed View */}
+      {!isExpanded ? (
+        <div className="flex gap-3">
+          {/* Drag handle */}
+          {dragHandleProps && (
+            <div className="flex-shrink-0 pt-1 cursor-grab touch-none" {...dragHandleProps}>
+              <GripVertical className="h-5 w-5 text-gray-400" />
+            </div>
+          )}
+          
+          {/* Completion checkbox */}
+          <div className="flex-shrink-0 pt-1">
+            <button
+              onClick={handleToggleCompleted}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label={completed ? "Mark as incomplete" : "Mark as complete"}
+            >
+              {completed || status === 'Done' ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <Circle className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+          
+          {/* Task content */}
+          <div className="flex-grow">
+            <button 
+              className="text-left w-full"
+              onClick={() => setIsExpanded(true)}
+            >
+              <p className={cn(
+                'text-sm font-medium',
+                (completed || status === 'Done') && 'line-through text-gray-500'
+              )}>
+                {cleanTaskTitle}
+              </p>
+              
+              {notes && (
+                <div className="mt-1 text-xs text-gray-600 truncate">
+                  {notes}
+                </div>
+              )}
+              
+              {/* Tags & metadata */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                {/* Priority indicator */}
+                {priority && (
+                  <Badge variant="outline" className={getPriorityColor(priority)}>
+                    {priority === 'high' ? 'High' : priority === 'medium' ? 'Medium' : 'Low'} Priority
+                  </Badge>
+                )}
+                
+                {/* Status indicator */}
+                <Badge variant="outline" className={getStatusColor(status)}>
+                  {status}
+                </Badge>
+                
+                {/* Owner indicator */}
+                {owner && (
+                  <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200">
+                    Owner: {owner}
+                  </Badge>
+                )}
+                
+                {/* Due date indicator */}
+                {dueDate && (
+                  <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                    Due: {format(new Date(dueDate), 'MMM d, yyyy')}
+                  </Badge>
+                )}
+                
+                {/* Source type indicator - hidden in collapsed view
+                <Badge variant="outline" className={getSourceBadgeColor()}>
+                  {getSourceLabel()}
+                </Badge>
+                */}
+              </div>
+            </button>
+          </div>
+          
+          {/* Actions menu */}
+          <div className="flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsExpanded(true)}>
+                  Edit Task Details
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem onClick={() => handlePriorityChange('high')}>
+                  Set High Priority
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem onClick={() => handlePriorityChange('medium')}>
+                  Set Medium Priority
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem onClick={() => handlePriorityChange('low')}>
+                  Set Low Priority
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      Set Due Date
+                    </DropdownMenuItem>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dueDate ? new Date(dueDate) : undefined}
+                      onSelect={handleDateChange}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                
+                {dueDate && (
+                  <DropdownMenuItem onClick={() => handleDateChange(undefined)}>
+                    Clear Due Date
+                  </DropdownMenuItem>
+                )}
+                
+                {priority && (
+                  <DropdownMenuItem onClick={() => handlePriorityChange(undefined)}>
+                    Clear Priority
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        
-        <div className="flex-grow">
-          <p className={cn(
-            'text-sm font-medium',
-            completed && 'line-through text-gray-500'
-          )}>
-            {text}
-          </p>
+      ) : (
+        // Expanded Edit Mode
+        <div className="space-y-4">
+          {/* Task Title */}
+          <div>
+            <Label htmlFor={`task-title-${id}`} className="text-sm font-medium mb-1">
+              Task Title
+            </Label>
+            <Input
+              id={`task-title-${id}`}
+              value={editedTaskTitle}
+              onChange={(e) => setEditedTaskTitle(e.target.value)}
+              className="mt-1"
+              placeholder="Enter task title..."
+              required
+            />
+          </div>
           
-          {/* Notes section */}
-          {isEditing ? (
-            <div className="mt-2 space-y-2">
-              <Textarea
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Add notes..."
-                className="min-h-[80px] text-sm"
+          {/* Description */}
+          <div>
+            <Label htmlFor={`task-notes-${id}`} className="text-sm font-medium mb-1">
+              Description (optional)
+            </Label>
+            <Textarea
+              id={`task-notes-${id}`}
+              value={editedNotes}
+              onChange={(e) => setEditedNotes(e.target.value)}
+              className="min-h-[80px] mt-1"
+              placeholder="Add notes or description..."
+            />
+          </div>
+          
+          {/* Owner */}
+          <div>
+            <Label htmlFor={`task-owner-${id}`} className="text-sm font-medium mb-1">
+              Owner (optional)
+            </Label>
+            <div className="relative mt-1">
+              <User className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+              <Input
+                id={`task-owner-${id}`}
+                value={editedOwner}
+                onChange={(e) => setEditedOwner(e.target.value)}
+                className="pl-8"
+                placeholder="Who is responsible for this task?"
               />
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setNoteText(notes);
-                    setIsEditing(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleNotesUpdate}
-                >
-                  Save
-                </Button>
-              </div>
             </div>
-          ) : notes ? (
-            <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
-              <div className="flex justify-between">
-                <span className="font-medium">Notes:</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 px-1"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit className="h-3 w-3" />
-                </Button>
-              </div>
-              <p className="whitespace-pre-wrap mt-1">{notes}</p>
-            </div>
-          ) : null}
+          </div>
           
-          {/* Tags & metadata */}
-          <div className="flex flex-wrap gap-2 mt-3">
+          {/* Status */}
+          <div>
+            <Label htmlFor={`task-status-${id}`} className="text-sm font-medium mb-1">
+              Status
+            </Label>
+            <Select 
+              value={editedStatus} 
+              onValueChange={(value: 'To Do' | 'Working On It' | 'Done') => {
+                setEditedStatus(value);
+              }}
+            >
+              <SelectTrigger id={`task-status-${id}`} className="mt-1">
+                <SelectValue placeholder="Select task status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="To Do">To Do</SelectItem>
+                <SelectItem value="Working On It">Working On It</SelectItem>
+                <SelectItem value="Done">Done</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Metadata tags - in a more compact layout */}
+          <div className="pt-2 flex flex-wrap gap-2">
             {/* Priority indicator */}
             {priority && (
               <Badge variant="outline" className={getPriorityColor(priority)}>
@@ -230,63 +456,29 @@ export default function TaskCard({
               {stage}
             </Badge>
           </div>
+          
+          {/* Action buttons */}
+          <div className="flex justify-end space-x-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelEdits}
+              className="flex items-center"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveEdits}
+              className="flex items-center"
+            >
+              <Save className="h-4 w-4 mr-1" />
+              Save
+            </Button>
+          </div>
         </div>
-        
-        <div className="flex-shrink-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                Add Notes
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={() => handlePriorityChange('high')}>
-                Set High Priority
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={() => handlePriorityChange('medium')}>
-                Set Medium Priority
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={() => handlePriorityChange('low')}>
-                Set Low Priority
-              </DropdownMenuItem>
-              
-              <Popover>
-                <PopoverTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Set Due Date
-                  </DropdownMenuItem>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dueDate ? new Date(dueDate) : undefined}
-                    onSelect={handleDateChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              
-              {dueDate && (
-                <DropdownMenuItem onClick={() => handleDateChange(undefined)}>
-                  Clear Due Date
-                </DropdownMenuItem>
-              )}
-              
-              {priority && (
-                <DropdownMenuItem onClick={() => handlePriorityChange(undefined)}>
-                  Clear Priority
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
