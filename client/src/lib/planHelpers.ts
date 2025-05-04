@@ -1,8 +1,9 @@
 /**
  * Helper functions for working with plans
  */
-import { PlanRecord, DeliveryApproachData, CustomFramework, Stage, savePlan, loadPlan, createEmptyPlan } from '@/lib/plan-db';
+import { PlanRecord, DeliveryApproachData, CustomFramework, Stage, TaskPriority, savePlan, loadPlan, createEmptyPlan } from '@/lib/plan-db';
 import { v4 as uuidv4 } from 'uuid';
+import { storage } from '@/lib/storageAdapter';
 
 /**
  * Gets the ID of the most recent plan from localStorage
@@ -418,13 +419,18 @@ export const loadSuccessFactorTasks = async (): Promise<Record<Stage, {
  */
 export const quickStartPlan = async (): Promise<string> => {
   try {
-    // Create a new empty plan
-    const planId = uuidv4();
-    const plan = createEmptyPlan();
+    // Create a new empty plan with a default name
+    const projectId = await createEmptyPlan("Quick Start Project", "Project created with default settings and Success Factor tasks");
     
     // Load success factor tasks
     console.log('Loading success factor tasks for new plan');
     const successFactorTasks = await loadSuccessFactorTasks();
+    
+    // Load the plan to update it
+    const plan = await loadPlan(projectId);
+    if (!plan) {
+      throw new Error('Failed to load newly created plan');
+    }
     
     // Add success factor tasks to the plan
     Object.keys(successFactorTasks).forEach((stageName) => {
@@ -435,23 +441,17 @@ export const quickStartPlan = async (): Promise<string> => {
       ];
     });
     
-    // Initialize the plan in memory
-    if (typeof window !== 'undefined') {
-      (window as any).plans = (window as any).plans || {};
-      (window as any).plans[planId] = plan;
-    }
-    
-    // Save the plan
-    const saved = await savePlan(planId, plan as Partial<PlanRecord>);
+    // Save the updated plan
+    const saved = await savePlan(projectId, plan);
     
     if (!saved) {
-      throw new Error('Failed to save plan');
+      throw new Error('Failed to save plan with success factor tasks');
     }
     
     // Set as the most recent plan
-    setLatestPlanId(planId);
+    setLatestPlanId(projectId);
     
-    return planId;
+    return projectId;
   } catch (error) {
     console.error('Error creating quick start plan:', error);
     throw error;
