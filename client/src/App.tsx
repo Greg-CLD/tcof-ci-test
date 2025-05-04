@@ -13,6 +13,7 @@ import MakeAPlanFullIntro from "@/pages/MakeAPlanFullIntro";
 import MakeAPlanFull from "@/pages/MakeAPlanFull";
 import AdminPresetEditor from "@/pages/AdminPresetEditor";
 import AdminFactorEditor from "@/pages/AdminFactorEditor";
+import GraphExplorer from "@/pages/GraphExplorer";
 import Block1Discover from "@/pages/Block1Discover";
 import Block2Design from "@/pages/Block2Design";
 import Block3Deliver from "@/pages/Block3Deliver";
@@ -114,6 +115,7 @@ function Router() {
       </Route>
       <Route path="/make-a-plan/admin" component={AdminPresetEditor} />
       <Route path="/make-a-plan/admin/factors" component={AdminFactorEditor} />
+      <Route path="/make-a-plan/admin/graph-explorer" component={GraphExplorer} />
       <Route path="/checklist">
         <ProtectedRouteGuard>
           <Checklist />

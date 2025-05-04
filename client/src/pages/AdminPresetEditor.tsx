@@ -20,7 +20,7 @@ import {
   CardDescription,
   CardFooter
 } from '@/components/ui/card';
-import { Download, Upload, Trash2, Plus, Save, LogOut, RefreshCw, Eye, Share2 } from 'lucide-react';
+import { Download, Upload, Trash2, Plus, Save, LogOut, RefreshCw, Eye, Share2, Network } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isAdmin, login, logout, ADMIN_EMAIL } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
@@ -45,7 +45,7 @@ export default function AdminPresetEditor() {
   const [isLoading, setIsLoading] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const { toast } = useToast();
-  const [_, setLocation] = useLocation();
+  const [_, navigate] = useLocation();
 
   useEffect(() => {
     // Check if user is already logged in as admin
@@ -315,10 +315,24 @@ export default function AdminPresetEditor() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Preset Editor</h1>
-        <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
-          <LogOut className="h-4 w-4" />
-          Log Out
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => navigate('/make-a-plan/admin/graph-explorer')} 
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <Network className="h-4 w-4" />
+            Open Graph Viewer
+          </Button>
+          <Button 
+            onClick={handleLogout} 
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Log Out
+          </Button>
+        </div>
       </div>
 
       {/* Core Heuristics (Read-only) */}
@@ -461,7 +475,7 @@ export default function AdminPresetEditor() {
         <div className="flex items-center gap-4 mb-4 flex-wrap">
           <Button 
             variant="outline" 
-            onClick={() => setLocation('/make-a-plan/admin/factors')}
+            onClick={() => navigate('/make-a-plan/admin/factors')}
             className="flex items-center gap-2"
           >
             <Eye className="h-4 w-4" />

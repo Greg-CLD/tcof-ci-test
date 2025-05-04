@@ -1,0 +1,92 @@
+🎯 Goal
+Give admins a quick way to see the relations network inside the app. Build a small “Graph Explorer” view that fetches the data you already log and shows it with pan-and-zoom. No editing, just read-only validation.
+
+1. New API routes (admin only)
+Route	Purpose	Notes
+GET /api/admin/graph?projectId=<optional>	Return graph shaped for a viewer	Gated by isAdmin. Uses relations[].
+GET /api/admin/graph/neighbours/:nodeId?projectId=<optional>	Return just the node plus direct links	Optional helper for drill-downs.
+
+Graph shape
+
+json
+Copy
+Edit
+{
+  "nodes": [
+    { "id": "node-id", "label": "node-id", "type": "heuristic|task|factor|project" }
+  ],
+  "links": [
+    { "source": "fromId", "target": "toId", "relType": "HAS_TASK" }
+  ]
+}
+Build the nodes list by de-duplicating every fromId and toId.
+
+Include only relations that have a valid projectId (skip stray entries).
+
+Keep userId out for anonymity.
+
+Cache-control header: no-store.
+
+2. Frontend – new page /make-a-plan/admin/graph-explorer
+Add a button on the admin screen
+
+tsx
+Copy
+Edit
+<Button variant="outline" onClick={() => navigate('/make-a-plan/admin/graph-explorer')}>
+  Open Graph Viewer
+</Button>
+GraphExplorer.tsx
+
+Use react-force-graph (add to package.json).
+
+On mount, call /api/admin/graph?projectId=<currentProjectId>.
+
+Render the network with pan, zoom, and drag.
+
+Show a small tooltip on link hover: relType.
+
+Colour nodes by type with a basic palette (no extra styling work now).
+
+Provide a dropdown filter for relType (optional but simple).
+
+Example skeleton:
+
+tsx
+Copy
+Edit
+import ForceGraph2D from 'react-force-graph';
+import { useEffect, useState } from 'react';
+
+export default function GraphExplorer() {
+  const [graph, setGraph] = useState({ nodes: [], links: [] });
+
+  useEffect(() => {
+    fetch('/api/admin/graph')
+      .then(res => res.json())
+      .then(setGraph)
+      .catch(console.error);
+  }, []);
+
+  return (
+    <div className="h-screen w-full">
+      <ForceGraph2D
+        graphData={graph}
+        nodeLabel="id"
+        linkLabel="relType"
+      />
+    </div>
+  );
+}
+3. Security and performance
+Gate the new page with the same admin check you already use.
+
+Keep payload small by default – if graph exceeds 5 000 links, warn in console.
+
+No write routes added, so risk is low.
+
+4. Nice-to-have (only if time allows, not required)
+Neighbour drill-down: click a node, call /graph/neighbours/:nodeId for a focused view.
+
+Simple legend for node colours.
+

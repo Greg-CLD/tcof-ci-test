@@ -1198,6 +1198,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint for graph visualization
+  app.get('/api/admin/graph', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { projectId } = req.query;
+      
+      // Load relations (either all or filtered by project)
+      let relations;
+      if (projectId && typeof projectId === 'string') {
+        relations = await relationsDb.getProjectRelations(projectId);
+      } else {
+        relations = loadRelations();
+      }
+      
+      // Skip invalid relations (missing projectId)
+      relations = relations.filter(r => r.projectId);
+      
+      if (relations.length > 5000) {
+        console.warn(`Large graph with ${relations.length} links being sent. Consider filtering by projectId.`);
+      }
+      
+      // Create node set from unique fromId and toId values
+      const nodeSet = new Set<string>();
+      relations.forEach(rel => {
+        nodeSet.add(rel.fromId);
+        nodeSet.add(rel.toId);
+      });
+      
+      // Generate nodes array with type info
+      const nodes = Array.from(nodeSet).map(id => {
+        // Determine node type based on patterns or prefixes
+        let type = 'unknown';
+        if (id.startsWith('sf-')) {
+          type = 'factor';
+        } else if (id.startsWith('H')) {
+          type = 'heuristic';
+        } else if (id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          type = 'project';
+        } else {
+          type = 'task';
+        }
+        
+        return {
+          id,
+          label: id,
+          type
+        };
+      });
+      
+      // Create links array from relations
+      const links = relations.map(rel => ({
+        source: rel.fromId,
+        target: rel.toId,
+        relType: rel.relType
+      }));
+      
+      // Set cache control header
+      res.setHeader('Cache-Control', 'no-store');
+      
+      // Return graph data
+      res.json({
+        nodes,
+        links
+      });
+    } catch (error: any) {
+      console.error('Error generating graph data:', error);
+      res.status(500).json({ message: 'Failed to generate graph data' });
+    }
+  });
+  
+  // Admin endpoint for focused node view
+  app.get('/api/admin/graph/neighbours/:nodeId', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { nodeId } = req.params;
+      const { projectId } = req.query;
+      
+      if (!nodeId) {
+        return res.status(400).json({ message: 'Node ID is required' });
+      }
+      
+      // Load relations (either all or filtered by project)
+      let relations;
+      if (projectId && typeof projectId === 'string') {
+        relations = await relationsDb.getProjectRelations(projectId);
+      } else {
+        relations = loadRelations();
+      }
+      
+      // Filter relations where nodeId is either fromId or toId
+      const neighbourRelations = relations.filter(
+        r => r.fromId === nodeId || r.toId === nodeId
+      );
+      
+      // Skip if no relations found
+      if (neighbourRelations.length === 0) {
+        return res.status(404).json({ message: `No relations found for node ${nodeId}` });
+      }
+      
+      // Create node set from the filtered relations
+      const nodeSet = new Set<string>();
+      nodeSet.add(nodeId); // Add the central node
+      
+      neighbourRelations.forEach(rel => {
+        nodeSet.add(rel.fromId);
+        nodeSet.add(rel.toId);
+      });
+      
+      // Generate nodes array with type info
+      const nodes = Array.from(nodeSet).map(id => {
+        // Determine node type based on patterns or prefixes
+        let type = 'unknown';
+        if (id.startsWith('sf-')) {
+          type = 'factor';
+        } else if (id.startsWith('H')) {
+          type = 'heuristic';
+        } else if (id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          type = 'project';
+        } else {
+          type = 'task';
+        }
+        
+        return {
+          id,
+          label: id,
+          type,
+          isCentral: id === nodeId
+        };
+      });
+      
+      // Create links array from relations
+      const links = neighbourRelations.map(rel => ({
+        source: rel.fromId,
+        target: rel.toId,
+        relType: rel.relType
+      }));
+      
+      // Set cache control header
+      res.setHeader('Cache-Control', 'no-store');
+      
+      // Return focused graph data
+      res.json({
+        nodes,
+        links
+      });
+    } catch (error: any) {
+      console.error('Error generating neighbour graph data:', error);
+      res.status(500).json({ message: 'Failed to generate neighbour graph data' });
+    }
+  });
+
   // Admin endpoint to export relations data
   app.get('/api/admin/relations-export', isAdmin, async (req: Request, res: Response) => {
     try {
