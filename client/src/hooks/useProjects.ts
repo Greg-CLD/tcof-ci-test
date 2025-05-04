@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { toast } from "@/hooks/use-toast";
 
 export interface Project {
   id: string;
@@ -15,37 +15,33 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface CreateProjectData {
+  name: string;
+  description?: string;
+  sector?: string;
+  orgType?: string;
+  teamSize?: string;
+  deliveryStage?: string;
+}
+
+export interface UpdateProjectParams {
+  id: string;
+  data: Partial<CreateProjectData>;
+}
+
 export function useProjects() {
   const queryClient = useQueryClient();
   
-  // Fetch all projects
-  const {
-    data: projects = [],
-    isLoading,
-    error,
-    refetch
-  } = useQuery<Project[]>({
+  // Fetch all projects for the current user
+  const { data: projects = [], isLoading, error } = useQuery<Project[]>({
     queryKey: ['/api/projects'],
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
-
+  
   // Create a new project
   const createProject = useMutation({
-    mutationFn: async (data: { 
-      name: string; 
-      description?: string;
-      sector?: string;
-      orgType?: string;
-      teamSize?: string;
-      deliveryStage?: string;
-    }) => {
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+    mutationFn: async (data: CreateProjectData): Promise<Project> => {
+      const response = await apiRequest('POST', '/api/projects', data);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -54,16 +50,9 @@ export function useProjects() {
       
       return response.json();
     },
-    onSuccess: (newProject: Project) => {
-      // Update the projects cache with the new project
-      queryClient.setQueryData<Project[]>(['/api/projects'], (oldProjects = []) => {
-        return [...oldProjects, newProject];
-      });
-      
-      toast({
-        title: 'Project Created',
-        description: `"${newProject.name}" has been created successfully.`,
-      });
+    onSuccess: () => {
+      // Invalidate projects query to force a refetch
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     },
     onError: (error: Error) => {
       toast({
@@ -73,30 +62,11 @@ export function useProjects() {
       });
     },
   });
-
+  
   // Update an existing project
   const updateProject = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: { 
-        name?: string; 
-        description?: string;
-        sector?: string;
-        orgType?: string;
-        teamSize?: string;
-        deliveryStage?: string;
-      };
-    }) => {
-      const response = await fetch(`/api/projects/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+    mutationFn: async ({ id, data }: UpdateProjectParams): Promise<Project> => {
+      const response = await apiRequest('PATCH', `/api/projects/${id}`, data);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -105,18 +75,9 @@ export function useProjects() {
       
       return response.json();
     },
-    onSuccess: (updatedProject: Project) => {
-      // Update the projects cache with the updated project
-      queryClient.setQueryData<Project[]>(['/api/projects'], (oldProjects = []) => {
-        return oldProjects.map((project) =>
-          project.id === updatedProject.id ? updatedProject : project
-        );
-      });
-      
-      toast({
-        title: 'Project Updated',
-        description: `"${updatedProject.name}" has been updated successfully.`,
-      });
+    onSuccess: () => {
+      // Invalidate projects query to force a refetch
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     },
     onError: (error: Error) => {
       toast({
@@ -126,13 +87,41 @@ export function useProjects() {
       });
     },
   });
-
+  
+  // Delete a project
+  const deleteProject = useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const response = await apiRequest('DELETE', `/api/projects/${id}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete project');
+      }
+    },
+    onSuccess: () => {
+      // Invalidate projects query to force a refetch
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
+      toast({
+        title: 'Project Deleted',
+        description: 'The project has been permanently deleted.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to delete project: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+  
   return {
     projects,
     isLoading,
     error,
-    refetch,
     createProject,
     updateProject,
+    deleteProject,
   };
 }

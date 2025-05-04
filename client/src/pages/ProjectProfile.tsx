@@ -58,12 +58,23 @@ export default function ProjectProfile() {
     },
   });
 
-  // On mount, check if there's a projectId in localStorage
+  // On mount, check query params and localStorage for projectId
   useEffect(() => {
-    const storedProjectId = localStorage.getItem('selectedProjectId');
-    if (storedProjectId) {
-      setSelectedProjectId(storedProjectId);
+    // Check URL query parameters first (for edit mode)
+    const params = new URLSearchParams(window.location.search);
+    const editProjectId = params.get('edit');
+    
+    if (editProjectId) {
+      // If we have an edit parameter, set it as selected and enable edit mode
+      setSelectedProjectId(editProjectId);
       setIsEditing(true);
+    } else {
+      // Otherwise, check localStorage for a selected project
+      const storedProjectId = localStorage.getItem('selectedProjectId');
+      if (storedProjectId) {
+        setSelectedProjectId(storedProjectId);
+        setIsEditing(true);
+      }
     }
   }, []);
 
