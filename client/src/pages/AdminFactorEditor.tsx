@@ -210,20 +210,26 @@ export default function AdminFactorEditor() {
     }
   } : null;
   
-  // Debug tasks for the selected factor
+  // Debug the selected factor when it changes
   useEffect(() => {
-    if (selectedFactor) {
-      console.log('Selected factor tasks:', {
-        id: selectedFactor.id,
-        title: selectedFactor.title,
-        taskCounts: {
-          Identification: selectedFactor.tasks.Identification.length,
-          Definition: selectedFactor.tasks.Definition.length,
-          Delivery: selectedFactor.tasks.Delivery.length,
-          Closure: selectedFactor.tasks.Closure.length
-        }
-      });
-    }
+    if (!selectedFactor) return;
+    
+    console.log('Selected factor tasks:', {
+      id: selectedFactor.id,
+      title: selectedFactor.title,
+      taskCounts: {
+        Identification: Array.isArray(selectedFactor.tasks?.Identification) ? selectedFactor.tasks.Identification.length : 0,
+        Definition: Array.isArray(selectedFactor.tasks?.Definition) ? selectedFactor.tasks.Definition.length : 0,
+        Delivery: Array.isArray(selectedFactor.tasks?.Delivery) ? selectedFactor.tasks.Delivery.length : 0,
+        Closure: Array.isArray(selectedFactor.tasks?.Closure) ? selectedFactor.tasks.Closure.length : 0
+      },
+      taskArrays: {
+        Identification: selectedFactor.tasks?.Identification,
+        Definition: selectedFactor.tasks?.Definition,
+        Delivery: selectedFactor.tasks?.Delivery,
+        Closure: selectedFactor.tasks?.Closure
+      }
+    });
   }, [selectedFactor]);
 
   // Handle saving all factors
