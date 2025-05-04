@@ -38,27 +38,31 @@ export default function Home() {
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
 
-  // Load projects on component mount
-  useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        setIsLoading(true);
-        const projectsList = await getAllPlanSummaries();
-        setProjects(projectsList);
-      } catch (error) {
-        console.error("Error loading projects:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load your projects. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Function to load projects
+  const loadProjects = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Fetching projects for dashboard...");
+      const projectsList = await getAllPlanSummaries();
+      console.log(`Loaded ${projectsList.length} projects for dashboard`);
+      setProjects(projectsList);
+    } catch (error) {
+      console.error("Error loading projects:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load your projects. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // Load projects on component mount or when location changes
+  useEffect(() => {
+    // This ensures we reload the project list when the user navigates back to the dashboard
     loadProjects();
-  }, [toast]);
+  }, [location, toast]);
 
   // Handle creating a new project
   const handleCreateProject = async () => {
@@ -221,9 +225,21 @@ export default function Home() {
       {/* Projects Section */}
       <section className="py-12 bg-white flex-1">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold mb-6 text-tcof-dark flex items-center">
-            <Clipboard className="mr-2 h-6 w-6 text-tcof-teal" /> My Projects
-          </h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-tcof-dark flex items-center">
+              <Clipboard className="mr-2 h-6 w-6 text-tcof-teal" /> My Projects
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadProjects}
+              className="text-tcof-dark border-tcof-teal hover:bg-tcof-teal/10"
+              disabled={isLoading}
+            >
+              <RefreshCcw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
           
           {isLoading ? (
             // Loading state

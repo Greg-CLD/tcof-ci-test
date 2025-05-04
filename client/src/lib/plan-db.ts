@@ -209,11 +209,40 @@ export const loadPlan = async (id?: string): Promise<PlanRecord | null> => {
 
 /**
  * Saves plan data with the given ID
+ * If the plan doesn't exist in memory, attempts to load it first
  */
 export const savePlan = async (id: string, data: Partial<PlanRecord>): Promise<boolean> => {
-  if (!plans[id]) return false;
+  // Check if plan exists in memory, if not try to load it first
+  if (!plans[id]) {
+    console.log(`Plan ${id} not found in memory, attempting to load from storage`);
+    try {
+      // Try to load from storage
+      const storedPlan = await storage.load(id);
+      if (storedPlan) {
+        plans[id] = storedPlan;
+        console.log(`Successfully loaded plan ${id} from storage`);
+      } else {
+        // If the plan doesn't exist yet, initialize it
+        console.log(`Creating new plan record for ID ${id} as it doesn't exist in storage`);
+        plans[id] = {
+          id,
+          created: new Date().toISOString(),
+          stages: {
+            Identification: createEmptyStageData(),
+            Definition: createEmptyStageData(),
+            Delivery: createEmptyStageData(),
+            Closure: createEmptyStageData()
+          },
+          ...data
+        } as PlanRecord;
+      }
+    } catch (error) {
+      console.error(`Failed to load or initialize plan ${id}:`, error);
+      return false;
+    }
+  }
   
-  // Update the plan with new data
+  // Update the plan with new data and timestamp
   plans[id] = {
     ...plans[id],
     ...data,
@@ -225,7 +254,9 @@ export const savePlan = async (id: string, data: Partial<PlanRecord>): Promise<b
   
   // Persist to storage
   try {
+    console.log(`Saving plan ${id} to persistent storage`);
     await storage.save(id, plans[id]);
+    console.log(`Successfully saved plan ${id}`);
     return true;
   } catch (error) {
     console.error('Error saving plan:', error);

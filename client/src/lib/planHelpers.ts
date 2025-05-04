@@ -106,19 +106,28 @@ export const extractBaseTaskName = (displayName: string): string => {
  */
 export const getAllPlans = async (): Promise<PlanRecord[]> => {
   try {
+    console.log('Getting all plan IDs...');
     // Get all plan IDs
     const planIds = await storage.list();
+    console.log(`Found ${planIds.length} plan IDs:`, planIds);
+    
+    if (planIds.length === 0) {
+      return [];
+    }
     
     // Load each plan
     const loadPromises = planIds.map(id => {
       // Extract the ID from the storage key
       const planId = id.replace('tcof_plan_', '');
+      console.log(`Loading plan ${planId}...`);
       return loadPlan(planId);
     });
     
     // Wait for all plans to load and filter out any nulls
     const loadedPlans = await Promise.all(loadPromises);
-    return loadedPlans.filter((plan): plan is PlanRecord => plan !== null);
+    const validPlans = loadedPlans.filter((plan): plan is PlanRecord => plan !== null);
+    console.log(`Successfully loaded ${validPlans.length} plans`);
+    return validPlans;
   } catch (error) {
     console.error('Error getting all plans:', error);
     return [];
@@ -136,7 +145,9 @@ export const getAllPlanSummaries = async (): Promise<{
   name?: string;
 }[]> => {
   try {
+    // Force reload of all plans from storage
     const plans = await getAllPlans();
+    console.log('Getting plan summaries for UI:', plans.length);
     
     // Extract just the summary info we need for listing
     return plans.map(plan => ({
