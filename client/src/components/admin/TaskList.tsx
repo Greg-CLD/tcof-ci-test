@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, Bug } from 'lucide-react';
 
 interface TaskListProps {
   tasks: string[];
@@ -13,26 +13,51 @@ interface TaskListProps {
 export default function TaskList({ tasks, onAddTask, onUpdateTask, onDeleteTask }: TaskListProps) {
   // Debug the tasks array when it changes
   useEffect(() => {
-    console.debug(`TaskList rendered with ${tasks?.length || 0} tasks`);
-    if (!tasks) {
-      console.warn('⚠️ TaskList received null or undefined tasks array');
-    } else if (!Array.isArray(tasks)) {
-      console.error('❌ TaskList received non-array tasks:', tasks);
-    }
+    console.log(`TaskList Debug:`, {
+      hasTasksProp: tasks !== undefined,
+      isArray: Array.isArray(tasks),
+      length: Array.isArray(tasks) ? tasks.length : 'N/A',
+      content: tasks
+    });
   }, [tasks]);
   
-  // Safely normalize the tasks array to prevent runtime errors
-  const normalizedTasks = Array.isArray(tasks) ? tasks : [];
+  // Extra safety check for tasks being undefined or null
+  if (tasks === undefined || tasks === null) {
+    console.error('⚠️ TaskList received null or undefined tasks array');
+    
+    return (
+      <div className="space-y-4">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center text-red-800">
+          <Bug className="h-5 w-5 mr-2 flex-shrink-0" />
+          <div>
+            <p className="font-semibold">Missing task data</p>
+            <p className="text-sm mt-1">The task list component received no data to display.</p>
+          </div>
+        </div>
+        
+        <Button 
+          onClick={onAddTask}
+          variant="outline"
+          className="w-full mt-4"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add First Task
+        </Button>
+      </div>
+    );
+  }
   
-  // Show a warning if tasks is not an array
+  // Check for non-array tasks data
   if (!Array.isArray(tasks)) {
+    console.error('❌ TaskList received non-array tasks:', tasks);
+    
     return (
       <div className="space-y-4">
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 flex items-center text-amber-800">
           <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
           <div>
             <p className="font-semibold">Invalid tasks data structure</p>
-            <p className="text-sm mt-1">The component received invalid task data. Please check the console for details.</p>
+            <p className="text-sm mt-1">Expected an array of tasks but received something else.</p>
           </div>
         </div>
         
@@ -48,17 +73,18 @@ export default function TaskList({ tasks, onAddTask, onUpdateTask, onDeleteTask 
     );
   }
   
+  // At this point we know tasks is a valid array
   return (
     <div className="space-y-2">
-      {normalizedTasks.length === 0 ? (
+      {tasks.length === 0 ? (
         <div className="text-center p-4 text-gray-500 bg-gray-50 rounded-md">
           No tasks for this stage. Click 'Add New Task' to create one.
         </div>
       ) : (
-        normalizedTasks.map((task, index) => (
+        tasks.map((task, index) => (
           <div key={`task-${index}`} className="flex items-center space-x-2">
             <Input
-              value={task}
+              value={task || ''}
               onChange={(e) => onUpdateTask(index, e.target.value)}
               className="flex-1"
               placeholder="Enter task description..."

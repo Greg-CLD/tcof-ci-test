@@ -76,10 +76,12 @@ export default function AdminFactorEditor() {
     async function loadFactors() {
       try {
         setIsLoading(true);
-        const data = await getFactors();
+        console.log('Loading factors from API or storage...');
+        const data = await getFactors(true); // Force bypass cache
+        console.log(`Loaded ${data.length} factors`, data);
         setFactors(data);
       } catch (error) {
-        console.error('Error loading factors:', error);
+        console.error('Error loading success factors:', error);
         toast({
           title: 'Error loading success factors',
           description: 'Could not load success factors from storage.',
