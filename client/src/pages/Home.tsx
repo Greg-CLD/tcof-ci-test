@@ -13,7 +13,7 @@ import {
   Clipboard, ClipboardCheck, FileDown, PlusCircle, Calendar, 
   Trash2, ArrowRight, FolderOpen, RefreshCcw, Clock, Edit
 } from "lucide-react";
-import { setLatestPlanId, quickStartPlan } from "@/lib/planHelpers";
+
 import { formatDistanceToNow } from "date-fns";
 import { generateCompletePDF } from "@/lib/pdf-utils";
 import vitruvianMan from "../assets/vitruvian-man.png";
@@ -49,45 +49,22 @@ export default function Home() {
         return;
       }
 
-      // Show loading toast
-      toast({
-        title: "Creating Project",
-        description: "Please wait while we set up your new project...",
+      // Create new project through the API
+      await createProject.mutateAsync({
+        name: newProjectName.trim(),
+        description: newProjectDescription.trim()
       });
-
-      // Create new project
-      const projectId = await createEmptyPlan(
-        newProjectName.trim(),
-        newProjectDescription.trim()
-      );
-
-      // Set as current project
-      setLatestPlanId(projectId);
-
-      // Refresh project list
-      const updatedProjects = await getAllPlanSummaries();
-      setProjects(updatedProjects);
 
       // Close dialog and clear form
       setCreateDialogOpen(false);
       setNewProjectName("");
       setNewProjectDescription("");
 
-      // Show success toast
-      toast({
-        title: "Project Created",
-        description: "Your new project has been created successfully!",
-      });
-
       // Navigate to make-a-plan landing
       navigate("/make-a-plan");
     } catch (error) {
       console.error("Error creating project:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create project. Please try again.",
-        variant: "destructive",
-      });
+      // Error toast is handled by the mutation
     }
   };
 
@@ -101,11 +78,13 @@ export default function Home() {
       });
 
       // Create a quick start project (with default success factor tasks)
-      const projectId = await quickStartPlan();
-
+      await createProject.mutateAsync({
+        name: "Quick Start Project",
+        description: "A pre-configured project with default success factor tasks"
+      });
+      
       // Refresh project list
-      const updatedProjects = await getAllPlanSummaries();
-      setProjects(updatedProjects);
+      await loadProjects();
 
       // Show success toast
       toast({
@@ -127,8 +106,8 @@ export default function Home() {
 
   // Handle continuing an existing project
   const handleContinueProject = (projectId: string) => {
-    // Set as current project
-    setLatestPlanId(projectId);
+    // Set as current project in localStorage
+    localStorage.setItem('selectedProjectId', projectId);
 
     // Navigate to make-a-plan landing
     navigate("/make-a-plan");
@@ -152,8 +131,8 @@ export default function Home() {
 
   // Handle generating a PDF export (for current project)
   const handleGeneratePDF = async (projectId: string) => {
-    // Set as current project
-    setLatestPlanId(projectId);
+    // Set as current project in localStorage
+    localStorage.setItem('selectedProjectId', projectId);
 
     // TODO: Navigate to PDF export or generate directly
     toast({
@@ -204,7 +183,7 @@ export default function Home() {
             <Button
               variant="outline"
               size="sm"
-              onClick={loadProjects}
+              onClick={() => loadProjects()}
               className="text-tcof-dark border-tcof-teal hover:bg-tcof-teal/10"
               disabled={isLoading}
             >
@@ -262,12 +241,12 @@ export default function Home() {
                   <CardContent className="pt-0 pb-4">
                     <div className="flex items-center text-sm text-gray-500 mb-3">
                       <Calendar className="mr-2 h-4 w-4" />
-                      <span>Created {formatDistanceToNow(new Date(project.created))} ago</span>
+                      <span>Created {formatDistanceToNow(new Date(project.createdAt))} ago</span>
                     </div>
-                    {project.lastUpdated && (
+                    {project.updatedAt && (
                       <div className="flex items-center text-sm text-gray-500">
                         <Clock className="mr-2 h-4 w-4" />
-                        <span>Updated {formatDistanceToNow(new Date(project.lastUpdated))} ago</span>
+                        <span>Updated {formatDistanceToNow(new Date(project.updatedAt))} ago</span>
                       </div>
                     )}
                   </CardContent>
