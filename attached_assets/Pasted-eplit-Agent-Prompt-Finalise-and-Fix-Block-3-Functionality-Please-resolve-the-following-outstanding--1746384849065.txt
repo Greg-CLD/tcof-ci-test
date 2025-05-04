@@ -1,0 +1,73 @@
+eplit Agent Prompt: Finalise and Fix Block 3 Functionality
+Please resolve the following outstanding issues in Block 3 (/make-a-plan/full/block-3) to ensure consistent UX, correct logic, and expected task/checklist handling.
+
+🎯 1. Fix Scope × Uncertainty Quadrant (Step 6)
+✅ Adjust the axis layout and formatting:
+
+Y-axis: “Uncertainty” – label on the left, values Low → High (bottom → top)
+
+X-axis: “Scope” – label at the bottom, values Simple → Complex (left → right)
+
+Top-right quadrant = High Scope + High Uncertainty = Zone E
+
+✅ Axis labels should not be cut off, and each quadrant should clearly show:
+
+Zone name (e.g. “Zone E”)
+
+Optional label: e.g. “Agile/Hybrid Delivery”
+
+✅ Remove any awkward vertical label formatting (e.g. “SmaZone A”)
+
+🧹 2. Block Clearing Logic
+✅ Fix the “Clear this Block” button in Block 3:
+
+It should only clear data for Block 3
+
+It should not clear any data entered in Block 2
+
+🔄 3. Default Delivery Framework
+✅ When a delivery zone is selected in Step 6, default the Praxis Framework as the associated delivery method (not UK Government Teal Book).
+
+If any default tasks are preloaded, ensure they are from Praxis.
+
+User can override by adding custom frameworks.
+
+✅ 4. Step 7 – Good Practice (Framework Tasks)
+✅ Add a “Clear All Tasks” button to Step 7:
+
+Allows users to deselect all tasks in one click
+
+✅ Refactor the “Custom Frameworks” UI to match Steps 4 & 5:
+
+Left panel: list of framework names
+
+Right panel: tabs or collapsible panels for stages (Identification, Definition, Delivery, Closure)
+
+Add task per stage with autosave and placeholder fields
+
+Friendly IDs should appear (e.g. Custom01 - Definition - Task 1)
+
+💾 5. Block 3 Save & Return Bug
+✅ Fix the Save Progress bug:
+
+If the user saves Block 3, then navigates away (e.g. to Block 2), all custom frameworks and delivery selections should persist
+
+The data should be retrieved on return to Block 3 without the user needing to trigger anything manually
+
+Fix the bug where new entries cause old entries to reappear unexpectedly
+
+📋 6. Step 8 – Final Checklist
+✅ When the user clicks “Create My Checklist”:
+
+The checklist should include:
+
+✅ All 12 TCOF Success Factors and their tasks
+
+✅ All User Heuristics + their tasks (from Step 4)
+
+✅ All Organisation Policy tasks (Step 5)
+
+✅ All Good Practice tasks (Step 7, including Praxis Framework if selected)
+
+✅ All Custom Framework tasks
+
