@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
+import { relationsDb, createRelation } from './relationsDb';
 import { 
   insertUserSchema, 
   insertGoalMapSchema, 
@@ -537,6 +538,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to create project" });
       }
 
+      // Create relationship between user and project
+      await createRelation(
+        userId.toString(),
+        project.id,
+        'BELONGS_TO_PROJECT',
+        project.id,
+        { origin: 'createProject' }
+      );
+      
       console.log(`Project saved → ${project.id}`);
       res.status(201).json(project);
     } catch (error: any) {
