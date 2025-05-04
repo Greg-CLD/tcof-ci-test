@@ -306,8 +306,18 @@ export const quickStartPlan = async (): Promise<string> => {
     const planId = uuidv4();
     const plan = createEmptyPlan();
     
+    // Initialize the plan in memory
+    if (typeof window !== 'undefined') {
+      (window as any).plans = (window as any).plans || {};
+      (window as any).plans[planId] = plan;
+    }
+    
     // Save the plan
-    await savePlan(planId, plan);
+    const saved = await savePlan(planId, plan as Partial<PlanRecord>);
+    
+    if (!saved) {
+      throw new Error('Failed to save plan');
+    }
     
     // Set as the most recent plan
     setLatestPlanId(planId);

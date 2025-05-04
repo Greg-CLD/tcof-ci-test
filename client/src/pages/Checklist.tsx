@@ -14,7 +14,7 @@ import ChecklistFilterBar, {
   SortDirection
 } from '@/components/checklist/ChecklistFilterBar';
 import { useToast } from '@/hooks/use-toast';
-import { exportToPDF, exportToCSV } from '@/lib/exportUtils';
+import { exportPlanPDF, exportCSV } from '@/lib/exportUtils';
 
 export default function Checklist() {
   const [, setLocation] = useLocation();
@@ -79,7 +79,7 @@ export default function Checklist() {
   const handleExportPDF = () => {
     if (!plan) return;
     
-    exportToPDF(plan);
+    exportPlanPDF(plan);
     
     toast({
       title: "Checklist Exported",
@@ -90,7 +90,7 @@ export default function Checklist() {
   const handleExportCSV = () => {
     if (!plan) return;
     
-    exportToCSV(plan);
+    exportCSV(plan);
     
     toast({
       title: "Checklist Exported",

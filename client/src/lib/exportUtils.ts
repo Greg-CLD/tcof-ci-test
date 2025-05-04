@@ -10,7 +10,7 @@ import { extractBaseTaskName } from './planHelpers';
  * Exports the plan data to a PDF file
  * @param plan The plan to export
  */
-export async function exportToPDF(plan: PlanRecord): Promise<void> {
+export async function exportPlanPDF(plan: PlanRecord): Promise<void> {
   // Create a temporary container with the content
   const container = document.createElement('div');
   container.style.position = 'absolute';
@@ -271,7 +271,7 @@ export async function exportToPDF(plan: PlanRecord): Promise<void> {
  * Exports the plan data to a CSV file
  * @param plan The plan to export
  */
-export function exportToCSV(plan: PlanRecord): void {
+export function exportCSV(plan: PlanRecord): void {
   // Header row
   const header = ['Stage', 'Task', 'Status', 'Priority', 'Due Date', 'Source', 'Notes'];
   
