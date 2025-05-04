@@ -621,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
   
-  // Get factors from database or file system
+  // Get factors from database or file system with guaranteed task structure
   async function getFactors(forceRefresh: boolean = false): Promise<FactorTask[]> {
     // If we're forcing a refresh, or the database is empty
     if (forceRefresh || factorsDb.length === 0) {
@@ -632,7 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const data = fs.readFileSync(factorsPath, 'utf8');
           const parsed = JSON.parse(data) as FactorTask[];
           
-          // Update database
+          // Update database (normalization happens in factorsDb.setAll)
           factorsDb.setAll(parsed);
           
           console.log(`Loaded ${parsed.length} factors from disk${forceRefresh ? ' (forced refresh)' : ''}`);
@@ -644,6 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // If no refresh needed or refresh failed, return current data
+    // Note: factorsDb.getAll() already normalizes task structure
     return factorsDb.getAll();
   }
   
@@ -730,15 +731,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fs.mkdirSync(dataDir, { recursive: true });
       }
       
+      // Normalize task structure for each factor before saving
+      const normalizedFactors = factors.map(factor => ({
+        id: factor.id,
+        title: factor.title,
+        tasks: {
+          Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
+          Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],
+          Delivery: Array.isArray(factor.tasks?.Delivery) ? factor.tasks.Delivery : [],
+          Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
+        }
+      }));
+      
+      // Save to file system
       fs.writeFileSync(
         path.join(dataDir, 'successFactors.json'), 
-        JSON.stringify(factors, null, 2),
+        JSON.stringify(normalizedFactors, null, 2),
         'utf8'
       );
       
-      // Update the database
-      factorsDb.setAll(factors);
+      // Update the database - factorsDb.setAll also normalizes the data
+      factorsDb.setAll(normalizedFactors);
       
+      console.log(`Saved ${normalizedFactors.length} factors with normalized task structure`);
       return true;
     } catch (error) {
       console.error('Error saving factors:', error);
@@ -791,23 +806,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid data format. Expected an array of success factors.' });
       }
       
-      // Ensure data directory exists (for backward compatibility)
-      const dataDir = path.join(process.cwd(), 'data');
-      if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
-      }
-      
-      // Save the success factors to the database
+      // Save the success factors (this already normalizes task structure and writes to file)
       await saveFactors(req.body);
       
-      // Also save to file for backward compatibility
-      fs.writeFileSync(
-        path.join(dataDir, 'successFactors.json'), 
-        JSON.stringify(req.body, null, 2),
-        'utf8'
-      );
+      // Get the normalized data to return
+      const normalizedFactors = await getFactors(true); // Force refresh from database
       
-      res.json({ success: true, message: 'Success factors saved successfully' });
+      res.json({ 
+        success: true, 
+        message: 'Success factors saved successfully',
+        count: normalizedFactors.length 
+      });
     } catch (error: any) {
       console.error('Error saving success factors:', error);
       res.status(500).json({ message: 'Failed to save success factors data' });
