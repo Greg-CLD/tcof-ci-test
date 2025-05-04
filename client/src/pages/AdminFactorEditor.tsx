@@ -43,6 +43,7 @@ import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import { Filter, Loader2, Plus, Save, Trash2, Upload, RefreshCw } from 'lucide-react';
 import { getFactors, saveFactors, createFactor, updateFactor, deleteFactor, FactorTask } from '@/utils/factorStore';
+import TaskList from '@/components/admin/TaskList';
 
 // Alias for type cleanliness
 type SuccessFactor = FactorTask;
@@ -838,6 +839,15 @@ export default function AdminFactorEditor() {
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isFixingFactors ? 'animate-spin' : ''}`} />
               Update to Canonical Factors
+            </Button>
+            
+            <Button
+              onClick={handleUpdateTasksFromCsv}
+              disabled={isSaving}
+              variant="outline"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isSaving ? 'animate-spin' : ''}`} />
+              Update Tasks from CSV
             </Button>
           </div>
         </div>

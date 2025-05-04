@@ -1162,6 +1162,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to load preset heuristics data' });
     }
   });
+  
+  // Update success factor tasks from CSV
+  app.post('/api/admin/update-factor-tasks', isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { updateFactorTasks } = require('../scripts/updateFactorTasks');
+      
+      const result = await updateFactorTasks();
+      
+      if (!result.success) {
+        return res.status(500).json({ error: result.message });
+      }
+      
+      // Refresh the in-memory database from disk
+      await getFactors(true);
+      
+      res.json({ 
+        success: true, 
+        message: result.message || 'Successfully updated success factor tasks'
+      });
+    } catch (error: any) {
+      console.error('Error updating factor tasks:', error);
+      res.status(500).json({ error: 'Error updating factor tasks: ' + error.message });
+    }
+  });
 
   app.post('/api/admin/preset-heuristics', isAdmin, async (req: Request, res: Response) => {
     try {
