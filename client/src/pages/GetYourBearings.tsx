@@ -1,17 +1,29 @@
-import React from "react";
-import { Link } from "wouter";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
-import { Compass, Map, GitBranch } from "lucide-react";
+import { useProjects } from "@/hooks/useProjects";
+import { Compass, Map, GitBranch, PlusCircle, Briefcase } from "lucide-react";
 
 export default function GetYourBearings() {
+  const [location, navigate] = useLocation();
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
+  const { projects, isLoading } = useProjects();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const isAuthorized = isAuthenticated('starter-access') || !!user;
+  
+  // Check for selectedProjectId in localStorage on mount
+  useEffect(() => {
+    const storedProjectId = localStorage.getItem('selectedProjectId');
+    if (storedProjectId) {
+      setSelectedProjectId(storedProjectId);
+    }
+  }, []);
   
   // Authentication check component
   const AuthCheck = () => (
@@ -50,8 +62,106 @@ export default function GetYourBearings() {
           </div>
         </section>
         
+        {/* Project Section */}
+        <section className="py-8 container mx-auto px-4">
+          {isAuthorized && (
+            <div className="max-w-6xl mx-auto mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-tcof-dark flex items-center">
+                  <Briefcase className="w-6 h-6 mr-2 text-tcof-teal" />
+                  Project Profile
+                </h2>
+                <Link href="/get-your-bearings/project-profile">
+                  <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white flex items-center gap-2">
+                    <PlusCircle className="w-4 h-4" />
+                    New Project
+                  </Button>
+                </Link>
+              </div>
+              
+              {isLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin w-8 h-8 border-4 border-tcof-teal border-t-transparent rounded-full"></div>
+                </div>
+              ) : projects.length === 0 ? (
+                <Card className="border-2 border-tcof-teal/30 shadow-md bg-white p-6 text-center">
+                  <div className="py-8">
+                    <Briefcase className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-xl font-medium text-tcof-dark mb-2">No Projects Yet</h3>
+                    <p className="text-gray-600 mb-6">Create your first project to get started with the TCOF tools</p>
+                    <Link href="/get-your-bearings/project-profile">
+                      <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white flex items-center gap-2 mx-auto">
+                        <PlusCircle className="w-4 h-4" />
+                        Create Project
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projects.map((project) => (
+                    <Card 
+                      key={project.id} 
+                      className={`
+                        border-2 cursor-pointer transition-all duration-200 hover:shadow-lg
+                        ${selectedProjectId === project.id ? 'border-tcof-teal bg-tcof-light/20' : 'border-gray-200 hover:border-tcof-teal/50'}
+                      `}
+                      onClick={() => {
+                        setSelectedProjectId(project.id);
+                        localStorage.setItem('selectedProjectId', project.id);
+                      }}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center">
+                            <Briefcase className={`w-5 h-5 mr-2 ${selectedProjectId === project.id ? 'text-tcof-teal' : 'text-gray-400'}`} />
+                            <h3 className="font-medium text-lg text-tcof-dark truncate">{project.name}</h3>
+                          </div>
+                          {selectedProjectId === project.id && (
+                            <div className="bg-tcof-teal text-white text-xs px-2 py-1 rounded-full">Active</div>
+                          )}
+                        </div>
+                        
+                        {project.description && (
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.description}</p>
+                        )}
+                        
+                        <div className="flex flex-wrap gap-2 text-xs mb-4">
+                          {project.sector && (
+                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">{project.sector}</span>
+                          )}
+                          {project.deliveryStage && (
+                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">{project.deliveryStage}</span>
+                          )}
+                        </div>
+                        
+                        <div className="flex justify-between">
+                          <Link href={`/get-your-bearings/project-profile?edit=${project.id}`}>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Edit Profile
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  <Link href="/get-your-bearings/project-profile">
+                    <Card className="border-2 border-dashed border-gray-300 hover:border-tcof-teal/50 flex items-center justify-center p-6 min-h-[220px] transition-all hover:bg-gray-50">
+                      <div className="text-center">
+                        <PlusCircle className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                        <p className="text-gray-600 font-medium">Create New Project</p>
+                      </div>
+                    </Card>
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+        
         {/* Tools Section */}
-        <section className="py-16 container mx-auto px-4">
+        <section className="py-8 container mx-auto px-4">
           {isAuthorized ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Goal-Mapping Tool */}

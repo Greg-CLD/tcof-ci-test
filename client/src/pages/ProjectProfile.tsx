@@ -1,287 +1,361 @@
-import React, { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { useToast } from "@/hooks/use-toast";
-import { useProjects } from "@/hooks/useProjects";
-import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useProjects, Project } from '@/hooks/useProjects';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Briefcase, FileText, Save, Users, Building, Clock } from "lucide-react";
+} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
+import { Briefcase, ChevronLeft } from 'lucide-react';
+
+// Form validation schema
+const projectFormSchema = z.object({
+  name: z.string().min(2, 'Project name must be at least 2 characters'),
+  description: z.string().optional(),
+  sector: z.string().optional(),
+  orgType: z.string().optional(),
+  teamSize: z.string().optional(),
+  deliveryStage: z.string().optional(),
+});
+
+type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
 export default function ProjectProfile() {
   const [location, navigate] = useLocation();
-  const { toast } = useToast();
-  const { createProject } = useProjects();
+  const { projects, isLoading, createProject, updateProject } = useProjects();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // Form setup
+  const form = useForm<ProjectFormValues>({
+    resolver: zodResolver(projectFormSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      sector: '',
+      orgType: '',
+      teamSize: '',
+      deliveryStage: '',
+    },
+  });
 
-  // Form state
-  const [name, setName] = useState("");
-  const [sector, setSector] = useState("");
-  const [orgType, setOrgType] = useState("");
-  const [teamSize, setTeamSize] = useState("");
-  const [description, setDescription] = useState("");
-  const [deliveryStage, setDeliveryStage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validation
-    if (!name.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide a project name",
-        variant: "destructive",
-      });
-      return;
+  // On mount, check if there's a projectId in localStorage
+  useEffect(() => {
+    const storedProjectId = localStorage.getItem('selectedProjectId');
+    if (storedProjectId) {
+      setSelectedProjectId(storedProjectId);
+      setIsEditing(true);
     }
+  }, []);
 
-    if (!sector) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a sector/domain",
-        variant: "destructive",
-      });
-      return;
+  // Fill form when editing and projects are loaded
+  useEffect(() => {
+    if (selectedProjectId && projects.length > 0 && isEditing) {
+      const project = projects.find(p => p.id === selectedProjectId);
+      if (project) {
+        form.reset({
+          name: project.name,
+          description: project.description || '',
+          sector: project.sector || '',
+          orgType: project.orgType || '',
+          teamSize: project.teamSize || '',
+          deliveryStage: project.deliveryStage || '',
+        });
+      }
     }
+  }, [selectedProjectId, projects, isEditing, form]);
 
-    if (!orgType) {
-      toast({
-        title: "Missing Information",
-        description: "Please select an organization type",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!teamSize) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a team size",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!deliveryStage) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a delivery stage",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  // Form submission handler
+  const onSubmit = async (data: ProjectFormValues) => {
     try {
-      setIsSubmitting(true);
-      
-      // Create project with all metadata
-      const result = await createProject.mutateAsync({
-        name: name.trim(),
-        description: description.trim(),
-        sector,
-        orgType,
-        teamSize,
-        deliveryStage
-      });
-
-      // Store the project ID in localStorage for context
-      localStorage.setItem('selectedProjectId', result.id);
-
-      toast({
-        title: "Project Created",
-        description: "Your project has been created successfully!",
-      });
-
-      // Redirect to Get Your Bearings page
-      navigate("/get-your-bearings");
+      if (isEditing && selectedProjectId) {
+        // Update existing project
+        const result = await updateProject.mutateAsync({
+          id: selectedProjectId,
+          data: {
+            name: data.name,
+            description: data.description,
+            sector: data.sector,
+            orgType: data.orgType,
+            teamSize: data.teamSize,
+            deliveryStage: data.deliveryStage,
+          },
+        });
+        
+        toast({
+          title: 'Project Updated',
+          description: 'Your project details have been updated successfully.',
+        });
+        
+        // Navigate to home or appropriate next page
+        navigate('/get-your-bearings');
+      } else {
+        // Create new project
+        const result = await createProject.mutateAsync({
+          name: data.name,
+          description: data.description,
+          sector: data.sector,
+          orgType: data.orgType,
+          teamSize: data.teamSize,
+          deliveryStage: data.deliveryStage,
+        });
+        
+        // Set as selected project
+        localStorage.setItem('selectedProjectId', result.id);
+        
+        toast({
+          title: 'Project Created',
+          description: 'Your new project has been created successfully.',
+        });
+        
+        // Navigate to home or appropriate next page
+        navigate('/get-your-bearings');
+      }
     } catch (error) {
-      console.error("Error creating project:", error);
+      console.error('Error saving project:', error);
       toast({
-        title: "Error",
-        description: "Failed to create project. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'There was a problem saving your project. Please try again.',
+        variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-tcof-light text-tcof-dark">
-      <SiteHeader />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6 text-tcof-dark">Project Profile</h1>
-          <p className="text-lg text-gray-700 mb-8">
-            Tell us about your project to help us provide the most relevant guidance and tools.
-            This information will help contextualize your work with the Connected Outcomes Framework.
-          </p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto">
+        <Button 
+          variant="ghost" 
+          className="mb-4 flex items-center text-tcof-teal"
+          onClick={() => navigate('/get-your-bearings')}
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Back to Get Your Bearings
+        </Button>
+        
+        <Card className="shadow-md">
+          <CardHeader className="bg-tcof-light/50">
+            <div className="flex items-center gap-3 mb-2">
+              <Briefcase className="w-6 h-6 text-tcof-teal" />
+              <CardTitle className="text-2xl text-tcof-dark">
+                {isEditing ? 'Edit Project Profile' : 'Create New Project'}
+              </CardTitle>
+            </div>
+            <CardDescription>
+              {isEditing 
+                ? 'Update your project details to help contextualize the TCOF tools and recommendations.'
+                : 'Tell us about your project to help contextualize the TCOF tools and recommendations.'}
+            </CardDescription>
+          </CardHeader>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Project</CardTitle>
-              <CardDescription>
-                Complete the form below with your project details. Required fields are marked with an asterisk (*).
-              </CardDescription>
-            </CardHeader>
-            
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-6">
-                {/* Project Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="project-name" className="flex items-center">
-                    <Briefcase className="w-4 h-4 mr-2 text-tcof-teal" />
-                    Project Name *
-                  </Label>
-                  <Input
-                    id="project-name"
-                    placeholder="E.g., Digital Transformation Initiative"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
+          <CardContent className="pt-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Name*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter project name" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Give your project a clear, identifiable name
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Briefly describe your project's goals and scope" 
+                          className="resize-none min-h-[100px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        A brief description of your project's objectives and key challenges
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="sector"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Project Sector</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select project sector" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="public">Public Sector</SelectItem>
+                            <SelectItem value="private">Private Sector</SelectItem>
+                            <SelectItem value="nonprofit">Non-profit / NGO</SelectItem>
+                            <SelectItem value="healthcare">Healthcare</SelectItem>
+                            <SelectItem value="education">Education</SelectItem>
+                            <SelectItem value="finance">Financial Services</SelectItem>
+                            <SelectItem value="technology">Technology</SelectItem>
+                            <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                            <SelectItem value="retail">Retail</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="orgType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Organization Type</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select organization type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="large_enterprise">Large Enterprise (1000+ employees)</SelectItem>
+                            <SelectItem value="medium_enterprise">Medium Enterprise (250-999 employees)</SelectItem>
+                            <SelectItem value="small_business">Small Business (10-249 employees)</SelectItem>
+                            <SelectItem value="micro_business">Micro Business (1-9 employees)</SelectItem>
+                            <SelectItem value="government">Government</SelectItem>
+                            <SelectItem value="education">Educational Institution</SelectItem>
+                            <SelectItem value="nonprofit">Non-profit</SelectItem>
+                            <SelectItem value="startup">Startup</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="teamSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Project Team Size</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select team size" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="solo">Solo (1 person)</SelectItem>
+                            <SelectItem value="small">Small Team (2-5 people)</SelectItem>
+                            <SelectItem value="medium">Medium Team (6-15 people)</SelectItem>
+                            <SelectItem value="large">Large Team (16-50 people)</SelectItem>
+                            <SelectItem value="xlarge">X-Large Team (50+ people)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="deliveryStage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Delivery Stage</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select delivery stage" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="concept">Concept / Idea Stage</SelectItem>
+                            <SelectItem value="planning">Planning Phase</SelectItem>
+                            <SelectItem value="requirements">Requirements Gathering</SelectItem>
+                            <SelectItem value="design">Design Phase</SelectItem>
+                            <SelectItem value="development">Development / Implementation</SelectItem>
+                            <SelectItem value="testing">Testing / QA</SelectItem>
+                            <SelectItem value="deployment">Deployment / Go-Live</SelectItem>
+                            <SelectItem value="postlaunch">Post-Launch / Maintenance</SelectItem>
+                            <SelectItem value="retrospective">Retrospective / Analysis</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
                 
-                {/* Sector/Domain */}
-                <div className="space-y-2">
-                  <Label htmlFor="sector" className="flex items-center">
-                    <FileText className="w-4 h-4 mr-2 text-tcof-teal" />
-                    Sector / Domain *
-                  </Label>
-                  <Select value={sector} onValueChange={setSector} required>
-                    <SelectTrigger id="sector">
-                      <SelectValue placeholder="Select a sector or domain" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="government">Government</SelectItem>
-                      <SelectItem value="healthcare">Healthcare</SelectItem>
-                      <SelectItem value="education">Education</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                      <SelectItem value="technology">Technology</SelectItem>
-                      <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                      <SelectItem value="retail">Retail</SelectItem>
-                      <SelectItem value="nonprofit">Non-profit</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Organization Type */}
-                <div className="space-y-2">
-                  <Label htmlFor="org-type" className="flex items-center">
-                    <Building className="w-4 h-4 mr-2 text-tcof-teal" />
-                    Organization Type *
-                  </Label>
-                  <Select value={orgType} onValueChange={setOrgType} required>
-                    <SelectTrigger id="org-type">
-                      <SelectValue placeholder="Select organization type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="public">Public Sector</SelectItem>
-                      <SelectItem value="private">Private Sector</SelectItem>
-                      <SelectItem value="charity">Charity/Non-profit</SelectItem>
-                      <SelectItem value="academic">Academic</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Team Size */}
-                <div className="space-y-2">
-                  <Label htmlFor="team-size" className="flex items-center">
-                    <Users className="w-4 h-4 mr-2 text-tcof-teal" />
-                    Team Size *
-                  </Label>
-                  <Select value={teamSize} onValueChange={setTeamSize} required>
-                    <SelectTrigger id="team-size">
-                      <SelectValue placeholder="Select team size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="solo">Solo (1 person)</SelectItem>
-                      <SelectItem value="small">Small (2-5 people)</SelectItem>
-                      <SelectItem value="medium">Medium (6-20 people)</SelectItem>
-                      <SelectItem value="large">Large (20+ people)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Delivery Stage */}
-                <div className="space-y-2">
-                  <Label htmlFor="delivery-stage" className="flex items-center">
-                    <Clock className="w-4 h-4 mr-2 text-tcof-teal" />
-                    Current Delivery Stage *
-                  </Label>
-                  <Select value={deliveryStage} onValueChange={setDeliveryStage} required>
-                    <SelectTrigger id="delivery-stage">
-                      <SelectValue placeholder="Select current stage" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="identification">Identification</SelectItem>
-                      <SelectItem value="definition">Definition</SelectItem>
-                      <SelectItem value="delivery">Delivery</SelectItem>
-                      <SelectItem value="closure">Closure</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="flex items-center">
-                    <FileText className="w-4 h-4 mr-2 text-tcof-teal" />
-                    Goal or Brief Description (Optional)
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Briefly describe your project goals or objectives"
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </div>
-              </CardContent>
-              
-              <CardFooter className="flex justify-end space-x-2">
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  onClick={() => navigate("/")}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                  disabled={isSubmitting}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {isSubmitting ? "Creating..." : "Create Project"}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </div>
-      </main>
-      
-      <SiteFooter />
+                <CardFooter className="px-0 pt-4 flex justify-between">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => navigate('/get-your-bearings')}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                    disabled={isLoading || createProject.isPending || updateProject.isPending}
+                  >
+                    {isEditing ? 'Update Project' : 'Create Project'}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

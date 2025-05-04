@@ -22,6 +22,7 @@ import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
 import UserHistory from "@/pages/UserHistory";
 import ProfilePage from "@/pages/ProfilePage";
+import ProjectProfile from "@/pages/ProjectProfile";
 import Dashboard from "@/pages/Dashboard";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -35,6 +36,7 @@ import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import GlobalNav from "@/components/GlobalNav";
 import Breadcrumb from "@/components/Breadcrumb";
+import ProjectBanner from "@/components/ProjectBanner";
 
 // Tool components wrapped with layout (without SiteHeader since it's now part of GlobalNav)
 const GoalMappingPage = () => (
@@ -78,6 +80,7 @@ function Router() {
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/get-your-bearings" component={GetYourBearings} />
+      <Route path="/get-your-bearings/project-profile" component={ProjectProfile} />
       <Route path="/make-a-plan" component={MakeAPlanLanding} />
       <Route path="/make-a-plan/full/intro" component={MakeAPlanFullIntro} />
       <Route path="/make-a-plan/full/block-1" component={Block1Discover} />
@@ -224,6 +227,7 @@ function App() {
               <div className="flex flex-col min-h-screen">
                 <GlobalNav />
                 <Breadcrumb />
+                <ProjectBanner />
                 <div className="flex-grow">
                   <Router />
                 </div>
