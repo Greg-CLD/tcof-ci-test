@@ -83,22 +83,72 @@ function ensureUnique12Factors(factors: FactorTask[]): FactorTask[] {
 /**
  * Gets all success factors from the data source with automatic deduplication
  */
+/**
+ * Debug and log task structure
+ */
+function debugFactorTasks(label: string, factors: FactorTask[]) {
+  console.debug(`📊 [FactorStore] ${label} - ${factors.length} factors`);
+  
+  // Log task counts for each factor
+  factors.forEach(factor => {
+    const taskCounts = {
+      Identification: factor.tasks?.Identification?.length || 0,
+      Definition: factor.tasks?.Definition?.length || 0,
+      Delivery: factor.tasks?.Delivery?.length || 0,
+      Closure: factor.tasks?.Closure?.length || 0,
+      total: (factor.tasks?.Identification?.length || 0) + 
+             (factor.tasks?.Definition?.length || 0) + 
+             (factor.tasks?.Delivery?.length || 0) + 
+             (factor.tasks?.Closure?.length || 0)
+    };
+    
+    if (taskCounts.total > 0) {
+      console.debug(`  📌 [${factor.id}] ${factor.title} - Total tasks: ${taskCounts.total}`, taskCounts);
+    } else {
+      console.warn(`  ⚠️ [${factor.id}] ${factor.title} - NO TASKS FOUND!`);
+    }
+  });
+}
+
+/**
+ * Normalize all task arrays in the factor structure
+ */
+export function normalizeFactorTasks(factors: FactorTask[]): FactorTask[] {
+  return factors.map(factor => ({
+    id: factor.id,
+    title: factor.title,
+    tasks: {
+      Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
+      Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],
+      Delivery: Array.isArray(factor.tasks?.Delivery) ? factor.tasks.Delivery : [],
+      Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
+    }
+  }));
+}
+
 export async function getFactors(bypassCache = false): Promise<FactorTask[]> {
   if (cachedFactors && !bypassCache) {
     // Even when using cache, enforce 12 unique factors
-    return ensureUnique12Factors(cachedFactors);
+    const normalizedFactors = normalizeFactorTasks(ensureUnique12Factors(cachedFactors));
+    debugFactorTasks('From cache', normalizedFactors);
+    return normalizedFactors;
   }
 
   try {
     // First try to load from API using the new endpoint
     try {
+      console.debug('Fetching factors from /api/admin/success-factors...');
       const response = await apiRequest('GET', '/api/admin/success-factors');
       if (response.ok) {
         const data = await response.json();
         
-        // Apply uniqueness enforcement
-        const processedData = ensureUnique12Factors(data);
+        // Apply uniqueness enforcement and normalize task structure
+        const rawProcessedData = ensureUnique12Factors(data);
+        const processedData = normalizeFactorTasks(rawProcessedData);
         cachedFactors = processedData;
+        
+        // Debug task data
+        debugFactorTasks('From API (success-factors)', processedData);
         
         // Check if we have the expected 12 factors
         if (data.length !== 12) {
@@ -114,13 +164,18 @@ export async function getFactors(bypassCache = false): Promise<FactorTask[]> {
       
       // Fall back to old API endpoint
       try {
+        console.debug('Fetching factors from /api/admin/tcof-tasks...');
         const response = await apiRequest('GET', '/api/admin/tcof-tasks');
         if (response.ok) {
           const data = await response.json();
           
-          // Apply uniqueness enforcement
-          const processedData = ensureUnique12Factors(data);
+          // Apply uniqueness enforcement and normalize task structure
+          const rawProcessedData = ensureUnique12Factors(data);
+          const processedData = normalizeFactorTasks(rawProcessedData);
           cachedFactors = processedData;
+          
+          // Debug task data
+          debugFactorTasks('From API (tcof-tasks)', processedData);
           
           // Check if we have the expected 12 factors
           if (data.length !== 12) {
@@ -137,11 +192,16 @@ export async function getFactors(bypassCache = false): Promise<FactorTask[]> {
     }
     
     // If API fails, try to load from local storage
+    console.debug('Fetching factors from local storage...');
     const dbFactors = await storage.get('successFactors');
     if (dbFactors && dbFactors.length > 0) {
-      // Apply uniqueness enforcement
-      const processedData = ensureUnique12Factors(dbFactors);
+      // Apply uniqueness enforcement and normalize task structure
+      const rawProcessedData = ensureUnique12Factors(dbFactors);
+      const processedData = normalizeFactorTasks(rawProcessedData);
       cachedFactors = processedData;
+      
+      // Debug task data
+      debugFactorTasks('From local storage', processedData);
       
       // Check if we have the expected 12 factors
       if (dbFactors.length !== 12) {
@@ -152,9 +212,11 @@ export async function getFactors(bypassCache = false): Promise<FactorTask[]> {
     }
     
     // Fall back to default factors if all else fails
-    cachedFactors = defaultFactors;
+    console.debug('Using default factors as fallback...');
+    cachedFactors = normalizeFactorTasks(defaultFactors);
     await storage.set('successFactors', cachedFactors);
     
+    debugFactorTasks('Default factors', cachedFactors);
     return cachedFactors;
   } catch (error) {
     console.error('Error loading success factors:', error);
@@ -167,19 +229,28 @@ export async function getFactors(bypassCache = false): Promise<FactorTask[]> {
  */
 export async function saveFactors(updatedFactors: FactorTask[]): Promise<boolean> {
   try {
-    // Update the cache
-    cachedFactors = updatedFactors;
+    // Normalize task arrays in the factors data
+    const normalizedFactors = normalizeFactorTasks(updatedFactors);
+    
+    // Debug the normalized tasks data
+    debugFactorTasks('Saving factors', normalizedFactors);
+    
+    // Update the cache with normalized data
+    cachedFactors = normalizedFactors;
     
     // Save to local storage
-    await storage.set('successFactors', updatedFactors);
+    await storage.set('successFactors', normalizedFactors);
     
     // Save via new API endpoint
     try {
       // Save all factors as a batch through the tcof-tasks endpoint
-      const response = await apiRequest('POST', '/api/admin/tcof-tasks', updatedFactors);
+      console.debug('Saving factors to API...');
+      const response = await apiRequest('POST', '/api/admin/tcof-tasks', normalizedFactors);
       
       if (!response.ok) {
         console.warn('Failed to save to API:', await response.text());
+      } else {
+        console.debug('Factors saved successfully to API');
       }
     } catch (apiError) {
       console.warn('Could not save to API:', apiError);

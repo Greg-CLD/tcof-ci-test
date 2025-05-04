@@ -1,0 +1,53 @@
+🛠️ Replit Agent Prompt: Fix Task Display and Mapping for Admin Factors
+Despite repeated fixes, I still do not see any tasks displayed in the /make-a-plan/admin/factors panel when logged in as an admin. This confirms that something is still broken or misaligned in the data flow between the database and the UI.
+
+Key points for you to action:
+
+❗ Expected Behaviour (Please make this work exactly as described):
+Each of the 12 canonical TCOF Success Factors should display their mapped tasks across the four project stages (Identification, Definition, Delivery, Closure) in the /admin/factors panel.
+
+The tasks for each factor were previously provided in a structured CSV format. Please load these directly into the database (not through UI upload), and map them to the correct factors and stages. Re-uploading should not be required.
+
+Remove any reliance on Excel/CSV going forward – tasks must live fully in the backend database and load via API.
+
+Do not display or rely on the original Admin Presets area. The /admin/factors page should be the single source of truth for managing Success Factors and Tasks.
+
+Ensure that when I log into /admin/factors, I can:
+
+Click a Success Factor
+
+View all relevant tasks per stage
+
+Add new tasks and see them saved and persistent after refresh.
+
+🧪 What I See Instead:
+When I visit /admin/factors and click on a success factor, no tasks appear (see attached PDF: Admin Factors 04052200.pdf).
+
+The panel claims to show tasks per stage but these are blank.
+
+This issue has persisted despite your successFactors.json showing correctly structured data.
+
+🔍 What Could Be Going Wrong:
+The front-end may be using an outdated or separate state management layer that is not referencing the updated backend.
+
+Task data might be fetched but not passed correctly to the display component.
+
+The display logic might be filtering out empty task arrays incorrectly.
+
+✅ What I Need Now:
+Please bypass all CSV uploads and instead load the tasks I’ve provided directly into the database and map them immediately.
+
+Refactor the /admin/factors panel to guarantee task visibility per factor and per stage.
+
+Completely decouple from /admin and ensure no legacy logic or task data is interfering.
+
+Confirm via logs or screen that:
+
+Task arrays are non-empty
+
+Tasks are rendering in the panel
+
+New tasks added through the interface persist after page reload
+
+Would you like me to re-provide the CSV again for clarity?
+
