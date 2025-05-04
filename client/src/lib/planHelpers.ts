@@ -100,16 +100,52 @@ export const extractBaseTaskName = (displayName: string): string => {
 };
 
 /**
- * Gets all available plans
- * @returns All plans 
+ * Gets all available plans with their full data
+ * @returns An array of all plan records
  */
 export const getAllPlans = async (): Promise<PlanRecord[]> => {
   try {
-    // This is a placeholder for actual implementation
-    // In a real implementation, this would fetch from localStorage or remote storage
-    return [];
+    // Get all plan IDs
+    const planIds = await storage.list();
+    
+    // Load each plan
+    const loadPromises = planIds.map(id => {
+      // Extract the ID from the storage key
+      const planId = id.replace('tcof_plan_', '');
+      return loadPlan(planId);
+    });
+    
+    // Wait for all plans to load and filter out any nulls
+    const loadedPlans = await Promise.all(loadPromises);
+    return loadedPlans.filter((plan): plan is PlanRecord => plan !== null);
   } catch (error) {
     console.error('Error getting all plans:', error);
+    return [];
+  }
+};
+
+/**
+ * Gets basic info for all plans (for listing in UI)
+ * @returns An array of basic plan info objects
+ */
+export const getAllPlanSummaries = async (): Promise<{
+  id: string;
+  created: string;
+  lastUpdated?: string;
+  name?: string;
+}[]> => {
+  try {
+    const plans = await getAllPlans();
+    
+    // Extract just the summary info we need for listing
+    return plans.map(plan => ({
+      id: plan.id,
+      created: plan.created,
+      lastUpdated: plan.lastUpdated,
+      name: plan.name || `Project ${plan.id.slice(0, 5)}` // Use name if available, otherwise generate one
+    }));
+  } catch (error) {
+    console.error('Error getting plan summaries:', error);
     return [];
   }
 };

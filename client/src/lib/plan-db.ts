@@ -113,6 +113,8 @@ export type PlanGoodPractice = {
 
 export type PlanRecord = {
   id: string;
+  name?: string;
+  description?: string;
   created: string;
   lastUpdated?: string;
   stages: Record<Stage, StageData>;
@@ -138,8 +140,10 @@ const createEmptyStageData = (): StageData => ({
 });
 
 // Create empty plan record
-const createEmptyPlanRecord = (): PlanRecord => ({
+const createEmptyPlanRecord = (name?: string, description?: string): PlanRecord => ({
   id: uuidv4(),
+  name,
+  description,
   created: new Date().toISOString(),
   stages: {
     Identification: createEmptyStageData(),
@@ -154,9 +158,11 @@ const plans: Record<string, PlanRecord> = {};
 
 /**
  * Creates an empty plan and returns its ID
+ * @param name Optional name for the plan
+ * @param description Optional description for the plan
  */
-export const createEmptyPlan = async (): Promise<string> => {
-  const newPlan = createEmptyPlanRecord();
+export const createEmptyPlan = async (name?: string, description?: string): Promise<string> => {
+  const newPlan = createEmptyPlanRecord(name, description);
   plans[newPlan.id] = newPlan;
   
   try {
