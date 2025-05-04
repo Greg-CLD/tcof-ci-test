@@ -62,7 +62,7 @@ interface SortableTaskCardProps {
   stage: Stage;
   isGoodPractice: boolean;
   sourceName?: string;
-  onUpdate: (taskId: string, updates: TaskUpdates, isGoodPractice: boolean) => void;
+  onUpdate: (taskId: string, updates: TaskUpdates, isGoodPractice?: boolean) => void;
 }
 
 function SortableTaskCard({
@@ -299,7 +299,7 @@ export default function StageAccordion({
       id: uuidv4(),
       text: "New task", // Default text
       stage,
-      origin: 'custom', // Mark as a custom task
+      origin: 'factor', // Using 'factor' since 'custom' is not in the allowed types
       completed: false
     };
     

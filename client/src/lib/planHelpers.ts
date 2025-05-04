@@ -297,6 +297,86 @@ export const removeCustomFramework = async (
 };
 
 /**
+ * Load Success Factor tasks from the API
+ * @returns A Promise that resolves to an array of Success Factor tasks, organized by stage
+ */
+export const loadSuccessFactorTasks = async (): Promise<Record<Stage, { 
+  id: string; 
+  text: string; 
+  stage: Stage; 
+  origin: 'heuristic' | 'factor' | 'policy';
+  sourceId?: string;
+  completed: boolean;
+  notes?: string;
+  priority?: TaskPriority;
+  dueDate?: string;
+}[]>> => {
+  try {
+    // Initialize empty result
+    const result: Record<Stage, { 
+      id: string; 
+      text: string; 
+      stage: Stage; 
+      origin: 'heuristic' | 'factor' | 'policy';
+      sourceId?: string;
+      completed: boolean;
+      notes?: string;
+      priority?: TaskPriority;
+      dueDate?: string;
+    }[]> = {
+      Identification: [],
+      Definition: [],
+      Delivery: [],
+      Closure: []
+    };
+    
+    // Fetch success factors from API
+    const response = await fetch('/api/admin/tcof-tasks');
+    if (!response.ok) {
+      console.warn('Failed to fetch success factors for default tasks');
+      return result;
+    }
+    
+    const factors = await response.json();
+    
+    // Process each factor's tasks into the appropriate stage
+    factors.forEach((factor: any) => {
+      if (!factor.tasks) return;
+      
+      // Process tasks for each stage
+      Object.keys(factor.tasks).forEach((stageName) => {
+        const stage = stageName as Stage;
+        const tasks = factor.tasks[stage] || [];
+        
+        // Add each task to the result
+        tasks.forEach((taskText: string) => {
+          if (!taskText) return; // Skip empty tasks
+          
+          result[stage].push({
+            id: uuidv4(),
+            text: taskText,
+            stage,
+            origin: 'factor',
+            sourceId: factor.id,
+            completed: false
+          });
+        });
+      });
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error loading success factor tasks:', error);
+    return {
+      Identification: [],
+      Definition: [],
+      Delivery: [],
+      Closure: []
+    };
+  }
+};
+
+/**
  * Creates a new plan with default settings and saves it
  * @returns The ID of the newly created plan
  */
@@ -305,6 +385,19 @@ export const quickStartPlan = async (): Promise<string> => {
     // Create a new empty plan
     const planId = uuidv4();
     const plan = createEmptyPlan();
+    
+    // Load success factor tasks
+    console.log('Loading success factor tasks for new plan');
+    const successFactorTasks = await loadSuccessFactorTasks();
+    
+    // Add success factor tasks to the plan
+    Object.keys(successFactorTasks).forEach((stageName) => {
+      const stage = stageName as Stage;
+      plan.stages[stage].tasks = [
+        ...(plan.stages[stage].tasks || []),
+        ...successFactorTasks[stage]
+      ];
+    });
     
     // Initialize the plan in memory
     if (typeof window !== 'undefined') {
