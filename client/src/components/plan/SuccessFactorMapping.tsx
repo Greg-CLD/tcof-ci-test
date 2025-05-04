@@ -43,7 +43,7 @@ export default function SuccessFactorMapping({
     if (options.length > 0) {
       // Use the options if available
       setFactorOptions([
-        { value: '', label: 'Select a success factor...' },
+        { value: 'none', label: 'Select a success factor...' },
         ...options
       ]);
     } else {
@@ -57,7 +57,7 @@ export default function SuccessFactorMapping({
       ];
       
       setFactorOptions([
-        { value: '', label: 'Select a success factor...' },
+        { value: 'none', label: 'Select a success factor...' },
         ...defaultOptions
       ]);
     }
@@ -70,12 +70,12 @@ export default function SuccessFactorMapping({
           const data = await response.json();
           if (Array.isArray(data) && data.length > 0) {
             const apiOptions = data.map((factor: any) => ({
-              value: factor.id || '',
-              label: `${factor.id}: ${factor.text || ''}`
+              value: factor.id || 'item_' + Math.random().toString(36).substring(2, 9),
+              label: `${factor.id}: ${factor.title || ''}`
             }));
             
             setFactorOptions([
-              { value: '', label: 'Select a success factor...' },
+              { value: 'none', label: 'Select a success factor...' },
               ...apiOptions
             ]);
           }
@@ -90,8 +90,11 @@ export default function SuccessFactorMapping({
 
   const handleFactorChange = async (heuristicId: string, factorId: string | null) => {
     try {
+      // Convert 'none' value to null for unmapping
+      const actualFactorId = factorId === 'none' ? null : factorId;
+      
       // Try to add the mapping
-      await addMapping(planId, heuristicId, factorId, stage);
+      await addMapping(planId, heuristicId, actualFactorId, stage);
       // Notify parent component that mapping has changed
       onMappingChange();
     } catch (error) {
@@ -102,7 +105,7 @@ export default function SuccessFactorMapping({
   // Get current mapping for a heuristic
   const getFactorForHeuristic = (heuristicId: string) => {
     const mapping = mappings.find(m => m.heuristicId === heuristicId);
-    return mapping?.factorId || '';
+    return mapping?.factorId || 'none';
   };
 
   return (
