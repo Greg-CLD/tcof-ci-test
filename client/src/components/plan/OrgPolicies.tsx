@@ -5,8 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { StageType } from './FactorTaskEditor';
-import { FactorTaskEditor } from '@/components/plan';
+import FactorTaskEditor, { StageType } from './FactorTaskEditor';
 
 interface OrgPolicy {
   id: string;

@@ -6,8 +6,11 @@ import { useToast } from '@/hooks/use-toast';
 import ProgressNav, { Step } from '@/components/plan/ProgressNav';
 import ActionButtons from '@/components/plan/ActionButtons';
 import IntroAccordion from '@/components/plan/IntroAccordion';
-import { SuccessFactorMapping, FactorTaskEditor, TaskList, StageSelector, OrgPolicies } from '@/components/plan';
-import { StageType } from '@/components/plan/FactorTaskEditor';
+import SuccessFactorMapping from '@/components/plan/SuccessFactorMapping';
+import TaskList from '@/components/plan/TaskList';
+import StageSelector from '@/components/plan/StageSelector';
+import FactorTaskEditor, { StageType } from '@/components/plan/FactorTaskEditor';
+import OrgPolicies from '@/components/plan/OrgPolicies';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
 import { Stage, loadPlan, savePlan, createEmptyPlan, addPolicyTask, removePolicyTask, PolicyTask, PersonalHeuristic, Mapping } from '@/lib/plan-db';
@@ -37,6 +40,13 @@ export default function Block2Design() {
     Delivery: [],
     Closure: []
   });
+  
+  // State for organizational policies
+  const [orgPolicies, setOrgPolicies] = useState<Array<{
+    id: string;
+    title: string;
+    tasks: Record<StageType, string[]>;
+  }>>([]);
   
   // Define steps for the progress bar
   const steps: Step[] = [
@@ -352,8 +362,8 @@ export default function Block2Design() {
     setLocation('/checklist');
   };
   
-  // Add policy task
-  const handleAddPolicyTask = async () => {
+  // Legacy policy task methods
+  const handleLegacyAddPolicyTask = async () => {
     if (!newPolicyTask.trim() || !planId) return;
     
     try {
@@ -375,8 +385,8 @@ export default function Block2Design() {
     }
   };
   
-  // Remove policy task
-  const handleRemovePolicyTask = async (taskId: string) => {
+  // Remove policy task - legacy method
+  const handleLegacyRemovePolicyTask = async (taskId: string) => {
     if (!planId) return;
     
     try {
@@ -393,6 +403,248 @@ export default function Block2Design() {
         title: "Error",
         description: "Failed to remove policy task",
         variant: "destructive"
+      });
+    }
+  };
+  
+  // New Policy-related methods for OrgPolicies component
+  
+  const handleAddPolicy = async (title: string) => {
+    if (!planId || !title.trim()) return;
+    
+    try {
+      // Create a new policy with empty tasks
+      const newPolicy = {
+        id: uuidv4(),
+        title: title.trim(),
+        tasks: {
+          Identification: [],
+          Definition: [],
+          Delivery: [],
+          Closure: []
+        }
+      };
+      
+      // Update local state
+      setOrgPolicies(prev => [...prev, newPolicy]);
+      
+      // Update plan data
+      const updatedPlan = { ...planData };
+      if (!updatedPlan.stages[currentStage].orgPolicies) {
+        updatedPlan.stages[currentStage].orgPolicies = [];
+      }
+      
+      updatedPlan.stages[currentStage].orgPolicies.push(newPolicy);
+      await savePlan(planId, updatedPlan);
+      setRefreshTrigger(prev => prev + 1);
+      
+      toast({
+        title: 'Policy created',
+        description: `Added new policy "${title}"`,
+      });
+    } catch (error) {
+      console.error('Error adding policy:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add policy',
+        variant: 'destructive'
+      });
+    }
+  };
+  
+  const handleUpdatePolicy = async (policyId: string, title: string) => {
+    if (!planId || !title.trim()) return;
+    
+    try {
+      // Update local state
+      setOrgPolicies(prev => prev.map(policy => 
+        policy.id === policyId ? { ...policy, title: title.trim() } : policy
+      ));
+      
+      // Update plan data
+      const updatedPlan = { ...planData };
+      const policyToUpdate = updatedPlan.stages[currentStage].orgPolicies?.find(
+        (p: any) => p.id === policyId
+      );
+      
+      if (policyToUpdate) {
+        policyToUpdate.title = title.trim();
+        await savePlan(planId, updatedPlan);
+        setRefreshTrigger(prev => prev + 1);
+        
+        toast({
+          title: 'Policy updated',
+          description: `Updated policy title to "${title}"`,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating policy:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update policy',
+        variant: 'destructive'
+      });
+    }
+  };
+  
+  const handleDeletePolicy = async (policyId: string) => {
+    if (!planId) return;
+    
+    try {
+      // Update local state
+      setOrgPolicies(prev => prev.filter(policy => policy.id !== policyId));
+      
+      // Update plan data
+      const updatedPlan = { ...planData };
+      if (updatedPlan.stages[currentStage].orgPolicies) {
+        updatedPlan.stages[currentStage].orgPolicies = updatedPlan.stages[currentStage].orgPolicies.filter(
+          (p: any) => p.id !== policyId
+        );
+        
+        await savePlan(planId, updatedPlan);
+        setRefreshTrigger(prev => prev + 1);
+        
+        toast({
+          title: 'Policy deleted',
+          description: 'The policy has been removed from your plan',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting policy:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete policy',
+        variant: 'destructive'
+      });
+    }
+  };
+  
+  const handleAddOrgPolicyTask = async (policyId: string, stage: StageType) => {
+    if (!planId) return;
+    
+    try {
+      // Update local state
+      setOrgPolicies(prev => prev.map(policy => {
+        if (policy.id === policyId) {
+          const updatedTasks = { ...policy.tasks };
+          updatedTasks[stage] = [...updatedTasks[stage], 'New task'];
+          return { ...policy, tasks: updatedTasks };
+        }
+        return policy;
+      }));
+      
+      // Update plan data
+      const updatedPlan = { ...planData };
+      const policyToUpdate = updatedPlan.stages[currentStage].orgPolicies?.find(
+        (p: any) => p.id === policyId
+      );
+      
+      if (policyToUpdate) {
+        if (!policyToUpdate.tasks[stage]) {
+          policyToUpdate.tasks[stage] = [];
+        }
+        
+        policyToUpdate.tasks[stage].push('New task');
+        await savePlan(planId, updatedPlan);
+        setRefreshTrigger(prev => prev + 1);
+        
+        toast({
+          title: 'Task added',
+          description: `Added new task to ${stage} stage`,
+        });
+      }
+    } catch (error) {
+      console.error('Error adding policy task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add policy task',
+        variant: 'destructive'
+      });
+    }
+  };
+  
+  const handleUpdatePolicyTask = async (policyId: string, stage: StageType, taskIndex: number, newText: string) => {
+    if (!planId) return;
+    
+    try {
+      // Update local state
+      setOrgPolicies(prev => prev.map(policy => {
+        if (policy.id === policyId) {
+          const updatedTasks = { ...policy.tasks };
+          if (updatedTasks[stage] && updatedTasks[stage][taskIndex] !== undefined) {
+            updatedTasks[stage] = [
+              ...updatedTasks[stage].slice(0, taskIndex),
+              newText,
+              ...updatedTasks[stage].slice(taskIndex + 1)
+            ];
+          }
+          return { ...policy, tasks: updatedTasks };
+        }
+        return policy;
+      }));
+      
+      // Update plan data
+      const updatedPlan = { ...planData };
+      const policyToUpdate = updatedPlan.stages[currentStage].orgPolicies?.find(
+        (p: any) => p.id === policyId
+      );
+      
+      if (policyToUpdate && policyToUpdate.tasks[stage] && policyToUpdate.tasks[stage][taskIndex] !== undefined) {
+        policyToUpdate.tasks[stage][taskIndex] = newText;
+        await savePlan(planId, updatedPlan);
+        setRefreshTrigger(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error updating policy task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update policy task',
+        variant: 'destructive'
+      });
+    }
+  };
+  
+  const handleDeletePolicyTask = async (policyId: string, stage: StageType, taskIndex: number) => {
+    if (!planId) return;
+    
+    try {
+      // Update local state
+      setOrgPolicies(prev => prev.map(policy => {
+        if (policy.id === policyId) {
+          const updatedTasks = { ...policy.tasks };
+          if (updatedTasks[stage] && updatedTasks[stage][taskIndex] !== undefined) {
+            updatedTasks[stage] = [
+              ...updatedTasks[stage].slice(0, taskIndex),
+              ...updatedTasks[stage].slice(taskIndex + 1)
+            ];
+          }
+          return { ...policy, tasks: updatedTasks };
+        }
+        return policy;
+      }));
+      
+      // Update plan data
+      const updatedPlan = { ...planData };
+      const policyToUpdate = updatedPlan.stages[currentStage].orgPolicies?.find(
+        (p: any) => p.id === policyId
+      );
+      
+      if (policyToUpdate && policyToUpdate.tasks[stage] && policyToUpdate.tasks[stage][taskIndex] !== undefined) {
+        policyToUpdate.tasks[stage].splice(taskIndex, 1);
+        await savePlan(planId, updatedPlan);
+        setRefreshTrigger(prev => prev + 1);
+        
+        toast({
+          title: 'Task deleted',
+          description: 'The task has been removed from your policy',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting policy task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete policy task',
+        variant: 'destructive'
       });
     }
   };
@@ -624,7 +876,7 @@ export default function Block2Design() {
                         value={newPolicyTask}
                         onChange={(e) => setNewPolicyTask(e.target.value)}
                       />
-                      <Button onClick={handleAddPolicyTask}>Add Task</Button>
+                      <Button onClick={handleLegacyAddPolicyTask}>Add Task</Button>
                     </div>
                   </div>
                   
@@ -636,7 +888,7 @@ export default function Block2Design() {
                         {policyTasks.map((task: PolicyTask) => (
                           <li key={task.id} className="flex items-center justify-between p-2 bg-white rounded-md border">
                             <span>{task.text}</span>
-                            <Button variant="ghost" size="sm" onClick={() => handleRemovePolicyTask(task.id)}>
+                            <Button variant="ghost" size="sm" onClick={() => handleLegacyRemovePolicyTask(task.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </li>
