@@ -554,11 +554,19 @@ export default function Block2Design() {
     if (!planId) return;
     
     try {
+      // Find policy name
+      const policy = orgPolicies.find(p => p.id === policyId);
+      if (!policy) return;
+      
+      // Create a friendly task name for policy
+      const taskIndex = (policy.tasks[stage]?.length || 0) + 1;
+      const taskDisplayName = getPolicyTaskDisplayName(policy.title, stage, taskIndex);
+      
       // Update local state
       setOrgPolicies(prev => prev.map(policy => {
         if (policy.id === policyId) {
           const updatedTasks = { ...policy.tasks };
-          updatedTasks[stage] = [...updatedTasks[stage], 'New task'];
+          updatedTasks[stage] = [...updatedTasks[stage], taskDisplayName];
           return { ...policy, tasks: updatedTasks };
         }
         return policy;
@@ -575,13 +583,13 @@ export default function Block2Design() {
           policyToUpdate.tasks[stage] = [];
         }
         
-        policyToUpdate.tasks[stage].push('New task');
+        policyToUpdate.tasks[stage].push(taskDisplayName);
         await savePlan(planId, updatedPlan);
         setRefreshTrigger(prev => prev + 1);
         
         toast({
           title: 'Task added',
-          description: `Added new task to ${stage} stage`,
+          description: `Added task to ${stage} stage in policy "${policy.title}"`,
         });
       }
     } catch (error) {
@@ -598,6 +606,20 @@ export default function Block2Design() {
     if (!planId) return;
     
     try {
+      // Find policy
+      const policy = orgPolicies.find(p => p.id === policyId);
+      if (!policy) return;
+      
+      // If the text has already been formatted (or is being edited after formatting),
+      // we want to preserve the user's edits
+      const useFormattedName = !isTaskAlreadyFormatted(newText);
+      
+      // If it needs formatting, generate a policy task display name
+      // Otherwise, use the text as provided by the user
+      const taskDisplayName = useFormattedName 
+        ? getPolicyTaskDisplayName(policy.title, stage, taskIndex + 1)
+        : newText;
+      
       // Update local state
       setOrgPolicies(prev => prev.map(policy => {
         if (policy.id === policyId) {
@@ -605,7 +627,7 @@ export default function Block2Design() {
           if (updatedTasks[stage] && updatedTasks[stage][taskIndex] !== undefined) {
             updatedTasks[stage] = [
               ...updatedTasks[stage].slice(0, taskIndex),
-              newText,
+              taskDisplayName,
               ...updatedTasks[stage].slice(taskIndex + 1)
             ];
           }
@@ -621,9 +643,14 @@ export default function Block2Design() {
       );
       
       if (policyToUpdate && policyToUpdate.tasks[stage] && policyToUpdate.tasks[stage][taskIndex] !== undefined) {
-        policyToUpdate.tasks[stage][taskIndex] = newText;
+        policyToUpdate.tasks[stage][taskIndex] = taskDisplayName;
         await savePlan(planId, updatedPlan);
         setRefreshTrigger(prev => prev + 1);
+        
+        toast({
+          title: 'Task updated',
+          description: `Updated task in "${policy.title}"`,
+        });
       }
     } catch (error) {
       console.error('Error updating policy task:', error);
@@ -665,9 +692,10 @@ export default function Block2Design() {
         await savePlan(planId, updatedPlan);
         setRefreshTrigger(prev => prev + 1);
         
+        const policyTitle = orgPolicies.find(p => p.id === policyId)?.title || "policy";
         toast({
           title: 'Task deleted',
-          description: 'The task has been removed from your policy',
+          description: `The task has been removed from "${policyTitle}"`,
         });
       }
     } catch (error) {
