@@ -8,9 +8,10 @@ export interface Project {
   name: string;
   description?: string;
   sector?: string;
+  customSector?: string;
   orgType?: string;
   teamSize?: string;
-  deliveryStage?: string;
+  currentStage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -19,9 +20,10 @@ export interface CreateProjectData {
   name: string;
   description?: string;
   sector?: string;
+  customSector?: string;
   orgType?: string;
   teamSize?: string;
-  deliveryStage?: string;
+  currentStage?: string;
 }
 
 export interface UpdateProjectParams {

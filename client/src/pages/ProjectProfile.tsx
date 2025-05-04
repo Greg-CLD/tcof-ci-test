@@ -25,16 +25,27 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Briefcase, ChevronLeft } from 'lucide-react';
+import { Briefcase, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Form validation schema
 const projectFormSchema = z.object({
-  name: z.string().min(2, 'Project name must be at least 2 characters'),
+  name: z.string().min(2, 'Project name must be at least 2 characters').max(100, 'Project name must not exceed 100 characters'),
   description: z.string().optional(),
-  sector: z.string().optional(),
-  orgType: z.string().optional(),
+  sector: z.string().min(1, 'Please select a sector'),
+  customSector: z.string().optional()
+    .refine((value, ctx) => {
+      // If sector is "other", customSector is required
+      if (ctx.parent.sector === 'other' && (!value || value.trim() === '')) {
+        return false;
+      }
+      return true;
+    }, {
+      message: 'Please describe your sector'
+    }),
+  orgType: z.string().min(1, 'Please select an organization type'),
   teamSize: z.string().optional(),
-  deliveryStage: z.string().optional(),
+  currentStage: z.string().min(1, 'Please select your current stage'),
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -45,6 +56,9 @@ export default function ProjectProfile() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   
+  // Track if sector is "other" to show custom sector field
+  const [showCustomSector, setShowCustomSector] = useState(false);
+  
   // Form setup
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -52,9 +66,10 @@ export default function ProjectProfile() {
       name: '',
       description: '',
       sector: '',
+      customSector: '',
       orgType: '',
       teamSize: '',
-      deliveryStage: '',
+      currentStage: '',
     },
   });
 
@@ -83,13 +98,19 @@ export default function ProjectProfile() {
     if (selectedProjectId && projects.length > 0 && isEditing) {
       const project = projects.find(p => p.id === selectedProjectId);
       if (project) {
+        // If sector is "other", show custom sector field
+        if (project.sector === 'other') {
+          setShowCustomSector(true);
+        }
+        
         form.reset({
           name: project.name,
           description: project.description || '',
           sector: project.sector || '',
+          customSector: project.customSector || '',
           orgType: project.orgType || '',
           teamSize: project.teamSize || '',
-          deliveryStage: project.deliveryStage || '',
+          currentStage: project.currentStage || '',
         });
       }
     }
@@ -98,18 +119,25 @@ export default function ProjectProfile() {
   // Form submission handler
   const onSubmit = async (data: ProjectFormValues) => {
     try {
+      const projectData = {
+        name: data.name,
+        description: data.description,
+        sector: data.sector,
+        orgType: data.orgType,
+        teamSize: data.teamSize,
+        currentStage: data.currentStage,
+      };
+      
+      // Add customSector if sector is "other"
+      if (data.sector === 'other' && data.customSector) {
+        projectData.customSector = data.customSector;
+      }
+      
       if (isEditing && selectedProjectId) {
         // Update existing project
         const result = await updateProject.mutateAsync({
           id: selectedProjectId,
-          data: {
-            name: data.name,
-            description: data.description,
-            sector: data.sector,
-            orgType: data.orgType,
-            teamSize: data.teamSize,
-            deliveryStage: data.deliveryStage,
-          },
+          data: projectData,
         });
         
         toast({
@@ -121,14 +149,7 @@ export default function ProjectProfile() {
         navigate('/get-your-bearings');
       } else {
         // Create new project
-        const result = await createProject.mutateAsync({
-          name: data.name,
-          description: data.description,
-          sector: data.sector,
-          orgType: data.orgType,
-          teamSize: data.teamSize,
-          deliveryStage: data.deliveryStage,
-        });
+        const result = await createProject.mutateAsync(projectData);
         
         // Set as selected project
         localStorage.setItem('selectedProjectId', result.id);
@@ -225,9 +246,12 @@ export default function ProjectProfile() {
                     name="sector"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Project Sector</FormLabel>
+                        <FormLabel>Project Sector*</FormLabel>
                         <Select 
-                          onValueChange={field.onChange} 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            setShowCustomSector(value === "other");
+                          }} 
                           defaultValue={field.value}
                         >
                           <FormControl>
@@ -253,12 +277,31 @@ export default function ProjectProfile() {
                     )}
                   />
                   
+                  {showCustomSector && (
+                    <FormField
+                      control={form.control}
+                      name="customSector"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Please describe your sector*</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter your specific sector" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
                   <FormField
                     control={form.control}
                     name="orgType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Organization Type</FormLabel>
+                        <FormLabel>Organization Type*</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
                           defaultValue={field.value}
@@ -315,31 +358,29 @@ export default function ProjectProfile() {
                   
                   <FormField
                     control={form.control}
-                    name="deliveryStage"
+                    name="currentStage"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Delivery Stage</FormLabel>
+                        <FormLabel>Which stage are you currently in?*</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
                           defaultValue={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select delivery stage" />
+                              <SelectValue placeholder="Select current stage" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="concept">Concept / Idea Stage</SelectItem>
-                            <SelectItem value="planning">Planning Phase</SelectItem>
-                            <SelectItem value="requirements">Requirements Gathering</SelectItem>
-                            <SelectItem value="design">Design Phase</SelectItem>
-                            <SelectItem value="development">Development / Implementation</SelectItem>
-                            <SelectItem value="testing">Testing / QA</SelectItem>
-                            <SelectItem value="deployment">Deployment / Go-Live</SelectItem>
-                            <SelectItem value="postlaunch">Post-Launch / Maintenance</SelectItem>
-                            <SelectItem value="retrospective">Retrospective / Analysis</SelectItem>
+                            <SelectItem value="identify">1. Identify</SelectItem>
+                            <SelectItem value="definition">2. Definition</SelectItem>
+                            <SelectItem value="delivery">3. Delivery</SelectItem>
+                            <SelectItem value="closure">4. Closure</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          The stage you select will help us recommend the most relevant tools and templates for your project
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
