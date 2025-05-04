@@ -48,6 +48,7 @@ export default function CustomFrameworkEditor({
   const [expandedFrameworks, setExpandedFrameworks] = useState<string[]>([]);
   const [newTasks, setNewTasks] = useState<Record<string, Record<Stage, string>>>({});
   const [selectedTab, setSelectedTab] = useState<Stage>('Identification');
+  const [selectedFramework, setSelectedFramework] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Initialize new tasks state whenever custom frameworks change
@@ -65,11 +66,21 @@ export default function CustomFrameworkEditor({
     
     setNewTasks(tasksState);
     
-    // Auto-expand newly added frameworks
-    if (customFrameworks.length > 0 && expandedFrameworks.length === 0) {
-      setExpandedFrameworks([customFrameworks[0].id]);
+    // Auto-expand and select the first framework if available
+    if (customFrameworks.length > 0) {
+      const firstFrameworkId = customFrameworks[0].id;
+      
+      // Auto-expand the first framework
+      if (expandedFrameworks.length === 0) {
+        setExpandedFrameworks([firstFrameworkId]);
+      }
+      
+      // Auto-select the first framework if none is selected
+      if (!selectedFramework) {
+        setSelectedFramework(firstFrameworkId);
+      }
     }
-  }, [customFrameworks]);
+  }, [customFrameworks, expandedFrameworks.length, selectedFramework]);
 
   const handleCreateFramework = async () => {
     if (!newFrameworkName.trim()) {
@@ -200,9 +211,18 @@ export default function CustomFrameworkEditor({
     });
   };
 
+  // Handle when a framework is selected
+  const handleFrameworkSelect = (frameworkId: string) => {
+    setSelectedFramework(frameworkId);
+    // Ensure the selected framework is expanded
+    if (!expandedFrameworks.includes(frameworkId)) {
+      setExpandedFrameworks(prev => [...prev, frameworkId]);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">Custom Frameworks</h3>
         
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -258,30 +278,24 @@ export default function CustomFrameworkEditor({
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
-          <Accordion 
-            type="multiple" 
-            value={expandedFrameworks}
-            className="border rounded-md"
-          >
-            {customFrameworks.map(framework => (
-              <AccordionItem 
-                key={framework.id} 
-                value={framework.id}
-                className="border-b last:border-0"
-              >
-                <div className="flex items-center justify-between pr-4">
-                  <AccordionTrigger 
-                    onClick={() => toggleFrameworkExpansion(framework.id)}
-                    className="py-3 px-4 flex-1"
-                  >
-                    {framework.name}
-                  </AccordionTrigger>
-                  
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Framework list (left sidebar) */}
+          <div className="md:col-span-1 border rounded-md p-2 bg-gray-50">
+            <h4 className="text-sm font-medium mb-2 px-2">Your Frameworks</h4>
+            <div className="space-y-1">
+              {customFrameworks.map(framework => (
+                <div 
+                  key={framework.id}
+                  className={`flex items-center justify-between p-2 rounded cursor-pointer ${
+                    selectedFramework === framework.id ? 'bg-primary/10 border-l-4 border-primary' : 'hover:bg-gray-100'
+                  }`}
+                  onClick={() => handleFrameworkSelect(framework.id)}
+                >
+                  <span className="font-medium truncate">{framework.name}</span>
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRemoveFramework(framework.id, framework.name);
@@ -290,70 +304,94 @@ export default function CustomFrameworkEditor({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                
-                <AccordionContent className="px-4 pb-4 pt-1">
-                  <Tabs defaultValue="Identification" value={selectedTab} onValueChange={(v) => setSelectedTab(v as Stage)}>
-                    <TabsList className="mb-4">
-                      <TabsTrigger value="Identification">Identification</TabsTrigger>
-                      <TabsTrigger value="Definition">Definition</TabsTrigger>
-                      <TabsTrigger value="Delivery">Delivery</TabsTrigger>
-                      <TabsTrigger value="Closure">Closure</TabsTrigger>
-                    </TabsList>
-                    
-                    {Object.keys(framework.tasks).map((stageName) => {
-                      const stage = stageName as Stage;
-                      const tasks = framework.tasks[stage];
+              ))}
+            </div>
+          </div>
+
+          {/* Task editor (right content area) */}
+          <div className="md:col-span-2 border rounded-md p-4">
+            {selectedFramework ? (
+              (() => {
+                const framework = customFrameworks.find(f => f.id === selectedFramework);
+                if (!framework) return <p>Select a framework to edit tasks</p>;
+
+                return (
+                  <div>
+                    <h4 className="font-medium mb-4">{framework.name} Tasks</h4>
+                    <Tabs defaultValue="Identification" value={selectedTab} onValueChange={(v) => setSelectedTab(v as Stage)}>
+                      <TabsList className="mb-4 w-full">
+                        <TabsTrigger value="Identification" className="flex-1">Identification</TabsTrigger>
+                        <TabsTrigger value="Definition" className="flex-1">Definition</TabsTrigger>
+                        <TabsTrigger value="Delivery" className="flex-1">Delivery</TabsTrigger>
+                        <TabsTrigger value="Closure" className="flex-1">Closure</TabsTrigger>
+                      </TabsList>
                       
-                      return (
-                        <TabsContent key={stage} value={stage} className="border rounded-md p-4">
-                          <div className="mb-4">
-                            <h4 className="font-medium mb-2">{stage} Tasks</h4>
+                      {Object.keys(framework.tasks).map((stageName) => {
+                        const stage = stageName as Stage;
+                        const tasks = framework.tasks[stage];
+                        
+                        return (
+                          <TabsContent key={stage} value={stage}>
+                            <div className="mb-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <h5 className="font-medium text-sm text-gray-500">{stage} Stage Tasks</h5>
+                                <span className="text-xs text-gray-400">{tasks.length} tasks</span>
+                              </div>
+                              
+                              {tasks.length === 0 ? (
+                                <div className="p-4 text-center border rounded-lg bg-gray-50">
+                                  <p className="text-sm text-gray-500">No tasks added yet for {stage} stage</p>
+                                </div>
+                              ) : (
+                                <ul className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded-md bg-gray-50">
+                                  {tasks.map((task, index) => (
+                                    <li key={index} className="flex items-center justify-between p-2 bg-white rounded shadow-sm">
+                                      <span className="flex-1 text-sm">{task}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-destructive"
+                                        onClick={() => handleRemoveTask(framework.id, stage, index)}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
                             
-                            {tasks.length === 0 ? (
-                              <p className="text-sm text-gray-500 italic">No tasks added yet</p>
-                            ) : (
-                              <ul className="space-y-2">
-                                {tasks.map((task, index) => (
-                                  <li key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                    <span className="flex-1">{task}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-6 w-6 text-destructive"
-                                      onClick={() => handleRemoveTask(framework.id, stage, index)}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder={`Add ${stage} task...`}
-                              value={newTasks[framework.id]?.[stage] || ''}
-                              onChange={(e) => handleTaskInputChange(framework.id, stage, e.target.value)}
-                              className="flex-1"
-                            />
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleAddTask(framework.id, stage)}
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Add
-                            </Button>
-                          </div>
-                        </TabsContent>
-                      );
-                    })}
-                  </Tabs>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+                            <div className="flex gap-2 mt-4">
+                              <Input
+                                placeholder={`Add ${stage} task...`}
+                                value={newTasks[framework.id]?.[stage] || ''}
+                                onChange={(e) => handleTaskInputChange(framework.id, stage, e.target.value)}
+                                className="flex-1"
+                              />
+                              <Button 
+                                variant="outline" 
+                                onClick={() => handleAddTask(framework.id, stage)}
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add Task
+                              </Button>
+                            </div>
+                          </TabsContent>
+                        );
+                      })}
+                    </Tabs>
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="p-6 text-center">
+                <p className="text-gray-500 mb-2">Select a framework from the list</p>
+                <p className="text-gray-500 text-sm">
+                  Choose a framework to add or edit tasks for each project stage.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
