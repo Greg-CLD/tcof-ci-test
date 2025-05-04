@@ -1,0 +1,60 @@
+🎯 Critical Bug
+After I click **+ New Project → Create Project**, the checklist opens,
+but when I return to the dashboard the new project is missing.
+We need bullet-proof project persistence before we advance.
+
+────────────────────────────────
+🚀 Bold, Clean Fix
+1️⃣  Back-end: Projects Store
+• Create /data/projects.json (or Replit DB collection “projects”) with schema:
+  {
+    projectId,         // UUID
+    userId,            // owner
+    name,
+    description,
+    createdAt,
+    updatedAt
+  }
+
+• Implement helpers in server/projectsDb.ts:
+  ▸ createProject(userId, data)   -> returns saved record
+  ▸ listProjects(userId)          -> returns user’s projects
+  ▸ updateProject(projectId, …)   (stub for future)
+
+• Replace any “plan” hacks with these helpers.
+
+2️⃣  API Routes  (server/routes.ts)
+POST  /api/projects          → createProject
+GET   /api/projects          → listProjects for current user
+Both routes guarded by auth middleware.
+
+3️⃣  Front-end
+Home / Dashboard component:
+• useQuery("projects", GET /api/projects)
+• After Create Project succeeds, optimistically
+  add the returned project to React-Query cache
+  so it appears instantly without full reload.
+
+Project-create modal / New Project dialog:
+• On submit → call POST /api/projects
+• Await response → navigate to GetYourBearings start route
+
+4️⃣  Delete “createEmptyPlan” shortcut
+Remove any temp functions that bypassed the API and wrote
+straight to a file; they cause the missing-project bug.
+
+5️⃣  Validation
+• Console-log on POST save: “Project saved → ${projectId}”
+• Console-log on dashboard load: list length
+• Manual test:
+   – Log in as Greg@confluity.co.uk
+   – Create Project A
+   – Return home → Project A card visible
+   – Refresh browser → Project A still visible
+   – Create Project B → both A & B visible
+
+No Excel/CSV logic is needed for projects.
+
+────────────────────────────────
+Once this persistence fix is live and stable, let me know
+so I can proceed with Prompt 1 (Project Profile form).

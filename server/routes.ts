@@ -9,6 +9,7 @@ import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
 import { factorsDb, type FactorTask } from './factorsDb';
+import { projectsDb } from './projectsDb';
 import { 
   insertUserSchema, 
   insertGoalMapSchema, 
@@ -480,7 +481,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const projects = await storage.getProjects(userId);
+      const projects = await projectsDb.listProjects(userId);
+      console.log(`Found ${projects.length} projects for user ${userId}`);
       res.json(projects);
     } catch (error: any) {
       console.error("Error fetching projects:", error);
@@ -490,8 +492,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const projectId = parseInt(req.params.id);
-      const project = await storage.getProject(projectId);
+      const projectId = req.params.id;
+      const project = await projectsDb.getProject(projectId);
       
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
@@ -512,21 +514,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const { name, description, goalMapId, cynefinSelectionId, tcofJourneyId } = req.body;
+      const { name, description } = req.body;
       
       if (!name) {
         return res.status(400).json({ message: "Project name is required" });
       }
       
-      const project = await storage.createProject(
-        userId, 
-        name, 
-        description || null, 
-        goalMapId || null, 
-        cynefinSelectionId || null, 
-        tcofJourneyId || null
+      const project = await projectsDb.createProject(
+        userId,
+        {
+          name,
+          description: description || ''
+        }
       );
       
+      if (!project) {
+        return res.status(500).json({ message: "Failed to create project" });
+      }
+
+      console.log(`Project saved → ${project.id}`);
       res.status(201).json(project);
     } catch (error: any) {
       console.error("Error creating project:", error);
@@ -536,11 +542,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const projectId = parseInt(req.params.id);
-      const { name, description, goalMapId, cynefinSelectionId, tcofJourneyId } = req.body;
+      const projectId = req.params.id;
+      const { name, description } = req.body;
       
       // Get the project to verify ownership
-      const existingProject = await storage.getProject(projectId);
+      const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
@@ -550,14 +556,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
-      const updateData: any = {};
+      const updateData: { name?: string; description?: string } = {};
       if (name !== undefined) updateData.name = name;
       if (description !== undefined) updateData.description = description;
-      if (goalMapId !== undefined) updateData.goalMapId = goalMapId;
-      if (cynefinSelectionId !== undefined) updateData.cynefinSelectionId = cynefinSelectionId;
-      if (tcofJourneyId !== undefined) updateData.tcofJourneyId = tcofJourneyId;
       
-      const updatedProject = await storage.updateProject(projectId, updateData);
+      const updatedProject = await projectsDb.updateProject(projectId, updateData);
+      
+      if (!updatedProject) {
+        return res.status(500).json({ message: "Failed to update project" });
+      }
+      
       res.json(updatedProject);
     } catch (error: any) {
       console.error("Error updating project:", error);

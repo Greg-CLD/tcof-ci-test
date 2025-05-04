@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,56 +13,28 @@ import {
   Clipboard, ClipboardCheck, FileDown, PlusCircle, Calendar, 
   Trash2, ArrowRight, FolderOpen, RefreshCcw, Clock, Edit
 } from "lucide-react";
-import { getAllPlanSummaries, setLatestPlanId, quickStartPlan } from "@/lib/planHelpers";
-import { createEmptyPlan } from "@/lib/plan-db";
+import { setLatestPlanId, quickStartPlan } from "@/lib/planHelpers";
 import { formatDistanceToNow } from "date-fns";
 import { generateCompletePDF } from "@/lib/pdf-utils";
 import vitruvianMan from "../assets/vitruvian-man.png";
-
-// Project interface
-interface ProjectSummary {
-  id: string;
-  name?: string;
-  created: string;
-  lastUpdated?: string;
-}
+import { useProjects, Project } from "@/hooks/useProjects";
 
 export default function Home() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
 
-  // Function to load projects
-  const loadProjects = async () => {
-    try {
-      setIsLoading(true);
-      console.log("Fetching projects for dashboard...");
-      const projectsList = await getAllPlanSummaries();
-      console.log(`Loaded ${projectsList.length} projects for dashboard`);
-      setProjects(projectsList);
-    } catch (error) {
-      console.error("Error loading projects:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load your projects. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Load projects on component mount or when location changes
-  useEffect(() => {
-    // This ensures we reload the project list when the user navigates back to the dashboard
-    loadProjects();
-  }, [location, toast]);
+  // Use the projects hook instead of manual state management
+  const { 
+    projects, 
+    isLoading, 
+    refetch: loadProjects,
+    createProject
+  } = useProjects();
 
   // Handle creating a new project
   const handleCreateProject = async () => {
