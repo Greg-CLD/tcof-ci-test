@@ -52,9 +52,17 @@ export default function ProjectBanner() {
   }, []);
   
   // Handle project change
-  const handleProjectChange = (projectId: string) => {
+  const handleProjectChange = async (projectId: string) => {
     setSelectedProjectId(projectId);
     localStorage.setItem('selectedProjectId', projectId);
+    
+    // Track relationship between user and project (will be handled by the backend)
+    try {
+      await apiRequest('POST', '/api/projects/select', { projectId });
+    } catch (error) {
+      console.error('Error tracking project selection:', error);
+      // Continue even if tracking fails
+    }
     
     // Refresh the current page to reflect the project change
     window.location.reload();

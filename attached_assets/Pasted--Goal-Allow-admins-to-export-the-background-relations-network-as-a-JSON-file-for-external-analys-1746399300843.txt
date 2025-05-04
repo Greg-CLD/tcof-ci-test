@@ -1,0 +1,86 @@
+🎯 Goal
+Allow admins to export the background relations[] network as a JSON file for external analysis and future AI model training.
+
+1. Backend: Secure API Route
+Create a new Express route:
+
+cpp
+Copy
+Edit
+GET /api/admin/relations-export?projectId=<optional>
+Requirements:
+
+Protect this route using isAdmin middleware (ensure middleware is implemented and checks user roles).
+
+Use a getRelations(projectId?) function to fetch relations, filtered by projectId if provided.
+
+Return a JSON array with the following fields for each relation:
+
+id, fromId, toId, relType, projectId, meta, timestamp
+
+Do NOT include userId to preserve anonymity.
+
+Include appropriate response headers:
+
+Content-Type: application/json
+
+Cache-Control: no-store
+
+Error handling:
+
+If no data is found, return 404 with message.
+
+If error occurs, return 500 with message.
+
+2. Frontend: Admin UI Download Button
+In /make-a-plan/admin:
+
+Add a button labeled:
+
+mathematica
+Copy
+Edit
+Export Graph JSON
+Button Behaviour:
+
+On click, fetch from /api/admin/relations-export
+
+Convert JSON response to a Blob
+
+Trigger a file download using a temporary <a> element
+
+Name the file using today’s date, e.g. graph-2025-05-04.json
+
+Example Implementation:
+
+ts
+Copy
+Edit
+const handleExportGraphJSON = async () => {
+  try {
+    const response = await fetch('/api/admin/relations-export');
+    if (!response.ok) throw new Error('Export failed');
+    
+    const data = await response.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `graph-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Export error:', error);
+  }
+};
+Render the button:
+
+tsx
+Copy
+Edit
+<Button onClick={handleExportGraphJSON} variant="outline">
+  Export Graph JSON
+</Button>

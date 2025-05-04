@@ -625,6 +625,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete project" });
       }
       
+      // Delete all relations for this project
+      await relationsDb.deleteProjectRelations(projectId);
+      console.log(`Relations deleted for project ${projectId}`);
+      
       res.status(200).json({ message: "Project deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting project:", error);
