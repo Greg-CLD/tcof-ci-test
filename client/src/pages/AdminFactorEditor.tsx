@@ -42,10 +42,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import { Filter, Loader2, Plus, Save, Trash2, Upload, RefreshCw } from 'lucide-react';
-import { getFactors, saveFactors, createFactor, updateFactor, deleteFactor } from '@/utils/factorStore';
+import { getFactors, saveFactors, createFactor, updateFactor, deleteFactor, FactorTask } from '@/utils/factorStore';
 
-// Types for the success factor
-import { SuccessFactor } from '@/utils/factorStore';
+// Alias for type cleanliness
+type SuccessFactor = FactorTask;
 
 type StageType = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 
@@ -91,6 +91,83 @@ export default function AdminFactorEditor() {
 
     loadFactors();
   }, [toast]);
+
+  // Create a debounced save function that will be created once and persisted
+  const debouncedSave = useCallback(
+    debounce(async (factorId: string, updatedFactor: SuccessFactor) => {
+      try {
+        setIsAutoSaving(true);
+        
+        // Ensure tasks property has all required stage arrays
+        const validatedFactor = {
+          ...updatedFactor,
+          tasks: {
+            Identification: Array.isArray(updatedFactor.tasks?.Identification) ? updatedFactor.tasks.Identification : [],
+            Definition: Array.isArray(updatedFactor.tasks?.Definition) ? updatedFactor.tasks.Definition : [],
+            Delivery: Array.isArray(updatedFactor.tasks?.Delivery) ? updatedFactor.tasks.Delivery : [],
+            Closure: Array.isArray(updatedFactor.tasks?.Closure) ? updatedFactor.tasks.Closure : []
+          }
+        };
+        
+        const result = await updateFactor(factorId, validatedFactor);
+        
+        if (!result) {
+          throw new Error('Failed to save task: server returned null');
+        }
+        
+        // Verify all stages were saved correctly
+        const stages: StageType[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
+        const anyMismatch = stages.some(stage => 
+          Array.isArray(result.tasks[stage]) && 
+          Array.isArray(validatedFactor.tasks[stage]) && 
+          result.tasks[stage].length !== validatedFactor.tasks[stage].length
+        );
+        
+        if (anyMismatch) {
+          console.warn('Some tasks may not have been saved correctly', { 
+            local: {
+              Identification: validatedFactor.tasks.Identification.length,
+              Definition: validatedFactor.tasks.Definition.length,
+              Delivery: validatedFactor.tasks.Delivery.length,
+              Closure: validatedFactor.tasks.Closure.length
+            },
+            server: {
+              Identification: result.tasks.Identification?.length || 0,
+              Definition: result.tasks.Definition?.length || 0,
+              Delivery: result.tasks.Delivery?.length || 0,
+              Closure: result.tasks.Closure?.length || 0
+            }
+          });
+          
+          // Force refresh from server
+          const refreshedFactors = await getFactors(true);
+          setFactors(refreshedFactors);
+          
+          toast({
+            title: 'Warning',
+            description: 'Some tasks may not have saved correctly. Please verify.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Task saved',
+            description: 'Changes saved automatically',
+            variant: 'default',
+          });
+        }
+      } catch (error) {
+        console.error(`Error saving task for factor ${factorId}:`, error);
+        toast({
+          title: 'Save error',
+          description: 'Failed to save changes to the server',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsAutoSaving(false);
+      }
+    }, 1000), // 1 second debounce
+    [toast]
+  );
 
   // Check if the user is authorized (admin) - case insensitive check
   if (!user || user.username.toLowerCase() !== 'greg@confluity.co.uk') {
@@ -296,6 +373,12 @@ export default function AdminFactorEditor() {
     
     // Create a copy with the new task added
     const updatedTasks = { ...updatedFactor.tasks };
+    
+    // Ensure the stage array exists
+    if (!Array.isArray(updatedTasks[stage])) {
+      updatedTasks[stage] = [];
+    }
+    
     updatedTasks[stage] = [...updatedTasks[stage], 'New task'];
     const newFactor = { ...updatedFactor, tasks: updatedTasks };
     
@@ -306,12 +389,35 @@ export default function AdminFactorEditor() {
     
     // Save to server with immediate feedback
     try {
-      await updateFactor(factorId, newFactor);
-      toast({
-        title: 'Task added',
-        description: 'New task added successfully',
-        variant: 'default',
-      });
+      const result = await updateFactor(factorId, newFactor);
+      
+      if (!result) {
+        throw new Error('Failed to save task: server returned null');
+      }
+      
+      // Verify the task was added in the returned data
+      if (!Array.isArray(result.tasks[stage]) || result.tasks[stage].length !== updatedTasks[stage].length) {
+        console.warn('Task may not have been saved correctly', { 
+          local: updatedTasks[stage].length, 
+          server: result.tasks[stage]?.length || 0 
+        });
+        
+        // Force refresh from server
+        const refreshedFactors = await getFactors(true);
+        setFactors(refreshedFactors);
+        
+        toast({
+          title: 'Warning',
+          description: 'Task may not have saved correctly. Please verify.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Task added',
+          description: 'New task added successfully',
+          variant: 'default',
+        });
+      }
     } catch (error) {
       console.error(`Error adding task for factor ${factorId}:`, error);
       toast({
@@ -322,31 +428,6 @@ export default function AdminFactorEditor() {
     }
   };
 
-  // Create a debounced save function that will be created once and persisted
-  const debouncedSave = useCallback(
-    debounce(async (factorId: string, updatedFactor: SuccessFactor) => {
-      try {
-        setIsAutoSaving(true);
-        await updateFactor(factorId, updatedFactor);
-        toast({
-          title: 'Task saved',
-          description: 'Changes saved automatically',
-          variant: 'default',
-        });
-      } catch (error) {
-        console.error(`Error saving task for factor ${factorId}:`, error);
-        toast({
-          title: 'Save error',
-          description: 'Failed to save changes to the server',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsAutoSaving(false);
-      }
-    }, 1000), // 1 second debounce
-    [toast]
-  );
-
   // Update a task text
   const handleUpdateTask = async (factorId: string, stage: StageType, taskIndex: number, newText: string) => {
     const updatedFactor = factors.find(f => f.id === factorId);
@@ -354,10 +435,33 @@ export default function AdminFactorEditor() {
     
     // Create a copy with the updated task
     const updatedTasks = { ...updatedFactor.tasks };
+    
+    // Ensure the stage array exists
+    if (!Array.isArray(updatedTasks[stage])) {
+      updatedTasks[stage] = [];
+      console.warn(`Stage array ${stage} was not properly initialized when attempting to update task`);
+      return;
+    }
+    
+    // Ensure the task index is valid
+    if (taskIndex < 0 || taskIndex >= updatedTasks[stage].length) {
+      console.warn(`Invalid task index ${taskIndex} for stage ${stage} that has ${updatedTasks[stage].length} tasks`);
+      return;
+    }
+    
     const tasks = [...updatedTasks[stage]];
     tasks[taskIndex] = newText;
     updatedTasks[stage] = tasks;
-    const newFactor = { ...updatedFactor, tasks: updatedTasks };
+    
+    const newFactor = { 
+      ...updatedFactor, 
+      tasks: {
+        Identification: Array.isArray(updatedTasks.Identification) ? updatedTasks.Identification : [],
+        Definition: Array.isArray(updatedTasks.Definition) ? updatedTasks.Definition : [],
+        Delivery: Array.isArray(updatedTasks.Delivery) ? updatedTasks.Delivery : [],
+        Closure: Array.isArray(updatedTasks.Closure) ? updatedTasks.Closure : []
+      }
+    };
     
     // Update UI immediately
     setFactors(prevFactors => 
@@ -375,10 +479,33 @@ export default function AdminFactorEditor() {
     
     // Create a copy with the task deleted
     const updatedTasks = { ...updatedFactor.tasks };
+    
+    // Ensure the stage array exists
+    if (!Array.isArray(updatedTasks[stage])) {
+      updatedTasks[stage] = [];
+      console.warn(`Stage array ${stage} was not properly initialized when attempting to delete task`);
+      return;
+    }
+    
+    // Ensure the task index is valid
+    if (taskIndex < 0 || taskIndex >= updatedTasks[stage].length) {
+      console.warn(`Invalid task index ${taskIndex} for stage ${stage} that has ${updatedTasks[stage].length} tasks`);
+      return;
+    }
+    
     const tasks = [...updatedTasks[stage]];
     tasks.splice(taskIndex, 1);
     updatedTasks[stage] = tasks;
-    const newFactor = { ...updatedFactor, tasks: updatedTasks };
+    
+    const newFactor = { 
+      ...updatedFactor, 
+      tasks: {
+        Identification: Array.isArray(updatedTasks.Identification) ? updatedTasks.Identification : [],
+        Definition: Array.isArray(updatedTasks.Definition) ? updatedTasks.Definition : [],
+        Delivery: Array.isArray(updatedTasks.Delivery) ? updatedTasks.Delivery : [],
+        Closure: Array.isArray(updatedTasks.Closure) ? updatedTasks.Closure : []
+      }
+    };
     
     // Update UI immediately
     setFactors(prevFactors => 
@@ -387,12 +514,36 @@ export default function AdminFactorEditor() {
     
     // Save to server with immediate feedback
     try {
-      await updateFactor(factorId, newFactor);
-      toast({
-        title: 'Task deleted',
-        description: 'Task removed successfully',
-        variant: 'default',
-      });
+      const result = await updateFactor(factorId, newFactor);
+      
+      if (!result) {
+        throw new Error('Failed to delete task: server returned null');
+      }
+      
+      // Verify the task was deleted in the returned data
+      if (Array.isArray(result.tasks[stage]) && 
+          result.tasks[stage].length !== updatedTasks[stage].length) {
+        console.warn('Task may not have been deleted correctly', { 
+          local: updatedTasks[stage].length, 
+          server: result.tasks[stage].length 
+        });
+        
+        // Force refresh from server
+        const refreshedFactors = await getFactors(true);
+        setFactors(refreshedFactors);
+        
+        toast({
+          title: 'Warning',
+          description: 'Task may not have been deleted correctly. Please verify.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Task deleted',
+          description: 'Task removed successfully',
+          variant: 'default',
+        });
+      }
     } catch (error) {
       console.error(`Error deleting task for factor ${factorId}:`, error);
       toast({
@@ -630,144 +781,111 @@ export default function AdminFactorEditor() {
       <SiteHeader />
       
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="flex flex-col mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-bold text-tcof-dark">Success Factor Editor</h1>
-          </div>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-tcof-dark">Success Factors Admin</h1>
           
-          {/* Always visible canonical factors update button */}
-          <div className="w-full bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6 flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-semibold text-blue-900 mb-1">Canonical TCOF Factors</h2>
-              <p className="text-blue-700">
-                Ensure your success factors match the 12 official TCOF factors while preserving all tasks. 
-                Click the button to standardize all factors.
-              </p>
-            </div>
-            <AlertDialog open={showFixFactorsDialog} onOpenChange={setShowFixFactorsDialog}>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={isFixingFactors || isSaving}
-                  className="bg-blue-100 hover:bg-blue-200 border-blue-300 text-blue-900 h-12"
-                >
-                  {isFixingFactors ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Updating Canonical Factors...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-5 w-5" />
-                      Update to Canonical Factors
-                    </>
-                  )}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Update to Canonical TCOF Factors</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will update all success factors to the 12 official TCOF success factors while preserving all tasks.
-                    Any duplicates will be combined into the official factors. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleFixFactors}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-          
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-tcof-dark">Manage Success Factors</h2>
-            </div>
-            <div className="space-x-2">
+          <div className="flex space-x-4">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-tcof-teal hover:bg-tcof-teal/90"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save All Factors
+                </>
+              )}
+            </Button>
+            
+            <label htmlFor="excel-upload">
               <Button 
-                onClick={handleSave} 
-                disabled={isSaving}
-                className="bg-tcof-teal hover:bg-tcof-teal/90"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save All
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (fileInputRef.current) {
-                    fileInputRef.current.click();
-                  }
-                }}
+                variant="outline" 
+                className="cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 Import from Excel
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleDeduplicate}
-                disabled={isSaving}
-                className="bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900"
-              >
-                <Filter className="mr-2 h-4 w-4" />
-                Deduplicate Factors
-              </Button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
+              <input 
+                id="excel-upload"
+                type="file" 
                 accept=".xlsx,.xls"
                 className="hidden"
+                ref={fileInputRef}
+                onChange={handleFileChange}
               />
-            </div>
+            </label>
+            
+            <Button
+              onClick={handleDeduplicate}
+              disabled={isSaving}
+              variant="outline"
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              Deduplicate Factors
+            </Button>
+            
+            <Button
+              onClick={() => setShowFixFactorsDialog(true)}
+              disabled={isFixingFactors}
+              variant="outline"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFixingFactors ? 'animate-spin' : ''}`} />
+              Update to Canonical Factors
+            </Button>
           </div>
         </div>
         
         {isLoading ? (
-          <div className="flex items-center justify-center p-12">
+          <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-tcof-teal" />
             <span className="ml-2 text-lg">Loading success factors...</span>
           </div>
         ) : (
           <div className="grid grid-cols-12 gap-6">
-            {/* List of factors */}
+            {/* Factor List */}
             <Card className="col-span-4">
               <CardHeader>
                 <CardTitle>Success Factors</CardTitle>
                 <CardDescription>
-                  Select a factor to edit or add a new one
+                  {factors.length} success factors found
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[600px] pr-4">
                   {factors.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      No success factors found. Add one or import from Excel.
-                    </div>
+                    <p className="text-center py-4 text-muted-foreground">
+                      No success factors found. Add your first one.
+                    </p>
                   ) : (
                     <div className="space-y-2">
-                      {factors.map(factor => (
+                      {factors.map((factor) => (
                         <div
                           key={factor.id}
-                          className={`p-3 rounded-md cursor-pointer hover:bg-gray-100 border ${
+                          className={`p-3 rounded-md cursor-pointer transition-colors ${
                             selectedFactorId === factor.id
-                              ? 'border-tcof-teal bg-tcof-teal/10'
-                              : 'border-gray-200'
+                              ? 'bg-tcof-teal/20 border-l-4 border-tcof-teal'
+                              : 'hover:bg-muted'
                           }`}
                           onClick={() => setSelectedFactorId(factor.id)}
                         >
-                          <div className="font-medium">{factor.id}</div>
-                          <div className="text-sm text-gray-700">{factor.title}</div>
+                          <div className="font-medium">
+                            {factor.id} - {factor.title}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Tasks: {
+                              (factor.tasks.Identification?.length || 0) +
+                              (factor.tasks.Definition?.length || 0) +
+                              (factor.tasks.Delivery?.length || 0) +
+                              (factor.tasks.Closure?.length || 0)
+                            }
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -809,6 +927,7 @@ export default function AdminFactorEditor() {
                         id="factor-id"
                         value={selectedFactor.id}
                         onChange={(e) => handleUpdateFactorId(selectedFactor.id, e.target.value)}
+                        className="mt-1"
                       />
                     </div>
                     <div>
@@ -817,6 +936,7 @@ export default function AdminFactorEditor() {
                         id="factor-title"
                         value={selectedFactor.title}
                         onChange={(e) => handleUpdateFactorTitle(selectedFactor.id, e.target.value)}
+                        className="mt-1"
                       />
                     </div>
                   </div>
@@ -825,12 +945,8 @@ export default function AdminFactorEditor() {
               
               {selectedFactor ? (
                 <>
-                  <CardContent>
-                    <Tabs 
-                      defaultValue="Identification" 
-                      value={activeTab} 
-                      onValueChange={(value) => setActiveTab(value as StageType)}
-                    >
+                  <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as StageType)}>
+                    <CardContent>
                       <TabsList className="grid grid-cols-4 mb-4">
                         <TabsTrigger value="Identification">Identification</TabsTrigger>
                         <TabsTrigger value="Definition">Definition</TabsTrigger>
@@ -838,48 +954,58 @@ export default function AdminFactorEditor() {
                         <TabsTrigger value="Closure">Closure</TabsTrigger>
                       </TabsList>
                       
-                      {(["Identification", "Definition", "Delivery", "Closure"] as const).map(stage => (
-                        <TabsContent key={stage} value={stage}>
-                          <h3 className="text-lg font-medium mb-4">{stage} Tasks</h3>
-                          <div className="space-y-4">
-                            {selectedFactor.tasks[stage].length === 0 ? (
-                              <div className="text-center py-4 text-gray-500 border border-dashed rounded-md">
-                                No tasks for this stage. Add your first task below.
-                              </div>
-                            ) : (
-                              selectedFactor.tasks[stage].map((task: string, index: number) => (
-                                <div key={index} className="flex items-start space-x-2">
-                                  <Input
-                                    value={task}
-                                    onChange={(e) => handleUpdateTask(selectedFactor.id, stage, index, e.target.value)}
-                                    className="flex-1"
-                                  />
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleDeleteTask(selectedFactor.id, stage, index)}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                  </Button>
-                                </div>
-                              ))
-                            )}
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAddTask(selectedFactor.id, stage)}
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add Task
-                            </Button>
-                          </div>
-                        </TabsContent>
-                      ))}
-                    </Tabs>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button
+                      <TabsContent value="Identification" className="space-y-4">
+                        <h3 className="text-lg font-semibold">Identification Stage Tasks</h3>
+                        <TaskList 
+                          tasks={selectedFactor.tasks.Identification || []}
+                          onAddTask={() => handleAddTask(selectedFactor.id, 'Identification')}
+                          onUpdateTask={(index, newText) => handleUpdateTask(selectedFactor.id, 'Identification', index, newText)}
+                          onDeleteTask={(index) => handleDeleteTask(selectedFactor.id, 'Identification', index)}
+                        />
+                      </TabsContent>
+                      
+                      <TabsContent value="Definition" className="space-y-4">
+                        <h3 className="text-lg font-semibold">Definition Stage Tasks</h3>
+                        <TaskList 
+                          tasks={selectedFactor.tasks.Definition || []}
+                          onAddTask={() => handleAddTask(selectedFactor.id, 'Definition')}
+                          onUpdateTask={(index, newText) => handleUpdateTask(selectedFactor.id, 'Definition', index, newText)}
+                          onDeleteTask={(index) => handleDeleteTask(selectedFactor.id, 'Definition', index)}
+                        />
+                      </TabsContent>
+                      
+                      <TabsContent value="Delivery" className="space-y-4">
+                        <h3 className="text-lg font-semibold">Delivery Stage Tasks</h3>
+                        <TaskList 
+                          tasks={selectedFactor.tasks.Delivery || []}
+                          onAddTask={() => handleAddTask(selectedFactor.id, 'Delivery')}
+                          onUpdateTask={(index, newText) => handleUpdateTask(selectedFactor.id, 'Delivery', index, newText)}
+                          onDeleteTask={(index) => handleDeleteTask(selectedFactor.id, 'Delivery', index)}
+                        />
+                      </TabsContent>
+                      
+                      <TabsContent value="Closure" className="space-y-4">
+                        <h3 className="text-lg font-semibold">Closure Stage Tasks</h3>
+                        <TaskList 
+                          tasks={selectedFactor.tasks.Closure || []}
+                          onAddTask={() => handleAddTask(selectedFactor.id, 'Closure')}
+                          onUpdateTask={(index, newText) => handleUpdateTask(selectedFactor.id, 'Closure', index, newText)}
+                          onDeleteTask={(index) => handleDeleteTask(selectedFactor.id, 'Closure', index)}
+                        />
+                      </TabsContent>
+                    </CardContent>
+                  </Tabs>
+                  
+                  <CardFooter className="border-t pt-4 justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Total tasks: {
+                        (selectedFactor.tasks.Identification?.length || 0) +
+                        (selectedFactor.tasks.Definition?.length || 0) +
+                        (selectedFactor.tasks.Delivery?.length || 0) +
+                        (selectedFactor.tasks.Closure?.length || 0)
+                      }
+                    </div>
+                    <Button 
                       variant="destructive"
                       onClick={() => setShowDeleteDialog(true)}
                     >
@@ -890,8 +1016,14 @@ export default function AdminFactorEditor() {
                 </>
               ) : (
                 <CardContent>
-                  <div className="text-center py-12 text-gray-500">
-                    Select a success factor from the list or add a new one to edit.
+                  <div className="flex flex-col items-center justify-center h-64 text-center">
+                    <p className="text-muted-foreground mb-4">
+                      Select a success factor from the list to edit it or add a new one.
+                    </p>
+                    <Button onClick={handleAddFactor}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add New Factor
+                    </Button>
                   </div>
                 </CardContent>
               )}
@@ -902,7 +1034,7 @@ export default function AdminFactorEditor() {
       
       <SiteFooter />
       
-      {/* Delete Confirmation Dialog */}
+      {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -914,55 +1046,94 @@ export default function AdminFactorEditor() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteFactor} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleDeleteFactor}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Import Confirmation Dialog */}
+      {/* Import confirmation dialog */}
       <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <AlertDialogContent className="max-w-3xl">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Import</AlertDialogTitle>
+            <AlertDialogTitle>Import Success Factors</AlertDialogTitle>
             <AlertDialogDescription>
-              This will replace all existing success factors with {importedFactors.length} factors from the Excel file.
+              This will replace your current success factors with those from the Excel file.
+              {importedFactors.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-semibold mb-2">Preview:</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Tasks</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importedFactors.slice(0, 5).map((factor) => (
+                        <TableRow key={factor.id}>
+                          <TableCell className="font-medium">{factor.id}</TableCell>
+                          <TableCell>{factor.title}</TableCell>
+                          <TableCell>
+                            {(factor.tasks.Identification?.length || 0) +
+                             (factor.tasks.Definition?.length || 0) +
+                             (factor.tasks.Delivery?.length || 0) +
+                             (factor.tasks.Closure?.length || 0)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {importedFactors.length > 5 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground">
+                            And {importedFactors.length - 5} more...
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
-          <div className="max-h-96 overflow-y-auto border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Tasks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {importedFactors.map(factor => (
-                  <TableRow key={factor.id}>
-                    <TableCell className="font-medium">{factor.id}</TableCell>
-                    <TableCell>{factor.title}</TableCell>
-                    <TableCell>
-                      <div className="text-xs">
-                        Identification: {factor.tasks.Identification.length} tasks<br />
-                        Definition: {factor.tasks.Definition.length} tasks<br />
-                        Delivery: {factor.tasks.Delivery.length} tasks<br />
-                        Closure: {factor.tasks.Closure.length} tasks
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmImport} className="bg-tcof-teal hover:bg-tcof-teal/90">
               Import {importedFactors.length} Factors
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Fix factors confirmation dialog */}
+      <AlertDialog open={showFixFactorsDialog} onOpenChange={setShowFixFactorsDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Update to Canonical Factors</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will ensure that your success factors match the 12 official TCOF success factors with the correct titles.
+              Any custom tasks will be preserved, but the titles will be updated to match the official names.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleFixFactors} 
+              className="bg-tcof-teal hover:bg-tcof-teal/90"
+              disabled={isFixingFactors}
+            >
+              {isFixingFactors ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>Update Factors</>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
