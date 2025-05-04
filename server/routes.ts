@@ -622,7 +622,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // Get factors from database or file system
-  async function getFactors(): Promise<FactorTask[]> {
+  async function getFactors(forceRefresh: boolean = false): Promise<FactorTask[]> {
+    // If we're forcing a refresh, or the database is empty
+    if (forceRefresh || factorsDb.length === 0) {
+      try {
+        // Try to load from successFactors.json
+        const factorsPath = path.join(process.cwd(), 'data', 'successFactors.json');
+        if (fs.existsSync(factorsPath)) {
+          const data = fs.readFileSync(factorsPath, 'utf8');
+          const parsed = JSON.parse(data) as FactorTask[];
+          
+          // Update database
+          factorsDb.setAll(parsed);
+          
+          console.log(`Loaded ${parsed.length} factors from disk${forceRefresh ? ' (forced refresh)' : ''}`);
+          return factorsDb.getAll();
+        }
+      } catch (error) {
+        console.error('Error refreshing factors from disk:', error);
+      }
+    }
+    
+    // If no refresh needed or refresh failed, return current data
+    return factorsDb.getAll();
+  }
+  
+  // Legacy function kept for backward compatibility
+  async function _getFactorsLegacy(): Promise<FactorTask[]> {
     if (factorsDb.length > 0) {
       return factorsDb.getAll();
     }
