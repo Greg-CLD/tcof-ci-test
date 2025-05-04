@@ -1,0 +1,120 @@
+Replit Agent Prompt: Fix and Complete Block 3
+Please refine the full functionality of Block 3 (/make-a-plan/full/block-3). This block includes Steps 6–8 and should match the final design, content structure, and UX expectations outlined below.
+
+🧱 Step 6 – Delivery Approach (Praxis Quadrant Tool)
+✅ Chart Layout:
+
+Flip the quadrant chart to match the Praxis Framework:
+
+Y-axis: Uncertainty (Low at bottom, High at top)
+
+X-axis: Scope (Simple at left, Complex at right)
+
+Top-right = High Scope / High Uncertainty
+
+✅ Zone Mapping:
+
+Use 6 clear zones with friendly names:
+
+Zone A – Fast & Focused (Small + Low)
+
+Zone B – Adaptive Projects
+
+Zone C – Iterative Delivery
+
+Zone D – Agile/Hybrid Delivery
+
+Zone E – Complex Adaptive
+
+Zone F – Systems Thinking (if needed for outliers)
+
+✅ Summary Panel:
+
+After user selection, show a panel with:
+
+Friendly zone name
+
+2-line description of delivery style
+
+Suggested methods (Agile, PRINCE2, Systems Thinking, etc.)
+
+Techniques (e.g. Critical Path, Kanban, Monte Carlo)
+
+Button to export/copy summary (PDF or clipboard)
+
+✅ Intro Text Above Chart:
+Add:
+
+“Use this tool to identify the right delivery approach. Based on your project’s scope and clarity, we’ll recommend styles and techniques to guide your next steps.”
+
+✅ Style:
+
+Fix misaligned text ("Scope" label is cut off)
+
+Use TCOF brand styles and colour scheme
+
+🧱 Step 7 – Add Good Practice Tasks
+✅ Praxis Tasks:
+
+These should still load based on delivery zone selected in Step 6
+
+User can preview and tick relevant tasks to include in their checklist
+
+✅ Custom Frameworks:
+
+Add section: “Custom Frameworks”
+
+Use the same UI pattern as Step 4 and Step 5:
+
+Allow users to name a framework (e.g. “Client Model X”)
+
+Then add up to 4 tasks per delivery stage
+
+Use clear tabs or vertical list for Identification, Definition, Delivery, Closure
+
+✅ User Experience:
+
+Replace system auto-IDs with friendly format like:
+Custom 01 - [Stage] - Task [#]
+
+Add placeholder text in task fields (e.g. “Enter task for this stage…”)
+
+Trigger autosave on:
+
+Pressing Enter
+
+Clicking “Add Task”
+
+Field blur (user clicks away)
+
+✅ Toast Notification:
+
+Brief message like: ✅ “Task saved for [Framework Name] – [Stage]”
+
+🧱 Step 8 – Finalise Checklist
+✅ Button:
+
+Add a “Generate My Checklist” button
+
+✅ On Click:
+
+Automatically compile all tasks into checklist
+
+Canonical 12 Success Factors + Tasks
+
+Any Personal Heuristic Tasks (if not linked)
+
+Any Good Practice Tasks (from Step 7)
+
+Any Organisational Policy Tasks (from Step 5)
+
+Any Custom Framework Tasks
+
+✅ Checklist Routing:
+
+Route user to /make-a-plan/checklist
+
+✅ Optional Exports:
+
+Let user copy, download PDF, or email to themselves
+

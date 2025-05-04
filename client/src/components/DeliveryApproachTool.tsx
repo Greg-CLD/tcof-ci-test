@@ -10,45 +10,45 @@ import '../styles/approach.css';
 const deliveryZonesData = [
   {
     "zone": "Zone A",
-    "alias": "Simple Projects",
-    "summary": "Low-uncertainty, small scope. Classic plan-then-do.",
-    "methods": ["Waterfall", "Critical Path Scheduling"],
+    "alias": "Fast & Focused",
+    "summary": "Small scope, low uncertainty. Classic plan-then-do approach with predictable outcomes.",
+    "methods": ["Waterfall", "Critical Path Scheduling", "PRINCE2"],
     "tools":   ["Gantt Charts", "PERT", "Basic Risk Log"]
   },
   {
     "zone": "Zone B",
-    "alias": "Hybrid / Adaptive",
-    "summary": "Medium scope, low–medium uncertainty. Mix agile with stage-gates.",
-    "methods": ["Hybrid PM", "Iterative Planning"],
+    "alias": "Adaptive Projects",
+    "summary": "Medium scope, low-medium uncertainty. Balance structure with adaptability.",
+    "methods": ["Hybrid PM", "Iterative Planning", "MSP"],
     "tools":   ["Rolling Wave", "Scrum-of-Scrums", "Burndown Chart"]
   },
   {
     "zone": "Zone C",
-    "alias": "Agile Projects",
-    "summary": "High uncertainty or larger scope that benefits from agility.",
-    "methods": ["Scrum", "Kanban"],
+    "alias": "Iterative Delivery",
+    "summary": "Higher uncertainty requires more feedback cycles. Time-boxed iterations with regular reviews.",
+    "methods": ["Scrum", "Kanban", "Adaptive Project Management"],
     "tools":   ["User Stories", "Kanban Board", "Retrospectives"]
   },
   {
     "zone": "Zone D",
-    "alias": "Complex Adaptive",
-    "summary": "Large scope + high uncertainty. Probe–sense–respond.",
-    "methods": ["SAFe", "Systems Thinking"],
-    "tools":   ["Causal Loop Diagrams", "Program Increment Planning"]
+    "alias": "Agile/Hybrid Delivery",
+    "summary": "Complex scope with evolving requirements. Blend best of agile with some structure.",
+    "methods": ["SAFe", "Disciplined Agile", "Hybrid Methods"],
+    "tools":   ["Program Boards", "Increment Planning", "Feature Mapping"]
   },
   {
     "zone": "Zone E",
-    "alias": "Systems-Led Portfolio",
-    "summary": "Enterprise-scale, very high complexity. Portfolio & systems lenses.",
-    "methods": ["Portfolio Kanban", "Benefits Mapping"],
-    "tools":   ["Strategy Map", "Monte-Carlo Portfolio Simulation"]
+    "alias": "Complex Adaptive",
+    "summary": "High scope, high uncertainty. Focus on emergence and continuous adaptation.",
+    "methods": ["Systems Thinking", "Complex Adaptive Leadership"],
+    "tools":   ["Causal Loop Diagrams", "Monte-Carlo Simulation", "Adaptive Strategy Maps"]
   },
   {
     "zone": "Zone F",
-    "alias": "Fast & Focused",
-    "summary": "Tiny scope but high uncertainty (e.g. innovation spike).",
-    "methods": ["Design Sprint", "Lean Startup"],
-    "tools":   ["4-day Sprint Canvas", "A/B Testing"]
+    "alias": "Systems Thinking",
+    "summary": "For outliers with extreme complexity. Focus on patterns, interconnections and system dynamics.",
+    "methods": ["Complexity Leadership", "Cynefin Framework", "Strategic Design"],
+    "tools":   ["Social Network Analysis", "Pattern Recognition", "Emergent Strategy"]
   }
 ];
 
@@ -141,7 +141,8 @@ const DeliveryApproachTool: React.FC<DeliveryApproachToolProps> = ({ initial, on
     <div className="my-6">
       <h3 className="text-xl font-bold text-tcof-dark mb-4">Delivery Approach Tool</h3>
       <p className="text-gray-700 mb-6">
-        Select the most appropriate delivery approach based on your project's scope and uncertainty level.
+        Use this tool to identify the right delivery approach. Based on your project's scope and clarity, 
+        we'll recommend styles and techniques to guide your next steps.
       </p>
       
       <Card className="mb-6">
