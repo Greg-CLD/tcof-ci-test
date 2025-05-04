@@ -20,7 +20,7 @@ import {
   CardDescription,
   CardFooter
 } from '@/components/ui/card';
-import { Download, Upload, Trash2, Plus, Save, LogOut, RefreshCw, Eye } from 'lucide-react';
+import { Download, Upload, Trash2, Plus, Save, LogOut, RefreshCw, Eye, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isAdmin, login, logout, ADMIN_EMAIL } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
@@ -244,6 +244,43 @@ export default function AdminPresetEditor() {
   const togglePreview = () => {
     setIsPreviewVisible(!isPreviewVisible);
   };
+  
+  const handleExportGraphJSON = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/admin/relations-export');
+      
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `graph-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: "Graph data has been exported as JSON.",
+      });
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: error.message || "Could not export graph data.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // If not logged in, show the login form
   if (!isLoggedIn) {
@@ -420,7 +457,8 @@ export default function AdminPresetEditor() {
 
       {/* Admin section navigation and links */}
       <section className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
+        <h2 className="text-xl font-semibold mb-4">Admin Tools</h2>
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
           <Button 
             variant="outline" 
             onClick={() => setLocation('/make-a-plan/admin/factors')}
@@ -428,6 +466,16 @@ export default function AdminPresetEditor() {
           >
             <Eye className="h-4 w-4" />
             Manage Success Factors
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            onClick={handleExportGraphJSON}
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            <Share2 className="h-4 w-4" />
+            Export Graph JSON
           </Button>
         </div>
       </section>

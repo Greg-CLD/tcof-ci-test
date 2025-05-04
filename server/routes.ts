@@ -1198,6 +1198,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to export relations data
+  app.get('/api/admin/relations-export', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { projectId } = req.query;
+      
+      // Get all relations or filtered by project if projectId is provided
+      let relations;
+      if (projectId && typeof projectId === 'string') {
+        relations = await relationsDb.getProjectRelations(projectId);
+      } else {
+        // Load all relations in memory
+        const allRelations = loadRelations();
+        relations = allRelations;
+      }
+      
+      // If no relations found, return 404
+      if (!relations || relations.length === 0) {
+        return res.status(404).json({ 
+          message: projectId ? `No relations found for project ${projectId}` : 'No relations found' 
+        });
+      }
+      
+      // Set appropriate headers for download
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-store');
+      
+      // Return the relations data
+      res.status(200).json(relations);
+    } catch (error: any) {
+      console.error('Error exporting relations:', error);
+      res.status(500).json({ message: 'Failed to export relations data' });
+    }
+  });
+
   app.post('/api/admin/update-canonical-factors', isAdmin, async (req: Request, res: Response) => {
     try {
       
