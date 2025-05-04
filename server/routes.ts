@@ -1192,8 +1192,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update success factor tasks from CSV
   app.post('/api/admin/update-factor-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
-      // Import dynamically to avoid circular dependencies
-      const { updateFactorTasks } = require('../scripts/updateFactorTasks');
+      // Import dynamically to avoid circular dependencies - using dynamic import for ES modules
+      const updateFactorsModule = await import('../scripts/updateFactorTasks.js');
+      const { updateFactorTasks } = updateFactorsModule;
       
       const result = await updateFactorTasks();
       

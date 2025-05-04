@@ -5,9 +5,14 @@
  * success factors in the database with these tasks, preserving the canonical factors.
  */
 
-const fs = require('fs');
-const path = require('path');
-const { parse } = require('csv-parse/sync');
+import fs from 'fs';
+import path from 'path';
+import { parse } from 'csv-parse/sync';
+import { fileURLToPath } from 'url';
+
+// Get dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Path to the CSV file
 const CSV_PATH = path.join(__dirname, '../attached_assets/tcof_factors_clean.csv');
@@ -19,7 +24,7 @@ function normalizeFactorTitle(title) {
   return title.trim().toLowerCase();
 }
 
-async function updateFactorTasks() {
+export async function updateFactorTasks() {
   try {
     // Read and parse the CSV file
     const csvContent = fs.readFileSync(CSV_PATH, 'utf8');
@@ -89,7 +94,7 @@ async function updateFactorTasks() {
         console.log(`Updating tasks for factor: ${factor.title} (ID: ${factor.id})`);
         updatedCount++;
         
-        // Preserve any existing tasks that aren't in the CSV
+        // Merge the new tasks from CSV
         const mergedTasks = {
           Identification: [...new Set([...tasksFromCsv.tasks.Identification])],
           Definition: [...new Set([...tasksFromCsv.tasks.Definition])],
@@ -126,7 +131,7 @@ async function updateFactorTasks() {
 }
 
 // If called directly from command line
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   updateFactorTasks()
     .then(result => {
       if (result.success) {
@@ -142,5 +147,3 @@ if (require.main === module) {
       process.exit(1);
     });
 }
-
-module.exports = { updateFactorTasks };
