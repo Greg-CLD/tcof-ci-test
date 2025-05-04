@@ -5,6 +5,7 @@ import SuccessFactorMapping from './SuccessFactorMapping';
 import ActionButtons from './ActionButtons';
 import OrgPolicies from './OrgPolicies';
 import StageSelector from './StageSelector';
+import TaskList from './TaskList';
 
 export {
   FactorTaskEditor,
@@ -13,5 +14,6 @@ export {
   SuccessFactorMapping,
   ActionButtons,
   OrgPolicies,
-  StageSelector
+  StageSelector,
+  TaskList
 };
