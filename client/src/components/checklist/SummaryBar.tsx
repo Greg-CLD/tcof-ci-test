@@ -1,98 +1,124 @@
 import React from 'react';
-import { PlanRecord, Stage, TaskItem, GoodPracticeTask } from '@/lib/plan-db';
-import styles from '@/lib/styles/checklist.module.css';
+import { PlanRecord, Stage } from '@/lib/plan-db';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 interface SummaryBarProps {
   plan: PlanRecord;
 }
 
-interface StageCounts {
+interface StageMetrics {
   total: number;
   completed: number;
+  percentage: number;
 }
 
+type StageMetricsMap = Record<Stage, StageMetrics>;
+
 export default function SummaryBar({ plan }: SummaryBarProps) {
-  // Count tasks by stage and get totals
-  const { stageCounts, totalCompleted, totalTasks } = countTasks(plan);
+  // Calculate metrics for each stage
+  const calculateStageMetrics = (): StageMetricsMap => {
+    const metrics: Partial<StageMetricsMap> = {};
+    
+    Object.entries(plan.stages).forEach(([stageName, stageData]) => {
+      const stage = stageName as Stage;
+      
+      // Count regular tasks
+      const regularTasks = stageData.tasks || [];
+      const regularCompleted = regularTasks.filter(t => t.completed).length;
+      
+      // Count good practice tasks
+      const gpTasks = stageData.goodPractice?.tasks || [];
+      const gpCompleted = gpTasks.filter(t => t.completed).length;
+      
+      // Calculate totals
+      const total = regularTasks.length + gpTasks.length;
+      const completed = regularCompleted + gpCompleted;
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      
+      metrics[stage] = { total, completed, percentage };
+    });
+    
+    return metrics as StageMetricsMap;
+  };
   
-  // Calculate completion percentage
-  const completionPercentage = totalTasks > 0 
-    ? Math.round((totalCompleted / totalTasks) * 100) 
-    : 0;
+  const stageMetrics = calculateStageMetrics();
+  
+  // Calculate overall progress
+  const calculateOverallProgress = (): number => {
+    let totalTasks = 0;
+    let completedTasks = 0;
+    
+    Object.values(stageMetrics).forEach(metrics => {
+      totalTasks += metrics.total;
+      completedTasks += metrics.completed;
+    });
+    
+    return totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  };
+  
+  const overallProgress = calculateOverallProgress();
+  
+  // Stage colors for visual distinction
+  const stageColors: Record<Stage, string> = {
+    'Identification': 'bg-blue-500',
+    'Definition': 'bg-purple-500',
+    'Delivery': 'bg-green-500',
+    'Closure': 'bg-amber-500'
+  };
+  
+  // Status label based on progress percentage
+  const getStatusLabel = (percentage: number): string => {
+    if (percentage === 0) return 'Not Started';
+    if (percentage < 25) return 'Just Started';
+    if (percentage < 50) return 'In Progress';
+    if (percentage < 75) return 'Well Underway';
+    if (percentage < 100) return 'Almost Complete';
+    return 'Complete';
+  };
   
   return (
-    <div className={styles.summaryBar}>
-      <div className={styles.summaryRow}>
-        <div className={styles.summaryTotal}>
-          Tasks completed: <span className={styles.summaryCount}>{totalCompleted}/{totalTasks}</span>
+    <div className="bg-white rounded-lg p-4 shadow-sm border">
+      {/* Overall progress */}
+      <div className="mb-4">
+        <div className="flex justify-between mb-1">
+          <h3 className="text-sm font-medium text-gray-700">Overall Progress</h3>
+          <span className="text-sm font-medium text-gray-700">{overallProgress}%</span>
         </div>
-        <div className={styles.stageCounters}>
-          {Object.entries(stageCounts).map(([stage, counts]) => (
-            <div key={stage} className={styles.stagePill}>
-              {stage}: {counts.completed}/{counts.total}
-            </div>
-          ))}
-        </div>
+        <Progress value={overallProgress} className="h-2" aria-label="Overall progress" />
+        <p className="text-xs text-gray-500 mt-1">
+          Status: {getStatusLabel(overallProgress)}
+        </p>
       </div>
-      <div className={styles.progressBarContainer}>
-        <div 
-          className={styles.progressBar} 
-          style={{ width: `${completionPercentage}%` }}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={completionPercentage}
-          role="progressbar"
-        />
+      
+      {/* Stage progress grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        {Object.entries(stageMetrics).map(([stageName, metrics]) => (
+          <div 
+            key={stageName}
+            className="p-3 rounded-md bg-gray-50 border"
+          >
+            <div className="flex justify-between mb-1">
+              <h4 className="text-sm font-medium">{stageName}</h4>
+              <span className="text-xs font-medium">{metrics.percentage}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className={cn("h-full rounded-full", stageColors[stageName as Stage])}
+                style={{ width: `${metrics.percentage}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-xs text-gray-500">
+                {metrics.completed}/{metrics.total} tasks
+              </span>
+              <span className="text-xs font-medium text-gray-600">
+                {getStatusLabel(metrics.percentage)}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
-}
-
-// Helper function to count tasks by stage and completion status
-function countTasks(plan: PlanRecord): { 
-  stageCounts: Record<Stage, StageCounts>, 
-  totalCompleted: number, 
-  totalTasks: number 
-} {
-  const stageCounts: Record<Stage, StageCounts> = {
-    'Identification': { total: 0, completed: 0 },
-    'Definition': { total: 0, completed: 0 },
-    'Delivery': { total: 0, completed: 0 },
-    'Closure': { total: 0, completed: 0 }
-  };
-  
-  let totalCompleted = 0;
-  let totalTasks = 0;
-  
-  // Process each stage
-  Object.keys(plan.stages).forEach(stageName => {
-    const stage = stageName as Stage;
-    const stageData = plan.stages[stage];
-    
-    // Count regular tasks
-    const tasks = stageData.tasks || [];
-    tasks.forEach(task => {
-      stageCounts[stage].total++;
-      totalTasks++;
-      
-      if (task.completed) {
-        stageCounts[stage].completed++;
-        totalCompleted++;
-      }
-    });
-    
-    // Count good practice tasks
-    const gpTasks = stageData.goodPractice?.tasks || [];
-    gpTasks.forEach(task => {
-      stageCounts[stage].total++;
-      totalTasks++;
-      
-      if (task.completed) {
-        stageCounts[stage].completed++;
-        totalCompleted++;
-      }
-    });
-  });
-  
-  return { stageCounts, totalCompleted, totalTasks };
 }

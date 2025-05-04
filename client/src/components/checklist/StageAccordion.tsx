@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import { ChevronRight, Trash2 } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { 
+  Collapsible, 
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from '@/lib/utils';
+import { TaskUpdates } from './TaskCard';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { PlanRecord, Stage, TaskItem, GoodPracticeTask } from '@/lib/plan-db';
-import styles from '@/lib/styles/checklist.module.css';
+import { PlanRecord, Stage, TaskItem, GoodPracticeTask, TaskPriority } from '@/lib/plan-db';
+import { Badge } from '@/components/ui/badge';
 import { savePlan } from '@/lib/plan-db';
 import { getLatestPlanId } from '@/lib/planHelpers';
 
@@ -11,270 +18,248 @@ interface StageAccordionProps {
   stage: Stage;
   plan: PlanRecord;
   onPlanUpdate: (updatedPlan: PlanRecord) => void;
+  stageFilter: string;
+  statusFilter: string;
+  sourceFilter: string;
 }
 
-export default function StageAccordion({ stage, plan, onPlanUpdate }: StageAccordionProps) {
+const stageDescriptions: Record<Stage, string> = {
+  'Identification': 'Discover and assess project requirements and constraints',
+  'Definition': 'Outline scope, objectives, and success criteria',
+  'Delivery': 'Execute project activities and manage progress',
+  'Closure': 'Conclude project, capture lessons, and transition to operations'
+};
+
+const stageEmojis: Record<Stage, string> = {
+  'Identification': '🔍',
+  'Definition': '📝',
+  'Delivery': '🚀',
+  'Closure': '🏁'
+};
+
+export default function StageAccordion({ 
+  stage, 
+  plan, 
+  onPlanUpdate,
+  stageFilter,
+  statusFilter,
+  sourceFilter 
+}: StageAccordionProps) {
   const [isOpen, setIsOpen] = useState(true);
   const { toast } = useToast();
   
-  // Sort tasks by origin
+  // Get tasks for this stage
   const tasks = plan.stages[stage].tasks || [];
-  const heuristicTasks = tasks.filter(task => task.origin === 'heuristic');
-  const factorTasks = tasks.filter(task => task.origin === 'factor');
   const gpTasks = plan.stages[stage].goodPractice?.tasks || [];
   
-  // Toggle accordion state
-  const toggleAccordion = () => {
-    setIsOpen(!isOpen);
-  };
+  // Count total tasks in this stage
+  const totalTasks = tasks.length + gpTasks.length;
+  const completedTasks = 
+    tasks.filter(t => t.completed).length + 
+    gpTasks.filter(t => t.completed).length;
   
-  // Handle task checkbox toggle
-  const handleTaskToggle = (taskIndex: number, isGoodPractice: boolean = false) => {
+  // Handle task update (completed status, notes, priority, due date)
+  const handleTaskUpdate = (taskId: string, updates: TaskUpdates, isGoodPractice = false) => {
     const updatedPlan = { ...plan };
     
     if (isGoodPractice) {
-      if (!updatedPlan.stages[stage].goodPractice?.tasks) return;
+      // Update good practice task
+      const taskIndex = updatedPlan.stages[stage].goodPractice?.tasks?.findIndex(t => t.id === taskId) ?? -1;
+      if (taskIndex === -1 || !updatedPlan.stages[stage].goodPractice?.tasks) return;
       
-      updatedPlan.stages[stage].goodPractice.tasks[taskIndex].completed = 
-        !updatedPlan.stages[stage].goodPractice.tasks[taskIndex].completed;
+      const task = updatedPlan.stages[stage].goodPractice.tasks[taskIndex];
+      
+      // Update task properties
+      if (updates.completed !== undefined) task.completed = updates.completed;
+      if (updates.notes !== undefined) task.notes = updates.notes;
+      if (updates.priority !== undefined) task.priority = updates.priority;
+      if (updates.dueDate !== undefined) {
+        // Convert null to undefined
+        task.dueDate = updates.dueDate === null ? undefined : updates.dueDate;
+      }
     } else {
-      if (!updatedPlan.stages[stage].tasks) return;
+      // Update regular task
+      const taskIndex = updatedPlan.stages[stage].tasks?.findIndex(t => t.id === taskId) ?? -1;
+      if (taskIndex === -1 || !updatedPlan.stages[stage].tasks) return;
       
-      updatedPlan.stages[stage].tasks[taskIndex].completed = 
-        !updatedPlan.stages[stage].tasks[taskIndex].completed;
-    }
-    
-    // Save to database and update the plan in parent component
-    const planId = getLatestPlanId();
-    if (planId) {
-      savePlan(planId, updatedPlan);
-      onPlanUpdate(updatedPlan);
-    }
-  };
-  
-  // Handle task deletion
-  const handleDeleteTask = (taskIndex: number, isGoodPractice: boolean = false, origin?: string) => {
-    // Don't allow deletion of TCOF factor tasks
-    if (!isGoodPractice && origin === 'factor') {
-      toast({
-        title: "Cannot delete TCOF factor task",
-        description: "These tasks are part of the core framework and can't be removed.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const updatedPlan = { ...plan };
-    
-    if (isGoodPractice) {
-      if (!updatedPlan.stages[stage].goodPractice?.tasks) return;
+      const task = updatedPlan.stages[stage].tasks[taskIndex];
       
-      updatedPlan.stages[stage].goodPractice.tasks = 
-        updatedPlan.stages[stage].goodPractice.tasks.filter((_, idx) => idx !== taskIndex);
-    } else {
-      if (!updatedPlan.stages[stage].tasks) return;
-      
-      updatedPlan.stages[stage].tasks = 
-        updatedPlan.stages[stage].tasks.filter((_, idx) => idx !== taskIndex);
+      // Update task properties
+      if (updates.completed !== undefined) task.completed = updates.completed;
+      if (updates.notes !== undefined) task.notes = updates.notes;
+      if (updates.priority !== undefined) task.priority = updates.priority;
+      if (updates.dueDate !== undefined) {
+        // Convert null to undefined
+        task.dueDate = updates.dueDate === null ? undefined : updates.dueDate;
+      }
     }
     
-    // Save to database and update the plan in parent component
+    // Save plan and update UI
     const planId = getLatestPlanId();
     if (planId) {
       savePlan(planId, updatedPlan);
       onPlanUpdate(updatedPlan);
       
       toast({
-        title: "Task deleted",
-        description: "The task has been removed from your checklist.",
+        title: "Task updated",
+        description: "Your changes have been saved.",
       });
     }
   };
+  
+  // Filter tasks based on the current filters
+  const filterTasks = () => {
+    let filteredTasks = [...tasks];
+    let filteredGpTasks = [...gpTasks];
+    
+    // Apply status filter
+    if (statusFilter === 'completed') {
+      filteredTasks = filteredTasks.filter(task => task.completed);
+      filteredGpTasks = filteredGpTasks.filter(task => task.completed);
+    } else if (statusFilter === 'open') {
+      filteredTasks = filteredTasks.filter(task => !task.completed);
+      filteredGpTasks = filteredGpTasks.filter(task => !task.completed);
+    }
+    
+    // Apply source filter
+    if (sourceFilter === 'heuristic') {
+      filteredTasks = filteredTasks.filter(task => task.origin === 'heuristic');
+      filteredGpTasks = [];
+    } else if (sourceFilter === 'factor') {
+      filteredTasks = filteredTasks.filter(task => task.origin === 'factor');
+      filteredGpTasks = [];
+    } else if (sourceFilter === 'framework') {
+      filteredTasks = [];
+      // Good practice tasks are already framework tasks
+    }
+    
+    return { filteredTasks, filteredGpTasks };
+  };
+  
+  // Get filtered tasks
+  const { filteredTasks, filteredGpTasks } = filterTasks();
+  
+  // Skip rendering this stage if there are no tasks that match the filters
+  if (filteredTasks.length === 0 && filteredGpTasks.length === 0) {
+    return null;
+  }
   
   return (
-    <div className={styles.accordionWrapper}>
-      {/* Accordion header */}
+    <div className="mb-6 border rounded-md shadow-sm bg-white overflow-hidden">
+      {/* Stage header */}
       <div 
-        className={`${styles.accordionHeader} ${isOpen ? styles.accordionHeaderCollapsed : ''}`}
-        onClick={toggleAccordion}
+        className={cn(
+          "flex items-center justify-between p-4 cursor-pointer",
+          isOpen ? "bg-tcof-teal/10 border-b" : "hover:bg-gray-50"
+        )}
+        onClick={() => setIsOpen(!isOpen)}
       >
-        <span>{stage} Stage</span>
-        <ChevronRight 
-          className={`${styles.accordionCaret} ${isOpen ? styles.accordionCaretOpen : ''}`} 
-          size={20} 
-        />
+        <div className="flex items-center">
+          <ChevronRight 
+            className={cn("h-5 w-5 mr-2 text-tcof-teal transition-transform", 
+              isOpen && "transform rotate-90"
+            )} 
+          />
+          <div>
+            <h2 className="text-lg font-semibold text-tcof-dark">{stage} Stage</h2>
+            <p className="text-sm text-gray-500">{stageDescriptions[stage]}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{stageEmojis[stage]}</span>
+          <Badge variant="outline" className="bg-white">
+            {completedTasks}/{totalTasks} complete
+          </Badge>
+        </div>
       </div>
       
-      {/* Accordion content */}
+      {/* Stage content */}
       {isOpen && (
-        <div className={styles.accordionContent}>
-          {/* Personal Heuristics section */}
-          <div className={`${styles.taskSection} ${!gpTasks.length ? styles.taskSectionLast : ''}`}>
-            <h3 className={styles.taskSectionHeader}>Your Heuristics</h3>
-            
-            {heuristicTasks.length > 0 ? (
-              <div className={styles.taskList}>
-                {heuristicTasks.map((task, index) => (
-                  <TaskRow 
-                    key={`heuristic-${index}`}
-                    task={task}
-                    index={tasks.indexOf(task)}
-                    isEven={index % 2 === 0}
-                    onToggle={handleTaskToggle}
-                    onDelete={handleDeleteTask}
-                    badgeType="heuristic"
-                    isDeletable={true}
+        <div className="p-4">
+          <div className="space-y-3">
+            {/* Render tasks */}
+            {filteredTasks.map((task, index) => (
+              <div key={task.id} className="p-3 border rounded-md bg-white">
+                <div className="flex items-start gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={task.completed}
+                    onChange={() => handleTaskUpdate(task.id, { completed: !task.completed })}
+                    className="mt-1"
                   />
-                ))}
-              </div>
-            ) : (
-              <div className={styles.emptyList}>— No tasks yet —</div>
-            )}
-          </div>
-          
-          {/* TCOF Factors section */}
-          <div className={`${styles.taskSection} ${!gpTasks.length && !heuristicTasks.length ? styles.taskSectionLast : ''}`}>
-            <h3 className={styles.taskSectionHeader}>TCOF Success Factors</h3>
-            
-            {factorTasks.length > 0 ? (
-              <div className={styles.taskList}>
-                {factorTasks.map((task, index) => (
-                  <TaskRow 
-                    key={`factor-${index}`}
-                    task={task}
-                    index={tasks.indexOf(task)}
-                    isEven={index % 2 === 0}
-                    onToggle={handleTaskToggle}
-                    onDelete={handleDeleteTask}
-                    badgeType="factor"
-                    isDeletable={false}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className={styles.emptyList}>— No tasks yet —</div>
-            )}
-          </div>
-          
-          {/* Good Practice section */}
-          {(gpTasks.length > 0 || factorTasks.length > 0 || heuristicTasks.length > 0) && (
-            <div className={styles.taskSection + ' ' + styles.taskSectionLast}>
-              <h3 className={styles.taskSectionHeader}>Good Practice Tasks</h3>
-              
-              {gpTasks.length > 0 ? (
-                <div className={styles.taskList}>
-                  {gpTasks.map((task, index) => (
-                    <GoodPracticeTaskRow 
-                      key={`gp-${index}`}
-                      task={task}
-                      index={index}
-                      isEven={index % 2 === 0}
-                      onToggle={(idx) => handleTaskToggle(idx, true)}
-                      onDelete={(idx) => handleDeleteTask(idx, true)}
-                      badgeType="gp"
-                      isDeletable={true}
-                    />
-                  ))}
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{task.text}</div>
+                    {task.notes && (
+                      <div className="text-xs text-gray-500 mt-1">{task.notes}</div>
+                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      {task.priority && (
+                        <Badge variant="outline" className="text-xs">
+                          {task.priority === 'high' ? 'High' : 
+                           task.priority === 'medium' ? 'Medium' : 'Low'} Priority
+                        </Badge>
+                      )}
+                      {task.dueDate && (
+                        <Badge variant="outline" className="text-xs">
+                          Due: {new Date(task.dueDate).toLocaleDateString()}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {task.origin === 'heuristic' ? 'Heuristic' : 
+                          task.origin === 'factor' ? 'Success Factor' : 'Custom'}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className={styles.emptyList}>— No tasks yet —</div>
-              )}
-            </div>
-          )}
+              </div>
+            ))}
+            
+            {/* Render good practice tasks */}
+            {filteredGpTasks.map((task, index) => (
+              <div key={task.id} className="p-3 border rounded-md bg-white">
+                <div className="flex items-start gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={task.completed}
+                    onChange={() => handleTaskUpdate(task.id, { completed: !task.completed }, true)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{task.text}</div>
+                    {task.notes && (
+                      <div className="text-xs text-gray-500 mt-1">{task.notes}</div>
+                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      {task.priority && (
+                        <Badge variant="outline" className="text-xs">
+                          {task.priority === 'high' ? 'High' : 
+                           task.priority === 'medium' ? 'Medium' : 'Low'} Priority
+                        </Badge>
+                      )}
+                      {task.dueDate && (
+                        <Badge variant="outline" className="text-xs">
+                          Due: {new Date(task.dueDate).toLocaleDateString()}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs">
+                        Framework
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {/* Show no tasks message when filtered but no results */}
+            {filteredTasks.length === 0 && filteredGpTasks.length === 0 && (
+              <div className="p-6 text-center text-gray-500">
+                <p>No tasks match the current filters.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// Task row component for regular tasks
-function TaskRow({ 
-  task, 
-  index, 
-  isEven, 
-  onToggle, 
-  onDelete, 
-  badgeType,
-  isDeletable
-}: { 
-  task: TaskItem; 
-  index: number; 
-  isEven: boolean; 
-  onToggle: (idx: number) => void; 
-  onDelete: (idx: number, isGp: boolean, origin?: string) => void; 
-  badgeType: 'heuristic' | 'factor';
-  isDeletable: boolean;
-}) {
-  return (
-    <div 
-      className={`${styles.taskRow} ${isEven ? styles.taskRowEven : styles.taskRowOdd} ${task.completed ? styles.taskRowCompleted : ''}`}
-    >
-      <Checkbox 
-        checked={task.completed}
-        onCheckedChange={() => onToggle(index)}
-        className={styles.taskCheckbox}
-        id={`task-${badgeType}-${index}`}
-      />
-      <label 
-        htmlFor={`task-${badgeType}-${index}`}
-        className={styles.taskText}
-      >
-        {task.text}
-      </label>
-      <span className={`${styles.taskBadge} ${styles[`taskBadge${badgeType === 'heuristic' ? 'Heuristic' : 'Factor'}`]}`}>
-        {badgeType === 'heuristic' ? 'Heuristic' : 'Factor'}
-      </span>
-      <Trash2 
-        size={16} 
-        className={`${styles.deleteIcon} ${!isDeletable ? styles.deleteIconDisabled : ''}`}
-        onClick={() => isDeletable ? onDelete(index, false, task.origin) : null}
-      />
-    </div>
-  );
-}
-
-// Task row component for good practice tasks
-function GoodPracticeTaskRow({ 
-  task, 
-  index, 
-  isEven, 
-  onToggle, 
-  onDelete, 
-  badgeType,
-  isDeletable
-}: { 
-  task: GoodPracticeTask; 
-  index: number; 
-  isEven: boolean; 
-  onToggle: (idx: number) => void; 
-  onDelete: (idx: number) => void; 
-  badgeType: 'gp';
-  isDeletable: boolean;
-}) {
-  return (
-    <div 
-      className={`${styles.taskRow} ${isEven ? styles.taskRowEven : styles.taskRowOdd} ${task.completed ? styles.taskRowCompleted : ''}`}
-    >
-      <Checkbox 
-        checked={task.completed}
-        onCheckedChange={() => onToggle(index)}
-        className={styles.taskCheckbox}
-        id={`task-${badgeType}-${index}`}
-      />
-      <label 
-        htmlFor={`task-${badgeType}-${index}`}
-        className={styles.taskText}
-      >
-        {task.text}
-      </label>
-      <span className={`${styles.taskBadge} ${styles.taskBadgeGp}`}>
-        {task.frameworkCode}
-      </span>
-      <Trash2 
-        size={16} 
-        className={`${styles.deleteIcon} ${!isDeletable ? styles.deleteIconDisabled : ''}`}
-        onClick={() => isDeletable ? onDelete(index) : null}
-      />
     </div>
   );
 }

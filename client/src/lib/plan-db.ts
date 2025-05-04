@@ -42,6 +42,8 @@ export type Mapping = {
   factorId: string | null;
 };
 
+export type TaskPriority = 'low' | 'medium' | 'high';
+
 export type TaskItem = {
   id: string;
   text: string;
@@ -49,6 +51,9 @@ export type TaskItem = {
   origin: 'heuristic' | 'factor' | 'policy';
   sourceId?: string;
   completed?: boolean;
+  notes?: string;
+  priority?: TaskPriority;
+  dueDate?: string;
 };
 
 export type PolicyTask = {
@@ -63,6 +68,9 @@ export type GoodPracticeTask = {
   stage: Stage;
   frameworkCode: string;
   completed?: boolean;
+  notes?: string;
+  priority?: TaskPriority;
+  dueDate?: string;
 };
 
 export type CustomFramework = {

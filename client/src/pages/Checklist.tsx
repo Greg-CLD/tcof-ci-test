@@ -1,352 +1,230 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
-import { Loader2, Info, FileSpreadsheet, FileText, Mail } from 'lucide-react';
+import { getLatestPlanId, hasExistingPlan } from '@/lib/planHelpers';
+import { PlanRecord, loadPlan, savePlan } from '@/lib/plan-db';
+import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import SiteHeader from '@/components/SiteHeader';
-import SiteFooter from '@/components/SiteFooter';
-import SummaryBar from '@/components/checklist/SummaryBar';
+import { CircleX, Download, FileText, Loader2 } from 'lucide-react';
 import StageAccordion from '@/components/checklist/StageAccordion';
+import SummaryBar from '@/components/checklist/SummaryBar';
+import ChecklistFilterBar, {
+  StageFilter,
+  StatusFilter,
+  SourceFilter,
+  SortOption,
+  SortDirection
+} from '@/components/checklist/ChecklistFilterBar';
 import { useToast } from '@/hooks/use-toast';
-import { PlanRecord, loadPlan } from '@/lib/plan-db';
-import { getLatestPlanId } from '@/lib/planHelpers';
-import { exportCSV, exportPDF, emailChecklist, downloadFile, getGoogleSheetsImportUrl } from '@/lib/exportUtils';
-import styles from '@/lib/styles/checklist.module.css';
+import { exportToPDF, exportToCSV } from '@/lib/exportUtils';
 
 export default function Checklist() {
-  const [plan, setPlan] = useState<PlanRecord | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [csvExportUrl, setCsvExportUrl] = useState<string | null>(null);
-  const [csvFilename, setCsvFilename] = useState<string>('');
-  const [showCsvOptions, setShowCsvOptions] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
-  // Load the plan data
+  // Plan state
+  const [planId, setPlanId] = useState<string | undefined>();
+  const [plan, setPlan] = useState<PlanRecord | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Filter and sort state
+  const [stageFilter, setStageFilter] = useState<StageFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('none');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  
+  // Load plan data when component mounts
   useEffect(() => {
     const loadPlanData = async () => {
+      setLoading(true);
+      
+      // Check if there's an existing plan
+      if (!hasExistingPlan()) {
+        setLoading(false);
+        return;
+      }
+      
       try {
-        const id = getLatestPlanId();
-        if (!id) {
-          // No plan found, redirect to make-a-plan
-          setLocation('/make-a-plan');
+        const currentPlanId = getLatestPlanId();
+        if (!currentPlanId) {
+          setLoading(false);
           return;
         }
         
-        const loadedPlan = await loadPlan(id);
-        if (!loadedPlan) {
-          // Plan ID exists but plan not found
-          setLocation('/make-a-plan');
-          return;
+        const loadedPlan = await loadPlan(currentPlanId);
+        if (loadedPlan) {
+          setPlan(loadedPlan);
+          setPlanId(currentPlanId);
         }
-        
-        setPlan(loadedPlan);
       } catch (error) {
         console.error('Error loading plan:', error);
         toast({
-          title: 'Error loading plan',
-          description: 'There was a problem loading your plan. Please try again.',
-          variant: 'destructive',
+          title: "Error loading plan",
+          description: "There was a problem loading your plan data.",
+          variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
     
     loadPlanData();
-  }, [setLocation, toast]);
+  }, [toast]);
   
-  // Cleanup URLs on unmount
-  useEffect(() => {
-    return () => {
-      if (csvExportUrl) {
-        URL.revokeObjectURL(csvExportUrl);
-      }
-    };
-  }, [csvExportUrl]);
-  
-  // Handle plan updates from child components
+  // Handle plan update
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
     setPlan(updatedPlan);
   };
   
-  // Handle CSV export
+  // Handle exporting the plan
+  const handleExportPDF = () => {
+    if (!plan) return;
+    
+    exportToPDF(plan);
+    
+    toast({
+      title: "Checklist Exported",
+      description: "Your checklist has been exported as a PDF.",
+    });
+  };
+  
   const handleExportCSV = () => {
     if (!plan) return;
     
-    try {
-      // Clean up previous URLs
-      if (csvExportUrl) {
-        URL.revokeObjectURL(csvExportUrl);
-      }
-      
-      // Generate the CSV and get the URL
-      const { url, filename } = exportCSV(plan);
-      setCsvExportUrl(url);
-      setCsvFilename(filename);
-      setShowCsvOptions(true);
-      
-      toast({
-        title: 'CSV export ready',
-        description: 'Choose how you want to use your CSV export.',
-      });
-    } catch (error) {
-      console.error('Error exporting to CSV:', error);
-      toast({
-        title: 'Export failed',
-        description: 'There was a problem exporting your checklist.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Handle CSV download
-  const handleDownloadCSV = () => {
-    if (!csvExportUrl || !csvFilename) return;
+    exportToCSV(plan);
     
-    try {
-      downloadFile(csvFilename, csvExportUrl);
-      toast({
-        title: 'CSV download started',
-        description: 'Your checklist CSV is being downloaded.',
-      });
-      setShowCsvOptions(false);
-    } catch (error) {
-      console.error('Error downloading CSV:', error);
-      toast({
-        title: 'Download failed',
-        description: 'There was a problem downloading your CSV file.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Handle open in Google Sheets
-  const handleOpenInGoogleSheets = () => {
-    if (!csvExportUrl) return;
-    
-    try {
-      // First download locally
-      downloadFile(csvFilename, csvExportUrl);
-      
-      // Then open Google Sheets import page
-      window.open(getGoogleSheetsImportUrl(csvExportUrl), '_blank');
-      
-      toast({
-        title: 'Google Sheets import started',
-        description: 'Your CSV has been downloaded and Google Sheets import page opened.',
-      });
-      setShowCsvOptions(false);
-    } catch (error) {
-      console.error('Error opening Google Sheets:', error);
-      toast({
-        title: 'Google Sheets import failed',
-        description: 'There was a problem opening Google Sheets.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Handle PDF export
-  const handleExportPDF = async () => {
-    try {
-      await exportPDF('checklist-content');
-      toast({
-        title: 'PDF export successful',
-        description: 'Your checklist has been exported to PDF format.',
-      });
-    } catch (error) {
-      console.error('Error exporting to PDF:', error);
-      toast({
-        title: 'Export failed',
-        description: 'There was a problem exporting your checklist.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Handle email
-  const handleEmailChecklist = () => {
-    if (!plan) return;
-    
-    try {
-      emailChecklist(plan);
-    } catch (error) {
-      console.error('Error opening email client:', error);
-      toast({
-        title: 'Email failed',
-        description: 'There was a problem opening your email client.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Check if all tasks are completed
-  const allTasksCompleted = () => {
-    if (!plan) return false;
-    
-    let totalTasks = 0;
-    let completedTasks = 0;
-    
-    Object.values(plan.stages).forEach(stage => {
-      // Count regular tasks
-      (stage.tasks || []).forEach(task => {
-        totalTasks++;
-        if (task.completed) completedTasks++;
-      });
-      
-      // Count good practice tasks
-      (stage.goodPractice?.tasks || []).forEach(task => {
-        totalTasks++;
-        if (task.completed) completedTasks++;
-      });
+    toast({
+      title: "Checklist Exported",
+      description: "Your checklist has been exported as a CSV file.",
     });
-    
-    return totalTasks > 0 && completedTasks === totalTasks;
   };
   
-  // Render loading state
-  if (isLoading) {
+  // Loading state
+  if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-tcof-light">
-        <SiteHeader />
-        <main className="flex-grow container mx-auto px-4 py-12 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 mx-auto animate-spin text-tcof-teal" />
-            <h2 className="mt-4 text-xl font-semibold text-tcof-dark">Loading your checklist...</h2>
-          </div>
-        </main>
-        <SiteFooter />
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 text-tcof-teal animate-spin" />
+          <p className="text-tcof-dark font-medium">Loading your plan...</p>
+        </div>
       </div>
     );
   }
   
-  // Render no plan state
+  // No plan state
   if (!plan) {
     return (
-      <div className="min-h-screen flex flex-col bg-tcof-light">
-        <SiteHeader />
-        <main className="flex-grow container mx-auto px-4 py-12 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-tcof-dark mb-4">No Plan Found</h2>
-            <p className="text-gray-600 mb-6">You need to create a plan first before viewing your checklist.</p>
-            <Button
-              onClick={() => setLocation('/make-a-plan')}
-              className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-            >
-              Create a Plan
-            </Button>
-          </div>
-        </main>
-        <SiteFooter />
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="text-center max-w-md">
+          <CircleX className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold text-tcof-dark mb-2">No Plan Found</h2>
+          <p className="text-gray-600 mb-6">
+            You need to create a plan first before accessing your task checklist.
+          </p>
+          <Button asChild>
+            <Link to="/make-a-plan">
+              Create Your Plan
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }
   
+  // Calculate total tasks and completed tasks
+  const getTotalAndCompleted = () => {
+    let total = 0;
+    let completed = 0;
+    
+    Object.values(plan.stages).forEach(stage => {
+      // Regular tasks
+      if (stage.tasks) {
+        total += stage.tasks.length;
+        completed += stage.tasks.filter(t => t.completed).length;
+      }
+      
+      // Good practice tasks
+      if (stage.goodPractice?.tasks) {
+        total += stage.goodPractice.tasks.length;
+        completed += stage.goodPractice.tasks.filter(t => t.completed).length;
+      }
+    });
+    
+    return { total, completed };
+  };
+  
+  const { total: totalTasks, completed: completedTasks } = getTotalAndCompleted();
+  
   return (
-    <div className="min-h-screen flex flex-col bg-tcof-light">
-      <SiteHeader />
-      <main className="flex-grow container mx-auto px-4 py-12">
-        <div id="checklist-content" className="max-w-4xl mx-auto">
-          <div className={styles.pageTitle}>
-            <h1 className={styles.pageTitleText}>
-              {allTasksCompleted() && '🎉 '} Your Project Checklist
-            </h1>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="ml-2 h-5 w-5 text-gray-400" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Tick items as you complete them. Changes save automatically.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+    <div className="bg-gray-50 min-h-screen py-6 px-4 md:px-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-tcof-dark">Project Checklist</h1>
+            <p className="text-gray-600 mt-1">
+              Track and manage your project tasks across all stages
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="text-sm font-medium">
+                Progress: {completedTasks}/{totalTasks} tasks completed
+              </div>
+            </div>
           </div>
           
-          <SummaryBar plan={plan} />
-          
-          {/* Stage accordions */}
-          <StageAccordion
-            stage="Identification"
-            plan={plan}
-            onPlanUpdate={handlePlanUpdate}
-          />
-          <StageAccordion
-            stage="Definition"
-            plan={plan}
-            onPlanUpdate={handlePlanUpdate}
-          />
-          <StageAccordion
-            stage="Delivery"
-            plan={plan}
-            onPlanUpdate={handlePlanUpdate}
-          />
-          <StageAccordion
-            stage="Closure"
-            plan={plan}
-            onPlanUpdate={handlePlanUpdate}
-          />
-          
-          {/* Export options */}
-          <div className={styles.exportBar}>
-            {!showCsvOptions ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleExportCSV}
-                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex items-center gap-2"
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Export CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleExportPDF}
-                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Export PDF
-                </Button>
-                <Button
-                  onClick={handleEmailChecklist}
-                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white flex items-center gap-2"
-                >
-                  <Mail className="h-4 w-4" />
-                  Email via Mail App
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleDownloadCSV}
-                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex items-center gap-2"
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Download CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleOpenInGoogleSheets}
-                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex items-center gap-2"
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Open in Google Sheets
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowCsvOptions(false)}
-                  className="border-gray-300 text-gray-600 hover:bg-gray-100"
-                >
-                  Cancel
-                </Button>
-              </>
-            )}
+          <div className="flex gap-3 mt-4 md:mt-0">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleExportPDF}
+            >
+              <FileText className="h-4 w-4" />
+              Export PDF
+            </Button>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleExportCSV}
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
           </div>
         </div>
-      </main>
-      <SiteFooter />
+        
+        {/* Summary bar */}
+        <div className="mb-6">
+          <SummaryBar plan={plan} />
+        </div>
+        
+        {/* Filters */}
+        <ChecklistFilterBar
+          stageFilter={stageFilter}
+          statusFilter={statusFilter}
+          sourceFilter={sourceFilter}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onStageFilterChange={setStageFilter}
+          onStatusFilterChange={setStatusFilter}
+          onSourceFilterChange={setSourceFilter}
+          onSortChange={setSortBy}
+          onSortDirectionChange={setSortDirection}
+        />
+        
+        {/* Task list by stage */}
+        <div>
+          {Object.keys(plan.stages).map((stageName) => (
+            <StageAccordion
+              key={stageName}
+              stage={stageName as any}
+              plan={plan}
+              onPlanUpdate={handlePlanUpdate}
+              stageFilter={stageFilter}
+              statusFilter={statusFilter}
+              sourceFilter={sourceFilter}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

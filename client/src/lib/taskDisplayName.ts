@@ -1,83 +1,153 @@
 /**
- * Utility functions for generating friendly task display names
+ * Utilities for formatting and displaying task names
  */
-
-import { StageType } from "@/components/plan/FactorTaskEditor";
+import { Stage } from '@/lib/plan-db';
 
 /**
- * Generates a user-friendly display name for a user heuristic task
- * 
- * @param heuristicIndex The index of the heuristic (1-based)
- * @param stage The project stage
- * @param taskIndex The index of the task within that stage and heuristic (1-based)
- * @returns A formatted display name
+ * Formats a task display name for heuristic tasks
+ * @param text The task text
+ * @param index The index number for the task
+ * @param stage The stage the task belongs to
+ * @returns Formatted task name
+ */
+export function formatHeuristicTaskName(text: string, index: number, stage: Stage): string {
+  return `UH${String(index).padStart(2, '0')} - ${stage} - Task ${index + 1}: ${text}`;
+}
+
+/**
+ * Formats a task display name for success factor tasks
+ * @param text The task text
+ * @param index The index number for the task
+ * @param stage The stage the task belongs to
+ * @returns Formatted task name
+ */
+export function formatFactorTaskName(text: string, index: number, stage: Stage): string {
+  return `SF${String(index).padStart(2, '0')} - ${stage} - Task ${index + 1}: ${text}`;
+}
+
+/**
+ * Formats a task display name for policy/framework tasks
+ * @param text The task text
+ * @param frameworkName The name of the framework or policy
+ * @param index The index number for the task
+ * @param stage The stage the task belongs to
+ * @returns Formatted task name
+ */
+export function formatFrameworkTaskName(
+  text: string, 
+  frameworkName: string, 
+  index: number, 
+  stage: Stage
+): string {
+  const code = frameworkName.substring(0, 3).toUpperCase();
+  return `${code}${String(index).padStart(2, '0')} - ${stage} - Task ${index + 1}: ${text}`;
+}
+
+/**
+ * Extracts the core task name from a fully formatted display name
+ * @param displayName The formatted task display name
+ * @returns The core task text without prefixes and codes
+ */
+export function extractCoreTaskName(displayName: string): string {
+  // Pattern for tasks with format: CODE## - Stage - Task #: Actual Text
+  const standardPattern = /^(?:.+) - (?:.+) - Task (?:\d+): (.+)$/;
+  const standardMatch = displayName.match(standardPattern);
+  
+  if (standardMatch && standardMatch[1]) {
+    return standardMatch[1];
+  }
+  
+  // Alternative pattern for policy tasks or other formats
+  const policyPattern = /^Policy: (.+) - (?:.+) - Task (?:\d+)$/;
+  const policyMatch = displayName.match(policyPattern);
+  
+  if (policyMatch && policyMatch[1]) {
+    return policyMatch[1];
+  }
+  
+  // If no pattern matches, return the original string
+  return displayName;
+}
+
+/**
+ * Formats a task name for display in the UI with improved readability
+ * @param taskName The full task name
+ * @returns Formatted, user-friendly task name
+ */
+export function formatTaskForDisplay(taskName: string): string {
+  return extractCoreTaskName(taskName);
+}
+
+/**
+ * Extracts the stage from a formatted task name
+ * @param taskName The formatted task name
+ * @returns The stage name or undefined if not found
+ */
+export function extractStageFromTaskName(taskName: string): Stage | undefined {
+  const pattern = /^(?:.+) - (Identification|Definition|Delivery|Closure) - Task (?:\d+)/;
+  const match = taskName.match(pattern);
+  
+  if (match && match[1]) {
+    return match[1] as Stage;
+  }
+  
+  return undefined;
+}
+
+/**
+ * Extracts the task code (prefix) from a formatted task name
+ * @param taskName The formatted task name
+ * @returns The task code or undefined if not found
+ */
+export function extractTaskCode(taskName: string): string | undefined {
+  const pattern = /^([A-Z0-9]+) - (?:.+) - Task (?:\d+)/;
+  const match = taskName.match(pattern);
+  
+  if (match && match[1]) {
+    return match[1];
+  }
+  
+  return undefined;
+}
+
+/**
+ * Checks if a task name is already formatted according to our display conventions
+ * @param taskName The task name to check
+ * @returns Whether the task name is already formatted
+ */
+export function isTaskAlreadyFormatted(taskName: string): boolean {
+  const standardPattern = /^(?:[A-Z0-9]+) - (?:.+) - Task (?:\d+): (?:.+)$/;
+  const policyPattern = /^Policy: (?:.+) - (?:.+) - Task (?:\d+)$/;
+  
+  return standardPattern.test(taskName) || policyPattern.test(taskName);
+}
+
+/**
+ * Formats a heuristic task display name for a specific heuristic, stage, and task index
+ * @param heuristicIndex The index of the heuristic
+ * @param stage The stage the task belongs to
+ * @param taskIndex The index of the task within the stage
+ * @returns Formatted task name
  */
 export function getUserHeuristicTaskDisplayName(
   heuristicIndex: number,
-  stage: StageType,
+  stage: Stage,
   taskIndex: number
 ): string {
-  // Format: UH01 - Identification - Task 1
-  const paddedIndex = String(heuristicIndex).padStart(2, '0');
-  return `UH${paddedIndex} - ${stage} - Task ${taskIndex}`;
+  return `UH${String(heuristicIndex).padStart(2, '0')} - ${stage} - Task ${taskIndex + 1}: Fill in task`;
 }
 
 /**
- * Generates a user-friendly display name for a policy task
- * 
+ * Formats a policy task display name
  * @param policyName The name of the policy
- * @param stage The project stage
- * @param taskIndex The index of the task within that stage and policy (1-based)
- * @returns A formatted display name
+ * @param stage The stage the task belongs to
+ * @param taskIndex The index of the task within the stage
+ * @returns Formatted task name
  */
 export function getPolicyTaskDisplayName(
   policyName: string,
-  stage: StageType,
+  stage: Stage,
   taskIndex: number
 ): string {
-  // Format: Policy: Risk Process - Closure - Task 1
-  return `Policy: ${policyName} - ${stage} - Task ${taskIndex}`;
-}
-
-/**
- * Determines if a task string has already been formatted with a display name
- * 
- * @param taskText The task text to check
- * @returns True if the task is already formatted
- */
-export function isTaskAlreadyFormatted(taskText: string): boolean {
-  // Check for UH pattern or Policy pattern
-  return /^UH\d{2} - /.test(taskText) || /^Policy: .+ - .+ - Task \d+$/.test(taskText);
-}
-
-/**
- * Formats a task for display, handling both formatted and unformatted tasks
- * 
- * @param taskText The task text to format
- * @returns A properly formatted task name for display
- */
-export function formatTaskName(taskText: string): string {
-  if (!taskText) return '';
-  
-  // If the task is already formatted with a code, extract the actual task content
-  if (isTaskAlreadyFormatted(taskText)) {
-    // Handle UH pattern (e.g., "UH01 - Identification - Task 1: Actual task content")
-    if (/^UH\d{2} - /.test(taskText)) {
-      const parts = taskText.split(': ');
-      if (parts.length > 1) {
-        return parts.slice(1).join(': '); // Return everything after the first colon
-      }
-    }
-    
-    // Handle Policy pattern (e.g., "Policy: Risk - Identification - Task 1: Actual task content")
-    if (/^Policy: .+ - .+ - Task \d+/.test(taskText)) {
-      const parts = taskText.split(': ');
-      if (parts.length > 1) {
-        return parts.slice(1).join(': '); // Return everything after the first colon
-      }
-    }
-  }
-  
-  // If it's not formatted or we couldn't extract the task content, return the original
-  return taskText;
+  return `Policy: ${policyName} - ${stage} - Task ${taskIndex + 1}`;
 }

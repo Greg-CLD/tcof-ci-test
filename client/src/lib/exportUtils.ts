@@ -1,308 +1,337 @@
-import { getPlan, getParentsByStage, Stage, PlanRecord } from './plan-db';
+/**
+ * Utilities for exporting plan data to various formats
+ */
+import { PlanRecord, Stage, TaskItem, GoodPracticeTask } from '@/lib/plan-db';
+import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import { formatTaskName } from './taskDisplayName';
+import { extractBaseTaskName } from './planHelpers';
 
 /**
- * Export a plan as a PDF document using plan ID
- * @param planId - The ID of the plan to export
+ * Exports the plan data to a PDF file
+ * @param plan The plan to export
  */
-export const exportPlanPDF = async (planId: string): Promise<void> => {
-  if (!planId) return;
+export async function exportToPDF(plan: PlanRecord): Promise<void> {
+  // Create a temporary container with the content
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  container.style.width = '794px'; // A4 width at 96 DPI
+  container.style.padding = '40px';
+  container.style.backgroundColor = '#ffffff';
+  container.style.fontFamily = 'Arial, sans-serif';
   
-  const plan = getPlan(planId);
-  if (!plan) return;
-  
-  // Create a temporary div to render the content
-  const tempDiv = document.createElement('div');
-  tempDiv.className = 'pdf-export';
-  tempDiv.style.padding = '40px';
-  tempDiv.style.maxWidth = '800px';
-  tempDiv.style.margin = '0 auto';
-  tempDiv.style.backgroundColor = '#ffffff';
-  tempDiv.style.color = '#000000';
-  tempDiv.style.fontFamily = 'Arial, sans-serif';
-  
-  // Add title and header
+  // Add title
   const title = document.createElement('h1');
-  title.textContent = 'TCOF Project Plan Checklist';
-  title.style.marginBottom = '20px';
-  title.style.color = '#008080';
+  title.textContent = 'Project Checklist';
   title.style.fontSize = '24px';
-  tempDiv.appendChild(title);
+  title.style.marginBottom = '10px';
+  title.style.color = '#16414E';
+  container.appendChild(title);
   
-  // Add metadata
-  const metadata = document.createElement('div');
-  metadata.style.marginBottom = '30px';
-  metadata.style.fontSize = '14px';
-  metadata.innerHTML = `
-    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-    <p><strong>Plan ID:</strong> ${planId}</p>
+  // Add project name and date
+  const header = document.createElement('div');
+  header.innerHTML = `
+    <p style="margin-bottom: 20px; color: #666;">
+      Plan created: ${new Date().toLocaleDateString()}
+    </p>
+    <hr style="margin-bottom: 30px; border: none; border-top: 1px solid #eee;" />
   `;
-  tempDiv.appendChild(metadata);
+  container.appendChild(header);
   
-  // Process the plan data
-  const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
-  const parentsByStage = getParentsByStage(planId);
+  // Add summary
+  const summaryHeader = document.createElement('h2');
+  summaryHeader.textContent = 'Summary';
+  summaryHeader.style.fontSize = '18px';
+  summaryHeader.style.marginTop = '20px';
+  summaryHeader.style.marginBottom = '10px';
+  summaryHeader.style.color = '#16414E';
+  container.appendChild(summaryHeader);
   
-  stages.forEach(stageStr => {
-    const stage = stageStr as Stage;
-    const stageSection = document.createElement('div');
-    stageSection.style.marginBottom = '30px';
-    
-    const stageHeader = document.createElement('h2');
-    stageHeader.textContent = stage;
-    stageHeader.style.marginBottom = '15px';
-    stageHeader.style.color = '#008080';
-    stageHeader.style.fontSize = '20px';
-    stageHeader.style.borderBottom = '2px solid #008080';
-    stageHeader.style.paddingBottom = '5px';
-    stageSection.appendChild(stageHeader);
-    
-    if (parentsByStage[stage] && parentsByStage[stage].length > 0) {
-      const taskList = document.createElement('ul');
-      taskList.style.paddingLeft = '20px';
-      
-      parentsByStage[stage].forEach((parent: any) => {
-        if (parent.tasks && parent.tasks.length > 0) {
-          const parentItem = document.createElement('li');
-          parentItem.style.marginBottom = '10px';
-          parentItem.style.fontWeight = 'bold';
-          parentItem.textContent = parent.label;
-          taskList.appendChild(parentItem);
-          
-          const subList = document.createElement('ul');
-          subList.style.paddingLeft = '20px';
-          subList.style.marginTop = '5px';
-          
-          parent.tasks.forEach((task: string) => {
-            const taskItem = document.createElement('li');
-            taskItem.style.marginBottom = '5px';
-            taskItem.style.fontWeight = 'normal';
-            taskItem.textContent = formatTaskName(task);
-            subList.appendChild(taskItem);
-          });
-          
-          parentItem.appendChild(subList);
-        }
-      });
-      
-      stageSection.appendChild(taskList);
-    } else {
-      const noTasks = document.createElement('p');
-      noTasks.textContent = 'No tasks for this stage';
-      noTasks.style.fontStyle = 'italic';
-      noTasks.style.color = '#666666';
-      stageSection.appendChild(noTasks);
+  // Calculate total tasks and completed tasks
+  let totalTasks = 0;
+  let completedTasks = 0;
+  Object.values(plan.stages).forEach(stage => {
+    if (stage.tasks) {
+      totalTasks += stage.tasks.length;
+      completedTasks += stage.tasks.filter(t => t.completed).length;
     }
-    
-    tempDiv.appendChild(stageSection);
+    if (stage.goodPractice?.tasks) {
+      totalTasks += stage.goodPractice.tasks.length;
+      completedTasks += stage.goodPractice.tasks.filter(t => t.completed).length;
+    }
   });
   
-  // Add footer
-  const footer = document.createElement('div');
-  footer.style.marginTop = '30px';
-  footer.style.borderTop = '1px solid #cccccc';
-  footer.style.paddingTop = '15px';
-  footer.style.fontSize = '12px';
-  footer.style.color = '#666666';
-  footer.style.textAlign = 'center';
-  footer.innerHTML = `
-    <p>Generated by The Connected Outcomes Framework Toolkit</p>
-    <p>© ${new Date().getFullYear()} Confluity Ltd. All rights reserved.</p>
-  `;
-  tempDiv.appendChild(footer);
+  const summaryText = document.createElement('p');
+  summaryText.textContent = `Total progress: ${completedTasks} of ${totalTasks} tasks completed (${Math.round((completedTasks / totalTasks) * 100)}%)`;
+  summaryText.style.marginBottom = '20px';
+  container.appendChild(summaryText);
   
-  // Append to document temporarily (hidden)
-  tempDiv.style.position = 'absolute';
-  tempDiv.style.left = '-9999px';
-  document.body.appendChild(tempDiv);
+  // Add tasks by stage
+  for (const [stageName, stageData] of Object.entries(plan.stages)) {
+    const stageHeader = document.createElement('h3');
+    stageHeader.textContent = `${stageName} Stage`;
+    stageHeader.style.fontSize = '16px';
+    stageHeader.style.marginTop = '30px';
+    stageHeader.style.marginBottom = '10px';
+    stageHeader.style.color = '#16414E';
+    container.appendChild(stageHeader);
+    
+    // Regular tasks
+    if (stageData.tasks && stageData.tasks.length > 0) {
+      const tasksContainer = document.createElement('div');
+      
+      stageData.tasks.forEach((task, i) => {
+        const taskItem = document.createElement('div');
+        taskItem.style.marginBottom = '12px';
+        taskItem.style.paddingLeft = '25px';
+        taskItem.style.position = 'relative';
+        
+        // Checkbox
+        const checkbox = document.createElement('div');
+        checkbox.style.position = 'absolute';
+        checkbox.style.left = '0';
+        checkbox.style.top = '2px';
+        checkbox.style.width = '16px';
+        checkbox.style.height = '16px';
+        checkbox.style.border = '1px solid #ccc';
+        checkbox.style.borderRadius = '3px';
+        checkbox.style.backgroundColor = task.completed ? '#008080' : '#fff';
+        checkbox.innerHTML = task.completed ? '<div style="color: white; text-align: center; line-height: 16px; font-size: 10px;">✓</div>' : '';
+        taskItem.appendChild(checkbox);
+        
+        // Task text
+        const taskText = document.createElement('div');
+        taskText.style.fontSize = '14px';
+        taskText.style.textDecoration = task.completed ? 'line-through' : 'none';
+        taskText.style.color = task.completed ? '#888' : '#333';
+        taskText.textContent = extractBaseTaskName(task.text);
+        taskItem.appendChild(taskText);
+        
+        // Task metadata
+        if (task.priority || task.dueDate) {
+          const taskMeta = document.createElement('div');
+          taskMeta.style.fontSize = '12px';
+          taskMeta.style.color = '#666';
+          taskMeta.style.marginTop = '4px';
+          
+          if (task.priority) {
+            const priority = document.createElement('span');
+            priority.textContent = `${task.priority} Priority`;
+            priority.style.marginRight = '10px';
+            taskMeta.appendChild(priority);
+          }
+          
+          if (task.dueDate) {
+            const dueDate = document.createElement('span');
+            dueDate.textContent = `Due: ${new Date(task.dueDate).toLocaleDateString()}`;
+            taskMeta.appendChild(dueDate);
+          }
+          
+          taskItem.appendChild(taskMeta);
+        }
+        
+        // Notes
+        if (task.notes) {
+          const notes = document.createElement('div');
+          notes.style.fontSize = '12px';
+          notes.style.color = '#666';
+          notes.style.marginTop = '4px';
+          notes.style.paddingLeft = '10px';
+          notes.style.borderLeft = '2px solid #eee';
+          notes.textContent = task.notes;
+          taskItem.appendChild(notes);
+        }
+        
+        tasksContainer.appendChild(taskItem);
+      });
+      
+      container.appendChild(tasksContainer);
+    }
+    
+    // Framework tasks
+    if (stageData.goodPractice?.tasks && stageData.goodPractice.tasks.length > 0) {
+      const frameworkHeader = document.createElement('h4');
+      frameworkHeader.textContent = 'Framework Tasks';
+      frameworkHeader.style.fontSize = '14px';
+      frameworkHeader.style.marginTop = '15px';
+      frameworkHeader.style.marginBottom = '10px';
+      frameworkHeader.style.color = '#6b21a8';
+      container.appendChild(frameworkHeader);
+      
+      const frameworkTasksContainer = document.createElement('div');
+      
+      stageData.goodPractice.tasks.forEach((task, i) => {
+        const taskItem = document.createElement('div');
+        taskItem.style.marginBottom = '12px';
+        taskItem.style.paddingLeft = '25px';
+        taskItem.style.position = 'relative';
+        
+        // Checkbox
+        const checkbox = document.createElement('div');
+        checkbox.style.position = 'absolute';
+        checkbox.style.left = '0';
+        checkbox.style.top = '2px';
+        checkbox.style.width = '16px';
+        checkbox.style.height = '16px';
+        checkbox.style.border = '1px solid #ccc';
+        checkbox.style.borderRadius = '3px';
+        checkbox.style.backgroundColor = task.completed ? '#6b21a8' : '#fff';
+        checkbox.innerHTML = task.completed ? '<div style="color: white; text-align: center; line-height: 16px; font-size: 10px;">✓</div>' : '';
+        taskItem.appendChild(checkbox);
+        
+        // Task text
+        const taskText = document.createElement('div');
+        taskText.style.fontSize = '14px';
+        taskText.style.textDecoration = task.completed ? 'line-through' : 'none';
+        taskText.style.color = task.completed ? '#888' : '#333';
+        taskText.textContent = extractBaseTaskName(task.text);
+        taskItem.appendChild(taskText);
+        
+        // Task metadata
+        if (task.priority || task.dueDate) {
+          const taskMeta = document.createElement('div');
+          taskMeta.style.fontSize = '12px';
+          taskMeta.style.color = '#666';
+          taskMeta.style.marginTop = '4px';
+          
+          if (task.priority) {
+            const priority = document.createElement('span');
+            priority.textContent = `${task.priority} Priority`;
+            priority.style.marginRight = '10px';
+            taskMeta.appendChild(priority);
+          }
+          
+          if (task.dueDate) {
+            const dueDate = document.createElement('span');
+            dueDate.textContent = `Due: ${new Date(task.dueDate).toLocaleDateString()}`;
+            taskMeta.appendChild(dueDate);
+          }
+          
+          taskItem.appendChild(taskMeta);
+        }
+        
+        // Notes
+        if (task.notes) {
+          const notes = document.createElement('div');
+          notes.style.fontSize = '12px';
+          notes.style.color = '#666';
+          notes.style.marginTop = '4px';
+          notes.style.paddingLeft = '10px';
+          notes.style.borderLeft = '2px solid #eee';
+          notes.textContent = task.notes;
+          taskItem.appendChild(notes);
+        }
+        
+        frameworkTasksContainer.appendChild(taskItem);
+      });
+      
+      container.appendChild(frameworkTasksContainer);
+    }
+  }
+  
+  // Add to document
+  document.body.appendChild(container);
   
   try {
-    // Convert to PDF
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const canvas = await html2canvas(tempDiv);
-    const imgData = canvas.toDataURL('image/png');
+    // Generate PDF
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const canvas = await html2canvas(container, {
+      scale: 1.5,
+      useCORS: true,
+      logging: false
+    });
     
-    // Calculate dimensions
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
-    const imgHeight = canvas.height * imgWidth / canvas.width;
+    const imgData = canvas.toDataURL('image/png');
+    const imgWidth = pdf.internal.pageSize.getWidth();
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
     let position = 0;
     
-    // Add first page
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    heightLeft -= pdf.internal.pageSize.getHeight();
     
-    // Add additional pages if content is too long
-    while (heightLeft > 0) {
+    // Add more pages if needed
+    while (heightLeft >= 0) {
       position = heightLeft - imgHeight;
       pdf.addPage();
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      heightLeft -= pdf.internal.pageSize.getHeight();
     }
     
     // Save PDF
-    pdf.save(`TCOF_Project_Plan_${planId}.pdf`);
-  } catch (error) {
-    console.error('Error generating PDF:', error);
+    pdf.save('project-checklist.pdf');
   } finally {
     // Clean up
-    document.body.removeChild(tempDiv);
+    document.body.removeChild(container);
   }
-};
+}
 
 /**
- * Export the current plan as a CSV file
- * @param plan - The plan record to export
- * @returns The generated URL and filename
+ * Exports the plan data to a CSV file
+ * @param plan The plan to export
  */
-export const exportCSV = (plan: PlanRecord): { url: string; filename: string } => {
-  if (!plan) throw new Error('No plan provided');
+export function exportToCSV(plan: PlanRecord): void {
+  // Header row
+  const header = ['Stage', 'Task', 'Status', 'Priority', 'Due Date', 'Source', 'Notes'];
   
-  // Process the plan data
-  const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
-  const parentsByStage = getParentsByStage(plan.id);
+  // Data rows
+  const rows: string[][] = [];
   
-  // Create CSV content
-  let csvContent = 'Stage,Category,Task,Status\n';
-  
-  stages.forEach(stageStr => {
-    const stage = stageStr as Stage;
-    if (parentsByStage[stage] && parentsByStage[stage].length > 0) {
-      parentsByStage[stage].forEach((parent: any) => {
-        if (parent.tasks && parent.tasks.length > 0) {
-          parent.tasks.forEach((task: string, index: number) => {
-            // Format CSV row (escape commas in fields)
-            const escapedCategory = `"${parent.label.replace(/"/g, '""')}"`;
-            const escapedTask = `"${formatTaskName(task).replace(/"/g, '""')}"`;
-            // Default to "Not Started" for status
-            const status = '"Not Started"';
-            csvContent += `${stage},${escapedCategory},${escapedTask},${status}\n`;
-          });
-        }
+  // Iterate through stages
+  for (const [stageName, stageData] of Object.entries(plan.stages)) {
+    // Regular tasks
+    if (stageData.tasks && stageData.tasks.length > 0) {
+      stageData.tasks.forEach(task => {
+        rows.push([
+          stageName,
+          extractBaseTaskName(task.text),
+          task.completed ? 'Completed' : 'Open',
+          task.priority || '',
+          task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '',
+          task.origin === 'heuristic' ? 'Personal Heuristic' : 
+            task.origin === 'factor' ? 'Success Factor' : 'Custom',
+          task.notes || ''
+        ]);
       });
     }
-  });
+    
+    // Framework tasks
+    if (stageData.goodPractice?.tasks && stageData.goodPractice.tasks.length > 0) {
+      stageData.goodPractice.tasks.forEach(task => {
+        rows.push([
+          stageName,
+          extractBaseTaskName(task.text),
+          task.completed ? 'Completed' : 'Open',
+          task.priority || '',
+          task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '',
+          'Framework',
+          task.notes || ''
+        ]);
+      });
+    }
+  }
   
-  // Create the CSV file
+  // Convert to CSV
+  const csvContent = [
+    header.join(','),
+    ...rows.map(row => 
+      row.map(cell => {
+        // Escape quotes and wrap cell in quotes if it contains commas or quotes
+        const escaped = cell.replace(/"/g, '""');
+        return /[",\n]/.test(cell) ? `"${escaped}"` : cell;
+      }).join(',')
+    )
+  ].join('\n');
+  
+  // Download the CSV file
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const filename = `TCOF_Project_Plan_${plan.id}.csv`;
-  
-  return { url, filename };
-};
-
-/**
- * Downloads a file using a URL
- * @param filename - The name to save the file as
- * @param url - The URL of the file
- */
-export const downloadFile = (filename: string, url: string): void => {
   const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
+  link.href = url;
+  link.setAttribute('download', 'project-checklist.csv');
+  link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-};
-
-/**
- * Gets the Google Sheets import URL for a CSV file
- * @param url - The URL of the CSV file
- * @returns The Google Sheets import URL
- */
-export const getGoogleSheetsImportUrl = (url: string): string => {
-  // Google Sheets can't directly import from a blob URL
-  // This would normally redirect to the Google Sheets import page
-  return 'https://docs.google.com/spreadsheets/d/import';
-};
-
-/**
- * Exports the plan as a PDF document by rendering the element with the given ID
- * @param elementId - The ID of the HTML element to render as PDF
- */
-export const exportPDF = async (elementId: string): Promise<void> => {
-  const element = document.getElementById(elementId);
-  if (!element) {
-    throw new Error(`Element with ID "${elementId}" not found`);
-  }
-  
-  try {
-    // Convert to PDF
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const canvas = await html2canvas(element);
-    const imgData = canvas.toDataURL('image/png');
-    
-    // Calculate dimensions
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-    
-    // Add first page
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    
-    // Add additional pages if content is too long
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-    
-    // Save PDF
-    pdf.save(`TCOF_Project_Checklist.pdf`);
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    throw error;
-  }
-};
-
-/**
- * Emails the plan as a formatted message
- * @param plan - The plan record to email
- */
-export const emailChecklist = (plan: PlanRecord): void => {
-  if (!plan) throw new Error('No plan provided');
-  
-  // Process the plan data
-  const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
-  const parentsByStage = getParentsByStage(plan.id);
-  
-  // Create email body
-  let subject = 'TCOF Project Checklist';
-  let body = 'TCOF Project Checklist\n\n';
-  body += `Generated: ${new Date().toLocaleString()}\n\n`;
-  
-  stages.forEach(stageStr => {
-    const stage = stageStr as Stage;
-    body += `=== ${stage} ===\n\n`;
-    
-    if (parentsByStage[stage] && parentsByStage[stage].length > 0) {
-      parentsByStage[stage].forEach((parent: any) => {
-        if (parent.tasks && parent.tasks.length > 0) {
-          body += `${parent.label}:\n`;
-          
-          parent.tasks.forEach((task: string) => {
-            body += `[ ] ${formatTaskName(task)}\n`;
-          });
-          
-          body += '\n';
-        }
-      });
-    } else {
-      body += 'No tasks for this stage\n\n';
-    }
-  });
-  
-  body += '\n\nGenerated by The Connected Outcomes Framework Toolkit';
-  
-  // Open email client
-  const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.open(mailtoUrl, '_self');
-};
+}

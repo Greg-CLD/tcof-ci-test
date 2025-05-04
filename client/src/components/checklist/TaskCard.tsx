@@ -1,326 +1,290 @@
 import React, { useState } from 'react';
-import { Calendar, Check, Edit2, Save, Trash2 } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
+import { 
+  Circle, 
+  CheckCircle, 
+  Edit, 
+  Clock, 
+  MoreHorizontal,
+  Calendar
+} from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import styles from '@/lib/styles/checklist.module.css';
-
-export type TaskPriority = 'low' | 'medium' | 'high';
-export type TaskSource = 'heuristic' | 'factor' | 'framework';
-
-export interface TaskCardProps {
-  id: string;
-  text: string;
-  sourceType: TaskSource;
-  sourceLabel: string;
-  sourceIcon?: string;
-  completed?: boolean;
-  notes?: string;
-  priority?: TaskPriority;
-  dueDate?: Date | null;
-  isDeletable?: boolean;
-  onToggleComplete: (id: string, completed: boolean) => void;
-  onUpdateTask: (id: string, updates: TaskUpdates) => void;
-  onDeleteTask?: (id: string) => void;
-}
+import { TaskPriority } from '@/lib/plan-db';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 export interface TaskUpdates {
-  text?: string;
+  completed?: boolean;
+  notes?: string;
+  priority?: TaskPriority | undefined;
+  dueDate?: string | undefined;
+}
+
+interface TaskCardProps {
+  id: string;
+  text: string;
+  completed: boolean;
   notes?: string;
   priority?: TaskPriority;
-  dueDate?: Date | null;
+  dueDate?: string;
+  stage: string;
+  source: 'heuristic' | 'factor' | 'custom' | 'framework';
+  sourceName?: string;
+  frameworkCode?: string;
+  isGoodPractice?: boolean;
+  onUpdate: (id: string, updates: TaskUpdates, isGoodPractice?: boolean) => void;
 }
 
 export default function TaskCard({
   id,
   text,
-  sourceType,
-  sourceLabel,
-  sourceIcon,
-  completed = false,
+  completed,
   notes = '',
   priority,
   dueDate,
-  isDeletable = true,
-  onToggleComplete,
-  onUpdateTask,
-  onDeleteTask,
+  stage,
+  source,
+  sourceName,
+  frameworkCode,
+  isGoodPractice = false,
+  onUpdate
 }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
-  const [editText, setEditText] = useState(text);
-  const [editNotes, setEditNotes] = useState(notes);
-  const [editPriority, setEditPriority] = useState<TaskPriority | undefined>(priority);
-  const [editDueDate, setEditDueDate] = useState<Date | null | undefined>(dueDate);
+  const [noteText, setNoteText] = useState(notes);
   
-  // Task source icon and styling
-  const getSourceIcon = () => {
-    if (sourceIcon) return sourceIcon;
-    switch (sourceType) {
-      case 'heuristic': return '🔸';
-      case 'factor': return '🧱';
-      case 'framework': return '📘';
-      default: return '📋';
-    }
+  // Handle task completion toggle
+  const handleToggleCompleted = () => {
+    onUpdate(id, { completed: !completed }, isGoodPractice);
   };
   
-  const getSourceClass = () => {
-    switch (sourceType) {
-      case 'heuristic': return styles.taskBadgeHeuristic;
-      case 'factor': return styles.taskBadgeFactor;
-      case 'framework': return styles.taskBadgeGp;
-      default: return '';
-    }
+  // Handle priority change
+  const handlePriorityChange = (newPriority: TaskPriority | undefined) => {
+    onUpdate(id, { priority: newPriority }, isGoodPractice);
   };
   
-  // Handle save edits
-  const handleSave = () => {
-    if (editText.trim() === '') return;
-    
-    const updates: TaskUpdates = {};
-    
-    if (editText !== text) {
-      updates.text = editText;
-    }
-    
-    if (editNotes !== notes) {
-      updates.notes = editNotes;
-    }
-    
-    if (editPriority !== priority) {
-      updates.priority = editPriority;
-    }
-    
-    if (editDueDate !== dueDate) {
-      updates.dueDate = editDueDate;
-    }
-    
-    // Only save if something has changed
-    if (Object.keys(updates).length > 0) {
-      onUpdateTask(id, updates);
-    }
-    
+  // Handle date change
+  const handleDateChange = (date: Date | undefined) => {
+    // Convert Date to ISO string, or undefined if no date
+    const dateString = date ? date.toISOString() : undefined;
+    onUpdate(id, { dueDate: dateString }, isGoodPractice);
+  };
+  
+  // Handle notes update
+  const handleNotesUpdate = () => {
+    onUpdate(id, { notes: noteText }, isGoodPractice);
     setIsEditing(false);
   };
   
-  // Handle pressing Enter to save
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSave();
+  const getPriorityColor = (priorityValue?: TaskPriority): string => {
+    switch (priorityValue) {
+      case 'high':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'medium':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'low':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
   
-  // Cancel editing and reset values
-  const handleCancel = () => {
-    setEditText(text);
-    setEditNotes(notes);
-    setEditPriority(priority);
-    setEditDueDate(dueDate);
-    setIsEditing(false);
-  };
-  
-  // Format priority for display
-  const formatPriority = (priority?: TaskPriority) => {
-    if (!priority) return '';
+  const getSourceBadgeColor = (): string => {
+    if (isGoodPractice || source === 'framework') {
+      return 'bg-purple-100 text-purple-800 border-purple-200';
+    }
     
-    switch (priority) {
-      case 'low': return '⚪ Low';
-      case 'medium': return '🔵 Medium';
-      case 'high': return '🔴 High';
-      default: return '';
+    switch (source) {
+      case 'heuristic':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'factor':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
   
-  // Priority color class
-  const getPriorityClass = (priority?: TaskPriority) => {
-    switch (priority) {
-      case 'high': return 'bg-red-50 text-red-700 border-red-200';
-      case 'medium': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'low': return 'bg-gray-50 text-gray-700 border-gray-200';
-      default: return 'bg-gray-50 text-gray-500 border-gray-200';
+  const getSourceLabel = (): string => {
+    if (isGoodPractice) {
+      return frameworkCode ? `Framework: ${frameworkCode}` : 'Framework';
+    }
+    
+    switch (source) {
+      case 'heuristic':
+        return 'Personal Heuristic';
+      case 'factor':
+        return sourceName ? `Success Factor: ${sourceName}` : 'Success Factor';
+      default:
+        return 'Task';
     }
   };
   
   return (
     <div className={cn(
-      'bg-white rounded-md shadow-sm border p-3 mb-2',
-      completed && 'opacity-70',
-      priority && !isEditing && getPriorityClass(priority)
+      'p-4 border rounded-md transition-colors',
+      completed ? 'bg-gray-50' : 'bg-white'
     )}>
-      <div className="flex items-start gap-2">
-        {/* Checkbox */}
-        <Checkbox 
-          checked={completed}
-          onCheckedChange={(checked) => onToggleComplete(id, !!checked)}
-          className={cn(
-            "mt-1",
-            completed && "bg-tcof-teal border-tcof-teal"
-          )}
-        />
+      <div className="flex gap-3">
+        <div className="flex-shrink-0 pt-1">
+          <button
+            onClick={handleToggleCompleted}
+            className="text-gray-400 hover:text-gray-600"
+            aria-label={completed ? "Mark as incomplete" : "Mark as complete"}
+          >
+            {completed ? (
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            ) : (
+              <Circle className="h-5 w-5" />
+            )}
+          </button>
+        </div>
         
-        {/* Content */}
-        <div className="flex-1">
+        <div className="flex-grow">
+          <p className={cn(
+            'text-sm font-medium',
+            completed && 'line-through text-gray-500'
+          )}>
+            {text}
+          </p>
+          
+          {/* Notes section */}
           {isEditing ? (
-            <div className="space-y-2">
-              <Input 
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Task text"
-                className="w-full"
+            <div className="mt-2 space-y-2">
+              <Textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Add notes..."
+                className="min-h-[80px] text-sm"
               />
-              
-              <div className="flex flex-wrap gap-2">
-                <Select 
-                  value={editPriority} 
-                  onValueChange={(value) => setEditPriority(value as TaskPriority)}
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setNoteText(notes);
+                    setIsEditing(false);
+                  }}
                 >
-                  <SelectTrigger className="w-[120px] h-8 text-xs">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">⚪ Low</SelectItem>
-                    <SelectItem value="medium">🔵 Medium</SelectItem>
-                    <SelectItem value="high">🔴 High</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="h-8 px-2 text-xs flex items-center gap-1"
-                    >
-                      <Calendar className="h-3.5 w-3.5" />
-                      {editDueDate ? format(editDueDate, 'PP') : 'Due date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={editDueDate || undefined}
-                      onSelect={setEditDueDate}
-                      initialFocus
-                    />
-                    {editDueDate && (
-                      <div className="flex justify-end p-2 border-t">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setEditDueDate(null)}
-                          className="text-red-500 hover:text-red-600"
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <Textarea 
-                value={editNotes}
-                onChange={(e) => setEditNotes(e.target.value)}
-                placeholder="Add notes here..."
-                className="w-full min-h-[60px]"
-              />
-              
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Button size="sm" onClick={handleSave}>
-                  <Save className="h-3.5 w-3.5 mr-1" /> Save
+                <Button
+                  size="sm"
+                  onClick={handleNotesUpdate}
+                >
+                  Save
                 </Button>
               </div>
             </div>
-          ) : (
-            <>
-              <div className="flex items-start justify-between">
-                <div className={cn("text-sm mb-1", completed && "line-through text-gray-500")}>
-                  {text}
-                </div>
-                
-                <div className="flex items-center gap-1 ml-1 text-gray-400">
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </Button>
-                  
-                  {isDeletable && onDeleteTask && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      className="h-6 w-6 text-gray-400 hover:text-red-500"
-                      onClick={() => onDeleteTask(id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
+          ) : notes ? (
+            <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+              <div className="flex justify-between">
+                <span className="font-medium">Notes:</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-1"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
               </div>
+              <p className="whitespace-pre-wrap mt-1">{notes}</p>
+            </div>
+          ) : null}
+          
+          {/* Tags & metadata */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            {/* Priority indicator */}
+            {priority && (
+              <Badge variant="outline" className={getPriorityColor(priority)}>
+                {priority === 'high' ? 'High' : priority === 'medium' ? 'Medium' : 'Low'} Priority
+              </Badge>
+            )}
+            
+            {/* Due date indicator */}
+            {dueDate && (
+              <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                Due: {format(new Date(dueDate), 'MMM d, yyyy')}
+              </Badge>
+            )}
+            
+            {/* Source type indicator */}
+            <Badge variant="outline" className={getSourceBadgeColor()}>
+              {getSourceLabel()}
+            </Badge>
+            
+            {/* Stage indicator */}
+            <Badge variant="outline" className="bg-gray-100 text-gray-800">
+              {stage}
+            </Badge>
+          </div>
+        </div>
+        
+        <div className="flex-shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                Add Notes
+              </DropdownMenuItem>
               
-              {/* Task metadata */}
-              <div className="flex flex-wrap items-center gap-2 text-xs mt-1">
-                <span className={cn(
-                  "px-1.5 py-0.5 rounded-full text-xs font-medium",
-                  getSourceClass()
-                )}>
-                  {getSourceIcon()} {sourceLabel}
-                </span>
-                
-                {priority && (
-                  <span className={cn(
-                    "px-1.5 py-0.5 rounded-full border text-xs",
-                    getPriorityClass(priority)
-                  )}>
-                    {formatPriority(priority)}
-                  </span>
-                )}
-                
-                {dueDate && (
-                  <span className="flex items-center gap-0.5 text-gray-500">
-                    <Calendar className="h-3 w-3" />
-                    {format(dueDate, 'PP')}
-                  </span>
-                )}
-                
-                {notes && (
-                  <Button 
-                    variant="link" 
-                    className="p-0 h-auto text-xs text-gray-500 underline"
-                    onClick={() => setShowNotes(!showNotes)}
-                  >
-                    {showNotes ? 'Hide notes' : 'View notes'}
-                  </Button>
-                )}
-              </div>
+              <DropdownMenuItem onClick={() => handlePriorityChange('high')}>
+                Set High Priority
+              </DropdownMenuItem>
               
-              {/* Notes */}
-              {showNotes && notes && (
-                <div className="mt-2 pl-2 border-l-2 border-gray-200 text-xs text-gray-600">
-                  {notes}
-                </div>
+              <DropdownMenuItem onClick={() => handlePriorityChange('medium')}>
+                Set Medium Priority
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem onClick={() => handlePriorityChange('low')}>
+                Set Low Priority
+              </DropdownMenuItem>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    Set Due Date
+                  </DropdownMenuItem>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dueDate ? new Date(dueDate) : undefined}
+                    onSelect={handleDateChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              {dueDate && (
+                <DropdownMenuItem onClick={() => handleDateChange(undefined)}>
+                  Clear Due Date
+                </DropdownMenuItem>
               )}
-            </>
-          )}
+              
+              {priority && (
+                <DropdownMenuItem onClick={() => handlePriorityChange(undefined)}>
+                  Clear Priority
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>
