@@ -1,0 +1,79 @@
+Please enhance the Checklist page (/make-a-plan/checklist) with the following
+structure, usability and export improvements.
+
+────────────────────────────────────────
+1️⃣  SECTION HEADINGS & GROUPING
+
+• Render the checklist grouped first by **Delivery Stage** (Identification,
+  Definition, Delivery, Closure).
+  – Each stage should have a bold header and a 1-line description.
+
+• Inside each stage, create three collapsible sub-sections:
+  1. 🔸 Your Heuristics
+  2. 🧱 TCOF Success Factors
+  3. 📘 Good Practice Tasks (includes Custom Framework tasks)
+
+────────────────────────────────────────
+2️⃣  TASK CARDS & METADATA
+
+For every task, show a compact card with:
+
+• Source icon (🔸 / 🧱 / 📘)  
+• Task text (editable)  
+• Optional fields:  
+  – ✏️ Notes (click to add inline)  
+  – ⭐ Priority tag (Low / Med / High drop-down)  
+  – 📅 Due-date picker (optional)  
+• Status toggle ☐ → ✅ (Done / Not Done)
+
+Autosave any change immediately.
+
+────────────────────────────────────────
+3️⃣  FILTER & SORT BAR (TOP OF PAGE)
+
+• Stage filter (All | Identification | …)  
+• Status filter (All | Open | Done)  
+• Source filter (All | Heuristic | TCOF | Good Practice)  
+• Sort within stage by Priority or Due-date.
+
+────────────────────────────────────────
+4️⃣  TASK REORDERING
+
+• Enable drag-and-drop re-ordering **within** each sub-section (use
+  dnd-kit or similar lightweight lib). Persist new order to plan data.
+
+────────────────────────────────────────
+5️⃣  EXPORT & SHARE
+
+Add an **Export** drop-down with:
+
+• 📄 “Download PDF” – generate print-optimised PDF with headings and
+  tick-boxes.  
+• 📊 “Download CSV” – flat table of tasks + metadata.  
+• 🔗 “Copy Summary to Clipboard” – stage & task counts.
+
+────────────────────────────────────────
+6️⃣  SUMMARY / COVER PANEL
+
+At top of checklist render a summary card with:
+
+• Project name (plan.title)  
+• Date/time generated  
+• Total tasks & tasks remaining per stage
+
+────────────────────────────────────────
+7️⃣  ACCESSIBILITY & STYLE
+
+• Keep palette consistent: bg #fff5e7, headings #008080, text #16414E.  
+• Ensure keyboard navigation for filters and drag-handles.
+
+────────────────────────────────────────
+FILES LIKELY TO TOUCH
+
+• pages/Checklist.tsx  (major layout)  
+• components/TaskCard.tsx  
+• components/ChecklistFilterBar.tsx  
+• utils/exportPdf.ts / exportCsv.ts  
+• planStore.ts (persist order, notes, status, priority, dates)
+
+End of prompt.
