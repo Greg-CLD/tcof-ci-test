@@ -279,6 +279,46 @@ export default function Block3Complete() {
     setRefreshTrigger(prev => prev + 1);
   };
   
+  // Handler for clearing all tasks across all frameworks
+  const handleClearAllTasks = async () => {
+    if (!planId) return;
+    
+    try {
+      // Load current plan
+      const currentPlan = await loadPlan(planId);
+      if (!currentPlan) return;
+      
+      // Clear all tasks from all frameworks in all stages
+      Object.keys(currentPlan.stages).forEach(stageName => {
+        const stage = stageName as Stage;
+        if (currentPlan.stages[stage].goodPractice) {
+          currentPlan.stages[stage].goodPractice!.tasks = [];
+        }
+      });
+      
+      // Save the updated plan
+      const success = await savePlan(planId, currentPlan);
+      
+      if (success) {
+        // Reset selected tasks state
+        setSelectedTasks({});
+        setRefreshTrigger(prev => prev + 1);
+        
+        toast({
+          title: "Tasks cleared",
+          description: "All framework tasks have been removed",
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing tasks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear tasks",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const handleGenerateChecklist = () => {
     if (!planId) return;
     
@@ -436,17 +476,31 @@ export default function Block3Complete() {
       const currentPlan = await loadPlan(planId);
       if (!currentPlan) return;
       
-      // Create a new plan object with block 3 data cleared
-      const updatedPlan = {
-        ...currentPlan,
-        praxisZone: null,
-        frameworks: {},
-        gpTasks: {},
-        deliveryApproach: null
+      // Create a modified plan with only Block 3 data cleared
+      // This keeps Block 1 and Block 2 data intact
+      const clearGoodPracticeData = (stage: Stage) => {
+        if (currentPlan.stages[stage] && currentPlan.stages[stage].goodPractice) {
+          currentPlan.stages[stage].goodPractice = {
+            zone: null,
+            frameworks: [],
+            tasks: [],
+            customFrameworks: []
+          };
+        }
       };
       
+      // Clear good practice data across all stages
+      Object.keys(currentPlan.stages).forEach(stageName => {
+        clearGoodPracticeData(stageName as Stage);
+      });
+      
+      // Remove delivery approach data if it exists
+      if (currentPlan.goodPractice && currentPlan.goodPractice.deliveryApproach) {
+        currentPlan.goodPractice.deliveryApproach = undefined;
+      }
+      
       // Save the updated plan
-      const success = await savePlan(planId, updatedPlan);
+      const success = await savePlan(planId, currentPlan);
       
       if (success) {
         // Trigger refresh to update the UI
@@ -492,21 +546,23 @@ export default function Block3Complete() {
     setPraxisZone(data.zone);
     setZoneSelected(true);
     
-    // Get related frameworks based on the zone
-    // Simplified - just use predefined frameworks based on zone
-    let suggestedFrameworks: string[] = [];
+    // Always default to use Praxis Framework first, then add any other suggested frameworks
+    // This ensures Praxis is always the default framework as specified in the requirements
+    let suggestedFrameworks: string[] = ["PRAXIS"];
+    
+    // Add additional frameworks based on zone if needed
     if (data.zone.includes('A')) {
-      suggestedFrameworks = ["PRAXIS", "AGILEPM"];
+      // For Zone A, just use Praxis by default
     } else if (data.zone.includes('B')) {
-      suggestedFrameworks = ["PRAXIS", "TEAL_BOOK", "AGILEPM"];
+      suggestedFrameworks.push("AGILEPM");
     } else if (data.zone.includes('C')) {
-      suggestedFrameworks = ["SAFe", "AGILEPM"];
+      suggestedFrameworks.push("AGILEPM");
     } else if (data.zone.includes('D')) {
-      suggestedFrameworks = ["SAFe"];
+      suggestedFrameworks.push("SAFe");
     } else if (data.zone.includes('E')) {
-      suggestedFrameworks = ["TEAL_BOOK"];
+      suggestedFrameworks.push("SAFe");
     } else if (data.zone.includes('F')) {
-      suggestedFrameworks = ["AGILEPM"];
+      suggestedFrameworks.push("AGILEPM");
     }
     
     setSelectedFrameworks(suggestedFrameworks);
@@ -613,6 +669,7 @@ export default function Block3Complete() {
               onTaskToggle={handleTaskToggle}
               selectedTasks={selectedTasks}
               onSkip={handleSkipFrameworks}
+              onClearAllTasks={handleClearAllTasks}
             />
             
             {/* Custom Framework Editor */}

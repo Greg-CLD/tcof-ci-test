@@ -232,26 +232,53 @@ const DeliveryApproachTool: React.FC<DeliveryApproachToolProps> = ({ initial, on
                 <line x1="200" y1="0" x2="200" y2="300" stroke="#ddd" strokeWidth="1" />
                 
                 {/* Zone labels */}
-                <text x="50" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone A</text>
-                <text x="150" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone B</text>
-                <text x="250" y="250" textAnchor="middle" fontSize="14" fill="#555">Zone C</text>
-                <text x="50" y="150" textAnchor="middle" fontSize="14" fill="#555">Zone B</text>
-                <text x="150" y="150" textAnchor="middle" fontSize="14" fill="#555">Zone C</text>
-                <text x="250" y="150" textAnchor="middle" fontSize="14" fill="#555">Zone D</text>
-                <text x="50" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone F</text>
-                <text x="150" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone D</text>
-                <text x="250" y="50" textAnchor="middle" fontSize="14" fill="#555">Zone E</text>
+                <g>
+                  <text x="50" y="240" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone A</text>
+                  <text x="50" y="260" textAnchor="middle" fontSize="10" fill="#666">Fast & Focused</text>
+                </g>
+                <g>
+                  <text x="150" y="240" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone B</text>
+                  <text x="150" y="260" textAnchor="middle" fontSize="10" fill="#666">Adaptive Projects</text>
+                </g>
+                <g>
+                  <text x="250" y="240" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone C</text>
+                  <text x="250" y="260" textAnchor="middle" fontSize="10" fill="#666">Iterative Delivery</text>
+                </g>
+                <g>
+                  <text x="50" y="140" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone B</text>
+                  <text x="50" y="160" textAnchor="middle" fontSize="10" fill="#666">Adaptive Projects</text>
+                </g>
+                <g>
+                  <text x="150" y="140" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone C</text>
+                  <text x="150" y="160" textAnchor="middle" fontSize="10" fill="#666">Iterative Delivery</text>
+                </g>
+                <g>
+                  <text x="250" y="140" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone D</text>
+                  <text x="250" y="160" textAnchor="middle" fontSize="10" fill="#666">Agile/Hybrid</text>
+                </g>
+                <g>
+                  <text x="50" y="40" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone F</text>
+                  <text x="50" y="60" textAnchor="middle" fontSize="10" fill="#666">Systems Thinking</text>
+                </g>
+                <g>
+                  <text x="150" y="40" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone D</text>
+                  <text x="150" y="60" textAnchor="middle" fontSize="10" fill="#666">Agile/Hybrid</text>
+                </g>
+                <g>
+                  <text x="250" y="40" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#555">Zone E</text>
+                  <text x="250" y="60" textAnchor="middle" fontSize="10" fill="#666">Complex Adaptive</text>
+                </g>
                 
                 {/* X and Y axis labels - Flipped with Scope on X-axis */}
-                <text x="150" y="295" textAnchor="middle" fontSize="12" fill="#333">Scope</text>
-                <text x="50" y="295" textAnchor="middle" fontSize="10" fill="#666">Small</text>
+                <text x="150" y="295" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#333">Scope</text>
+                <text x="50" y="295" textAnchor="middle" fontSize="10" fill="#666">Simple</text>
                 <text x="150" y="295" textAnchor="middle" fontSize="10" fill="#666">Medium</text>
-                <text x="250" y="295" textAnchor="middle" fontSize="10" fill="#666">Large</text>
+                <text x="250" y="295" textAnchor="middle" fontSize="10" fill="#666">Complex</text>
                 
-                <text x="5" y="150" textAnchor="middle" fontSize="12" fill="#333" transform="rotate(-90, 5, 150)">Uncertainty</text>
-                <text x="20" y="250" textAnchor="middle" fontSize="10" fill="#666">Low</text>
-                <text x="20" y="150" textAnchor="middle" fontSize="10" fill="#666">Medium</text>
-                <text x="20" y="50" textAnchor="middle" fontSize="10" fill="#666">High</text>
+                <text x="15" y="150" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#333" transform="rotate(-90, 15, 150)">Uncertainty</text>
+                <text x="35" y="250" textAnchor="middle" fontSize="10" fill="#666">Low</text>
+                <text x="35" y="150" textAnchor="middle" fontSize="10" fill="#666">Medium</text>
+                <text x="35" y="50" textAnchor="middle" fontSize="10" fill="#666">High</text>
                 
                 {/* Highlight selected cell - Flipped coordinates */}
                 {scope && uncertainty && (

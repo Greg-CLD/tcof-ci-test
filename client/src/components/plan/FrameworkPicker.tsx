@@ -24,6 +24,7 @@ interface FrameworkPickerProps {
   onTaskToggle: (text: string, frameworkCode: string, stage: Stage) => void;
   selectedTasks: Record<string, Record<Stage, string[]>>;
   onSkip: () => void;
+  onClearAllTasks?: () => void;
 }
 
 export default function FrameworkPicker({
@@ -31,7 +32,8 @@ export default function FrameworkPicker({
   onFrameworkToggle,
   onTaskToggle,
   selectedTasks,
-  onSkip
+  onSkip,
+  onClearAllTasks
 }: FrameworkPickerProps) {
   const [frameworks, setFrameworks] = useState<Framework[]>([]);
   const [expandedFrameworks, setExpandedFrameworks] = useState<string[]>([]);
@@ -227,9 +229,20 @@ export default function FrameworkPicker({
       )}
       
       <div className="flex justify-between mt-4">
-        <Button variant="outline" onClick={onSkip}>
-          Skip This Step
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onSkip}>
+            Skip This Step
+          </Button>
+          {totalTaskCount > 0 && onClearAllTasks && (
+            <Button 
+              variant="destructive" 
+              onClick={onClearAllTasks}
+              size="sm"
+            >
+              Clear All Tasks
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
