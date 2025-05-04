@@ -805,25 +805,14 @@ export default function Block2Design() {
             Steps to complete this block:
           </p>
           <ol className="list-decimal list-inside space-y-2 mt-2 mb-4">
-            <li>Select a project stage (Identification, Definition, Delivery, or Closure)</li>
             <li>Map your personal heuristics to TCOF success factors</li>
-            <li>Import tasks from the TCOF framework</li>
-            <li>Add custom policy tasks as needed</li>
-            <li>Repeat for each project stage</li>
+            <li>Create tasks for your unmapped heuristics</li>
+            <li>Add organizational policy tasks as needed</li>
+            <li>Use the tabs in each section to switch between stages (Identification, Definition, Delivery, Closure)</li>
           </ol>
         </IntroAccordion>
         
-        {/* Stage Selector */}
-        <div className="mb-6 bg-gray-50 p-4 rounded-lg border">
-          <h3 className="text-lg font-medium mb-2">Select Project Stage</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Choose the project stage you want to work on. Each stage requires its own set of mappings and tasks.
-          </p>
-          <StageSelector
-            currentStage={currentStage}
-            onStageChange={handleStageChange}
-          />
-        </div>
+        {/* The Stage Selector is now handled via the tab interface in each component */}
         
         {personalHeuristics.length === 0 && (
           <Alert variant="destructive" className="mb-6">

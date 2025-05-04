@@ -116,7 +116,7 @@ export default function OrgPolicies({
               onUpdateTask={onUpdateTask}
               onDeleteTask={onDeleteTask}
               onSelectItem={setSelectedPolicyId}
-              isAutoSaving={true}
+              isAutoSaving={false}
             />
           ) : (
             <div className="p-8 text-center text-muted-foreground border border-dashed rounded-md">

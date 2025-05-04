@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Trash2, Loader2, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import debounce from 'lodash.debounce';
 import { getUserHeuristicTaskDisplayName, isTaskAlreadyFormatted } from '@/lib/taskDisplayName';
 
 export type StageType = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
@@ -51,19 +50,17 @@ export default function FactorTaskEditor({
   const [savedTaskIndex, setSavedTaskIndex] = useState<number | null>(null);
   const { toast } = useToast();
   
-  // Create a debounced task update function
-  const debouncedUpdateTask = useCallback(
-    debounce((itemId: string, stage: StageType, taskIndex: number, newText: string) => {
-      onUpdateTask(itemId, stage, taskIndex, newText);
-      setSavingTaskIndex(null);
-      setSavedTaskIndex(taskIndex);
-      // Clear saved indicator after 1.5 seconds
-      setTimeout(() => {
-        setSavedTaskIndex(null);
-      }, 1500);
-    }, 800), // 800ms debounce
-    [onUpdateTask]
-  );
+  // Update task function without debounce
+  // We now only call this on specific events (Enter, blur, Add Task button)
+  const updateTask = useCallback((itemId: string, stage: StageType, taskIndex: number, newText: string) => {
+    onUpdateTask(itemId, stage, taskIndex, newText);
+    setSavingTaskIndex(null);
+    setSavedTaskIndex(taskIndex);
+    // Clear saved indicator after 1.5 seconds
+    setTimeout(() => {
+      setSavedTaskIndex(null);
+    }, 1500);
+  }, [onUpdateTask]);
   
   // Create a reference for active input field
   const inputRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
@@ -82,7 +79,7 @@ export default function FactorTaskEditor({
       const input = e.currentTarget;
       const newText = input.value;
       
-      debouncedUpdateTask(itemId, stage, taskIndex, newText);
+      updateTask(itemId, stage, taskIndex, newText);
       
       // Move focus to next input or blur if it's the last one
       input.blur();
@@ -92,7 +89,7 @@ export default function FactorTaskEditor({
   // Handle blur events to save when user clicks away
   const handleBlur = (itemId: string, stage: StageType, taskIndex: number, newText: string) => {
     setSavingTaskIndex(taskIndex);
-    debouncedUpdateTask(itemId, stage, taskIndex, newText);
+    updateTask(itemId, stage, taskIndex, newText);
   };
 
   // Get the currently selected item
@@ -173,47 +170,58 @@ export default function FactorTaskEditor({
                           No tasks for this stage. Add your first task below.
                         </div>
                       ) : (
-                        tasks[stage].map((task: string, index: number) => (
-                          <div key={index} className="flex items-start space-x-2">
-                            <div className="flex-1 relative">
-                              <Input
-                                value={isTaskAlreadyFormatted(task) ? task : task || getUserHeuristicTaskDisplayName(
-                                  items.findIndex(item => item.id === selectedItemId) + 1,
-                                  stage,
-                                  index + 1
-                                )}
-                                onChange={(e) => {
-                                  if (selectedItemId) {
-                                    // Just update the UI value without saving
-                                    inputRefs.current[`${stage}_${index}`]?.setAttribute('value', e.target.value);
-                                  }
-                                }}
-                                onBlur={(e) => selectedItemId && handleBlur(selectedItemId, stage, index, e.target.value)}
-                                onKeyDown={(e) => selectedItemId && handleKeyPress(e, selectedItemId, stage, index)}
-                                ref={(el) => inputRefs.current[`${stage}_${index}`] = el}
-                                className="flex-1"
-                              />
-                              {savingTaskIndex === index && (
-                                <div className="absolute right-2 top-2 text-sm text-muted-foreground">
-                                  <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
-                                  Saving...
+                        tasks[stage].map((task: string, index: number) => {
+                          // Generate the display name for this task
+                          const displayName = isTaskAlreadyFormatted(task) ? task : getUserHeuristicTaskDisplayName(
+                            items.findIndex(item => item.id === selectedItemId) + 1,
+                            stage,
+                            index + 1
+                          );
+
+                          return (
+                            <div key={index} className="flex flex-col space-y-1 mb-4">
+                              {/* Show the friendly task name as a label */}
+                              <label className="text-sm font-medium text-gray-700">
+                                {displayName}
+                              </label>
+                              <div className="flex items-start space-x-2">
+                                <div className="flex-1 relative">
+                                  <Input
+                                    placeholder="Enter task description here..."
+                                    onChange={(e) => {
+                                      if (selectedItemId) {
+                                        // Just update the UI value without saving
+                                        inputRefs.current[`${stage}_${index}`]?.setAttribute('value', e.target.value);
+                                      }
+                                    }}
+                                    onBlur={(e) => selectedItemId && handleBlur(selectedItemId, stage, index, e.target.value)}
+                                    onKeyDown={(e) => selectedItemId && handleKeyPress(e, selectedItemId, stage, index)}
+                                    ref={(el) => inputRefs.current[`${stage}_${index}`] = el}
+                                    className="flex-1"
+                                  />
+                                  {savingTaskIndex === index && (
+                                    <div className="absolute right-2 top-2 text-sm text-muted-foreground">
+                                      <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
+                                      Saving...
+                                    </div>
+                                  )}
+                                  {savedTaskIndex === index && (
+                                    <div className="absolute right-2 top-2 text-sm text-tcof-teal animate-fadeOut">
+                                      ✅ Saved
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {savedTaskIndex === index && (
-                                <div className="absolute right-2 top-2 text-sm text-tcof-teal animate-fadeOut">
-                                  ✅ Saved
-                                </div>
-                              )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => selectedItemId && onDeleteTask(selectedItemId, stage, index)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => selectedItemId && onDeleteTask(selectedItemId, stage, index)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                       
                       <Button
