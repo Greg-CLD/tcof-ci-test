@@ -123,6 +123,15 @@ export default function Block2Design() {
   const tasks = stageData?.tasks || [];
   const policyTasks = stageData?.policyTasks || [];
   
+  // Load org policies when plan data or stage changes
+  useEffect(() => {
+    if (planData?.stages?.[currentStage]?.orgPolicies) {
+      setOrgPolicies(planData.stages[currentStage].orgPolicies);
+    } else {
+      setOrgPolicies([]);
+    }
+  }, [planData, currentStage]);
+  
   // Get only unmapped heuristics for Step 4
   const unmappedHeuristics = personalHeuristics.filter((h: PersonalHeuristic) => 
     !mappings.some((m: Mapping) => m.heuristicId === h.id && m.factorId !== null)
@@ -663,25 +672,29 @@ export default function Block2Design() {
             ...planData.stages.Identification,
             mappings: [],
             tasks: [],
-            policyTasks: []
+            policyTasks: [],
+            orgPolicies: []
           },
           Definition: {
             ...planData.stages.Definition,
             mappings: [],
             tasks: [],
-            policyTasks: []
+            policyTasks: [],
+            orgPolicies: []
           },
           Delivery: {
             ...planData.stages.Delivery,
             mappings: [],
             tasks: [],
-            policyTasks: []
+            policyTasks: [],
+            orgPolicies: []
           },
           Closure: {
             ...planData.stages.Closure,
             mappings: [],
             tasks: [],
-            policyTasks: []
+            policyTasks: [],
+            orgPolicies: []
           }
         }
       };
@@ -857,47 +870,40 @@ export default function Block2Design() {
             </CardHeader>
             
             <CardContent>
-              <div className="p-4 border-2 border-dashed rounded-md border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800">
-                <h3 className="text-lg font-medium mb-3">Organization-Specific Tasks</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Add tasks that are required by your organization's policies or governance frameworks.
-                  These might include approvals, documentation, or compliance checks specific to your context.
-                </p>
-                
-                <div className="space-y-3">
-                  {/* Policy Task Input */}
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm font-medium">Enter policy task for {currentStage} stage:</label>
-                    <div className="flex items-center space-x-2">
-                      <input 
-                        type="text" 
-                        placeholder="e.g., Get sign-off from Finance department" 
-                        className="flex-1 p-2 border rounded-md"
-                        value={newPolicyTask}
-                        onChange={(e) => setNewPolicyTask(e.target.value)}
-                      />
-                      <Button onClick={handleLegacyAddPolicyTask}>Add Task</Button>
-                    </div>
+              {/* Legacy Policy Tasks Section */}
+              {policyTasks.length > 0 && (
+                <div className="mb-6">
+                  <div className="p-4 border rounded-md bg-amber-50">
+                    <h3 className="text-md font-medium text-amber-800 mb-2">Legacy Policy Tasks</h3>
+                    <p className="text-sm text-amber-700 mb-3">
+                      The following tasks were created with the previous version of the policy system.
+                      Consider migrating them to the new Organizational Policies below.
+                    </p>
+                    <ul className="space-y-2">
+                      {policyTasks.map((task: PolicyTask) => (
+                        <li key={task.id} className="flex items-center justify-between p-2 bg-white rounded-md border">
+                          <span>{task.text}</span>
+                          <Button variant="ghost" size="sm" onClick={() => handleLegacyRemovePolicyTask(task.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  
-                  {/* Display existing policy tasks */}
-                  {policyTasks.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="text-sm font-medium mb-2">Current Policy Tasks:</h4>
-                      <ul className="space-y-2">
-                        {policyTasks.map((task: PolicyTask) => (
-                          <li key={task.id} className="flex items-center justify-between p-2 bg-white rounded-md border">
-                            <span>{task.text}</span>
-                            <Button variant="ghost" size="sm" onClick={() => handleLegacyRemovePolicyTask(task.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
+              
+              {/* New OrgPolicies Component */}
+              <OrgPolicies
+                planId={planId || ''}
+                policies={orgPolicies}
+                onAddPolicy={handleAddPolicy}
+                onUpdatePolicy={handleUpdatePolicy}
+                onDeletePolicy={handleDeletePolicy}
+                onAddTask={handleAddOrgPolicyTask}
+                onUpdateTask={handleUpdatePolicyTask}
+                onDeleteTask={handleDeletePolicyTask}
+              />
             </CardContent>
           </Card>
         </div>
