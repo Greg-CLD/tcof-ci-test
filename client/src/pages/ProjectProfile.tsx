@@ -33,21 +33,7 @@ const projectFormSchema = z.object({
   name: z.string().min(2, 'Project name must be at least 2 characters').max(100, 'Project name must not exceed 100 characters'),
   description: z.string().optional(),
   sector: z.string().min(1, 'Please select a sector'),
-  customSector: z.string().optional()
-    .superRefine((value, ctx) => {
-      // If sector is "other", customSector is required
-      // Access parent data safely through the path
-      // Get the form data to check sector value
-  const data: any = ctx.path.length ? ctx.getData() : undefined;
-  if (data && data.sector === 'other' && (!value || value.trim() === '')) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Please describe your sector'
-        });
-        return false;
-      }
-      return true;
-    }),
+  customSector: z.string().optional(),
   orgType: z.string().min(1, 'Please select an organization type'),
   teamSize: z.string().optional(),
   currentStage: z.string().min(1, 'Please select your current stage'),
@@ -124,6 +110,15 @@ export default function ProjectProfile() {
   // Form submission handler
   const onSubmit = async (data: ProjectFormValues) => {
     try {
+      // Check if sector is "other" but customSector is empty
+      if (data.sector === 'other' && (!data.customSector || data.customSector.trim() === '')) {
+        form.setError('customSector', {
+          type: 'manual',
+          message: 'Please describe your sector'
+        });
+        return;
+      }
+      
       // Create project data with proper typing
       const projectData: CreateProjectData = {
         name: data.name,

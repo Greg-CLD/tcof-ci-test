@@ -28,6 +28,7 @@ import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-prot
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProgressProvider } from "@/hooks/use-progress";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { ProtectedRouteGuard } from "@/components/ProtectedRouteGuard";
 import { Button } from "@/components/ui/button";
 import GoalMappingTool from "@/components/GoalMappingTool";
 import CynefinOrientationTool from "@/components/CynefinOrientationTool";
@@ -81,20 +82,50 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/get-your-bearings" component={GetYourBearings} />
       <Route path="/get-your-bearings/project-profile" component={ProjectProfile} />
-      <Route path="/make-a-plan" component={MakeAPlanLanding} />
-      <Route path="/make-a-plan/full/intro" component={MakeAPlanFullIntro} />
-      <Route path="/make-a-plan/full/block-1" component={Block1Discover} />
-      <Route path="/make-a-plan/full/block-2" component={Block2Design} />
-      <Route path="/make-a-plan/full/block-3" component={Block3Complete} />
-      <Route path="/make-a-plan/full/:blockId" component={MakeAPlanFull} />
+      <Route path="/make-a-plan">
+        <ProtectedRouteGuard>
+          <MakeAPlanLanding />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/full/intro">
+        <ProtectedRouteGuard>
+          <MakeAPlanFullIntro />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/full/block-1">
+        <ProtectedRouteGuard>
+          <Block1Discover />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/full/block-2">
+        <ProtectedRouteGuard>
+          <Block2Design />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/full/block-3">
+        <ProtectedRouteGuard>
+          <Block3Complete />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/full/:blockId">
+        <ProtectedRouteGuard>
+          <MakeAPlanFull />
+        </ProtectedRouteGuard>
+      </Route>
       <Route path="/make-a-plan/admin" component={AdminPresetEditor} />
       <Route path="/make-a-plan/admin/factors" component={AdminFactorEditor} />
-      <Route path="/checklist" component={Checklist} />
+      <Route path="/checklist">
+        <ProtectedRouteGuard>
+          <Checklist />
+        </ProtectedRouteGuard>
+      </Route>
       
       {/* Dashboard route - protected like other tools */}
       <Route path="/dashboard">
         {isAuthenticated('starter-access') || user ? (
-          <Dashboard />
+          <ProtectedRouteGuard>
+            <Dashboard />
+          </ProtectedRouteGuard>
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
             <main className="flex-grow container mx-auto px-4 py-12">
@@ -123,7 +154,9 @@ function Router() {
       {/* Protected routes with dual authentication (old password system + new database auth) */}
       <Route path="/tools/goal-mapping">
         {isAuthenticated('starter-access') || user ? (
-          <GoalMappingPage />
+          <ProtectedRouteGuard>
+            <GoalMappingPage />
+          </ProtectedRouteGuard>
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
             <main className="flex-grow container mx-auto px-4 py-12">
@@ -151,7 +184,9 @@ function Router() {
       
       <Route path="/tools/cynefin-orientation">
         {isAuthenticated('starter-access') || user ? (
-          <CynefinOrientationPage />
+          <ProtectedRouteGuard>
+            <CynefinOrientationPage />
+          </ProtectedRouteGuard>
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
             <main className="flex-grow container mx-auto px-4 py-12">
@@ -179,7 +214,9 @@ function Router() {
       
       <Route path="/tools/tcof-journey">
         {isAuthenticated('starter-access') || user ? (
-          <TCOFJourneyPage />
+          <ProtectedRouteGuard>
+            <TCOFJourneyPage />
+          </ProtectedRouteGuard>
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
             <main className="flex-grow container mx-auto px-4 py-12">
