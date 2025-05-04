@@ -17,6 +17,10 @@ export interface Project {
   userId: number;
   name: string;
   description?: string;
+  sector?: string;
+  orgType?: string;
+  teamSize?: string;
+  deliveryStage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,7 +74,14 @@ export const projectsDb = {
    */
   createProject: async (
     userId: number,
-    data: { name: string; description?: string }
+    data: { 
+      name: string; 
+      description?: string;
+      sector?: string;
+      orgType?: string;
+      teamSize?: string;
+      deliveryStage?: string;
+    }
   ): Promise<Project | null> => {
     try {
       // Create new project object
@@ -79,6 +90,10 @@ export const projectsDb = {
         userId,
         name: data.name,
         description: data.description || '',
+        sector: data.sector,
+        orgType: data.orgType,
+        teamSize: data.teamSize,
+        deliveryStage: data.deliveryStage,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -153,7 +168,14 @@ export const projectsDb = {
    */
   updateProject: async (
     projectId: string,
-    data: { name?: string; description?: string }
+    data: { 
+      name?: string; 
+      description?: string;
+      sector?: string;
+      orgType?: string;
+      teamSize?: string;
+      deliveryStage?: string;
+    }
   ): Promise<Project | null> => {
     try {
       // Load all projects
