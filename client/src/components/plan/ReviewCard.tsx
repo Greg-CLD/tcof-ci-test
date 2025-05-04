@@ -18,7 +18,8 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from '@/components/ui/tooltip';
-import { exportPDF, exportCSV } from '@/lib/exportUtils';
+import { exportPlanPDF, exportCSV } from '@/lib/exportUtils';
+import { getPlan } from '@/lib/plan-db';
 
 interface ReviewCardProps {
   planId: string;
@@ -35,7 +36,7 @@ export default function ReviewCard({ planId, onGenerateChecklist }: ReviewCardPr
     if (!planId) return;
     setIsExporting(true);
     try {
-      await exportPDF(planId);
+      await exportPlanPDF(planId);
     } catch (error) {
       console.error('Error exporting PDF:', error);
     } finally {

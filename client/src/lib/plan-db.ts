@@ -223,6 +223,138 @@ export const savePlan = async (id: string, data: Partial<PlanRecord>): Promise<b
 export const getPlans = (): Record<string, PlanRecord> => ({ ...plans });
 
 /**
+ * Gets a single plan by ID
+ * @param planId - The ID of the plan to retrieve
+ */
+export const getPlan = (planId: string): PlanRecord | null => {
+  return plans[planId] || null;
+};
+
+interface ParentItem {
+  id: string;
+  label: string;
+  source: 'heuristic' | 'factor' | 'policy' | 'framework';
+  tasks: string[];
+}
+
+/**
+ * Get tasks organized by parent and stage
+ * @param planId - The ID of the plan
+ */
+export const getParentsByStage = (planId: string): Record<Stage, ParentItem[]> => {
+  const plan = plans[planId];
+  if (!plan) {
+    return {
+      Identification: [],
+      Definition: [],
+      Delivery: [],
+      Closure: []
+    };
+  }
+  
+  const result: Record<Stage, ParentItem[]> = {
+    Identification: [],
+    Definition: [],
+    Delivery: [],
+    Closure: []
+  };
+  
+  // Process all stages
+  Object.keys(plan.stages).forEach(stageName => {
+    const stage = stageName as Stage;
+    const stageData = plan.stages[stage];
+    const parentGroups: Record<string, ParentItem> = {};
+    
+    // Process tasks from factors and heuristics
+    (stageData.tasks || []).forEach(task => {
+      const sourceId = task.sourceId || 'unknown';
+      let label = 'Unknown Source';
+      let source: 'heuristic' | 'factor' | 'policy' = task.origin;
+      
+      // Determine parent label based on source
+      if (task.origin === 'heuristic') {
+        const heuristic = (stageData.personalHeuristics || []).find(h => h.id === sourceId);
+        label = heuristic ? heuristic.text : 'Personal Heuristic';
+      } else if (task.origin === 'factor') {
+        label = 'Success Factor Tasks';
+      } else if (task.origin === 'policy') {
+        label = 'Organizational Policy';
+      }
+      
+      // Create or update parent group
+      if (!parentGroups[sourceId]) {
+        parentGroups[sourceId] = {
+          id: sourceId,
+          label,
+          source,
+          tasks: []
+        };
+      }
+      
+      parentGroups[sourceId].tasks.push(task.text);
+    });
+    
+    // Process tasks from policies
+    (stageData.policyTasks || []).forEach(task => {
+      const policyId = 'policy';
+      
+      if (!parentGroups[policyId]) {
+        parentGroups[policyId] = {
+          id: policyId,
+          label: 'Organizational Policy',
+          source: 'policy',
+          tasks: []
+        };
+      }
+      
+      parentGroups[policyId].tasks.push(task.text);
+    });
+    
+    // Process good practice tasks
+    if (stageData.goodPractice) {
+      (stageData.goodPractice.tasks || []).forEach(task => {
+        const frameworkId = task.frameworkCode;
+        
+        if (!parentGroups[frameworkId]) {
+          parentGroups[frameworkId] = {
+            id: frameworkId,
+            label: `Framework: ${frameworkId}`,
+            source: 'framework',
+            tasks: []
+          };
+        }
+        
+        parentGroups[frameworkId].tasks.push(task.text);
+      });
+      
+      // Process custom frameworks
+      (stageData.goodPractice.customFrameworks || []).forEach(framework => {
+        const frameworkId = framework.id;
+        const stageTasks = framework.tasks[stage] || [];
+        
+        if (stageTasks.length > 0) {
+          if (!parentGroups[frameworkId]) {
+            parentGroups[frameworkId] = {
+              id: frameworkId,
+              label: framework.name,
+              source: 'framework',
+              tasks: []
+            };
+          }
+          
+          parentGroups[frameworkId].tasks.push(...stageTasks);
+        }
+      });
+    }
+    
+    // Convert parentGroups object to array
+    result[stage] = Object.values(parentGroups);
+  });
+  
+  return result;
+};
+
+/**
  * Adds a mapping between a heuristic and a factor
  */
 export const addMapping = (

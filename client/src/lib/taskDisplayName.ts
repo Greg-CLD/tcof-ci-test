@@ -49,3 +49,35 @@ export function isTaskAlreadyFormatted(taskText: string): boolean {
   // Check for UH pattern or Policy pattern
   return /^UH\d{2} - /.test(taskText) || /^Policy: .+ - .+ - Task \d+$/.test(taskText);
 }
+
+/**
+ * Formats a task for display, handling both formatted and unformatted tasks
+ * 
+ * @param taskText The task text to format
+ * @returns A properly formatted task name for display
+ */
+export function formatTaskName(taskText: string): string {
+  if (!taskText) return '';
+  
+  // If the task is already formatted with a code, extract the actual task content
+  if (isTaskAlreadyFormatted(taskText)) {
+    // Handle UH pattern (e.g., "UH01 - Identification - Task 1: Actual task content")
+    if (/^UH\d{2} - /.test(taskText)) {
+      const parts = taskText.split(': ');
+      if (parts.length > 1) {
+        return parts.slice(1).join(': '); // Return everything after the first colon
+      }
+    }
+    
+    // Handle Policy pattern (e.g., "Policy: Risk - Identification - Task 1: Actual task content")
+    if (/^Policy: .+ - .+ - Task \d+/.test(taskText)) {
+      const parts = taskText.split(': ');
+      if (parts.length > 1) {
+        return parts.slice(1).join(': '); // Return everything after the first colon
+      }
+    }
+  }
+  
+  // If it's not formatted or we couldn't extract the task content, return the original
+  return taskText;
+}
