@@ -78,9 +78,9 @@ export const storage = {
 
   async getUserByUsername(username: string) {
     try {
-      // Use a direct SQL query to avoid the ORM column mapping issue
+      // Use a direct SQL query to avoid the ORM column mapping issue, based on the actual schema
       const result = await db.execute(
-        sql`SELECT id, username, email, password, created_at, updated_at FROM users WHERE username = ${username}`
+        sql`SELECT id, username, email, password, created_at FROM users WHERE username = ${username}`
       );
       
       if (result && result.rows && result.rows.length > 0) {
@@ -91,9 +91,9 @@ export const storage = {
           email: row.email,
           password: row.password,
           createdAt: row.created_at,
-          updatedAt: row.updated_at,
-          firstName: null,
-          lastName: null
+          updatedAt: null, // This field doesn't exist in the database
+          firstName: null, // This field doesn't exist in the database
+          lastName: null   // This field doesn't exist in the database
         };
       }
       
@@ -105,18 +105,36 @@ export const storage = {
   },
 
   async createUser(userData: { username: string; password: string; email?: string }) {
-    // Hash the password before storing
-    const hashedPassword = await hashPassword(userData.password);
-    
-    const [user] = await db.insert(users)
-      .values({
-        username: userData.username,
-        password: hashedPassword,
-        email: userData.email,
-      })
-      .returning();
-    
-    return user;
+    try {
+      // Hash the password before storing
+      const hashedPassword = await hashPassword(userData.password);
+      
+      // Use direct SQL query to avoid column name mismatches
+      const result = await db.execute(
+        sql`INSERT INTO users (username, password, email, created_at)
+            VALUES (${userData.username}, ${hashedPassword}, ${userData.email || null}, ${new Date()})
+            RETURNING id, username, email, created_at`
+      );
+      
+      if (result.rows && result.rows.length > 0) {
+        const row = result.rows[0];
+        return {
+          id: row.id,
+          username: row.username,
+          email: row.email,
+          password: hashedPassword,
+          createdAt: row.created_at,
+          updatedAt: null,
+          firstName: null,
+          lastName: null
+        };
+      }
+      
+      throw new Error('Failed to create user');
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
   },
 
   // Password verification

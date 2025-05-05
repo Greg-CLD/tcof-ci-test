@@ -102,32 +102,61 @@ function setupAuth(app: Express) {
       // Log the user in
       req.login(user, (err) => {
         if (err) {
-          return res.status(500).json({ message: "Error during login" });
+          console.error('Error during login after registration:', err);
+          return res.status(500).json({ message: "Account created but couldn't log you in automatically, please log in manually" });
         }
-        return res.status(201).json(user);
+        
+        // Return filtered user data
+        return res.status(201).json({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          createdAt: user.createdAt
+        });
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
+        return res.status(400).json({ 
+          message: "Invalid registration data", 
+          errors: error.errors.map(e => `${e.path.join('.')}: ${e.message}`) 
+        });
       }
+      
       console.error("Registration error:", error);
-      return res.status(500).json({ message: "Registration failed" });
+      
+      // Provide more specific error message if possible
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "Username or email already exists" });
+      }
+      
+      return res.status(500).json({ message: "Registration failed, please try again" });
     }
   });
 
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
-        return next(err);
+        console.error('Login error:', err);
+        return res.status(500).json({ message: "Server error during login, please try again" });
       }
+      
       if (!user) {
-        return res.status(401).json({ message: info.message || "Authentication failed" });
+        return res.status(401).json({ message: info?.message || "Invalid username or password" });
       }
-      req.login(user, (err) => {
-        if (err) {
-          return next(err);
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error('Session error during login:', loginErr);
+          return res.status(500).json({ message: "Error creating session, please try again" });
         }
-        return res.json(user);
+        
+        // Return user data
+        return res.status(200).json({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          createdAt: user.createdAt
+        });
       });
     })(req, res, next);
   });
