@@ -8,7 +8,7 @@ import { FileDown, Loader2 } from "lucide-react";
 import { OutcomeSelectorModal, type Outcome } from "@/components/outcomes/OutcomeSelectorModal";
 import { OutcomeProgressTracker, type OutcomeProgress } from "@/components/outcomes/OutcomeProgressTracker";
 import { OutcomeRadarChart } from "@/components/outcomes/OutcomeRadarChart";
-import { generatePDF } from "@/lib/pdfExport";
+import { exportOutcomesToPDF } from "@/lib/pdfExport";
 import { useProjectContext } from "@/contexts/ProjectContext";
 
 export default function OutcomeManagement() {
@@ -70,11 +70,17 @@ export default function OutcomeManagement() {
     
     setExportingPDF(true);
     try {
-      await generatePDF({
-        projectName: currentProject.name,
-        outcomes: selectedOutcomes,
-        outcomeProgress: outcomeProgress || [],
-      });
+      // Create a dummy SVG element for the PDF export
+      const svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svgElement.setAttribute("width", "400");
+      svgElement.setAttribute("height", "400");
+      
+      await exportOutcomesToPDF(
+        currentProject.name,
+        svgElement,
+        selectedOutcomes,
+        outcomeProgress || []
+      );
       
       toast({
         title: "Report exported",

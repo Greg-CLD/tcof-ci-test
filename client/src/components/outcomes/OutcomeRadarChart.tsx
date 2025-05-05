@@ -1,18 +1,25 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { type Outcome } from "./OutcomeSelectorModal";
 import { type OutcomeProgress } from "./OutcomeProgressTracker";
+
+export interface OutcomeRadarChartRef {
+  getSvgElement: () => SVGSVGElement | null;
+}
 
 interface OutcomeRadarChartProps {
   outcomes: Outcome[];
   outcomeProgress: OutcomeProgress[];
 }
 
-export function OutcomeRadarChart({
-  outcomes,
-  outcomeProgress
-}: OutcomeRadarChartProps) {
+export const OutcomeRadarChart = forwardRef<OutcomeRadarChartRef, OutcomeRadarChartProps>((props, ref) => {
+  const { outcomes, outcomeProgress } = props;
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Expose the SVG element to the parent component
+  useImperativeHandle(ref, () => ({
+    getSvgElement: () => svgRef.current
+  }));
   
   // Get the latest progress for each outcome
   const getProgressValue = (outcomeId: string): number => {
@@ -188,4 +195,4 @@ export function OutcomeRadarChart({
       </CardContent>
     </Card>
   );
-}
+});
