@@ -59,15 +59,17 @@ export default function Checklist() {
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
     setPlan(updatedPlan);
     // Save the updated plan to storage
-    savePlan(updatedPlan)
-      .catch(err => {
-        console.error('Error saving plan:', err);
-        toast({
-          title: "Error saving plan",
-          description: "There was a problem saving your changes.",
-          variant: "destructive",
+    if (selectedPlanId) {
+      savePlan(selectedPlanId, { ...updatedPlan })
+        .catch(err => {
+          console.error('Error saving plan:', err);
+          toast({
+            title: "Error saving plan",
+            description: "There was a problem saving your changes.",
+            variant: "destructive",
+          });
         });
-      });
+    }
   };
   
   // Handle exporting the plan
