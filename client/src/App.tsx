@@ -27,6 +27,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import ProjectProfile from "@/pages/ProjectProfile";
 import Dashboard from "@/pages/Dashboard";
 import OutcomeManagement from "@/pages/OutcomeManagement";
+import TestAuth from "@/pages/TestAuth";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProgressProvider } from "@/hooks/use-progress";
@@ -79,6 +80,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/pro-tools" component={ProTools} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/test-auth" component={TestAuth} />
       <Route path="/tools/starter-access" component={StarterAccess} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/history" component={UserHistory} />
