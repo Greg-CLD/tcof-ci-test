@@ -456,9 +456,10 @@ export const ensurePlanForProject = async (projectId: string): Promise<string> =
       
       return planId;
     }
-  } catch (error) {
+  } catch (err) {
+    const error = err as Error;
     console.error(`Error ensuring plan for project ${projectId}:`, error);
-    throw new Error(`Failed to ensure plan for project: ${error.message}`);
+    throw new Error(`Failed to ensure plan for project: ${error.message || 'Unknown error'}`);
   }
 };
 

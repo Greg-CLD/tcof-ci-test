@@ -8,6 +8,7 @@ import session from "express-session";
 import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
 import { relationsDb, createRelation, loadRelations } from './relationsDb';
@@ -584,8 +585,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { origin: 'createProject' }
       );
       
-      console.log(`Project saved → ${project.id}`);
-      res.status(201).json(project);
+      // Automatically create a plan for this project on server-side
+      // This is a lightweight plan shell - client-side can fully populate it
+      const planId = uuidv4();
+      
+      // Store the plan ID's association with the project
+      await relationsDb.createRelation(
+        planId, 
+        project.id, 
+        'PLAN_FOR_PROJECT', 
+        project.id,
+        {
+          createdAt: new Date().toISOString()
+        }
+      );
+      
+      console.log(`Project saved → ${project.id} with plan ${planId}`);
+      res.status(201).json({ 
+        ...project, 
+        planId // Include planId in the response
+      });
     } catch (error: any) {
       console.error("Error creating project:", error);
       res.status(500).json({ message: "Error creating project" });
