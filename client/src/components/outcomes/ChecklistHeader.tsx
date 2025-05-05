@@ -87,13 +87,13 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
       if (success) {
         toast({
           title: "PDF ready!",
-          description: "Your outcomes report has been downloaded.",
+          description: "Check your downloads.",
           variant: "default",
         });
       } else {
         toast({
           title: "Export failed",
-          description: "Could not generate the PDF.",
+          description: "Unable to generate PDF.",
           variant: "destructive",
         });
       }
@@ -101,7 +101,7 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
       console.error('PDF export error:', error);
       toast({
         title: "Export failed",
-        description: "An error occurred while generating the PDF.",
+        description: "Unable to generate PDF.",
         variant: "destructive",
       });
     } finally {
@@ -126,7 +126,7 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
                         size="sm"
                         className="flex items-center gap-1"
                         onClick={handleExportPDF}
-                        disabled={!user || isExporting || selectedOutcomes.length === 0}
+                        disabled={!user || isExporting}
                       >
                         {isExporting ? (
                           <div className="animate-spin mr-1 h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full" />
@@ -139,7 +139,7 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
                   </TooltipTrigger>
                   {!user && (
                     <TooltipContent>
-                      <p>Create a free account to export</p>
+                      <p>You must be logged in to export a PDF.</p>
                     </TooltipContent>
                   )}
                 </Tooltip>

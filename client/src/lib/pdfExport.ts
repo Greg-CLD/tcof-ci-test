@@ -39,8 +39,8 @@ export async function exportOutcomesToPDF(
     
     // Set up header with project name and timestamp
     const now = new Date();
-    const timestamp = format(now, "yyyy-MM-dd HH:mm");
-    const fileTimestamp = format(now, "yyyyMMdd_HHmm");
+    const timestamp = format(now, "yyyy-MM-dd");
+    const fileTimestamp = format(now, "yyyyMMdd");
     
     // Add header
     pdf.setFontSize(18);
@@ -53,15 +53,31 @@ export async function exportOutcomesToPDF(
     
     // Prepare the SVG chart
     try {
+      if (!svgElement) {
+        throw new Error('SVG element is null or undefined');
+      }
+      
       // Create a temporary container to hold the SVG for html2canvas
       const tempContainer = document.createElement('div');
-      tempContainer.appendChild(svgElement.cloneNode(true));
+      tempContainer.style.width = '800px'; // Fixed width for consistent rendering
+      tempContainer.style.height = '800px'; // Fixed height for consistent rendering
+      tempContainer.style.display = 'flex';
+      tempContainer.style.alignItems = 'center';
+      tempContainer.style.justifyContent = 'center';
+      tempContainer.style.backgroundColor = 'white';
+      
+      // Clone the SVG and set dimensions for better quality
+      const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement;
+      clonedSvg.setAttribute('width', '600');
+      clonedSvg.setAttribute('height', '600');
+      tempContainer.appendChild(clonedSvg);
+      
       document.body.appendChild(tempContainer);
       
       // Convert the SVG to a canvas using html2canvas
       const canvas = await html2canvas(tempContainer, {
         scale: 2, // Higher scale for better quality
-        backgroundColor: null, // Transparent background
+        backgroundColor: 'white', // White background to ensure proper rendering
         logging: false,
         useCORS: true
       });
@@ -74,27 +90,40 @@ export async function exportOutcomesToPDF(
       
       // Calculate dimensions to fit half the page width
       const maxWidth = pageWidth / 2 - 20; // Half page minus margins
-      const maxHeight = pageHeight - 50; // Leave room for header/footer
+      const maxHeight = pageHeight - 60; // Leave room for header/footer
       
-      const imgWidth = maxWidth;
-      const imgHeight = canvas.height * (imgWidth / canvas.width);
+      // Calculate scaled dimensions to maintain aspect ratio
+      let imgWidth = maxWidth;
+      let imgHeight = canvas.height * (imgWidth / canvas.width);
+      
+      // If height exceeds maximum, scale down proportionally
+      if (imgHeight > maxHeight) {
+        imgHeight = maxHeight;
+        imgWidth = canvas.width * (imgHeight / canvas.height);
+      }
+      
+      // Add title for the chart
+      pdf.setFontSize(14);
+      pdf.setTextColor(22, 65, 78); // #16414E
+      pdf.text('Outcome Progress Radar', 14, 25);
       
       // Add the chart image to the left side of the page
       pdf.addImage(
         chartImgData, 
         'PNG', 
         14, // Left margin
-        25, // Top position below header
+        30, // Top position below header and title
         imgWidth, 
-        Math.min(imgHeight, maxHeight)
+        imgHeight
       );
-      
-      // Add title for the chart
-      pdf.setFontSize(14);
-      pdf.setTextColor(22, 65, 78); // #16414E
-      pdf.text('Outcome Progress Radar', 14, 25);
     } catch (err) {
       console.error('Error rendering radar chart:', err);
+      
+      // Add error message in place of the chart
+      pdf.setFontSize(12);
+      pdf.setTextColor(200, 0, 0);
+      pdf.text('Could not render radar chart.', 14, 50);
+      
       // Continue with the table even if chart fails
     }
     
@@ -162,11 +191,11 @@ export async function exportOutcomesToPDF(
       pdf.text('No outcome metrics have been selected.', tableX, tableY + 15);
     }
     
-    // Add footer
+    // Add footer with project name and export date
     pdf.setFontSize(8);
     pdf.setTextColor(150, 150, 150);
-    pdf.text('The Connected Outcomes Framework Toolkit', 14, pageHeight - 10);
-    pdf.text('Page 1/1', pageWidth - 30, pageHeight - 10);
+    pdf.text(`${projectName} | The Connected Outcomes Framework Toolkit`, 14, pageHeight - 10);
+    pdf.text(`Generated: ${timestamp} | Page 1/1`, pageWidth - 70, pageHeight - 10);
     
     // Save the PDF
     const fileName = `${projectName.replace(/[^\w\s]/gi, '')}_Outcomes_${fileTimestamp}.pdf`;
