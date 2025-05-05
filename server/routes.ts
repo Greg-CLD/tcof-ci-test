@@ -200,6 +200,17 @@ function isAdmin(req: Request, res: Response, next: any) {
   res.status(403).json({ message: "Admin access required" });
 }
 
+// Import organization routes (ESM import)
+async function importOrganisationRoutes() {
+  try {
+    const module = await import('./routes/organisations.js');
+    return module.default;
+  } catch (error) {
+    console.error('Failed to import organisation routes:', error);
+    return null;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
   setupAuth(app);
@@ -211,6 +222,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Factors database initialized successfully');
   } catch (error) {
     console.error('Error initializing factors database:', error);
+  }
+  
+  // Register organisation routes
+  try {
+    const organisationRoutes = await importOrganisationRoutes();
+    if (organisationRoutes) {
+      app.use('/api/organisations', organisationRoutes);
+      console.log('Organisation routes registered successfully');
+    }
+  } catch (error) {
+    console.error('Error registering organisation routes:', error);
   }
 
   // Setup basic health check endpoint

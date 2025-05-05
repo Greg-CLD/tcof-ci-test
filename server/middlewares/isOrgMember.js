@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
-import { organisationMemberships } from '@shared/schema.js';
 import { eq, and } from 'drizzle-orm';
+import { organisationMemberships } from '@shared/schema.js';
 
 /**
  * Middleware to check if the current user is a member of the specified organization
@@ -15,32 +15,32 @@ export const isOrgMember = async (req, res, next) => {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  const organisationId = req.params.id;
-  if (!organisationId) {
-    return res.status(400).json({ message: 'Organization ID is required' });
-  }
-
   try {
     const userId = req.user.id;
+    const organisationId = req.params.id;
     
-    // Check if the user is a member of the organization
+    if (!organisationId) {
+      return res.status(400).json({ message: 'Organization ID is required' });
+    }
+    
+    // Find the membership record
     const membership = await db.query.organisationMemberships.findFirst({
       where: and(
         eq(organisationMemberships.userId, userId),
         eq(organisationMemberships.organisationId, organisationId)
       )
     });
-
+    
     if (!membership) {
-      return res.status(403).json({ message: 'Access denied: You are not a member of this organization' });
+      return res.status(403).json({ message: 'You are not a member of this organization' });
     }
-
-    // Add membership info to the request object for future use
+    
+    // Add the membership info to the request object for later use
     req.organisationMembership = membership;
     next();
   } catch (error) {
     console.error('Error checking organization membership:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 
@@ -57,33 +57,36 @@ export const isOrgAdminOrOwner = async (req, res, next) => {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  const organisationId = req.params.id;
-  if (!organisationId) {
-    return res.status(400).json({ message: 'Organization ID is required' });
-  }
-
   try {
     const userId = req.user.id;
+    const organisationId = req.params.id;
     
-    // Check if the user is an admin or owner of the organization
+    if (!organisationId) {
+      return res.status(400).json({ message: 'Organization ID is required' });
+    }
+    
+    // Find the membership record
     const membership = await db.query.organisationMemberships.findFirst({
       where: and(
         eq(organisationMemberships.userId, userId),
-        eq(organisationMemberships.organisationId, organisationId),
-        // Role must be 'admin' or 'owner'
-        eq(organisationMemberships.role, 'admin').or(eq(organisationMemberships.role, 'owner'))
+        eq(organisationMemberships.organisationId, organisationId)
       )
     });
-
+    
     if (!membership) {
-      return res.status(403).json({ message: 'Access denied: Admin or owner privileges required' });
+      return res.status(403).json({ message: 'You are not a member of this organization' });
     }
-
-    // Add membership info to the request object for future use
+    
+    // Check if the user is an admin or owner
+    if (membership.role !== 'admin' && membership.role !== 'owner') {
+      return res.status(403).json({ message: 'You need admin or owner permissions for this action' });
+    }
+    
+    // Add the membership info to the request object for later use
     req.organisationMembership = membership;
     next();
   } catch (error) {
-    console.error('Error checking organization admin privileges:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error checking organization admin status:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
