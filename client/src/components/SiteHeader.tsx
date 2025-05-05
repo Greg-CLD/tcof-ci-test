@@ -102,6 +102,14 @@ export default function SiteHeader() {
             >
               <CheckSquare className="h-4 w-4 mr-1" /> Checklist
             </Link>
+            {!isLoggedIn && (
+              <Link 
+                href="/pricing" 
+                className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/pricing' ? 'nav-link active font-medium' : 'nav-link'}`}
+              >
+                <DollarSign className="h-4 w-4 mr-1" /> Pricing
+              </Link>
+            )}
             {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
               <Link 
                 href="/make-a-plan/admin" 
@@ -229,6 +237,17 @@ export default function SiteHeader() {
               >
                 <CheckSquare className="h-5 w-5 mr-2" /> Checklist
               </Link>
+              
+              {/* Pricing link (mobile) - only shown when not logged in */}
+              {!isLoggedIn && (
+                <Link 
+                  href="/pricing"
+                  onClick={() => handleNavigation("/pricing")}
+                  className={`flex items-center py-2 px-3 rounded-md ${location === '/pricing' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+                >
+                  <DollarSign className="h-5 w-5 mr-2" /> Pricing
+                </Link>
+              )}
               
               {/* Admin link (mobile) */}
               {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
