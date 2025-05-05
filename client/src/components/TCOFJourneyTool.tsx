@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useProjectContext } from "@/contexts/ProjectContext";
 import {
   STORAGE_KEYS,
   TCOFJourneyData,
@@ -17,7 +18,18 @@ import {
   saveToLocalStorage
 } from "@/lib/storage";
 import { elementToPDF } from "@/lib/pdf-utils";
-import { FileDown, Save } from "lucide-react";
+import { FileDown, Save, Loader2 } from "lucide-react";
+
+// API response type for TCOF journey data
+interface TCOFJourneyResponse {
+  id: string;
+  name: string;
+  data: TCOFJourneyData;
+  userId: number;
+  projectId: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Decision tree question type
 type Question = {
@@ -123,7 +135,15 @@ const phaseDescriptions: Record<ImplementationStage, {
 };
 
 export default function TCOFJourneyTool() {
-  // Load existing data from local storage
+  // Get the current project from context
+  const { currentProject } = useProjectContext();
+  const projectId = currentProject?.id;
+  
+  // State to track if we've loaded data from server
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load existing data from local storage as fallback
   const storedData = loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY) || initialTCOFJourneyData;
 
   // Decision tree states
@@ -137,9 +157,37 @@ export default function TCOFJourneyTool() {
   const { toast } = useToast();
   const { user } = useAuth();
   
+  // Fetch TCOF journey data from server for the current project
+  const {
+    data: serverJourney,
+    isLoading: journeyLoading,
+    error: journeyError
+  } = useQuery<TCOFJourneyResponse | null>({
+    queryKey: ['/api/tcof-journeys', projectId],
+    queryFn: async () => {
+      if (!projectId) throw new Error("No project selected");
+      const res = await apiRequest("GET", `/api/tcof-journeys?projectId=${projectId}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          return null; // No TCOF journey found for this project
+        }
+        throw new Error("Failed to fetch TCOF journey");
+      }
+      return await res.json();
+    },
+    enabled: !!projectId,
+  });
+  
+  // Interface for the mutation data
+  interface SaveJourneyData {
+    name: string;
+    data: TCOFJourneyData;
+    projectId: string;
+  }
+  
   // Database save mutation
   const saveJourneyMutation = useMutation({
-    mutationFn: async (data: { name: string, data: any }) => {
+    mutationFn: async (data: SaveJourneyData) => {
       const response = await apiRequest("POST", "/api/tcof-journeys", data);
       if (!response.ok) {
         throw new Error("Failed to save journey to database");
@@ -147,7 +195,7 @@ export default function TCOFJourneyTool() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tcof-journeys"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tcof-journeys", projectId] });
       toast({
         title: "Journey saved",
         description: "Your TCOF journey has been saved to your account.",
@@ -161,6 +209,32 @@ export default function TCOFJourneyTool() {
       });
     },
   });
+  
+  // Load data from server when available
+  useEffect(() => {
+    if (serverJourney && !hasLoadedData) {
+      console.log("Loading TCOF journey data from server:", serverJourney);
+      
+      // Set journey name
+      if (serverJourney.name) {
+        setJourneyName(serverJourney.name);
+      }
+      
+      // Set journey data if available
+      if (serverJourney.data) {
+        if (serverJourney.data.stage) {
+          setStage(serverJourney.data.stage);
+          setDetermined(true);
+        }
+        
+        if (serverJourney.data.notes) {
+          setNotes(serverJourney.data.notes);
+        }
+      }
+      
+      setHasLoadedData(true);
+    }
+  }, [serverJourney, hasLoadedData]);
 
   // Handle answering a question
   const handleAnswer = (questionId: string, answer: boolean) => {
@@ -203,6 +277,15 @@ export default function TCOFJourneyTool() {
       });
       return;
     }
+    
+    if (!projectId) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project before saving.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const journeyData: TCOFJourneyData = {
       ...storedData,
@@ -223,13 +306,22 @@ export default function TCOFJourneyTool() {
       return;
     }
     
+    // Set loading state
+    setIsLoading(true);
+    
     // Then save to database if user is logged in
     if (user) {
       saveJourneyMutation.mutate({
         name: journeyName,
-        data: journeyData
+        data: journeyData,
+        projectId: projectId
+      }, {
+        onSettled: () => {
+          setIsLoading(false);
+        }
       });
     } else {
+      setIsLoading(false);
       toast({
         title: "Journey saved locally",
         description: "Your journey has been saved locally. Sign in to save it to your account.",
@@ -310,6 +402,15 @@ export default function TCOFJourneyTool() {
         <h2 className="text-2xl font-bold mb-2">🧪 TCOF Journey Decision Tree</h2>
         <p className="text-gray-600">Figure out where you are in the delivery journey.</p>
       </div>
+      
+      {journeyLoading && !hasLoadedData && (
+        <Card className="mb-6">
+          <CardContent className="p-6 flex justify-center items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-tcof-teal mr-2" />
+            <p>Loading your saved journey data...</p>
+          </CardContent>
+        </Card>
+      )}
       
       {showIntro && (
         <Card className="mb-6">
@@ -452,9 +553,18 @@ export default function TCOFJourneyTool() {
                   <Button 
                     variant="secondary" 
                     onClick={handleSave}
+                    disabled={isLoading}
                     className="flex items-center gap-1"
                   >
-                    <Save className="h-4 w-4 mr-1" /> Save Results
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-1" /> Save Results
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
