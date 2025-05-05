@@ -197,22 +197,39 @@ export default function ProjectProfile() {
       setIsSaved(true);
       
       if (isEditing && selectedProjectId) {
+        console.log('Updating project with data:', projectData);
+        
         // Update existing project
         const result = await updateProject.mutateAsync({
           id: selectedProjectId,
           data: projectData,
         });
         
-        // Also manually invalidate the individual project query to ensure ProjectContext gets updated
+        // Force a refetch of the project details
         await queryClient.invalidateQueries({
           queryKey: ['/api/projects', selectedProjectId]
         });
         
+        // Explicitly fetch the updated project
+        const updatedResponse = await fetch(`/api/projects?id=${selectedProjectId}`);
+        if (!updatedResponse.ok) {
+          throw new Error('Failed to fetch updated project after save');
+        }
+        
+        const updatedProject = await updatedResponse.json();
+        
         // If we have a result, update the ProjectContext directly
-        if (result) {
-          setCurrentProject(result);
-          // Also ensure the project context is fully refreshed
-          await refreshProject();
+        if (updatedProject) {
+          console.log('Successfully fetched updated project:', updatedProject);
+          setCurrentProject(updatedProject);
+          
+          // Invalidate the main projects list too
+          await queryClient.invalidateQueries({
+            queryKey: ['/api/projects']
+          });
+          
+          // Update the project cache
+          queryClient.setQueryData(['/api/projects', selectedProjectId], updatedProject);
         }
         
         // Show success message via toast
@@ -227,16 +244,37 @@ export default function ProjectProfile() {
         }, 1500);
       } else {
         // Create new project
+        console.log('Creating new project with data:', projectData);
         const result = await createProject.mutateAsync(projectData);
         
         // Set as selected project
         localStorage.setItem('selectedProjectId', result.id);
         
+        // Force a refetch of the project details
+        await queryClient.invalidateQueries({
+          queryKey: ['/api/projects', result.id]
+        });
+        
+        // Explicitly fetch the created project
+        const createdResponse = await fetch(`/api/projects?id=${result.id}`);
+        if (!createdResponse.ok) {
+          throw new Error('Failed to fetch created project after save');
+        }
+        
+        const createdProject = await createdResponse.json();
+        
         // If we have a result, update the ProjectContext directly
-        if (result) {
-          setCurrentProject(result);
-          // Also ensure the project context is fully refreshed
-          await refreshProject();
+        if (createdProject) {
+          console.log('Successfully fetched created project:', createdProject);
+          setCurrentProject(createdProject);
+          
+          // Invalidate the main projects list too
+          await queryClient.invalidateQueries({
+            queryKey: ['/api/projects']
+          });
+          
+          // Update the project cache
+          queryClient.setQueryData(['/api/projects', result.id], createdProject);
         }
         
         // Show success message via toast
