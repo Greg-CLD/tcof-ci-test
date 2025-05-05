@@ -582,7 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create the custom outcome
-      const outcome = await outcomesDb.createOutcome(projectId, title, level);
+      const outcome = await outcomesDb.createCustomOutcome(title, userId, level === 'custom' ? undefined : level);
       
       if (!outcome) {
         return res.status(500).json({ message: "Error creating outcome" });
