@@ -11,12 +11,54 @@ import { exportPlanPDF, exportCSV } from '@/lib/exportUtils';
 import { usePlan } from '@/contexts/PlanContext';
 import { ensurePlanForProject } from '@/lib/planHelpers';
 import { useProjects } from '@/hooks/useProjects';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function FactorChecklist() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { selectedPlanId, setSelectedPlanId } = usePlan();
   const { getSelectedProject } = useProjects();
+  const queryClient = useQueryClient();
+  
+  // Check if the project still exists (for handling deletion cases)
+  useEffect(() => {
+    const checkProjectExists = async () => {
+      const projectId = localStorage.getItem('selectedProjectId');
+      if (!projectId) return;
+      
+      try {
+        // Try to get the projects list
+        const projects = await queryClient.fetchQuery({ 
+          queryKey: ['/api/projects'],
+          staleTime: 0 // Force a fresh fetch
+        });
+        
+        // Check if the current project exists in the list
+        const projectExists = Array.isArray(projects) && 
+          projects.some((project: any) => project.id === projectId);
+        
+        // If the project doesn't exist anymore (i.e., it was deleted)
+        if (!projectExists) {
+          console.log('Selected project no longer exists, redirecting to home');
+          // Clear the selected project from localStorage
+          localStorage.removeItem('selectedProjectId');
+          // Clear selected plan ID
+          setSelectedPlanId(null);
+          // Show toast notification
+          toast({
+            title: "Project Deleted",
+            description: "The project you were viewing has been deleted.",
+          });
+          // Redirect to home
+          setLocation('/');
+        }
+      } catch (error) {
+        console.error('Error checking if project exists:', error);
+      }
+    };
+    
+    checkProjectExists();
+  }, [queryClient, setLocation, toast, setSelectedPlanId]);
   
   // Plan state
   const [plan, setPlan] = useState<PlanRecord | null>(null);
