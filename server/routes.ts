@@ -1381,6 +1381,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New endpoint for success factors integrity report
+  app.get('/api/admin/factors-integrity', isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Import the factor utilities dynamically
+      const factorUtils = await import('../scripts/factorUtils.js');
+      
+      // Generate a comprehensive integrity report
+      const report: {
+        factorCount: number;
+        taskDistribution: Record<string, number>;
+        gapsByFactor: Record<string, string[]>;
+        canonicalIntegrity: {
+          valid: boolean;
+          missing: string[];
+          extra: string[];
+        };
+        gapReport: string[];
+        overallValid?: boolean;
+      } = {
+        factorCount: 0,
+        taskDistribution: {},
+        gapsByFactor: {},
+        canonicalIntegrity: {
+          valid: false,
+          missing: [],
+          extra: []
+        },
+        gapReport: []
+      };
+      
+      // Get factor metrics
+      const factorsReport = factorUtils.generateFactorsReport();
+      report.factorCount = factorsReport.factorCount;
+      report.taskDistribution = factorsReport.tasksByStage;
+      report.gapsByFactor = factorsReport.gapsByFactor;
+      
+      // Check canonical integrity
+      const canonicalCheck = factorUtils.checkCanonicalFactorsIntegrity();
+      report.canonicalIntegrity = canonicalCheck;
+      
+      // Get all task gaps
+      report.gapReport = factorUtils.identifyTaskGaps();
+      
+      // Run the full integrity check
+      const integrityValid = factorUtils.verifyFactorsIntegrity();
+      report.overallValid = integrityValid;
+      
+      res.status(200).json(report);
+    } catch (error) {
+      console.error('Error generating factors integrity report:', error);
+      res.status(500).json({ message: 'Failed to generate factors integrity report' });
+    }
+  });
+
   app.post('/api/admin/update-canonical-factors', isAdmin, async (req: Request, res: Response) => {
     try {
       
@@ -1533,6 +1587,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error saving presetHeuristics.json:', error);
       res.status(500).json({ message: 'Failed to save preset heuristics data' });
+    }
+  });
+  
+  // Endpoint to export success factors data for external analysis
+  app.get('/api/admin/factors-export', isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Import the factor utilities dynamically
+      const factorUtils = await import('../scripts/factorUtils.js');
+      
+      // Get the format parameter (default to 'json')
+      const format = req.query.format as string || 'json';
+      
+      // Get all factors
+      const factors = factorUtils.loadFactors();
+      
+      if (!factors || factors.length === 0) {
+        return res.status(404).json({ message: 'No success factors found to export' });
+      }
+      
+      // Set appropriate headers for download
+      res.setHeader('Cache-Control', 'no-store');
+      
+      if (format === 'csv') {
+        // Transform into CSV format (simpler format for Excel/analysis tools)
+        let csvData = 'Factor ID,Factor Title,Stage,Task\n';
+        
+        factors.forEach(factor => {
+          for (const stage in factor.tasks) {
+            const tasks = factor.tasks[stage as keyof typeof factor.tasks];
+            if (tasks && tasks.length > 0) {
+              tasks.forEach(task => {
+                // Escape any commas in the task description
+                const escapedTask = `"${task.replace(/"/g, '""')}"`;
+                csvData += `${factor.id},${factor.title},${stage},${escapedTask}\n`;
+              });
+            } else {
+              // Add a row even for empty stages
+              csvData += `${factor.id},${factor.title},${stage},""\n`;
+            }
+          }
+        });
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="success-factors-export.csv"`);
+        res.status(200).send(csvData);
+      } else {
+        // Return JSON format (with special formatting for better readability)
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="success-factors-export.json"`);
+        res.status(200).json(factors);
+      }
+    } catch (error) {
+      console.error('Error exporting success factors:', error);
+      res.status(500).json({ message: 'Failed to export success factors data' });
     }
   });
 
