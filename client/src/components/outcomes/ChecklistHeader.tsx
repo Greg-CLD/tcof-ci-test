@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { exportOutcomesToPDF } from "@/lib/pdfExport";
 import { useQuery } from "@tanstack/react-query";
+import { RadarChart, type RadarChartPoint } from "@/components/checklist/RadarChart";
 
 interface ChecklistHeaderProps {
   projectId: string;
@@ -50,6 +51,15 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
       return "";
     }
   };
+
+  // Transform outcomes data into radar chart format
+  const radarChartData: RadarChartPoint[] = useMemo(() => {
+    return selectedOutcomes.map(outcome => ({
+      id: outcome.id,
+      label: outcome.title,
+      value: progressValues[outcome.id] ?? 0
+    }));
+  }, [selectedOutcomes, progressValues]);
   
   // Determine if user can edit outcome progress
   // For this implementation we'll check if user is authenticated
@@ -209,14 +219,31 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
                     <span>Manage Outcomes</span>
                   </Button>
                 </div>
+                
+                {/* Mini radar chart for small screens */}
+                <div className="mt-6 block lg:hidden">
+                  <div className="p-2 border border-gray-100 rounded-md bg-gray-50">
+                    <h4 className="text-xs font-medium text-center mb-2 text-gray-600">Progress Overview</h4>
+                    <div className="flex justify-center">
+                      <RadarChart data={radarChartData} size={180} />
+                    </div>
+                  </div>
+                </div>
               </div>
               
-              <div className="flex justify-center items-center">
+              <div className="flex-col justify-center items-center hidden lg:flex">
+                {/* Large radar chart section for PDF export */}
                 <OutcomeRadarChart
                   ref={radarChartRef}
                   outcomes={selectedOutcomes}
                   outcomeProgress={Object.values(latestProgress)}
                 />
+                
+                {/* Mini radar chart for larger screens */}
+                <div className="mt-4 p-3 border border-gray-100 rounded-md bg-gray-50">
+                  <h4 className="text-xs font-medium text-center mb-2 text-gray-600">Live Progress Summary</h4>
+                  <RadarChart data={radarChartData} size={150} />
+                </div>
               </div>
             </div>
           </CardContent>
