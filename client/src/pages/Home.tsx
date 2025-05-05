@@ -52,19 +52,28 @@ export default function Home() {
         return;
       }
 
-      // Create new project through the API
-      await createProject.mutateAsync({
+      // Create new project through the API with minimal required information
+      const newProject = await createProject.mutateAsync({
         name: newProjectName.trim(),
         description: newProjectDescription.trim()
       });
+
+      // Store the project ID in localStorage
+      localStorage.setItem('selectedProjectId', newProject.id);
 
       // Close dialog and clear form
       setCreateDialogOpen(false);
       setNewProjectName("");
       setNewProjectDescription("");
 
-      // Navigate to make-a-plan landing
-      navigate("/make-a-plan");
+      // Show a toast with a suggestion to complete the profile
+      toast({
+        title: "Project Created",
+        description: "Your project has been created! You can complete your project profile later.",
+      });
+
+      // Stay on the homepage instead of redirecting to profile
+      await queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     } catch (error) {
       console.error("Error creating project:", error);
       // Error toast is handled by the mutation

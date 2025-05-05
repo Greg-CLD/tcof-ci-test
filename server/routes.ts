@@ -919,16 +919,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Project name is required" });
       }
       
+      // Create project with minimal data - only name is required
+      // Other profile fields can be completed later
       const project = await projectsDb.createProject(
         userId,
         {
           name,
           description: description || '',
-          sector,
-          customSector,
-          orgType,
-          teamSize,
-          currentStage
+          sector: sector || undefined,
+          customSector: customSector || undefined,
+          orgType: orgType || undefined,
+          teamSize: teamSize || undefined,
+          currentStage: currentStage || undefined
         }
       );
       
