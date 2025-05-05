@@ -1,16 +1,21 @@
 /**
  * Utility to verify success factors integrity
  */
-const fs = require('fs');
-const path = require('path');
+import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+// Get current module's directory (ES Module alternative to __dirname)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Verifies that the success factors file contains all 12 canonical factors
  * with task arrays for each stage
  */
-function verifyFactorsIntegrity() {
+export function verifyFactorsIntegrity() {
   try {
-    const factorsPath = path.resolve(__dirname, '../data/successFactors.json');
+    const factorsPath = resolve(__dirname, '../data/successFactors.json');
     console.log(`Checking success factors integrity at ${factorsPath}...`);
     
     if (!fs.existsSync(factorsPath)) {
@@ -60,9 +65,7 @@ function verifyFactorsIntegrity() {
   }
 }
 
-// If running directly
-if (require.main === module) {
+// If running directly (ES Module equivalent of the CommonJS check)
+if (import.meta.url === `file://${process.argv[1]}`) {
   verifyFactorsIntegrity();
 }
-
-module.exports = { verifyFactorsIntegrity };

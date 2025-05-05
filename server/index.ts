@@ -38,30 +38,33 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Run the factors integrity check using child_process
+  // Run the factors integrity check using improved utilities
   try {
-    const { spawnSync } = await import('child_process');
-    const { dirname, resolve, join } = await import('path');
-    const { fileURLToPath } = await import('url');
+    log('Running success factors integrity check...');
     
-    // Get current module's directory (ES Module alternative to __dirname)
-    const currentFilePath = fileURLToPath(import.meta.url);
-    const currentDir = dirname(currentFilePath);
+    // Use the improved factor utilities
+    const factorUtils = await import('../scripts/factorUtils.js') as typeof import('../scripts/factorUtils');
     
-    const scriptPath = resolve(currentDir, '../scripts/verifyFactors.js');
-    log(`Running factors integrity check: ${scriptPath}`);
-    
-    const result = spawnSync('node', [scriptPath], { 
-      encoding: 'utf8',
-      stdio: 'inherit'
-    });
-    
-    if (result.error) {
-      log(`Error running factors integrity check: ${result.error.message}`);
-    } else if (result.status !== 0) {
-      log(`Factors integrity check exited with status: ${result.status}`);
+    if (factorUtils.verifyFactorsIntegrity()) {
+      log('Success factors integrity check passed');
     } else {
-      log('Factors integrity check completed');
+      log('Success factors integrity check failed - issues detected');
+      
+      // Generate a detailed report
+      const report = factorUtils.generateFactorsReport();
+      log(`Factor count: ${report.factorCount}`);
+      log(`Task distribution: ${JSON.stringify(report.tasksByStage)}`);
+      
+      // Check canonical integrity
+      const canonicalCheck = factorUtils.checkCanonicalFactorsIntegrity();
+      if (!canonicalCheck.valid) {
+        if (canonicalCheck.missing.length > 0) {
+          log(`Missing canonical factors: ${canonicalCheck.missing.join(', ')}`);
+        }
+        if (canonicalCheck.extra.length > 0) {
+          log(`Extra non-canonical factors: ${canonicalCheck.extra.join(', ')}`);
+        }
+      }
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
