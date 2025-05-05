@@ -1,7 +1,7 @@
 /**
  * Helper functions for working with plans
  */
-import { PlanRecord, DeliveryApproachData, CustomFramework, Stage, TaskPriority, savePlan, loadPlan, createEmptyPlan } from '@/lib/plan-db';
+import { PlanRecord, DeliveryApproachData, CustomFramework, Stage, TaskPriority, savePlan, loadPlan, createEmptyPlan, getPlan } from '@/lib/plan-db';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storageAdapter';
 
@@ -421,6 +421,44 @@ export const loadSuccessFactorTasks = async (): Promise<Record<Stage, {
       Delivery: [],
       Closure: []
     };
+  }
+};
+
+/**
+ * Ensures a plan exists for a given project ID
+ * @param projectId The ID of the project
+ * @returns Promise resolving to the plan ID
+ */
+export const ensurePlanForProject = async (projectId: string): Promise<string> => {
+  if (!projectId) {
+    throw new Error('Project ID is required');
+  }
+
+  try {
+    console.log(`Checking for existing plan for project ${projectId}`);
+    
+    // Look for plans with this projectId
+    const plans = await getAllPlans();
+    const projectPlan = plans.find(plan => plan.projectId === projectId);
+    
+    if (projectPlan) {
+      console.log(`Found existing plan ${projectPlan.id} for project ${projectId}`);
+      // If a plan exists, return its ID
+      return projectPlan.id;
+    } else {
+      console.log(`No plan found for project ${projectId}, creating new plan`);
+      // If no plan exists, create a new one
+      const planId = await createEmptyPlan(undefined, undefined, projectId);
+      console.log(`Created new plan ${planId} for project ${projectId}`);
+      
+      // Set this as the active plan
+      setLatestPlanId(planId);
+      
+      return planId;
+    }
+  } catch (error) {
+    console.error(`Error ensuring plan for project ${projectId}:`, error);
+    throw new Error(`Failed to ensure plan for project: ${error.message}`);
   }
 };
 
