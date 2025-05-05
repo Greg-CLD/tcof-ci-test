@@ -50,26 +50,9 @@ export const storage = {
   // User methods
   async getUser(id: number) {
     try {
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, id)
-      });
-      
-      // Ensure we return a valid user object even if some fields are missing
-      if (user) {
-        return {
-          ...user,
-          firstName: user.firstName || null,
-          lastName: user.lastName || null
-        };
-      }
-      return user;
-    } catch (error) {
-      console.error('Error fetching user:', error);
-      
-      // Fallback to a direct query without the potentially missing columns
-      // Need to be careful with column names that might not exist in the actual database
+      // Use a direct SQL query to avoid the ORM column mapping issue
       const result = await db.execute(
-        sql`SELECT id, username, email, password FROM users WHERE id = ${id}`
+        sql`SELECT id, username, email, password, created_at, updated_at FROM users WHERE id = ${id}`
       );
       
       if (result && result.rows && result.rows.length > 0) {
@@ -79,38 +62,25 @@ export const storage = {
           username: row.username,
           email: row.email,
           password: row.password,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
           firstName: null,
           lastName: null
         };
       }
       
       return null;
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      return null;
     }
   },
 
   async getUserByUsername(username: string) {
     try {
-      const user = await db.query.users.findFirst({
-        where: eq(users.username, username)
-      });
-      
-      // Ensure we return a valid user object even if some fields are missing
-      if (user) {
-        return {
-          ...user,
-          firstName: user.firstName || null,
-          lastName: user.lastName || null
-        };
-      }
-      return user;
-    } catch (error) {
-      console.error('Error fetching user by username:', error);
-      
-      // Fallback to a direct query without the potentially missing columns
+      // Use a direct SQL query to avoid the ORM column mapping issue
       const result = await db.execute(
-        sql`SELECT id, username, email, password FROM users WHERE username = ${username}`
+        sql`SELECT id, username, email, password, created_at, updated_at FROM users WHERE username = ${username}`
       );
       
       if (result && result.rows && result.rows.length > 0) {
@@ -120,13 +90,16 @@ export const storage = {
           username: row.username,
           email: row.email,
           password: row.password,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
           firstName: null,
           lastName: null
         };
       }
       
+      return null;
+    } catch (error) {
+      console.error('Error fetching user by username:', error);
       return null;
     }
   },
