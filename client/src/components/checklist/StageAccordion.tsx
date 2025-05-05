@@ -161,6 +161,58 @@ export default function StageAccordion({
   const [isOpen, setIsOpen] = useState(true);
   const { toast } = useToast();
   
+  // On initial load, initialize order fields for tasks that don't have it
+  // This ensures backward compatibility with existing data
+  useEffect(() => {
+    const stageTasks = plan.stages[stage].tasks || [];
+    const stageGpTasks = plan.stages[stage].goodPractice?.tasks || [];
+    
+    // Check if any tasks are missing the order field
+    const needsOrderUpdate = 
+      stageTasks.some(t => t.order === undefined) || 
+      stageGpTasks.some(t => t.order === undefined);
+    
+    if (needsOrderUpdate) {
+      console.log(`Initializing order field for ${stage} stage tasks`);
+      
+      const updatedPlan = { ...plan };
+      let updated = false;
+      
+      // Update regular tasks
+      if (updatedPlan.stages[stage].tasks) {
+        updatedPlan.stages[stage].tasks = updatedPlan.stages[stage].tasks.map((task, index) => {
+          if (task.order === undefined) {
+            updated = true;
+            return { ...task, order: index };
+          }
+          return task;
+        });
+      }
+      
+      // Update good practice tasks
+      if (updatedPlan.stages[stage].goodPractice?.tasks) {
+        updatedPlan.stages[stage].goodPractice.tasks = updatedPlan.stages[stage].goodPractice.tasks.map(
+          (task, index) => {
+            if (task.order === undefined) {
+              updated = true;
+              return { ...task, order: index };
+            }
+            return task;
+          }
+        );
+      }
+      
+      // Save the updated plan if changes were made
+      if (updated) {
+        const planId = getLatestPlanId();
+        if (planId) {
+          savePlan(planId, updatedPlan);
+          onPlanUpdate(updatedPlan);
+        }
+      }
+    }
+  }, [plan.id, stage, onPlanUpdate]);
+  
   // Get tasks for this stage
   const tasks = plan.stages[stage].tasks || [];
   const gpTasks = plan.stages[stage].goodPractice?.tasks || [];
@@ -256,6 +308,11 @@ export default function StageAccordion({
         const [movedTask] = gpTasks.splice(fromIndex, 1);
         gpTasks.splice(toIndex, 0, movedTask);
         
+        // Update order values for all tasks in the array
+        gpTasks.forEach((task, index) => {
+          task.order = index;
+        });
+        
         // Update the plan with reordered tasks
         if (updatedPlan.stages[stage].goodPractice) {
           updatedPlan.stages[stage].goodPractice.tasks = gpTasks;
@@ -272,6 +329,11 @@ export default function StageAccordion({
         const [movedTask] = tasks.splice(fromIndex, 1);
         tasks.splice(toIndex, 0, movedTask);
         
+        // Update order values for all tasks in the array
+        tasks.forEach((task, index) => {
+          task.order = index;
+        });
+        
         // Update the plan with reordered tasks
         updatedPlan.stages[stage].tasks = tasks;
       }
@@ -286,6 +348,7 @@ export default function StageAccordion({
       toast({
         title: "Tasks reordered",
         description: "Task order has been updated.",
+        duration: 1500,
       });
     }
   };
@@ -294,13 +357,20 @@ export default function StageAccordion({
   const handleAddTask = () => {
     const updatedPlan = { ...plan };
     
+    // Determine the order for the new task (highest order + 1)
+    const existingTasks = updatedPlan.stages[stage].tasks || [];
+    const highestOrder = existingTasks.length > 0 
+      ? Math.max(...existingTasks.map(t => t.order !== undefined ? t.order : -1))
+      : -1;
+    
     // Create a new task with default values
     const newTask: TaskItem = {
       id: uuidv4(),
       text: "New task", // Default text
       stage,
       origin: 'factor', // Using 'factor' since 'custom' is not in the allowed types
-      completed: false
+      completed: false,
+      order: highestOrder + 1 // Set the order to ensure it appears at the end
     };
     
     // Add the task to the plan
@@ -318,6 +388,7 @@ export default function StageAccordion({
       toast({
         title: "Task added",
         description: "New task has been added.",
+        duration: 1500,
       });
     }
   };
@@ -348,7 +419,27 @@ export default function StageAccordion({
       // Good practice tasks are already framework tasks
     }
     
+    // Sort by order field if available, otherwise maintain current order
+    // For tasks without order, place them at the end in their current relative order
+    filteredTasks = sortTasksByOrder(filteredTasks);
+    filteredGpTasks = sortTasksByOrder(filteredGpTasks);
+    
     return { filteredTasks, filteredGpTasks };
+  };
+  
+  // Helper function to sort tasks by order field
+  const sortTasksByOrder = <T extends { order?: number }>(taskList: T[]): T[] => {
+    // Create a copy of tasks with their original position as a fallback
+    const tasksWithPos = taskList.map((task, index) => ({ 
+      task, 
+      order: task.order !== undefined ? task.order : Number.MAX_SAFE_INTEGER - (taskList.length - index) 
+    }));
+    
+    // Sort by order field
+    tasksWithPos.sort((a, b) => a.order - b.order);
+    
+    // Return just the tasks in their new order
+    return tasksWithPos.map(t => t.task);
   };
   
   // Get filtered tasks
