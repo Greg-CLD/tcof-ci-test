@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { 
@@ -32,11 +32,25 @@ import { useAuth } from "@/hooks/use-auth";
 import ProjectBanner from "@/components/ProjectBanner";
 import logoImage from "../assets/logo.png";
 
+// Keep track of header instances
+const instanceCounter = {count: 0};
+
 export default function SiteHeader() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, clearAuth } = useAuthProtection();
   const { user, logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Log mount/unmount to debug duplicate headers
+  useEffect(() => {
+    instanceCounter.count++;
+    console.log(`SiteHeader mounted. Total instances: ${instanceCounter.count}`);
+    
+    return () => {
+      instanceCounter.count--;
+      console.log(`SiteHeader unmounted. Remaining instances: ${instanceCounter.count}`);
+    };
+  }, []);
   
   // Check if user is authenticated using either method
   const isLoggedInWithPassword = isAuthenticated('starter-access') || isAuthenticated('pro-tools');

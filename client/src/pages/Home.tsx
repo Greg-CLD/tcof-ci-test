@@ -199,8 +199,6 @@ export default function Home() {
       {user ? (
         // AUTHENTICATED VIEW - Project Dashboard
         <>
-          <SiteHeader />
-          
           {/* Hero Section */}
           <header className="bg-gradient-to-b from-white to-tcof-light py-12">
             <div className="container mx-auto px-4">
@@ -393,8 +391,6 @@ export default function Home() {
       ) : (
         // UNAUTHENTICATED VIEW - Marketing Landing Page
         <>
-          <SiteHeader />
-          
           {/* Hero Section */}
           <header className="bg-gradient-to-b from-white to-tcof-light py-16 md:py-24">
             <div className="container mx-auto px-4 text-center">
