@@ -1,28 +1,16 @@
 /**
- * Script to verify the integrity of success factors data
- * Checks if any factor is missing tasks for any stage
+ * Utility to verify success factors integrity
  */
+const fs = require('fs');
+const path = require('path');
 
-import * as fs from 'fs';
-import * as path from 'path';
-
-export interface FactorTask {
-  id: string;
-  title: string;
-  tasks: {
-    Identification: string[];
-    Definition: string[];
-    Delivery: string[];
-    Closure: string[];
-  };
-}
-
-export function checkFactorsIntegrity(): boolean {
+/**
+ * Verifies that the success factors file contains all 12 canonical factors
+ * with task arrays for each stage
+ */
+function verifyFactorsIntegrity() {
   try {
-    // Use import.meta.url to get the current file's path in ES modules
-    const currentFilePath = new URL(import.meta.url).pathname;
-    const projectRoot = path.resolve(path.dirname(currentFilePath), '..');
-    const factorsPath = path.join(projectRoot, 'data/successFactors.json');
+    const factorsPath = path.resolve(__dirname, '../data/successFactors.json');
     console.log(`Checking success factors integrity at ${factorsPath}...`);
     
     if (!fs.existsSync(factorsPath)) {
@@ -30,7 +18,7 @@ export function checkFactorsIntegrity(): boolean {
       return false;
     }
     
-    const factorsData = JSON.parse(fs.readFileSync(factorsPath, 'utf8')) as FactorTask[];
+    const factorsData = JSON.parse(fs.readFileSync(factorsPath, 'utf8'));
     
     if (!Array.isArray(factorsData) || factorsData.length === 0) {
       console.error('\x1b[31mERROR: Success factors data is empty or not an array!\x1b[0m');
@@ -52,10 +40,10 @@ export function checkFactorsIntegrity(): boolean {
       }
       
       stages.forEach(stage => {
-        if (!factor.tasks[stage as keyof typeof factor.tasks]) {
+        if (!factor.tasks[stage]) {
           console.error(`\x1b[31mERROR: Factor "${factor.title}" is missing the "${stage}" stage array\x1b[0m`);
           hasIssues = true;
-        } else if (factor.tasks[stage as keyof typeof factor.tasks].length === 0) {
+        } else if (factor.tasks[stage].length === 0) {
           console.warn(`\x1b[33mWARNING: Factor "${factor.title}" has no tasks for the "${stage}" stage\x1b[0m`);
         }
       });
@@ -67,8 +55,14 @@ export function checkFactorsIntegrity(): boolean {
     
     return !hasIssues;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`\x1b[31mERROR: Failed to check success factors integrity: ${errorMessage}\x1b[0m`);
+    console.error(`\x1b[31mERROR: Failed to check success factors integrity: ${error.message}\x1b[0m`);
     return false;
   }
 }
+
+// If running directly
+if (require.main === module) {
+  verifyFactorsIntegrity();
+}
+
+module.exports = { verifyFactorsIntegrity };

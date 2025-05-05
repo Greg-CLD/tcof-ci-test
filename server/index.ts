@@ -38,14 +38,31 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Run the factors integrity check
+  // Run the factors integrity check using child_process
   try {
-    // Use dynamic import to load the factors check script
-    import('../scripts/checkFactors.js').then(module => {
-      module.checkFactorsIntegrity();
-    }).catch((err: Error) => {
-      log(`Error importing factors check module: ${err.message}`);
+    const { spawnSync } = await import('child_process');
+    const { dirname, resolve, join } = await import('path');
+    const { fileURLToPath } = await import('url');
+    
+    // Get current module's directory (ES Module alternative to __dirname)
+    const currentFilePath = fileURLToPath(import.meta.url);
+    const currentDir = dirname(currentFilePath);
+    
+    const scriptPath = resolve(currentDir, '../scripts/verifyFactors.js');
+    log(`Running factors integrity check: ${scriptPath}`);
+    
+    const result = spawnSync('node', [scriptPath], { 
+      encoding: 'utf8',
+      stdio: 'inherit'
     });
+    
+    if (result.error) {
+      log(`Error running factors integrity check: ${result.error.message}`);
+    } else if (result.status !== 0) {
+      log(`Factors integrity check exited with status: ${result.status}`);
+    } else {
+      log('Factors integrity check completed');
+    }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     log(`Error running success factors integrity check: ${errorMessage}`);
