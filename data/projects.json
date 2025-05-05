@@ -11,5 +11,13 @@
     "orgType": "startup",
     "teamSize": "solo",
     "currentStage": "identify"
+  },
+  {
+    "id": "8cd81052-a1bb-4d31-829e-6fff175a1c1a",
+    "userId": 3,
+    "name": "Quick Start Project",
+    "description": "A pre-configured project with default success factor tasks",
+    "createdAt": "2025-05-05T13:48:50.937Z",
+    "updatedAt": "2025-05-05T13:48:50.937Z"
   }
 ]

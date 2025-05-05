@@ -6,10 +6,8 @@
 import { db } from "../db";
 import {
   users,
-  goalMaps,
-  cynefinSelections,
-  tcofJourneys,
   projects,
+  plans
 } from "../shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import connectPg from "connect-pg-simple";

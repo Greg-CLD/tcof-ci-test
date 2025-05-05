@@ -17,6 +17,7 @@ import { relations } from "drizzle-orm";
 import { z } from "zod";
 
 // Legacy tables needed for compatibility with existing code
+
 export const goalMaps = pgTable("goal_maps", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),

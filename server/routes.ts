@@ -13,12 +13,11 @@ import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
 import { relationsDb, createRelation, loadRelations } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
-import { 
-  insertUserSchema, 
-  insertGoalMapSchema, 
-  insertCynefinSelectionSchema, 
-  insertTcofJourneySchema, 
-  insertProjectSchema 
+import {
+  userInsertSchema as insertUserSchema,
+  projectInsertSchema,
+  outcomeInsertSchema,
+  outcomeProgressInsertSchema
 } from "@shared/schema";
 
 // Initialize Stripe with your secret key

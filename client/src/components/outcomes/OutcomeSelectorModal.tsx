@@ -77,7 +77,6 @@ export function OutcomeSelectorModal({
         toast({
           title: "Maximum outcomes reached",
           description: `You can select up to ${MAX_OUTCOMES} outcomes to track.`,
-          variant: "warning",
         });
       }
     }
