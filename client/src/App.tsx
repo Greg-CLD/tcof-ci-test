@@ -258,6 +258,7 @@ function Router() {
 
 // Dev-only import for accessibility audit
 import A11yAuditProvider from '@/components/A11yAuditProvider';
+import { PlanProvider } from '@/contexts/PlanContext';
 
 function App() {
   // Check if we're in development mode
@@ -270,15 +271,17 @@ function App() {
           {/* Only enable accessibility audits in development */}
           <A11yAuditProvider disabled={!isDev}>
             <ProgressProvider>
-              <div className="flex flex-col min-h-screen">
-                <GlobalNav />
-                <Breadcrumb />
-                <ProjectBanner />
-                <div className="flex-grow">
-                  <Router />
+              <PlanProvider>
+                <div className="flex flex-col min-h-screen">
+                  <GlobalNav />
+                  <Breadcrumb />
+                  <ProjectBanner />
+                  <div className="flex-grow">
+                    <Router />
+                  </div>
+                  <Toaster />
                 </div>
-                <Toaster />
-              </div>
+              </PlanProvider>
             </ProgressProvider>
           </A11yAuditProvider>
         </AuthProtectionProvider>

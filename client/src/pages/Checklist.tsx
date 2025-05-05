@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getLatestPlanId, hasExistingPlan } from '@/lib/planHelpers';
 import { PlanRecord, loadPlan, savePlan } from '@/lib/plan-db';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,7 @@ import ChecklistFilterBar, {
 } from '@/components/checklist/ChecklistFilterBar';
 import { useToast } from '@/hooks/use-toast';
 import { exportPlanPDF, exportCSV } from '@/lib/exportUtils';
+import { usePlan } from '@/contexts/PlanContext';
 
 export default function Checklist() {
   const [, setLocation] = useLocation();
