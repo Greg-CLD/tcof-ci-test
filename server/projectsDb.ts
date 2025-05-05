@@ -22,6 +22,7 @@ export interface Project {
   orgType?: string;
   teamSize?: string;
   currentStage?: string;
+  selectedOutcomeIds?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -179,6 +180,7 @@ export const projectsDb = {
       orgType?: string;
       teamSize?: string;
       currentStage?: string;
+      selectedOutcomeIds?: string[];
     }
   ): Promise<Project | null> => {
     try {
