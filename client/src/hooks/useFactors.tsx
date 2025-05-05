@@ -22,8 +22,8 @@ export function useFactors() {
   useEffect(() => {
     const loadFactors = async () => {
       try {
-        // Test error handling
-        throw new Error('Test error');
+        // Uncomment to test error handling
+        // throw new Error('Test error');
         
         setLoading(true);
         setError(null);

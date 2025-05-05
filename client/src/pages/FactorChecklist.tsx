@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getLatestPlanId, hasExistingPlan } from '@/lib/planHelpers';
 import { PlanRecord, loadPlan } from '@/lib/plan-db';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -9,39 +8,37 @@ import SummaryBar from '@/components/checklist/SummaryBar';
 import FactorAccordion from '@/components/checklist/FactorAccordion';
 import { useToast } from '@/hooks/use-toast';
 import { exportPlanPDF, exportCSV } from '@/lib/exportUtils';
+import { useProjects } from '@/hooks/useProjects';
 
 export default function FactorChecklist() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { getSelectedProject } = useProjects();
   
   // Plan state
-  const [planId, setPlanId] = useState<string | undefined>();
   const [plan, setPlan] = useState<PlanRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'factors'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'factors'>('factors'); // Set 'factors' as default
+  
+  // Get the selected project ID
+  const selectedProject = getSelectedProject();
+  const selectedProjectId = selectedProject?.id;
   
   // Load plan data when component mounts
   useEffect(() => {
     const loadPlanData = async () => {
       setLoading(true);
       
-      // Check if there's an existing plan
-      if (!hasExistingPlan()) {
+      // Check if there's a selected project
+      if (!selectedProjectId) {
         setLoading(false);
         return;
       }
       
       try {
-        const currentPlanId = getLatestPlanId();
-        if (!currentPlanId) {
-          setLoading(false);
-          return;
-        }
-        
-        const loadedPlan = await loadPlan(currentPlanId);
+        const loadedPlan = await loadPlan(selectedProjectId);
         if (loadedPlan) {
           setPlan(loadedPlan);
-          setPlanId(currentPlanId);
         }
       } catch (error) {
         console.error('Error loading plan:', error);
@@ -56,7 +53,7 @@ export default function FactorChecklist() {
     };
     
     loadPlanData();
-  }, [toast]);
+  }, [selectedProjectId, toast]);
   
   // Handle plan update
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
@@ -205,7 +202,7 @@ export default function FactorChecklist() {
           
           <TabsContent value="factors" className="mt-4">
             {/* Factor Accordion component */}
-            <FactorAccordion selectedProjectId={planId || ''} />
+            <FactorAccordion selectedProjectId={selectedProjectId || ''} />
           </TabsContent>
         </Tabs>
       </div>
