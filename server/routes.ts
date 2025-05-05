@@ -884,7 +884,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (teamSize !== undefined) updateData.teamSize = teamSize;
       if (currentStage !== undefined) updateData.currentStage = currentStage;
       
+      console.log(`Updating project ${projectId} with fields:`, JSON.stringify(updateData, null, 2));
+      
       const updatedProject = await projectsDb.updateProject(projectId, updateData);
+      console.log("Updated project result:", JSON.stringify(updatedProject, null, 2));
       
       if (!updatedProject) {
         return res.status(500).json({ message: "Failed to update project" });

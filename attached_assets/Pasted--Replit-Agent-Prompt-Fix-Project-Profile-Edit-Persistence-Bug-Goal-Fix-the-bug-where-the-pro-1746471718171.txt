@@ -1,0 +1,56 @@
+🛠️ Replit Agent Prompt – Fix Project Profile Edit Persistence Bug
+🎯 Goal
+Fix the bug where the project profile form does not persist changes after editing. When a user edits a project profile and saves, the data should be stored and correctly shown next time they visit the form.
+
+✅ Checklist
+Frontend Fixes
+
+ Ensure the useEffect in ProjectProfile.tsx correctly populates the form using the project object.
+
+ Confirm the form.reset() fields align exactly with the schema and backend payload.
+
+ Check that the form submit handler includes all expected fields in the PUT request.
+
+ Ensure no empty or default values are accidentally overwriting valid existing values.
+
+Backend Fixes
+
+ Verify that the PUT /api/projects/:id endpoint correctly receives and updates the project data using projectsDb.updateProject(...).
+
+ Ensure the updateProject function updates all profile-related fields: sector, customSector, orgType, teamSize, currentStage.
+
+ Add logging or console output (temporarily) to confirm which fields are received in the PUT body.
+
+Database Sanity
+
+ Confirm the projects table is not being overwritten with null or empty values unintentionally.
+
+Form Schema
+
+ Validate that the form schema (Zod) aligns exactly with the field names used in both the backend and the form reset logic.
+
+ Adjust optional/required settings if needed to prevent validation rejections.
+
+✅ Definition of Done
+Editing a project correctly updates all fields (e.g. sector type).
+
+After clicking Save, returning to the project shows the correct previously saved values in the form.
+
+No fields go blank unless intentionally cleared by the user.
+
+The fix is made directly in the dev environment. No backup, no rollback planning — just fix it.
+
+✅ Smoke Test Cases
+Edit a project → change sector → save → refresh page → sector should remain updated.
+
+Add a customSector value → save → return → value should be present.
+
+Change multiple fields (e.g. orgType, teamSize) → save → return → all should persist.
+
+Validate frontend logs: PUT request payload includes correct data.
+
+Validate backend logs: updateProject() updates correct fields and returns 200 OK.
+
+🚨 Important
+This is a development environment. You have permission to make bold, direct changes. There are no users. The only goal is to fix this persistence issue.
+

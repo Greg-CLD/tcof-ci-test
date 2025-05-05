@@ -325,11 +325,17 @@ export const storage = {
     data: {
       name?: string,
       description?: string | null,
+      sector?: string,
+      customSector?: string | null,
+      orgType?: string,
+      teamSize?: string,
+      currentStage?: string,
       goalMapId?: number | null,
       cynefinSelectionId?: number | null,
       tcofJourneyId?: number | null
     }
   ) {
+    console.log("Updating project with data:", JSON.stringify(data, null, 2));
     const updateValues = {
       ...data,
       lastUpdated: new Date()
