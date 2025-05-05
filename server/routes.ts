@@ -510,7 +510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get custom outcomes for this project
-      const customOutcomes = await outcomesDb.getProjectOutcomes(projectId);
+      const customOutcomes = await outcomesDb.getCustomOutcomesByUserId(userId);
       
       // Return the outcome IDs and custom outcomes
       res.json({
@@ -613,7 +613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get all outcome progress entries for this project
-      const progress = await outcomeProgressDb.getProjectOutcomeProgress(projectId);
+      const progress = await outcomeProgressDb.getProgressByProjectId(projectId);
       
       res.json(progress);
     } catch (error: any) {
@@ -645,7 +645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create the outcome progress entry
-      const progress = await outcomeProgressDb.createOutcomeProgress(projectId, outcomeId, value);
+      const progress = await outcomeProgressDb.updateOutcomeProgress(projectId, outcomeId, value);
       
       if (!progress) {
         return res.status(500).json({ message: "Error creating outcome progress" });
@@ -655,6 +655,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating outcome progress:", error);
       res.status(500).json({ message: "Error creating outcome progress" });
+    }
+  });
+  
+  // Update outcome progress (PATCH endpoint for updating a specific outcome's progress)
+  app.patch("/api/projects/:projectId/outcomes/:outcomeId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const { projectId, outcomeId } = req.params;
+      const { value } = req.body;
+      
+      if (typeof value !== 'number' || value < 0 || value > 100) {
+        return res.status(400).json({ message: "Value must be a number between 0 and 100" });
+      }
+      
+      // Get the project to verify existence and ownership
+      const existingProject = await projectsDb.getProject(projectId);
+      if (!existingProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Ensure user owns this project
+      if (existingProject.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      // Verify that the outcome exists
+      const outcome = await outcomesDb.getOutcomeById(outcomeId);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      // Update the outcome progress
+      const updatedProgress = await outcomeProgressDb.updateOutcomeProgress(projectId, outcomeId, value);
+      
+      if (!updatedProgress) {
+        return res.status(500).json({ message: "Error updating outcome progress" });
+      }
+      
+      res.json(updatedProgress);
+    } catch (error: any) {
+      console.error("Error updating outcome progress:", error);
+      res.status(500).json({ message: "Error updating outcome progress" });
     }
   });
 

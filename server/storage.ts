@@ -295,7 +295,7 @@ export const storage = {
     });
   },
 
-  async getProject(id: number) {
+  async getProject(id: string) {
     return await db.query.projects.findFirst({
       where: eq(projects.id, id),
       with: {
@@ -330,7 +330,7 @@ export const storage = {
   },
 
   async updateProject(
-    id: number,
+    id: string,
     data: {
       name?: string,
       description?: string | null,
