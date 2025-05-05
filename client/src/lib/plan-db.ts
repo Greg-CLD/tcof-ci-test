@@ -54,6 +54,7 @@ export type TaskItem = {
   notes?: string;
   priority?: TaskPriority;
   dueDate?: string;
+  order?: number;
 };
 
 export type PolicyTask = {
@@ -71,6 +72,7 @@ export type GoodPracticeTask = {
   notes?: string;
   priority?: TaskPriority;
   dueDate?: string;
+  order?: number;
 };
 
 export type CustomFramework = {
