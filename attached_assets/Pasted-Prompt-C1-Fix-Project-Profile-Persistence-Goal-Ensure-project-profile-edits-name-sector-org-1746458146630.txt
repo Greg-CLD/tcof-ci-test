@@ -1,0 +1,56 @@
+Prompt C1 – Fix Project Profile Persistence
+
+🎯 Goal
+Ensure project profile edits (name, sector, orgType, teamSize, description, currentStage) are saved and re-loaded correctly.
+
+────────────────────────────────
+
+Client Form Handler
+
+Open ProjectProfile.tsx (or equivalent) and review the “Save” button handler.
+
+Verify it issues a PUT /api/projects/:id (or POST if that’s your convention) with all profile fields in the request body.
+
+Ensure on success it updates:
+
+React context (e.g. via setSelectedProjectId or setProjectData)
+
+Local component state
+
+localStorage key (e.g. selectedProjectId or any per-project profile key)
+
+Backend Route
+
+Open routes.ts (or your Express routes file) and inspect the PUT /api/projects/:id handler.
+
+Confirm it reads all incoming fields (name, sector, customSector, orgType, teamSize, description, currentStage) and writes them to the project record in Replit DB (or JSON file).
+
+Add logging for the incoming payload and the saved object to catch mismatches.
+
+Data Reload on Profile Page
+
+After saving, ensure useEffect or reload logic in ProjectProfile.tsx calls GET /api/projects/:id (or loadProject(id)) to fetch and populate the form.
+
+If you’re using a context provider (PlanProvider), verify it exposes projectData and that ProjectProfile subscribes to it.
+
+Checklist Load Dependency
+
+In Checklist.tsx, ensure it checks that profile fields are not null (e.g. projectData.sector) before deciding “No Plan Found.”
+
+If profile incomplete, guide the user to complete profile; once complete, calling loadPlan() again should render the checklist.
+
+User Feedback & Testing
+
+Add toasts on save success/failure in the profile form.
+
+Write a simple end-to-end smoke test in the code (or manually):
+
+Create a new project.
+
+Edit profile fields → Save.
+
+Refresh or navigate away/back.
+
+Confirm form fields persist via another GET /api/projects/:id.
+
+Please implement these changes so that saving a project profile truly persists the settings and allows the checklist to load immediately afterward.
