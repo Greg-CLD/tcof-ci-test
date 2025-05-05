@@ -275,7 +275,7 @@ export default function GoalMappingTool() {
     }
   };
   
-  // Save the map
+  // Save the map - now with fixed name and simplified flow
   const handleSaveMap = () => {
     if (nodes.length === 0) {
       toast({
@@ -288,14 +288,16 @@ export default function GoalMappingTool() {
     
     setIsLoading(true);
     
+    // Create goal map data with fixed name
     const mapData: GoalMapData = {
-      name: mapName,
+      name: mapName, // Using our fixed name constant
       nodes: nodes,
       connections: connections,
       lastUpdated: Date.now(),
+      projectId: projectId // Include project ID directly
     };
     
-    // First save to localStorage for offline use
+    // First save to localStorage for backup/offline use
     const success = saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, mapData);
     
     if (!success) {
@@ -315,19 +317,13 @@ export default function GoalMappingTool() {
         updateMapMutation.mutate({
           id: serverGoalMap.id,
           name: mapName,
-          data: {
-            ...mapData,
-            projectId,
-          }
+          data: mapData
         });
       } else {
         // Otherwise create a new one
         saveMapMutation.mutate({
           name: mapName,
-          data: {
-            ...mapData,
-            projectId,
-          },
+          data: mapData,
           projectId
         });
       }
@@ -351,10 +347,7 @@ export default function GoalMappingTool() {
     }
   };
   
-  // Handle form input
-  const handleMapNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMapName(e.target.value);
-  };
+  // No longer need map name handling since it's a fixed constant
   
   // Show loading state while fetching data
   if (goalMapLoading && !hasLoadedData) {
@@ -407,8 +400,11 @@ export default function GoalMappingTool() {
                 <li>Enter your goals at different levels (strategic, business, product)</li>
                 <li>Drag to position goals on the canvas</li>
                 <li>Connect related goals by clicking and dragging between them</li>
-                <li>Name and save your map when you're done</li>
+                <li>Save your map when you're done</li>
               </ol>
+              <p className="mt-2 text-xs text-gray-600">
+                Your map is automatically saved with your project, and you can return to edit it anytime.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -427,15 +423,9 @@ export default function GoalMappingTool() {
         <>
           <Card className="mb-6">
             <CardContent className="p-4 md:p-6 space-y-4">
-              {/* Map Name Input */}
+              {/* Map name is now fixed - display as heading */}
               <div>
-                <Input 
-                  type="text" 
-                  placeholder="Name your success map"
-                  value={mapName}
-                  onChange={handleMapNameChange}
-                  className="text-lg font-semibold"
-                />
+                <h3 className="text-lg font-semibold">{mapName}</h3>
               </div>
               
               {/* Goal Input Form */}

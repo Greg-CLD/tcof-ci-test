@@ -26,6 +26,10 @@
     "name": "Test 2130",
     "description": "",
     "createdAt": "2025-05-05T20:29:17.500Z",
-    "updatedAt": "2025-05-05T20:29:17.500Z"
+    "updatedAt": "2025-05-05T20:32:06.658Z",
+    "sector": "nonprofit",
+    "orgType": "education",
+    "teamSize": "medium",
+    "currentStage": "identify"
   }
 ]
