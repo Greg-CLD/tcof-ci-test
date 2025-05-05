@@ -23,6 +23,7 @@ export interface Project {
   teamSize?: string;
   currentStage?: string;
   selectedOutcomeIds?: string[];
+  organisationId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,6 +85,7 @@ export const projectsDb = {
       orgType?: string;
       teamSize?: string;
       currentStage?: string;
+      organisationId?: string;
     }
   ): Promise<Project | null> => {
     try {
@@ -98,6 +100,7 @@ export const projectsDb = {
         orgType: data.orgType,
         teamSize: data.teamSize,
         currentStage: data.currentStage,
+        organisationId: data.organisationId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -124,19 +127,27 @@ export const projectsDb = {
   },
 
   /**
-   * List all projects for a user
+   * List all projects for a user, optionally filtered by organization
    * @param userId User ID
+   * @param organisationId Optional organization ID filter
    * @returns Array of projects for the user
    */
-  listProjects: async (userId: number): Promise<Project[]> => {
+  listProjects: async (userId: number, organisationId?: string): Promise<Project[]> => {
     try {
       // Load all projects
       const projects = loadProjects();
       
       // Filter projects by user ID
-      const userProjects = projects.filter(p => p.userId === userId);
+      let userProjects = projects.filter(p => p.userId === userId);
       
-      console.log(`Found ${userProjects.length} projects for user ${userId}`);
+      // If organisationId is provided, filter by that too
+      if (organisationId) {
+        userProjects = userProjects.filter(p => p.organisationId === organisationId);
+        console.log(`Found ${userProjects.length} projects for user ${userId} in organisation ${organisationId}`);
+      } else {
+        console.log(`Found ${userProjects.length} projects for user ${userId}`);
+      }
+      
       return userProjects;
     } catch (error) {
       console.error('Error listing projects:', error);
@@ -181,6 +192,7 @@ export const projectsDb = {
       teamSize?: string;
       currentStage?: string;
       selectedOutcomeIds?: string[];
+      organisationId?: string;
     }
   ): Promise<Project | null> => {
     try {
