@@ -5,11 +5,11 @@
     "name": "TCOF Launch",
     "description": "Launching this bad boy.",
     "createdAt": "2025-05-04T22:13:56.770Z",
-    "updatedAt": "2025-05-05T18:55:37.074Z",
+    "updatedAt": "2025-05-05T19:05:28.718Z",
     "sector": "private",
     "customSector": "Test",
     "orgType": "startup",
-    "teamSize": "solo",
+    "teamSize": "small",
     "currentStage": "identify"
   },
   {
@@ -18,6 +18,10 @@
     "name": "Test Project",
     "description": "",
     "createdAt": "2025-05-05T18:04:58.574Z",
-    "updatedAt": "2025-05-05T18:04:58.574Z"
+    "updatedAt": "2025-05-05T19:12:37.235Z",
+    "sector": "education",
+    "orgType": "micro_business",
+    "teamSize": "medium",
+    "currentStage": "identify"
   }
 ]

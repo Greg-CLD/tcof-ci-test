@@ -89,6 +89,11 @@ function Router() {
       <Route path="/get-your-bearings/project-profile" component={ProjectProfile} />
       <Route path="/make-a-plan">
         <ProtectedRouteGuard>
+          <MakeAPlan />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/landing">
+        <ProtectedRouteGuard>
           <MakeAPlanLanding />
         </ProtectedRouteGuard>
       </Route>

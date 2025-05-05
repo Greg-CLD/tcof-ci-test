@@ -139,12 +139,17 @@ export default function ProjectProfile() {
   // Fill form when editing and projects are loaded
   useEffect(() => {
     if (selectedProjectId && projects.length > 0 && isEditing) {
+      console.log("Trying to load project data:", { selectedProjectId, projectsCount: projects.length });
       const project = projects.find(p => p.id === selectedProjectId);
       if (project) {
+        console.log("Found project for form:", project);
         // If sector is "other", show custom sector field
         if (project.sector === 'other') {
           setShowCustomSector(true);
         }
+        
+        // Set hasLoadedProject to true once we've loaded data
+        setHasLoadedProject(true);
         
         form.reset({
           name: project.name,
@@ -155,6 +160,8 @@ export default function ProjectProfile() {
           teamSize: project.teamSize || '',
           currentStage: project.currentStage || '',
         });
+      } else {
+        console.warn(`Project with ID ${selectedProjectId} not found in projects list`);
       }
     }
   }, [selectedProjectId, projects, isEditing, form]);
