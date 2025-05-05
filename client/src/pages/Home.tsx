@@ -20,6 +20,9 @@ import { generateCompletePDF } from "@/lib/pdf-utils";
 import vitruvianMan from "../assets/vitruvian-man.png";
 import { useProjects, Project } from "@/hooks/useProjects";
 import { useQueryClient } from "@tanstack/react-query";
+import { useProjectContext } from "@/contexts/ProjectContext";
+import ProjectProgressTracker from "@/components/home/ProjectProgressTracker";
+import QuickLinkButtons from "@/components/home/QuickLinkButtons";
 
 export default function Home() {
   const [location, navigate] = useLocation();
@@ -38,6 +41,9 @@ export default function Home() {
     deleteProject
   } = useProjects();
   const queryClient = useQueryClient();
+  
+  // Get the current project context
+  const { currentProject } = useProjectContext();
 
   // Handle creating a new project
   const handleCreateProject = async () => {
@@ -123,8 +129,11 @@ export default function Home() {
     // Set as current project in localStorage
     localStorage.setItem('selectedProjectId', projectId);
 
-    // Navigate to make-a-plan landing
-    navigate("/make-a-plan");
+    // Stay on the home page (refreshing the page will show the tracker and quick links)
+    queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+    
+    // Force a page refresh to show the tracker and quick links
+    window.location.href = '/';
   };
 
   // Handle deleting a project
@@ -212,6 +221,21 @@ export default function Home() {
               Refresh
             </Button>
           </div>
+          
+          {/* Project Progress Tracker and Quick Links (when a project is selected) */}
+          {currentProject && (
+            <div className="mb-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-tcof-dark mb-4">
+                {currentProject.name}
+              </h3>
+              
+              {/* Project Progress Tracker */}
+              <ProjectProgressTracker />
+              
+              {/* Quick Link Buttons */}
+              <QuickLinkButtons projectId={currentProject.id} />
+            </div>
+          )}
           
           {isLoading ? (
             // Loading state
