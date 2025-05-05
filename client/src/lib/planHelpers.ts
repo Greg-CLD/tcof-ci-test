@@ -6,28 +6,28 @@ import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storageAdapter';
 
 /**
- * Gets the ID of the most recent plan from localStorage
- * @returns The ID of the most recent plan, or undefined if none exists
+ * Gets the ID of the selected plan from localStorage
+ * @returns The ID of the selected plan, or undefined if none exists
  */
 export const getLatestPlanId = (): string | undefined => {
-  const planId = localStorage.getItem('tcof_most_recent_plan');
+  const planId = localStorage.getItem('selectedProjectId');
   return planId !== null ? planId : undefined;
 };
 
 /**
- * Sets the ID of the most recent plan in localStorage
- * @param planId The ID of the plan to set as most recent
+ * Sets the ID of the selected plan in localStorage
+ * @param planId The ID of the plan to set as selected
  */
 export const setLatestPlanId = (planId: string): void => {
-  localStorage.setItem('tcof_most_recent_plan', planId);
+  localStorage.setItem('selectedProjectId', planId);
 };
 
 /**
- * Checks if there is an existing plan
- * @returns Whether there is an existing plan
+ * Checks if there is an existing selected plan
+ * @returns Whether there is an existing selected plan
  */
 export const hasExistingPlan = (): boolean => {
-  const planId = getLatestPlanId();
+  const planId = localStorage.getItem('selectedProjectId');
   return !!planId;
 };
 

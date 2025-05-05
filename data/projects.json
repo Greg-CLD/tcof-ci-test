@@ -11,5 +11,17 @@
     "orgType": "startup",
     "teamSize": "solo",
     "currentStage": "identify"
+  },
+  {
+    "id": "5f49aa79-9720-49a1-9342-e5c3e70a070d",
+    "userId": 3,
+    "name": "New Test",
+    "description": "",
+    "createdAt": "2025-05-05T08:17:25.076Z",
+    "updatedAt": "2025-05-05T08:18:08.787Z",
+    "sector": "private",
+    "orgType": "startup",
+    "teamSize": "medium",
+    "currentStage": "identify"
   }
 ]

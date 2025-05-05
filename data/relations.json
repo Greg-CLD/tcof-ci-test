@@ -9,5 +9,16 @@
       "origin": "selectProject"
     },
     "timestamp": "2025-05-05T07:52:34.208Z"
+  },
+  {
+    "id": "54e12123-e2b4-4c10-8692-c7d5ba1c522e",
+    "fromId": "3",
+    "toId": "5f49aa79-9720-49a1-9342-e5c3e70a070d",
+    "relType": "BELONGS_TO_PROJECT",
+    "projectId": "5f49aa79-9720-49a1-9342-e5c3e70a070d",
+    "meta": {
+      "origin": "createProject"
+    },
+    "timestamp": "2025-05-05T08:17:25.077Z"
   }
 ]

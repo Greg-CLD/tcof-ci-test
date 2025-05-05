@@ -174,6 +174,10 @@ export const createEmptyPlan = async (name?: string, description?: string, proje
   try {
     // Store the new plan in persistent storage
     await storage.save(newPlan.id, newPlan);
+    
+    // Set this as the selected project ID in localStorage
+    localStorage.setItem('selectedProjectId', newPlan.id);
+    
     return newPlan.id;
   } catch (error) {
     console.error('Error creating empty plan:', error);
@@ -183,13 +187,13 @@ export const createEmptyPlan = async (name?: string, description?: string, proje
 
 /**
  * Loads a plan by its ID
- * If no ID is provided, attempts to load the most recent plan
+ * If no ID is provided, attempts to load the selected plan
  */
 export const loadPlan = async (id?: string): Promise<PlanRecord | null> => {
-  // If no ID provided, try to get the latest plan ID from localStorage
+  // If no ID provided, try to get the selected plan ID from localStorage
   let planId = id;
   if (!planId) {
-    const storedId = localStorage.getItem('tcof_most_recent_plan');
+    const storedId = localStorage.getItem('selectedProjectId');
     if (!storedId) return null;
     planId = storedId;
   }
@@ -260,8 +264,8 @@ export const savePlan = async (id: string, data: Partial<PlanRecord>): Promise<b
     lastUpdated: new Date().toISOString()
   };
   
-  // Save to localStorage as latest plan
-  localStorage.setItem('tcof_most_recent_plan', id);
+  // Save to localStorage as selected plan
+  localStorage.setItem('selectedProjectId', id);
   
   // Persist to storage
   try {
