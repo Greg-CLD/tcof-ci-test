@@ -34,6 +34,9 @@ interface StageTabsProps {
 }
 
 export default function StageTabs({ factor, projectId }: StageTabsProps) {
+  // Debug log for props inspection
+  console.log('StageTabs props ➔', { factor, projectId });
+
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
   const [taskStatus, setTaskStatus] = useState<TaskStatus>({});
   const [plan, setPlan] = useState<PlanRecord | null>(null);

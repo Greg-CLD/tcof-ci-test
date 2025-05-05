@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Accordion,
   AccordionContent,
@@ -8,56 +8,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Loader2, HelpCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import StageTabs from './StageTabs';
-import { apiRequest } from '@/lib/queryClient';
-
-interface FactorTask {
-  id: string;
-  title: string;
-  tasks: {
-    Identification: string[];
-    Definition: string[];
-    Delivery: string[];
-    Closure: string[];
-  };
-}
+import { useFactors, type FactorTask } from '@/hooks/useFactors';
+import { ErrorMessage } from '@/components/ui/error-message';
 
 interface FactorAccordionProps {
   selectedProjectId: string;
 }
 
 export default function FactorAccordion({ selectedProjectId }: FactorAccordionProps) {
-  const [factors, setFactors] = useState<FactorTask[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  // Load success factors on component mount
-  useEffect(() => {
-    const loadFactors = async () => {
-      try {
-        setLoading(true);
-        const response = await apiRequest('GET', '/api/factors');
-        if (!response.ok) {
-          throw new Error('Failed to load success factors');
-        }
-        
-        const data = await response.json();
-        setFactors(data);
-      } catch (error) {
-        console.error('Error loading success factors:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load success factors. Please try again later.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadFactors();
-  }, [toast]);
+  const { factors, loading, error } = useFactors();
 
   // Count total tasks for a factor
   const countTotalTasks = (factor: FactorTask) => {
@@ -125,6 +85,16 @@ export default function FactorAccordion({ selectedProjectId }: FactorAccordionPr
     }
     return aSubCat - bSubCat;
   });
+
+  if (error) {
+    return (
+      <ErrorMessage 
+        title="Failed to load success factors" 
+        message={error} 
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
 
   if (loading) {
     return (
