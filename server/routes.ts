@@ -669,9 +669,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Ensure user owns this project
-      if (existingProject.userId !== (req.user as any).id) {
+      // Ensure user owns this project or is an admin
+      if (existingProject.userId !== (req.user as any).id && !(req.user as any).isAdmin) {
         return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      // Find and delete associated plans
+      try {
+        // Get all plans to find those associated with this project
+        const plans = await storage.list();
+        console.log(`Checking ${plans.length} plans for project ${projectId}`);
+        
+        for (const planId of plans) {
+          try {
+            const planData = await storage.load(planId);
+            if (planData && planData.projectId === projectId) {
+              console.log(`Deleting plan ${planId} associated with project ${projectId}`);
+              await storage.delete(planId);
+            }
+          } catch (planError) {
+            console.error(`Error processing plan ${planId}:`, planError);
+            // Continue with other plans even if one fails
+          }
+        }
+      } catch (plansError) {
+        console.error(`Error finding associated plans for project ${projectId}:`, plansError);
+        // Continue with project deletion even if plan deletion fails
       }
       
       // Delete the project
@@ -685,7 +708,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await relationsDb.deleteProjectRelations(projectId);
       console.log(`Relations deleted for project ${projectId}`);
       
-      res.status(200).json({ message: "Project deleted successfully" });
+      // Return 204 No Content for successful deletion
+      res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting project:", error);
       res.status(500).json({ message: "Error deleting project" });
