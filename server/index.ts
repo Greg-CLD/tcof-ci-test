@@ -38,6 +38,19 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Run the factors integrity check
+  try {
+    // Use dynamic import to load the factors check script
+    import('../scripts/checkFactors.js').then(module => {
+      module.checkFactorsIntegrity();
+    }).catch((err: Error) => {
+      log(`Error importing factors check module: ${err.message}`);
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log(`Error running success factors integrity check: ${errorMessage}`);
+  }
+
   // Initialize the canonical factors on startup
   const factorsUpdated = await ensureCanonicalFactors();
   if (factorsUpdated) {
