@@ -123,6 +123,51 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
     }
   };
   
+  // Check if there are any tasks in the plan
+  const checkForTasks = async (): Promise<boolean> => {
+    if (!selectedPlanId) return false;
+    
+    // Load the current plan
+    const plan = await loadPlan(selectedPlanId);
+    if (!plan) return false;
+    
+    // Check if there are any tasks in any stage
+    let hasTasks = false;
+    Object.keys(plan.stages).forEach((stageName) => {
+      const stage = stageName as Stage;
+      const stageData = plan.stages[stage];
+      
+      // Regular tasks
+      if (stageData.tasks && stageData.tasks.length > 0) {
+        hasTasks = true;
+      }
+      
+      // Good practice tasks
+      if (stageData.goodPractice?.tasks && stageData.goodPractice.tasks.length > 0) {
+        hasTasks = true;
+      }
+    });
+    
+    return hasTasks;
+  };
+  
+  // Track if there are tasks in the plan
+  const [hasTasks, setHasTasks] = useState<boolean | null>(null);
+  
+  // Check for tasks when the plan changes
+  useEffect(() => {
+    const checkTasks = async () => {
+      if (selectedPlanId) {
+        const result = await checkForTasks();
+        setHasTasks(result);
+      } else {
+        setHasTasks(false);
+      }
+    };
+    
+    checkTasks();
+  }, [selectedPlanId]);
+  
   // Handle Email Task List
   const handleEmailTaskList = async () => {
     try {
@@ -132,6 +177,17 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
         toast({
           title: "No plan selected",
           description: "Please select a project plan first.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check again if there are tasks
+      const tasksExist = await checkForTasks();
+      if (!tasksExist) {
+        toast({
+          title: "No tasks to email",
+          description: "Please add some tasks to your plan first.",
           variant: "destructive",
         });
         return;
@@ -204,18 +260,62 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
       
       // Create and open mailto link
       const subject = `TCOF Task List – ${projectName}`;
-      const encodedBody = encodeURIComponent(emailBody);
-      const encodedSubject = encodeURIComponent(subject);
-      const mailtoLink = `mailto:?subject=${encodedSubject}&body=${encodedBody}`;
       
-      // Open the email client
-      window.location.href = mailtoLink;
-      
-      // Show confirmation toast
-      toast({
-        title: "Launching email client",
-        description: "Your task list will open in your mail app.",
-      });
+      try {
+        // Handle potential encoding issues with special characters
+        const encodedBody = encodeURIComponent(emailBody);
+        const encodedSubject = encodeURIComponent(subject);
+        
+        // Check if the mailto URI might be too long (most email clients have limits around 2000 chars)
+        if (encodedBody.length > 1500) {
+          // If too long, truncate and add a note
+          const truncatedBody = encodedBody.substring(0, 1500) + encodeURIComponent("\n\n[Note: Task list was truncated due to length. Please use the app to view all tasks.]");
+          const mailtoLink = `mailto:?subject=${encodedSubject}&body=${truncatedBody}`;
+          
+          // Open the email client
+          window.location.href = mailtoLink;
+          
+          // Show warning toast
+          toast({
+            title: "Task list was truncated",
+            description: "The task list was too long and was shortened for email compatibility.",
+            variant: "destructive",
+          });
+        } else {
+          // Normal case - open with full content
+          const mailtoLink = `mailto:?subject=${encodedSubject}&body=${encodedBody}`;
+          
+          // Open the email client
+          window.location.href = mailtoLink;
+          
+          // Show confirmation toast
+          toast({
+            title: "Launching email client",
+            description: "Your task list will open in your mail app.",
+          });
+        }
+      } catch (encodingError) {
+        console.error('Encoding error:', encodingError);
+        
+        // Fallback with simplified content if encoding fails
+        try {
+          // Create a simpler version without special characters
+          const simplifiedBody = `Task list for project: ${projectName}\nDate: ${format(new Date(), 'yyyy-MM-dd')}\n\nPlease view the full task list in the TCOF app.`;
+          const fallbackLink = `mailto:?subject=${encodeURIComponent("TCOF Task List")}&body=${encodeURIComponent(simplifiedBody)}`;
+          
+          window.location.href = fallbackLink;
+          
+          toast({
+            title: "Email client opened with limited content",
+            description: "Some special characters couldn't be included in the email.",
+            variant: "destructive",
+          });
+        } catch (fallbackError) {
+          // If even the fallback fails, show an error
+          console.error('Fallback encoding error:', fallbackError);
+          throw new Error("Unable to generate email with this content. Please try again with fewer tasks.");
+        }
+      }
     } catch (error) {
       console.error('Email task list error:', error);
       toast({
@@ -371,21 +471,40 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
             </div>
             
             <div className="mt-3 md:mt-0">
-              <Button
-                variant="outline"
-                size="default"
-                className="flex items-center gap-2"
-                onClick={handleEmailTaskList}
-                disabled={isEmailingTaskList || !selectedPlanId}
-                data-testid="email-task-list-button"
-              >
-                {isEmailingTaskList ? (
-                  <div className="animate-spin mr-1 h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                ) : (
-                  <Mail className="h-4 w-4" />
-                )}
-                <span>{isEmailingTaskList ? "Generating..." : "Email Task List"}</span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        variant="outline"
+                        size="default"
+                        className="flex items-center gap-2"
+                        onClick={handleEmailTaskList}
+                        disabled={isEmailingTaskList || !selectedPlanId || hasTasks === false}
+                        data-testid="email-task-list-button"
+                        aria-label="Email task list to collaborators"
+                      >
+                        {isEmailingTaskList ? (
+                          <div className="animate-spin mr-1 h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                        ) : (
+                          <Mail className="h-4 w-4" />
+                        )}
+                        <span>{isEmailingTaskList ? "Generating..." : "Email Task List"}</span>
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {!selectedPlanId && (
+                    <TooltipContent>
+                      <p>Please select a project plan first</p>
+                    </TooltipContent>
+                  )}
+                  {selectedPlanId && hasTasks === false && (
+                    <TooltipContent>
+                      <p>No tasks to email. Add tasks to your plan first.</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </CardContent>
