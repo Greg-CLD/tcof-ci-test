@@ -80,10 +80,34 @@ export function useProjects() {
       return response.json();
     },
     onSuccess: (updatedProject) => {
+      // Ensure localStorage is updated with the correct project ID
+      const selectedProjectId = localStorage.getItem('selectedProjectId');
+      if (!selectedProjectId || selectedProjectId === updatedProject.id) {
+        localStorage.setItem('selectedProjectId', updatedProject.id);
+      }
+      
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
       // Also invalidate the specific project query to update ProjectContext
       queryClient.invalidateQueries({ queryKey: ['/api/projects', updatedProject.id] });
+      
+      // Update the project in the cache directly to ensure immediate consistency
+      queryClient.setQueryData(['/api/projects', updatedProject.id], updatedProject);
+      
+      // Also update the project in the projects array in the cache
+      const projects = queryClient.getQueryData<Project[]>(['/api/projects']);
+      if (projects) {
+        const updatedProjects = projects.map(p => 
+          p.id === updatedProject.id ? updatedProject : p
+        );
+        queryClient.setQueryData(['/api/projects'], updatedProjects);
+      }
+      
+      toast({
+        title: 'Project Updated',
+        description: 'The project has been successfully updated.',
+      });
     },
     onError: (error: Error) => {
       toast({

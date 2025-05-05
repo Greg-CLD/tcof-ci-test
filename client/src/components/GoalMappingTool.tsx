@@ -106,7 +106,7 @@ export default function GoalMappingTool() {
   
   // Database save mutation
   const saveMapMutation = useMutation({
-    mutationFn: async (data: { name: string, data: any }) => {
+    mutationFn: async (data: { name: string, data: any, projectId?: string }) => {
       const response = await apiRequest("POST", "/api/goal-maps", data);
       if (!response.ok) {
         throw new Error("Failed to save map to database");
@@ -229,9 +229,21 @@ export default function GoalMappingTool() {
     
     // Then save to database if user is logged in
     if (user) {
+      // Get current project ID from localStorage
+      const projectId = localStorage.getItem('selectedProjectId');
+      
+      if (!projectId) {
+        toast({
+          title: "Warning",
+          description: "No project selected. The map will be saved but not linked to any project.",
+          variant: "destructive"
+        });
+      }
+      
       saveMapMutation.mutate({
         name: mapName,
-        data: data
+        data: data,
+        projectId: projectId || undefined
       });
     } else {
       toast({

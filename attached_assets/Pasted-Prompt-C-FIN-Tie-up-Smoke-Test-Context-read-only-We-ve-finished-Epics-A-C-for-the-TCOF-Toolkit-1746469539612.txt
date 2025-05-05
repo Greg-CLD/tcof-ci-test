@@ -1,0 +1,65 @@
+Prompt C-FIN — Tie-up & Smoke-Test
+Context (read-only)
+We’ve finished Epics A–C for the TCOF Toolkit.
+The remaining quirks are:
+
+1️⃣ Project-profile save occasionally loses data (localStorage / cache not synced).
+
+2️⃣ Goal-map save must always pass projectId to /api/goal-maps and persist.
+
+3️⃣ ensurePlanForProject must seed each new plan with the canonical factor-tasks so that
+stages.Identification.tasks etc. are never empty.
+
+4️⃣ The new owner-nudge & email task list features work, but we want a one-click smoke test and an automated axe-a11y run for the checklist page.*
+
+Fix & verify
+ProjectProfile PUT route & client-side save
+
+After a successful PUT /api/projects/:id, always
+update localStorage.selectedProjectId and
+queryClient.invalidateQueries(['/api/projects']).
+
+On the client, add a unit-test that mounts ProjectProfile, edits all six fields, hits Save, mocks the server response, and asserts that localStorage & React Query cache both contain the updated values.
+
+Goal-map save
+
+Ensure the Save Map call always includes projectId and that the server writes it.
+
+Add a Jest test: mock POST /api/goal-maps, call handleSaveMap, assert that the body has projectId, and that toast.success fires.
+
+Plan seeding guarantee
+
+In ensurePlanForProject(projectId) add a check: if any of the four stage arrays are missing OR empty, fetch the canonical factor-tasks (from data/successFactors.json) and seed [stage].tasks with every factor task.
+
+Unit-test: create a blank project, run the function, then GET /api/plans/:id and assert that Identification.tasks.length > 0.
+
+Checklist a11y & smoke script
+
+Add __tests__/checklist.smoke.test.ts that:
+
+ts
+Copy code
+// 1. create a project via API
+// 2. visit /checklist (using @playwright/test or React Testing Library + MemoryRouter)
+// 3. expect radar + task table to render
+// 4. run `axe-core` on the container, fail if any violation severity === 'critical'
+Wire this into npm run test-smoke.
+
+Owner-nudge & email list QA
+
+Integration test that:
+
+loads checklist with one un-owned task → expects ⚠️ icon.
+
+sets owner, presses Email Task List, and asserts window.open('mailto:...') is called with a body containing that owner’s name.
+
+Definition of Done
+✅ Editing a profile always persists & survives refresh.
+
+✅ Goal-map POST contains projectId (test passes).
+
+✅ New plans are auto-seeded; GET /api/plans/:id shows non-empty stage arrays.
+
+✅ npm run test-smoke passes with 0 axe critical violations and checklist renders.
+
+✅ All new tests green in CI.

@@ -5,7 +5,7 @@
     "name": "TCOF Launch",
     "description": "Launching this bad boy.",
     "createdAt": "2025-05-04T22:13:56.770Z",
-    "updatedAt": "2025-05-04T23:08:15.298Z",
+    "updatedAt": "2025-05-05T18:05:29.334Z",
     "sector": "private",
     "customSector": "Test",
     "orgType": "startup",
@@ -13,15 +13,11 @@
     "currentStage": "identify"
   },
   {
-    "id": "8cd81052-a1bb-4d31-829e-6fff175a1c1a",
+    "id": "ed2fcbe2-2555-4be4-808b-f55ff800731d",
     "userId": 3,
-    "name": "Quick Start Project",
-    "description": "A pre-configured project with default success factor tasks",
-    "createdAt": "2025-05-05T13:48:50.937Z",
-    "updatedAt": "2025-05-05T15:12:54.770Z",
-    "sector": "private",
-    "orgType": "startup",
-    "teamSize": "small",
-    "currentStage": "identify"
+    "name": "Test Project",
+    "description": "",
+    "createdAt": "2025-05-05T18:04:58.574Z",
+    "updatedAt": "2025-05-05T18:04:58.574Z"
   }
 ]
