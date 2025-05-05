@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, useRoute } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,15 +27,23 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Briefcase, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Briefcase, ChevronLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2 } from 'lucide-react';
 
 // Form validation schema
 const projectFormSchema = z.object({
   name: z.string().min(2, 'Project name must be at least 2 characters').max(100, 'Project name must not exceed 100 characters'),
   description: z.string().optional(),
   sector: z.string().min(1, 'Please select a sector'),
-  customSector: z.string().optional(),
+  customSector: z.string().optional()
+    .refine(val => {
+      // If there's no sector or sector is not "other", customSector is optional
+      // The form component will check this condition more thoroughly
+      return true;
+    }, {
+      message: 'Please describe your sector'
+    }),
   orgType: z.string().min(1, 'Please select an organization type'),
   teamSize: z.string().optional(),
   currentStage: z.string().min(1, 'Please select your current stage'),
@@ -45,11 +53,16 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
 export default function ProjectProfile() {
   const [location, navigate] = useLocation();
+  const [, params] = useRoute('/get-your-bearings/project-profile');
   const { projects, isLoading, createProject, updateProject } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [hasLoadedProject, setHasLoadedProject] = useState(false);
   const queryClient = useQueryClient();
-  const { setCurrentProject, refreshProject } = useProjectContext();
+  const { setCurrentProject, refreshProject, currentProject } = useProjectContext();
   
   // Track if sector is "other" to show custom sector field
   const [showCustomSector, setShowCustomSector] = useState(false);
@@ -68,6 +81,37 @@ export default function ProjectProfile() {
     },
   });
 
+  // Check form validity on field changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      if (!name) return; // Skip if no field name is provided
+      
+      // Check if the form is valid
+      const formState = form.getValues();
+      let isValid = !!formState.name && formState.name.length >= 2 &&
+                   !!formState.sector && 
+                   !!formState.orgType &&
+                   !!formState.currentStage;
+      
+      // Special validation for custom sector field
+      if (formState.sector === 'other') {
+        isValid = isValid && !!formState.customSector && formState.customSector.trim() !== '';
+      }
+      
+      setIsFormValid(isValid);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
+  
+  // Redirect to home if no projects found
+  useEffect(() => {
+    if (!isLoading && projects.length === 0 && !createProject.isPending) {
+      setIsRedirecting(true);
+      navigate('/');
+    }
+  }, [isLoading, projects, navigate]);
+
   // On mount, check query params and localStorage for projectId
   useEffect(() => {
     // Check URL query parameters first (for edit mode)
@@ -84,6 +128,10 @@ export default function ProjectProfile() {
       if (storedProjectId) {
         setSelectedProjectId(storedProjectId);
         setIsEditing(true);
+      } else {
+        // If no project ID is found, redirect to dashboard
+        setIsRedirecting(true);
+        navigate('/');
       }
     }
   }, []);
@@ -138,6 +186,9 @@ export default function ProjectProfile() {
         projectData.customSector = data.customSector;
       }
       
+      // Track that we're editing to disable the form
+      setIsSaved(true);
+      
       if (isEditing && selectedProjectId) {
         // Update existing project
         const result = await updateProject.mutateAsync({
@@ -157,13 +208,16 @@ export default function ProjectProfile() {
           await refreshProject();
         }
         
+        // Show success message via toast
         toast({
           title: 'Project Updated',
           description: 'Your project details have been updated successfully.',
         });
         
-        // Navigate to home or appropriate next page
-        navigate('/get-your-bearings');
+        // Wait a moment to show the saved state before navigating away
+        setTimeout(() => {
+          navigate('/get-your-bearings');
+        }, 1500);
       } else {
         // Create new project
         const result = await createProject.mutateAsync(projectData);
@@ -178,16 +232,24 @@ export default function ProjectProfile() {
           await refreshProject();
         }
         
+        // Show success message via toast
         toast({
           title: 'Project Created',
           description: 'Your new project has been created successfully.',
         });
         
-        // Navigate to home or appropriate next page
-        navigate('/get-your-bearings');
+        // Wait a moment to show the saved state before navigating away
+        setTimeout(() => {
+          navigate('/get-your-bearings');
+        }, 1500);
       }
     } catch (error) {
       console.error('Error saving project:', error);
+      
+      // Reset saved state since we had an error
+      setIsSaved(false);
+      
+      // Show error message
       toast({
         title: 'Error',
         description: 'There was a problem saving your project. Please try again.',
@@ -411,20 +473,50 @@ export default function ProjectProfile() {
                   />
                 </div>
                 
-                <CardFooter className="px-0 pt-4 flex justify-between">
+                <CardFooter className="px-0 pt-4 flex justify-between relative">
+                  {/* Loading indicator */}
+                  {isLoading && (
+                    <div className="absolute top-0 left-0 right-0 flex justify-center">
+                      <Loader2 className="h-5 w-5 animate-spin text-tcof-teal" />
+                    </div>
+                  )}
+                  
+                  {/* Show saved state indicator when saved */}
+                  {isSaved && (
+                    <div className="absolute right-0 -top-8 flex items-center text-green-600 bg-green-50 px-3 py-1 rounded-md animate-fadeIn">
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      <span className="text-sm font-medium">Saved!</span>
+                    </div>
+                  )}
+                  
                   <Button 
                     type="button" 
                     variant="outline"
                     onClick={() => navigate('/get-your-bearings')}
+                    disabled={isSaved || createProject.isPending || updateProject.isPending}
+                    className="flex-1 md:flex-none"
                   >
                     Cancel
                   </Button>
+                  
                   <Button 
                     type="submit" 
-                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                    disabled={isLoading || createProject.isPending || updateProject.isPending}
+                    className={`flex-1 md:flex-none bg-tcof-teal hover:bg-tcof-teal/90 text-white ${isSaved ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                    disabled={!isFormValid || isSaved || createProject.isPending || updateProject.isPending}
                   >
-                    {isEditing ? 'Update Project' : 'Create Project'}
+                    {isSaved ? (
+                      <span className="flex items-center">
+                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        {isEditing ? 'Updated!' : 'Created!'}
+                      </span>
+                    ) : (createProject.isPending || updateProject.isPending) ? (
+                      <span className="flex items-center">
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {isEditing ? 'Updating...' : 'Creating...'}
+                      </span>
+                    ) : (
+                      <span>{isEditing ? 'Update Project' : 'Create Project'}</span>
+                    )}
                   </Button>
                 </CardFooter>
               </form>
