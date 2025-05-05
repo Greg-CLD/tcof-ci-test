@@ -379,29 +379,19 @@ export default function SiteHeader() {
               
               {!isLoggedIn && (
                 <div className="border-t border-gray-100 pt-2 flex flex-col gap-2">
-                  <Link 
-                    href="/auth"
+                  <Button 
+                    variant="outline" 
+                    className="border-tcof-teal text-tcof-teal hover:bg-tcof-light w-full"
                     onClick={() => handleNavigation("/auth")}
-                    className="w-full"
                   >
-                    <Button 
-                      variant="outline" 
-                      className="border-tcof-teal text-tcof-teal hover:bg-tcof-light w-full"
-                    >
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link 
-                    href="/auth"
+                    Sign In
+                  </Button>
+                  <Button 
+                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full mt-2"
                     onClick={() => handleNavigation("/auth")}
-                    className="w-full"
                   >
-                    <Button 
-                      className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full"
-                    >
-                      Register
-                    </Button>
-                  </Link>
+                    Register
+                  </Button>
                 </div>
               )}
             </nav>

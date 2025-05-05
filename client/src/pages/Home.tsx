@@ -582,14 +582,14 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <Button 
                   className="bg-white text-tcof-dark hover:bg-gray-100"
-                  onClick={() => setLocation("/auth")}
+                  onClick={() => navigate("/auth")}
                 >
                   Sign In / Register <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button 
                   variant="outline" 
                   className="border-white text-white hover:bg-white/10"
-                  onClick={() => setLocation("/pro-tools")}
+                  onClick={() => navigate("/pro-tools")}
                 >
                   Learn About Pro Tools <Lock className="ml-2 h-4 w-4" />
                 </Button>
