@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { PlusCircle, Clock, Info, FileText } from "lucide-react";
+import { PlusCircle, Clock, Info, FileText, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { useOutcomes } from "@/hooks/useOutcomes";
 import { OutcomeSelectorModal } from "./OutcomeSelectorModal";
@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { exportOutcomesToPDF } from "@/lib/pdfExport";
 import { useQuery } from "@tanstack/react-query";
 import { RadarChart, type RadarChartPoint } from "@/components/checklist/RadarChart";
+import { Stage, TaskItem, GoodPracticeTask, PlanRecord, loadPlan } from "@/lib/plan-db";
+import { usePlan } from "@/contexts/PlanContext";
 
 interface ChecklistHeaderProps {
   projectId: string;

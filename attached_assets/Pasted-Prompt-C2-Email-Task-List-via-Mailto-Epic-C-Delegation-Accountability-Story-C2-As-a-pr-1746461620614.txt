@@ -1,0 +1,98 @@
+Prompt C2 – “Email Task List” via Mailto
+🎯 Epic C – Delegation & Accountability – Story C2: As a project manager I want to email the task list (with owners) to the team so that everyone gets their responsibilities in writing.
+
+────────────────────────────────
+1. Checklist Header Button
+
+Add a new button next to “📄 Export PDF”:
+
+jsx
+Copy code
+<Button
+  variant="outline"
+  size="sm"
+  className="flex items-center gap-1"
+  asChild
+>
+  <a
+    id="email-task-list-btn"
+    className="flex items-center gap-1"
+    onClick={handleEmailTaskList}
+    href="#"
+  >
+    <Mail className="h-4 w-4" />
+    Email Task List
+  </a>
+</Button>
+────────────────────────────────
+2. Email Handler Implementation (handleEmailTaskList)
+
+Collect all tasks for the current project & stage:
+
+tasks: TaskItem[] from your React Query or context.
+
+Include each task’s stage, text, owner || 'Unassigned', and status || 'To Do'.
+
+Format a plain-text body:
+
+yaml
+Copy code
+Project: <projectName>
+Date: <YYYY-MM-DD>
+
+Identification:
+ • [ ] Task A — Owner: Alice — Status: To Do
+ • [x] Task B — Owner: Bob — Status: Done
+
+Definition:
+ • …
+
+Delivery:
+ • …
+
+Closure:
+ • …
+Build a mailto: link:
+
+ts
+Copy code
+const subject = `TCOF Task List – ${projectName}`;
+const body = encodeURIComponent(formattedBody);
+const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+In handleEmailTaskList, assign window.location.href = href.
+
+────────────────────────────────
+3. Edge-Case & Bug Fixes
+
+Ensure the button actually fires: use an <a> with href instead of plain <Button onClick> to avoid React router intercept.
+
+Encode special characters in body text with encodeURIComponent.
+
+Provide feedback:
+
+ts
+Copy code
+toast({
+  title: "Launching email client",
+  description: "Your task list will open in your mail app.",
+});
+Disable the button if there are no tasks:
+
+jsx
+Copy code
+disabled={tasks.length === 0}
+title={tasks.length === 0 ? "No tasks to email" : ""}
+────────────────────────────────
+4. DoD
+
+Clicking “Email Task List” opens the user’s default mail client with:
+
+Subject: TCOF Task List – <Project Name>
+
+Body: properly formatted plain text, all stages and tasks with owners/status.
+
+Button is disabled when there are no tasks.
+
+Toast confirms the mail client is launching.
+
+Please implement the above in your ChecklistHeader and verify that clicking it actually invokes the user’s mail client with the correctly encoded subject and body. Let me know if any part misbehaves or if you encounter URI-length issues, and we can adjust accordingly.
