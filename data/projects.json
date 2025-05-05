@@ -5,11 +5,11 @@
     "name": "TCOF Launch",
     "description": "Launching this bad boy.",
     "createdAt": "2025-05-04T22:13:56.770Z",
-    "updatedAt": "2025-05-05T19:15:53.676Z",
-    "sector": "public",
+    "updatedAt": "2025-05-05T19:36:04.029Z",
+    "sector": "private",
     "customSector": "Test",
-    "orgType": "nonprofit",
-    "teamSize": "solo",
+    "orgType": "startup",
+    "teamSize": "small",
     "currentStage": "identify"
   },
   {

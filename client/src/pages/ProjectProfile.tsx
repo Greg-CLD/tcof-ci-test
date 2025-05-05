@@ -3,7 +3,7 @@ import { useLocation, useRoute } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useProjects, Project, CreateProjectData } from '@/hooks/useProjects';
+import { useProjects, useProject, Project, CreateProjectData } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -54,7 +54,7 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>;
 export default function ProjectProfile() {
   const [location, navigate] = useLocation();
   const [, params] = useRoute('/get-your-bearings/project-profile');
-  const { projects, isLoading, createProject, updateProject } = useProjects();
+  const { projects, isLoading: projectsLoading, createProject, updateProject } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
@@ -63,6 +63,9 @@ export default function ProjectProfile() {
   const [hasLoadedProject, setHasLoadedProject] = useState(false);
   const queryClient = useQueryClient();
   const { setCurrentProject, refreshProject, currentProject } = useProjectContext();
+  
+  // Directly fetch the specific project data using the server API
+  const { project, isLoading: projectLoading } = useProject(selectedProjectId || undefined);
   
   // Track if sector is "other" to show custom sector field
   const [showCustomSector, setShowCustomSector] = useState(false);
@@ -106,11 +109,11 @@ export default function ProjectProfile() {
   
   // Redirect to home if no projects found
   useEffect(() => {
-    if (!isLoading && projects.length === 0 && !createProject.isPending) {
+    if (!projectsLoading && projects.length === 0 && !createProject.isPending) {
       setIsRedirecting(true);
       navigate('/');
     }
-  }, [isLoading, projects, navigate]);
+  }, [projectsLoading, projects, navigate]);
 
   // On mount, check query params and localStorage for projectId
   useEffect(() => {
@@ -136,35 +139,31 @@ export default function ProjectProfile() {
     }
   }, []);
 
-  // Fill form when editing and projects are loaded
+  // Fill form when project data is loaded from server
   useEffect(() => {
-    if (selectedProjectId && projects.length > 0 && isEditing) {
-      console.log("Trying to load project data:", { selectedProjectId, projectsCount: projects.length });
-      const project = projects.find(p => p.id === selectedProjectId);
-      if (project) {
-        console.log("Found project for form:", project);
-        // If sector is "other", show custom sector field
-        if (project.sector === 'other') {
-          setShowCustomSector(true);
-        }
-        
-        // Set hasLoadedProject to true once we've loaded data
-        setHasLoadedProject(true);
-        
-        form.reset({
-          name: project.name,
-          description: project.description || '',
-          sector: project.sector || '',
-          customSector: project.customSector || '',
-          orgType: project.orgType || '',
-          teamSize: project.teamSize || '',
-          currentStage: project.currentStage || '',
-        });
-      } else {
-        console.warn(`Project with ID ${selectedProjectId} not found in projects list`);
+    if (project && isEditing) {
+      console.log("Directly loaded project data from server:", project);
+      
+      // If sector is "other", show custom sector field
+      if (project.sector === 'other') {
+        setShowCustomSector(true);
       }
+      
+      // Set hasLoadedProject to true once we've loaded data
+      setHasLoadedProject(true);
+      
+      // Reset form with server data
+      form.reset({
+        name: project.name,
+        description: project.description || '',
+        sector: project.sector || '',
+        customSector: project.customSector || '',
+        orgType: project.orgType || '',
+        teamSize: project.teamSize || '',
+        currentStage: project.currentStage || '',
+      });
     }
-  }, [selectedProjectId, projects, isEditing, form]);
+  }, [project, isEditing, form]);
 
   // Form submission handler
   const onSubmit = async (data: ProjectFormValues) => {
@@ -520,7 +519,7 @@ export default function ProjectProfile() {
                 
                 <CardFooter className="px-0 pt-4 flex justify-between relative">
                   {/* Loading indicator */}
-                  {isLoading && (
+                  {(projectsLoading || projectLoading) && (
                     <div className="absolute top-0 left-0 right-0 flex justify-center">
                       <Loader2 className="h-5 w-5 animate-spin text-tcof-teal" />
                     </div>
