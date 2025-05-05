@@ -89,11 +89,14 @@ export default function Home() {
         description: "Please wait while we set up your project...",
       });
 
-      // Create a quick start project (with default success factor tasks)
-      await createProject.mutateAsync({
+      // Create a quick start project with minimal data
+      const newProject = await createProject.mutateAsync({
         name: "Quick Start Project",
         description: "A pre-configured project with default success factor tasks"
       });
+      
+      // Store the project ID in localStorage
+      localStorage.setItem('selectedProjectId', newProject.id);
       
       // Refresh project list
       await queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
@@ -101,11 +104,10 @@ export default function Home() {
       // Show success toast
       toast({
         title: "Quick Start Project Created",
-        description: "Your project has been created with default tasks!",
+        description: "Your project has been created with default tasks! You can complete your profile later.",
       });
 
-      // Navigate to make-a-plan landing
-      navigate("/make-a-plan");
+      // Stay on the homepage instead of forcing navigation to profile
     } catch (error) {
       console.error("Error with quick start:", error);
       toast({

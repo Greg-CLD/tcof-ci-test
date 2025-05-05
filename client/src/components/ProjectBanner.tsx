@@ -8,7 +8,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Briefcase } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PlusCircle, Briefcase, AlertCircle } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuthProtection } from '@/hooks/use-auth-protection';
 import { useAuth } from '@/hooks/use-auth';
@@ -94,6 +95,15 @@ export default function ProjectBanner() {
   // Use currentProject from context first, or fall back to local state
   const selectedProject = currentProject || projects.find(p => p.id === selectedProjectId);
   
+  // Check if selected project has a complete profile
+  const isProfileComplete = selectedProject ? (
+    !!selectedProject.name && 
+    !!selectedProject.sector && 
+    (selectedProject.sector !== 'other' || !!selectedProject.customSector) && 
+    !!selectedProject.orgType &&
+    !!selectedProject.currentStage
+  ) : false;
+  
   if (!showBanner || !isAuthorized) {
     return null;
   }
@@ -149,15 +159,25 @@ export default function ProjectBanner() {
               <Button 
                 size="sm" 
                 variant="ghost" 
-                className="ml-2 text-tcof-teal"
+                className={`ml-2 ${!isProfileComplete ? "bg-yellow-50 text-amber-600" : "text-tcof-teal"}`}
                 onClick={() => navigate(`/get-your-bearings/project-profile?edit=${selectedProject.id}`)}
               >
                 <Briefcase className="w-4 h-4 mr-1" />
-                Edit Profile
+                {isProfileComplete ? "Edit Profile" : "Complete Profile"}
               </Button>
             )}
           </div>
         </div>
+        
+        {/* Profile completion alert */}
+        {selectedProject && !isProfileComplete && (
+          <Alert className="mt-2 bg-yellow-50 text-amber-800 border-amber-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="ml-2">
+              Your project profile is incomplete. Adding details like sector and stage will help personalize your experience.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
     </div>
   );

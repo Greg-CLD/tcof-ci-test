@@ -204,6 +204,37 @@ export function useProjects() {
   };
   
   /**
+   * Gets the missing profile fields for a project
+   * @param project The project to check
+   * @returns Array of field names that are missing
+   */
+  const getMissingProfileFields = (project: Project): string[] => {
+    const missingFields = [];
+    
+    if (!project.name || project.name.trim() === '') {
+      missingFields.push('name');
+    }
+    
+    if (!project.sector || project.sector.trim() === '') {
+      missingFields.push('sector');
+    }
+    
+    if (project.sector === 'other' && (!project.customSector || project.customSector.trim() === '')) {
+      missingFields.push('custom sector');
+    }
+    
+    if (!project.orgType || project.orgType.trim() === '') {
+      missingFields.push('organization type');
+    }
+    
+    if (!project.currentStage || project.currentStage.trim() === '') {
+      missingFields.push('current stage');
+    }
+    
+    return missingFields;
+  };
+  
+  /**
    * Get the currently selected project from localStorage
    * @returns The selected project or undefined if none selected
    */
@@ -233,6 +264,7 @@ export function useProjects() {
     updateProject,
     deleteProject,
     isProjectProfileComplete,
+    getMissingProfileFields,
     getSelectedProject,
     isSelectedProjectProfileComplete,
   };
