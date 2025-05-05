@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+// Extend the Window interface to allow our custom property
+declare global {
+  interface Window {
+    __capturedMailto?: string;
+  }
+}
+
 /**
  * Task Ownership E2E Test
  * 
@@ -92,7 +99,6 @@ test('Task ownership workflow', async ({ page }) => {
   
   // Check the captured mailto URL
   const mailtoUrl = await page.evaluate(() => {
-    // @ts-ignore - Accessing the property we set above
     return window.__capturedMailto || '';
   });
   
