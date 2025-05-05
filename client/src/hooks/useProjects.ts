@@ -52,9 +52,11 @@ export function useProjects() {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newProject) => {
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      // Also add the new project to the query cache
+      queryClient.setQueryData(['/api/projects', newProject.id], newProject);
     },
     onError: (error: Error) => {
       toast({
@@ -77,9 +79,11 @@ export function useProjects() {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedProject) => {
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      // Also invalidate the specific project query to update ProjectContext
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', updatedProject.id] });
     },
     onError: (error: Error) => {
       toast({
