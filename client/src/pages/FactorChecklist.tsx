@@ -1,22 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { getLatestPlanId, hasExistingPlan } from '@/lib/planHelpers';
-import { PlanRecord, loadPlan, savePlan } from '@/lib/plan-db';
+import { PlanRecord, loadPlan } from '@/lib/plan-db';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { CircleX, Download, FileText, Loader2 } from 'lucide-react';
-import StageAccordion from '@/components/checklist/StageAccordion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SummaryBar from '@/components/checklist/SummaryBar';
-import ChecklistFilterBar, {
-  StageFilter,
-  StatusFilter,
-  SourceFilter,
-  SortOption,
-  SortDirection
-} from '@/components/checklist/ChecklistFilterBar';
+import FactorAccordion from '@/components/checklist/FactorAccordion';
 import { useToast } from '@/hooks/use-toast';
 import { exportPlanPDF, exportCSV } from '@/lib/exportUtils';
 
-export default function Checklist() {
+export default function FactorChecklist() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -24,13 +18,7 @@ export default function Checklist() {
   const [planId, setPlanId] = useState<string | undefined>();
   const [plan, setPlan] = useState<PlanRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Filter and sort state
-  const [stageFilter, setStageFilter] = useState<StageFilter>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('none');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'factors'>('tasks');
   
   // Load plan data when component mounts
   useEffect(() => {
@@ -196,43 +184,30 @@ export default function Checklist() {
           <SummaryBar plan={plan} />
         </div>
         
-        {/* View toggle button */}
-        <div className="mb-4">
-          <Button asChild variant="outline">
-            <Link to="/factor-checklist">
-              Switch to Factor-Based Checklist
-            </Link>
-          </Button>
-        </div>
-        
-        {/* Filters */}
-        <ChecklistFilterBar
-          stageFilter={stageFilter}
-          statusFilter={statusFilter}
-          sourceFilter={sourceFilter}
-          sortBy={sortBy}
-          sortDirection={sortDirection}
-          onStageFilterChange={setStageFilter}
-          onStatusFilterChange={setStatusFilter}
-          onSourceFilterChange={setSourceFilter}
-          onSortChange={setSortBy}
-          onSortDirectionChange={setSortDirection}
-        />
-        
-        {/* Task list by stage */}
-        <div>
-          {Object.keys(plan.stages).map((stageName) => (
-            <StageAccordion
-              key={stageName}
-              stage={stageName as any}
-              plan={plan}
-              onPlanUpdate={handlePlanUpdate}
-              stageFilter={stageFilter}
-              statusFilter={statusFilter}
-              sourceFilter={sourceFilter}
-            />
-          ))}
-        </div>
+        {/* View Toggle Tabs */}
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(value) => setActiveTab(value as 'tasks' | 'factors')} 
+          className="mb-6"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="tasks">Tasks by Stage</TabsTrigger>
+            <TabsTrigger value="factors">Tasks by Success Factor</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="tasks" className="mt-4">
+            <Button asChild className="mb-4">
+              <Link to="/checklist">
+                Go to Stage-Based Checklist
+              </Link>
+            </Button>
+          </TabsContent>
+          
+          <TabsContent value="factors" className="mt-4">
+            {/* Factor Accordion component */}
+            <FactorAccordion selectedProjectId={planId || ''} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

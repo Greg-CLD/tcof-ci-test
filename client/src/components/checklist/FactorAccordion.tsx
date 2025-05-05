@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
   AccordionTrigger 
 } from '@/components/ui/accordion';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertTriangle } from 'lucide-react';
-import StageTabs from './StageTabs';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Loader2, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import StageTabs from './StageTabs';
 import { apiRequest } from '@/lib/queryClient';
 
 interface FactorTask {
@@ -30,132 +29,170 @@ interface FactorAccordionProps {
 
 export default function FactorAccordion({ selectedProjectId }: FactorAccordionProps) {
   const [factors, setFactors] = useState<FactorTask[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const loadFactors = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await apiRequest('GET', '/api/admin/success-factors');
-      if (!response.ok) {
-        throw new Error('Failed to load success factors');
+  // Load success factors on component mount
+  useEffect(() => {
+    const loadFactors = async () => {
+      try {
+        setLoading(true);
+        const response = await apiRequest('GET', '/api/factors');
+        if (!response.ok) {
+          throw new Error('Failed to load success factors');
+        }
+        
+        const data = await response.json();
+        setFactors(data);
+      } catch (error) {
+        console.error('Error loading success factors:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load success factors. Please try again later.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      const data = await response.json();
-      console.log(`Loaded ${data.length} success factors`);
-      setFactors(data);
-    } catch (error) {
-      console.error('Error loading success factors:', error);
-      setError('Failed to load success factors. Please try again.');
-    } finally {
-      setIsLoading(false);
+    };
+
+    loadFactors();
+  }, [toast]);
+
+  // Count total tasks for a factor
+  const countTotalTasks = (factor: FactorTask) => {
+    return (
+      factor.tasks.Identification.length +
+      factor.tasks.Definition.length +
+      factor.tasks.Delivery.length +
+      factor.tasks.Closure.length
+    );
+  };
+
+  // Generate category label from factor title (e.g., "1.1 Ask Why" -> "Category 1")
+  const getCategoryLabel = (factorTitle: string) => {
+    const categoryNumber = factorTitle.split('.')[0];
+    let categoryName = '';
+    
+    switch (categoryNumber) {
+      case '1':
+        categoryName = 'Direction';
+        break;
+      case '2':
+        categoryName = 'History';
+        break;
+      case '3':
+        categoryName = 'Exploration';
+        break;
+      case '4':
+        categoryName = 'Decision-Making';
+        break;
+      default:
+        categoryName = 'General';
+    }
+    
+    return categoryName;
+  };
+
+  // Get badge color based on category
+  const getCategoryColor = (categoryLabel: string) => {
+    switch (categoryLabel) {
+      case 'Direction':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'History':
+        return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'Exploration':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'Decision-Making':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
-  // Load factors on component mount
-  useEffect(() => {
-    loadFactors();
-  }, []);
+  // Sort factors by ID for consistent order
+  const sortedFactors = [...factors].sort((a, b) => {
+    // Extract numbers from factor IDs (format: "1.1", "1.2", etc.)
+    const aId = a.id.split('-')[0]; // Get the first part before any dash
+    const bId = b.id.split('-')[0];
+    
+    // Compare first by category number, then by subcategory number
+    const [aCat, aSubCat] = aId.split('.').map(Number);
+    const [bCat, bSubCat] = bId.split('.').map(Number);
+    
+    if (aCat !== bCat) {
+      return aCat - bCat;
+    }
+    return aSubCat - bSubCat;
+  });
 
-  // Show loading skeleton during initial load
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="space-y-4">
-        {Array(4).fill(0).map((_, index) => (
-          <div key={index} className="space-y-2">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        ))}
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-tcof-teal" />
+        <span className="ml-2">Loading success factors...</span>
       </div>
     );
   }
 
-  // Show error message if loading failed
-  if (error) {
-    return (
-      <Alert variant="destructive" className="my-4">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription className="flex justify-between items-center">
-          <span>{error}</span>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={loadFactors}
-            className="ml-2"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // If no factors were found
   if (factors.length === 0) {
     return (
-      <Alert className="my-4">
-        <AlertDescription>
-          No success factors found. Please contact an administrator.
-        </AlertDescription>
-      </Alert>
+      <Card className="p-6 text-center">
+        <HelpCircle className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+        <h3 className="text-lg font-medium mb-2">No Success Factors Found</h3>
+        <p className="text-gray-500">
+          There are currently no success factors available. Please contact the administrator.
+        </p>
+      </Card>
     );
   }
 
-  // Group factors by their categories
-  const factorsByCategory: Record<string, FactorTask[]> = {};
-  factors.forEach(factor => {
-    const categoryId = factor.id.split('.')[0];
-    if (!factorsByCategory[categoryId]) {
-      factorsByCategory[categoryId] = [];
-    }
-    factorsByCategory[categoryId].push(factor);
-  });
-
-  // Get category names
-  const getCategoryName = (categoryId: string) => {
-    switch (categoryId) {
-      case '1': return 'Leadership';
-      case '2': return 'Best Practice';
-      case '3': return 'Agility';
-      case '4': return 'Optimism Control';
-      default: return `Category ${categoryId}`;
-    }
-  };
-
-  // Render accordion for all factors
   return (
-    <Accordion type="single" collapsible className="space-y-4">
-      {Object.keys(factorsByCategory).sort().map(categoryId => (
-        <div key={categoryId} className="border rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-2">{getCategoryName(categoryId)}</h3>
+    <div className="space-y-4">
+      <div className="mb-4">
+        <h3 className="text-lg font-medium mb-2">Success Factors</h3>
+        <p className="text-gray-600 text-sm">
+          These 12 TCOF success factors help ensure your project delivers the right outcome. 
+          Each factor contains specific tasks across the project lifecycle.
+        </p>
+      </div>
+      
+      <Accordion type="multiple" className="space-y-4">
+        {sortedFactors.map((factor) => {
+          const categoryLabel = getCategoryLabel(factor.title);
+          const categoryColor = getCategoryColor(categoryLabel);
+          const totalTasks = countTotalTasks(factor);
           
-          <Accordion type="multiple" className="space-y-2">
-            {factorsByCategory[categoryId].map(factor => (
-              <AccordionItem key={factor.id} value={factor.id} className="border rounded-md overflow-hidden">
-                <AccordionTrigger className="px-4 py-2 hover:bg-muted/50">
-                  <div className="flex items-center text-left">
-                    <span className="bg-primary/10 text-primary text-xs rounded-md px-2 py-1 mr-2 font-mono">
-                      {factor.id}
+          return (
+            <AccordionItem 
+              key={factor.id}
+              value={factor.id}
+              className="border border-gray-200 rounded-lg overflow-hidden"
+            >
+              <AccordionTrigger className="px-4 py-3 bg-gray-50 hover:bg-gray-100 data-[state=open]:bg-gray-100">
+                <div className="flex flex-col sm:flex-row sm:items-center text-left gap-2 w-full">
+                  <div className="font-medium">{factor.title}</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Badge variant="outline" className={categoryColor}>
+                      {categoryLabel}
+                    </Badge>
+                    <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
+                      {totalTasks} tasks
                     </span>
-                    <span>{factor.title}</span>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 pt-2">
-                  <StageTabs
-                    factor={factor}
-                    projectId={selectedProjectId}
-                  />
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      ))}
-    </Accordion>
+                </div>
+              </AccordionTrigger>
+              
+              <AccordionContent className="px-4 py-3">
+                <StageTabs 
+                  factor={factor}
+                  projectId={selectedProjectId}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
+    </div>
   );
 }

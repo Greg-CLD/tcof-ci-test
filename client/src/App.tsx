@@ -19,6 +19,7 @@ import Block2Design from "@/pages/Block2Design";
 import Block3Deliver from "@/pages/Block3Deliver";
 import Block3Complete from "@/pages/Block3Complete";
 import Checklist from "@/pages/Checklist";
+import FactorChecklist from "@/pages/FactorChecklist";
 import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
 import UserHistory from "@/pages/UserHistory";
@@ -119,6 +120,12 @@ function Router() {
       <Route path="/checklist">
         <ProtectedRouteGuard>
           <Checklist />
+        </ProtectedRouteGuard>
+      </Route>
+      
+      <Route path="/factor-checklist">
+        <ProtectedRouteGuard>
+          <FactorChecklist />
         </ProtectedRouteGuard>
       </Route>
       
