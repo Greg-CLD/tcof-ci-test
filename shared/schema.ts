@@ -41,6 +41,40 @@ export const tcofJourneys = pgTable("tcof_journeys", {
   lastUpdated: timestamp("last_updated").defaultNow().notNull()
 });
 
+// Organisations table
+export const organisations = pgTable("organisations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Organisation memberships table
+export const organisationMemberships = pgTable("organisation_memberships", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  organisationId: uuid("organisation_id").notNull().references(() => organisations.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 50 }).notNull().default("member"), // 'owner', 'admin', 'member'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    userOrgIdx: index("user_org_idx").on(table.userId, table.organisationId),
+  };
+});
+
+// Organisation heuristics table
+export const organisationHeuristics = pgTable("organisation_heuristics", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organisationId: uuid("organisation_id").notNull().references(() => organisations.id, { onDelete: "cascade" }),
+  successFactor: varchar("success_factor", { length: 255 }).notNull(),
+  goal: text("goal"),
+  metric: text("metric"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Project table - main entity for storing project metadata
 export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -52,6 +86,8 @@ export const projects = pgTable("projects", {
   teamSize: varchar("team_size", { length: 100 }),
   currentStage: varchar("current_stage", { length: 100 }),
   selectedOutcomeIds: jsonb("selected_outcome_ids").$type<string[]>(),
+  // Add organisation reference as nullable foreign key
+  organisationId: uuid("organisation_id").references(() => organisations.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   
@@ -126,6 +162,12 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
   plans: many(plans),
   outcomeProgress: many(outcomeProgress),
   
+  // Add relationship to organisation
+  organisation: one(organisations, {
+    fields: [projects.organisationId],
+    references: [organisations.id]
+  }),
+  
   // Legacy relationships
   goalMap: one(goalMaps, {
     fields: [projects.goalMapId],
@@ -156,8 +198,34 @@ export const outcomeProgressRelations = relations(outcomeProgress, ({ one }) => 
   }),
 }));
 
+// Add organisation relations
+export const organisationsRelations = relations(organisations, ({ many }) => ({
+  memberships: many(organisationMemberships),
+  projects: many(projects),
+  heuristics: many(organisationHeuristics),
+}));
+
+export const organisationMembershipsRelations = relations(organisationMemberships, ({ one }) => ({
+  user: one(users, {
+    fields: [organisationMemberships.userId],
+    references: [users.id]
+  }),
+  organisation: one(organisations, {
+    fields: [organisationMemberships.organisationId],
+    references: [organisations.id]
+  }),
+}));
+
+export const organisationHeuristicsRelations = relations(organisationHeuristics, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [organisationHeuristics.organisationId],
+    references: [organisations.id]
+  }),
+}));
+
 export const usersRelations = relations(users, ({ many }) => ({
   plans: many(plans),
+  organisationMemberships: many(organisationMemberships),
 }));
 
 export const plansRelations = relations(plans, ({ one }) => ({
@@ -187,6 +255,16 @@ export const userSelectSchema = createSelectSchema(users);
 export const planInsertSchema = createInsertSchema(plans);
 export const planSelectSchema = createSelectSchema(plans);
 
+// Add organisation schemas
+export const organisationInsertSchema = createInsertSchema(organisations);
+export const organisationSelectSchema = createSelectSchema(organisations);
+
+export const organisationMembershipInsertSchema = createInsertSchema(organisationMemberships);
+export const organisationMembershipSelectSchema = createSelectSchema(organisationMemberships);
+
+export const organisationHeuristicInsertSchema = createInsertSchema(organisationHeuristics);
+export const organisationHeuristicSelectSchema = createSelectSchema(organisationHeuristics);
+
 // Define exported types
 export type Project = z.infer<typeof projectSelectSchema>;
 export type InsertProject = z.infer<typeof projectInsertSchema>;
@@ -202,3 +280,13 @@ export type InsertUser = z.infer<typeof userInsertSchema>;
 
 export type Plan = z.infer<typeof planSelectSchema>;
 export type InsertPlan = z.infer<typeof planInsertSchema>;
+
+// Add organisation types
+export type Organisation = z.infer<typeof organisationSelectSchema>;
+export type InsertOrganisation = z.infer<typeof organisationInsertSchema>;
+
+export type OrganisationMembership = z.infer<typeof organisationMembershipSelectSchema>;
+export type InsertOrganisationMembership = z.infer<typeof organisationMembershipInsertSchema>;
+
+export type OrganisationHeuristic = z.infer<typeof organisationHeuristicSelectSchema>;
+export type InsertOrganisationHeuristic = z.infer<typeof organisationHeuristicInsertSchema>;
