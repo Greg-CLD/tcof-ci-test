@@ -1,117 +1,190 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { useRef, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { type Outcome } from "./OutcomeSelectorModal";
 import { type OutcomeProgress } from "./OutcomeProgressTracker";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Check, Info } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 
 interface OutcomeRadarChartProps {
   outcomes: Outcome[];
   outcomeProgress: OutcomeProgress[];
 }
 
-interface RadarDataPoint {
-  subject: string;
-  value: number;
-  fullMark: number;
-}
-
-export function OutcomeRadarChart({ outcomes, outcomeProgress }: OutcomeRadarChartProps) {
-  // Prepare the data for the radar chart
-  const prepareChartData = (): RadarDataPoint[] => {
-    // Group progress by outcomeId and get the latest entry for each
-    const latestProgressByOutcome = outcomeProgress.reduce((acc, progress) => {
-      if (!acc[progress.outcomeId] || new Date(progress.updatedAt) > new Date(acc[progress.outcomeId].updatedAt)) {
-        acc[progress.outcomeId] = progress;
-      }
-      return acc;
-    }, {} as Record<string, OutcomeProgress>);
+export function OutcomeRadarChart({
+  outcomes,
+  outcomeProgress
+}: OutcomeRadarChartProps) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Get the latest progress for each outcome
+  const getProgressValue = (outcomeId: string): number => {
+    // Find the latest progress entry for this outcome
+    const latestProgress = outcomeProgress
+      .filter(p => p.outcomeId === outcomeId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
     
-    // Map outcomes to radar data points
-    return outcomes.map(outcome => {
-      const progress = latestProgressByOutcome[outcome.id];
-      return {
-        subject: outcome.title,
-        value: progress ? progress.value : 0,
-        fullMark: 100,
-      };
+    return latestProgress?.value ?? 0;
+  };
+  
+  // Draw the radar chart
+  useEffect(() => {
+    if (!svgRef.current || outcomes.length === 0) return;
+    
+    const svg = svgRef.current;
+    const svgNS = "http://www.w3.org/2000/svg";
+    
+    // Clear previous content
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+    
+    // Chart dimensions
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(centerX, centerY) * 0.8;
+    
+    // Create background grid
+    const gridGroup = document.createElementNS(svgNS, "g");
+    gridGroup.setAttribute("class", "grid");
+    
+    // Draw circular grid lines
+    [0.2, 0.4, 0.6, 0.8, 1].forEach(factor => {
+      const circle = document.createElementNS(svgNS, "circle");
+      circle.setAttribute("cx", centerX.toString());
+      circle.setAttribute("cy", centerY.toString());
+      circle.setAttribute("r", (radius * factor).toString());
+      circle.setAttribute("fill", "none");
+      circle.setAttribute("stroke", "#e2e8f0");
+      circle.setAttribute("stroke-width", "1");
+      gridGroup.appendChild(circle);
     });
-  };
-  
-  const data = prepareChartData();
-  
-  // Get the most recent update timestamp across all outcomes
-  const getLatestUpdateTime = (): string | null => {
-    if (outcomeProgress.length === 0) return null;
     
-    const latestUpdate = outcomeProgress.reduce((latest, current) => {
-      const currentDate = new Date(current.updatedAt);
-      return currentDate > latest ? currentDate : latest;
-    }, new Date(0));
+    // Draw axis lines and labels
+    outcomes.forEach((outcome, i) => {
+      const angle = (i / outcomes.length) * 2 * Math.PI - Math.PI / 2;
+      const axisX = centerX + radius * Math.cos(angle);
+      const axisY = centerY + radius * Math.sin(angle);
+      
+      // Draw axis line
+      const line = document.createElementNS(svgNS, "line");
+      line.setAttribute("x1", centerX.toString());
+      line.setAttribute("y1", centerY.toString());
+      line.setAttribute("x2", axisX.toString());
+      line.setAttribute("y2", axisY.toString());
+      line.setAttribute("stroke", "#e2e8f0");
+      line.setAttribute("stroke-width", "1");
+      gridGroup.appendChild(line);
+      
+      // Add label
+      const label = document.createElementNS(svgNS, "text");
+      const labelX = centerX + (radius + 15) * Math.cos(angle);
+      const labelY = centerY + (radius + 15) * Math.sin(angle);
+      
+      label.setAttribute("x", labelX.toString());
+      label.setAttribute("y", labelY.toString());
+      label.setAttribute("text-anchor", angle > Math.PI / 2 && angle < 3 * Math.PI / 2 ? "end" : "start");
+      label.setAttribute("dominant-baseline", "middle");
+      label.setAttribute("font-size", "10");
+      label.setAttribute("fill", "#64748b");
+      
+      // Truncate long labels
+      const maxLabelLength = 12;
+      const truncatedLabel = outcome.title.length > maxLabelLength
+        ? outcome.title.substring(0, maxLabelLength) + '...'
+        : outcome.title;
+        
+      label.textContent = truncatedLabel;
+      gridGroup.appendChild(label);
+    });
     
-    if (latestUpdate.getTime() === 0) return null;
+    svg.appendChild(gridGroup);
     
-    return formatDistanceToNow(latestUpdate, { addSuffix: true });
-  };
+    // Plot the data
+    const dataPoints: [number, number][] = [];
+    
+    outcomes.forEach((outcome, i) => {
+      const angle = (i / outcomes.length) * 2 * Math.PI - Math.PI / 2;
+      const value = getProgressValue(outcome.id) / 100; // Normalize to 0-1
+      const pointX = centerX + radius * value * Math.cos(angle);
+      const pointY = centerY + radius * value * Math.sin(angle);
+      
+      dataPoints.push([pointX, pointY]);
+    });
+    
+    // Create the data polygon
+    if (dataPoints.length > 2) {
+      const polygon = document.createElementNS(svgNS, "polygon");
+      polygon.setAttribute("points", dataPoints.map(p => p.join(",")).join(" "));
+      polygon.setAttribute("fill", "rgba(0, 120, 120, 0.2)");
+      polygon.setAttribute("stroke", "#008080");
+      polygon.setAttribute("stroke-width", "2");
+      svg.appendChild(polygon);
+    }
+    
+    // Add data points
+    dataPoints.forEach(([x, y], i) => {
+      const point = document.createElementNS(svgNS, "circle");
+      point.setAttribute("cx", x.toString());
+      point.setAttribute("cy", y.toString());
+      point.setAttribute("r", "4");
+      point.setAttribute("fill", "#008080");
+      svg.appendChild(point);
+      
+      // Add value label
+      const value = getProgressValue(outcomes[i].id);
+      if (value > 0) {
+        const valueLabel = document.createElementNS(svgNS, "text");
+        const angle = (i / outcomes.length) * 2 * Math.PI - Math.PI / 2;
+        const labelX = centerX + (radius * (value / 100) + 15) * Math.cos(angle);
+        const labelY = centerY + (radius * (value / 100) + 15) * Math.sin(angle);
+        
+        valueLabel.setAttribute("x", x.toString());
+        valueLabel.setAttribute("y", (y - 8).toString());
+        valueLabel.setAttribute("text-anchor", "middle");
+        valueLabel.setAttribute("font-size", "10");
+        valueLabel.setAttribute("font-weight", "bold");
+        valueLabel.setAttribute("fill", "#16414E");
+        valueLabel.textContent = `${value}%`;
+        svg.appendChild(valueLabel);
+      }
+    });
+    
+    // Add title
+    const title = document.createElementNS(svgNS, "text");
+    title.setAttribute("x", centerX.toString());
+    title.setAttribute("y", "20");
+    title.setAttribute("text-anchor", "middle");
+    title.setAttribute("font-size", "12");
+    title.setAttribute("font-weight", "bold");
+    title.setAttribute("fill", "#16414E");
+    title.textContent = "Outcome Progress";
+    svg.appendChild(title);
+    
+  }, [outcomes, outcomeProgress]);
   
-  const latestUpdate = getLatestUpdateTime();
+  if (outcomes.length === 0) {
+    return (
+      <Card className="w-full h-full">
+        <CardContent className="p-4 flex items-center justify-center min-h-[250px]">
+          <p className="text-sm text-muted-foreground text-center">
+            Select outcomes to visualize progress
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-semibold">Outcome Progress Overview</CardTitle>
-        <CardDescription>
-          Visualize your progress towards selected outcomes.
-          {latestUpdate && (
-            <span className="block text-xs mt-1">Last updated: {latestUpdate}</span>
-          )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {outcomes.length === 0 ? (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Select outcomes to track to see progress visualization.
-            </AlertDescription>
-          </Alert>
-        ) : data.every(item => item.value === 0) ? (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Start tracking progress on your outcomes to see visualization.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <div className="w-full h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
-                <PolarGrid />
-                <PolarAngleAxis 
-                  dataKey="subject"
-                  tick={{ fontSize: 10 }}
-                  tickFormatter={(value) => 
-                    value.length > 15 ? `${value.substring(0, 15)}...` : value
-                  }
-                />
-                <PolarRadiusAxis domain={[0, 100]} tickCount={5} />
-                <Tooltip 
-                  formatter={(value) => [`${value}%`, 'Progress']}
-                  labelFormatter={(label) => label}
-                />
-                <Radar
-                  name="Progress"
-                  dataKey="value"
-                  stroke="#16414E"
-                  fill="#008080"
-                  fillOpacity={0.6}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+    <Card className="w-full h-full">
+      <CardContent className="p-4">
+        <svg
+          ref={svgRef}
+          width="100%"
+          height="250"
+          viewBox="0 0 300 300"
+          preserveAspectRatio="xMidYMid meet"
+          className="w-full"
+        />
       </CardContent>
     </Card>
   );

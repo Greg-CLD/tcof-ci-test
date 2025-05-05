@@ -48,8 +48,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   
   // Update current project when project data changes
   useEffect(() => {
-    if (project) {
-      setCurrentProject(project);
+    if (project && typeof project === 'object') {
+      setCurrentProject(project as Project);
     }
   }, [project]);
   

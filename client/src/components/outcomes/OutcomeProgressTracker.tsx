@@ -1,20 +1,21 @@
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { BellRing, ChevronDown, ChevronUp, Clock, Save } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { type Outcome } from "./OutcomeSelectorModal";
-import { ChevronDown, ChevronUp, BellRing, Save, Clock } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { type Outcome } from "./OutcomeSelectorModal";
 
 export interface OutcomeProgress {
   id: string;
-  projectId: string;
   outcomeId: string;
+  projectId: string;
   value: number;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -25,14 +26,13 @@ interface OutcomeProgressTrackerProps {
   onSelectOutcomes: () => void;
 }
 
-export function OutcomeProgressTracker({
+export function OutcomeProgressTracker({ 
   projectId,
   outcomes,
   outcomeProgress,
   onSelectOutcomes
 }: OutcomeProgressTrackerProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [progressValues, setProgressValues] = useState<Record<string, number>>({});
   const [lastUpdate, setLastUpdate] = useState<Record<string, string>>({});
   const [isOpen, setIsOpen] = useState(true);

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CircleX, Download, FileText, Loader2 } from 'lucide-react';
 import StageAccordion from '@/components/checklist/StageAccordion';
 import SummaryBar from '@/components/checklist/SummaryBar';
+import { ChecklistHeader } from '@/components/outcomes/ChecklistHeader';
 import ChecklistFilterBar, {
   StageFilter,
   StatusFilter,
@@ -277,6 +278,11 @@ export default function Checklist() {
   return (
     <div className="bg-gray-50 min-h-screen py-6 px-4 md:px-6">
       <div className="max-w-6xl mx-auto">
+        {/* Outcome Progress Tracking */}
+        {getSelectedProject()?.id ? (
+          <ChecklistHeader projectId={getSelectedProject()?.id as string} />
+        ) : null}
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <div>
