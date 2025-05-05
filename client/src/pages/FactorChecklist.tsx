@@ -9,39 +9,64 @@ import FactorAccordion from '@/components/checklist/FactorAccordion';
 import { useToast } from '@/hooks/use-toast';
 import { exportPlanPDF, exportCSV } from '@/lib/exportUtils';
 import { usePlan } from '@/contexts/PlanContext';
+import { ensurePlanForProject } from '@/lib/planHelpers';
+import { useProjects } from '@/hooks/useProjects';
 
 export default function FactorChecklist() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { selectedPlanId } = usePlan();
+  const { selectedPlanId, setSelectedPlanId } = usePlan();
+  const { getSelectedProject } = useProjects();
   
   // Plan state
   const [plan, setPlan] = useState<PlanRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'tasks' | 'factors'>('factors'); // Set 'factors' as default
   
-  // Load plan data when component mounts
+  // Ensure a plan exists for the current project
   useEffect(() => {
-    setLoading(true);
-    if (!selectedPlanId) {
-      setLoading(false);
-      return;
+    async function ensurePlan() {
+      try {
+        setLoading(true);
+        const selectedProject = getSelectedProject();
+        
+        if (selectedProject) {
+          // If we have a project but no plan, ensure one exists
+          console.log('Ensuring plan exists for project:', selectedProject.id);
+          const planId = await ensurePlanForProject(selectedProject.id);
+          
+          if (!selectedPlanId || selectedPlanId !== planId) {
+            console.log('Setting new plan ID:', planId);
+            setSelectedPlanId(planId);
+          }
+          
+          // Load the plan
+          const pl = await loadPlan(planId);
+          setPlan(pl || null);
+        } else if (selectedPlanId) {
+          // If we have a planId but no project, just load the plan
+          console.log('Loading plan with ID:', selectedPlanId);
+          const pl = await loadPlan(selectedPlanId);
+          setPlan(pl || null);
+        } else {
+          // No project and no plan ID
+          console.log('No project or plan ID found');
+          setPlan(null);
+        }
+      } catch (err) {
+        console.error('Error ensuring plan exists:', err);
+        toast({
+          title: 'Error loading plan',
+          description: 'Please try again or select a different project.',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
     }
     
-    loadPlan(selectedPlanId)
-      .then(pl => {
-        setPlan(pl || null);
-      })
-      .catch(err => {
-        console.error('Error loading plan:', err);
-        toast({
-          title: "Error loading plan",
-          description: "There was a problem loading your plan data.",
-          variant: "destructive",
-        });
-      })
-      .finally(() => setLoading(false));
-  }, [selectedPlanId, toast]);
+    ensurePlan();
+  }, [selectedPlanId, setSelectedPlanId, getSelectedProject, toast]);
   
   // Handle plan update
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
@@ -97,19 +122,74 @@ export default function FactorChecklist() {
   
   // No plan state
   if (!plan) {
+    // Get the currently selected project to show relevant information
+    const selectedProject = getSelectedProject();
+    
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <div className="text-center max-w-md">
           <CircleX className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-tcof-dark mb-2">No Plan Found</h2>
-          <p className="text-gray-600 mb-6">
-            You need to create a plan first before accessing your task checklist.
-          </p>
-          <Button asChild>
-            <Link to="/make-a-plan">
-              Create Your Plan
-            </Link>
-          </Button>
+          <h2 className="text-2xl font-semibold text-tcof-dark mb-2">Project Plan Setup Required</h2>
+          
+          {selectedProject ? (
+            <>
+              <p className="text-gray-600 mb-6">
+                The plan for <span className="font-semibold">{selectedProject.name}</span> needs to be initialized.
+                Please complete the process by clicking the button below.
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <Button
+                  onClick={async () => {
+                    try {
+                      setLoading(true);
+                      const planId = await ensurePlanForProject(selectedProject.id);
+                      setSelectedPlanId(planId);
+                      const loadedPlan = await loadPlan(planId);
+                      setPlan(loadedPlan || null);
+                      toast({
+                        title: "Plan Initialized",
+                        description: "Your project plan has been created successfully."
+                      });
+                    } catch (err) {
+                      console.error("Error creating plan:", err);
+                      toast({
+                        title: "Error Creating Plan",
+                        description: "Please try again or select a different project.",
+                        variant: "destructive"
+                      });
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  Initialize Project Plan
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/">
+                    Return to Home
+                  </Link>
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-600 mb-6">
+                You need to select or create a project before you can view the task checklist.
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <Button asChild>
+                  <Link to="/make-a-plan">
+                    Create a Plan
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/">
+                    Return to Home
+                  </Link>
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
