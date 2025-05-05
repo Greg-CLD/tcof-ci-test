@@ -1,0 +1,142 @@
+Prompt 3 (Revised) — Organisation Dashboard & Project Creation
+Goal
+Within a chosen organisation (/organisations/:orgId), show its projects and let members spin up new ones that inherit the org’s default heuristics. Use the new navigation pattern (redirects via navigate()) and ensure all links work.
+
+✅ Checklist
+Routing & Redirects
+
+App.tsx:
+
+tsx
+Copy
+Edit
+// inside your Router component’s useEffect:
+useEffect(() => {
+  if (user && location === '/organisations') {
+    // let them use the org list
+    return;
+  }
+  if (user && location === `/organisations/${orgIdParam}`) {
+    // allow dashboard
+    return;
+  }
+  // any other auth-route guard
+}, [user, location, navigate]);
+Add route for dashboard:
+
+jsx
+Copy
+Edit
+<Route path="/organisations/:orgId">
+  {user ? (
+    <ProtectedRouteGuard>
+      <OrganisationDashboardPage />
+    </ProtectedRouteGuard>
+  ) : (
+    navigate('/')
+  )}
+</Route>
+Use useParams() (or Wouter’s equivalent) to pull orgId.
+
+OrganisationDashboardPage Component
+
+Location: client/src/pages/OrganisationDashboardPage.tsx
+
+Data Fetch:
+
+ts
+Copy
+Edit
+const { orgId } = useParams();
+const { data: projects = [], isLoading: pLoading } = useQuery(
+  ['orgProjects', orgId],
+  () => apiRequest('GET', `/api/organisations/${orgId}/projects`).then(r => r.json())
+);
+const { data: defaults = [], isLoading: dLoading } = useQuery(
+  ['orgDefaults', orgId],
+  () => apiRequest('GET', `/api/organisations/${orgId}/heuristics`).then(r => r.json())
+);
+Render:
+
+Org name and description (from props or another query).
+
+“Projects” section:
+
+Spinner while pLoading; error toast on failure.
+
+If projects.length === 0, show “No projects yet. Create one to get started.”
+
+Otherwise list project cards with clickable titles (navigate(/projects/${project.id})).
+
+“New Project” Flow
+
+Button “New Project” always visible:
+
+jsx
+Copy
+Edit
+<Button onClick={() => setModalOpen(true)}>New Project</Button>
+Modal or inline form fields:
+
+Project Name (required text input).
+
+On submit:
+
+ts
+Copy
+Edit
+await apiRequest('POST', '/api/projects', {
+  name,
+  organisationId: orgId
+});
+Rely on backend to clone organisation_heuristics into project_heuristics.
+
+After success:
+
+navigate('/organisations/'+orgId, { replace: true }) or simply refetch the projects query.
+
+Show success toast.
+
+Navigation & Buttons
+
+In the dashboard, use direct navigate('/organisations') or navigate(/projects/${id}) calls—no nested <Link>.
+
+Ensure any back or home buttons use navigate().
+
+Error Handling & Loading
+
+Disable “New Project” button while request in flight.
+
+Show inline spinners/loading indicators for both queries and mutations.
+
+Show error toasts on failures.
+
+✅ Definition of Done
+Navigating to /organisations/:orgId (via nav or URL) shows the org’s name, defaults loaded, and project list.
+
+“New Project” opens a form, creating a project tied to orgId and inheriting defaults; it appears immediately without broken links.
+
+All navigation uses navigate() calls—no broken <Link> or double redirects.
+
+🧪 Smoke Tests
+Dashboard Load
+
+Sign in → click “Organisations” → select an org → land on its dashboard.
+
+Spinner appears then projects list (or empty-state).
+
+Create Project
+
+Click New Project, enter name → project appears in list.
+
+URL remains /organisations/:orgId.
+
+Link Behavior
+
+Click project card → navigate to /projects/:projectId.
+
+Browser “Back” returns to /organisations/:orgId.
+
+Auth Guard
+
+Log out → hit /organisations/:orgId → redirect to /.
