@@ -93,8 +93,6 @@ export default function StarterAccess() {
   if (!sessionVerified && !isAuthenticated('starter-access')) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
-        <SiteHeader />
-        
         <main className="flex-grow container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="p-8">
@@ -132,8 +130,6 @@ export default function StarterAccess() {
   
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <SiteHeader />
-      
       <main className="flex-grow container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="bg-tcof-light rounded-xl p-8 mb-8 text-center">

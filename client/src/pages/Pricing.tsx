@@ -51,8 +51,6 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <SiteHeader />
-      
       <main className="flex-grow container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
