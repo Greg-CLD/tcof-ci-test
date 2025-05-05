@@ -11,7 +11,7 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const RELATIONS_FILE = path.join(DATA_DIR, 'relations.json');
 
 // Relation types
-export type RelationType = 'MAPS_TO' | 'HAS_TASK' | 'USES_FRAMEWORK' | 'BELONGS_TO_PROJECT';
+export type RelationType = 'MAPS_TO' | 'HAS_TASK' | 'USES_FRAMEWORK' | 'BELONGS_TO_PROJECT' | 'PLAN_FOR_PROJECT';
 
 // Relation data type
 export interface Relation {
