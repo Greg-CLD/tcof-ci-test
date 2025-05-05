@@ -8,30 +8,7 @@
     "meta": {
       "origin": "selectProject"
     },
-    "timestamp": "2025-05-05T19:12:56.649Z"
-  },
-  {
-    "id": "ad0669c7-fa57-454f-9581-a34c6f2abfac",
-    "fromId": "3",
-    "toId": "ed2fcbe2-2555-4be4-808b-f55ff800731d",
-    "relType": "BELONGS_TO_PROJECT",
-    "projectId": "ed2fcbe2-2555-4be4-808b-f55ff800731d",
-    "meta": {
-      "origin": "createProject"
-    },
-    "timestamp": "2025-05-05T18:04:58.575Z"
-  },
-  {
-    "id": "907736d4-e4f6-45ad-a9c1-d48cdc1ba894",
-    "fromId": "62c7f952-f4da-4f57-a503-14691c753491",
-    "toId": "ed2fcbe2-2555-4be4-808b-f55ff800731d",
-    "relType": "PLAN_FOR_PROJECT",
-    "projectId": "ed2fcbe2-2555-4be4-808b-f55ff800731d",
-    "meta": {
-      "origin": "createProject",
-      "stage": "initial"
-    },
-    "timestamp": "2025-05-05T18:04:58.575Z"
+    "timestamp": "2025-05-05T20:10:38.228Z"
   },
   {
     "id": "fcc380d6-9120-41a8-a4ac-3da06ecaefdc",

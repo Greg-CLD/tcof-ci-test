@@ -5,9 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useCanvas } from "@/hooks/use-canvas";
+import { useProjectContext } from "@/contexts/ProjectContext";
+import { GoalMappingView } from "@/components/GoalMappingView";
 import {
   STORAGE_KEYS,
   GoalMapData,
@@ -20,7 +22,7 @@ import { Link } from "wouter";
 import { 
   FileDown, ArrowLeft, Target as TargetIcon, Compass as CompassIcon, 
   GitBranch as GitBranchIcon, File as FileIcon, Save, Download, Trash2,
-  History
+  History, Loader2
 } from "lucide-react";
 
 // Success Map Level types
@@ -85,8 +87,7 @@ function ToolNavigation({ currentTool }: { currentTool: 'goal-mapping' | 'cynefi
       <Link href="/tools/starter-access">
         <Button variant="ghost" size="sm" className="flex items-center gap-1 text-tcof-teal">
           <FileIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">View Saved Results</span>
-          <span className="sm:hidden">Results</span>
+          <span className="hidden sm:inline">Pro Tools</span>
         </Button>
       </Link>
     </div>
@@ -100,9 +101,37 @@ export default function GoalMappingTool() {
   const [showHelp, setShowHelp] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [mapName, setMapName] = useState("My Success Map");
+  const [isEditing, setIsEditing] = useState(true);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { currentProject } = useProjectContext();
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Get the project ID from the context
+  const projectId = currentProject?.id;
+  
+  // Fetch goal map data from server for the current project
+  const {
+    data: serverGoalMap,
+    isLoading: goalMapLoading,
+    error: goalMapError
+  } = useQuery<GoalMapData>({
+    queryKey: ['/api/goal-maps', projectId],
+    queryFn: async () => {
+      if (!projectId) throw new Error("No project selected");
+      const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          return null; // No goal map found for this project
+        }
+        throw new Error("Failed to fetch goal map");
+      }
+      return await res.json();
+    },
+    enabled: !!projectId,
+  });
   
   // Database save mutation
   const saveMapMutation = useMutation({
@@ -114,11 +143,12 @@ export default function GoalMappingTool() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectId] });
       toast({
         title: "Map saved",
         description: "Your success map has been saved to your account.",
       });
+      setIsEditing(false); // Switch to view mode after saving
     },
     onError: (error: Error) => {
       toast({
@@ -129,9 +159,36 @@ export default function GoalMappingTool() {
     },
   });
   
-  // Load existing data from local storage
-  const storedData = loadFromLocalStorage<GoalMapData>(STORAGE_KEYS.GOAL_MAP) || initialGoalMapData;
+  // Update existing map mutation
+  const updateMapMutation = useMutation({
+    mutationFn: async (data: { id: string, name: string, data: any }) => {
+      const response = await apiRequest("PUT", `/api/goal-maps/${data.id}`, {
+        name: data.name,
+        data: data.data
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update map");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectId] });
+      toast({
+        title: "Map updated",
+        description: "Your success map has been updated successfully.",
+      });
+      setIsEditing(false); // Switch to view mode after saving
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error updating",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
   
+  // Use the canvas hook with proper initialization
   const {
     canvasRef,
     svgRef,
@@ -139,158 +196,168 @@ export default function GoalMappingTool() {
     connections,
     addNode,
     deleteNode,
-    clearCanvas
+    clearCanvas,
+    loadCanvasData,
   } = useCanvas({
-    initialNodes: storedData.nodes,
-    initialConnections: storedData.connections,
-    onNodeChange: (updatedNodes) => {
-      saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, {
-        nodes: updatedNodes,
-        connections,
-        lastUpdated: Date.now()
-      });
-    },
-    onConnectionChange: (updatedConnections) => {
-      saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, {
-        nodes,
-        connections: updatedConnections,
-        lastUpdated: Date.now()
-      });
-    }
+    initialNodes: [], 
+    initialConnections: []
   });
-
-  // Handle adding a new goal
+  
+  // Switch to edit mode
+  const handleEditClick = () => {
+    setIsEditing(true);
+  };
+  
+  // Load data when it becomes available
+  useEffect(() => {
+    if (serverGoalMap && !hasLoadedData) {
+      console.log("Loading goal map data from server:", serverGoalMap);
+      
+      // Set map name
+      setMapName(serverGoalMap.name || "My Success Map");
+      
+      // Load canvas data
+      if (serverGoalMap.nodes && serverGoalMap.connections) {
+        loadCanvasData({
+          nodes: serverGoalMap.nodes,
+          connections: serverGoalMap.connections
+        });
+      }
+      
+      setHasLoadedData(true);
+      // For existing maps, start in view mode
+      setIsEditing(false);
+    }
+  }, [serverGoalMap, hasLoadedData, loadCanvasData]);
+  
+  // Handle adding a goal
   const handleAddGoal = () => {
-    if (goalInput.trim() === "") {
+    if (!goalInput.trim()) {
       toast({
-        title: "Goal text required",
-        description: "Please enter a goal before adding.",
+        title: "Input required",
+        description: "Please enter a goal description.",
         variant: "destructive"
       });
       return;
     }
-
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      // Place the new node in a reasonable default position
-      const x = Math.random() * (rect.width - 200) + 50;
-      const y = Math.random() * (rect.height - 100) + 50;
-      
-      // Add level prefix to goal timeframe
-      let levelPrefix = "";
-      switch (goalLevel) {
-        case "strategic":
-          levelPrefix = "Level 5: Strategic";
-          break;
-        case "business":
-          levelPrefix = "Level 4: Business";
-          break;
-        case "product":
-          levelPrefix = "Level 3: Product";
-          break;
-        default:
-          levelPrefix = "Custom";
-      }
-      
-      const formattedTimeframe = timeframeInput ? 
-        `${levelPrefix} - ${timeframeInput}` : 
-        levelPrefix;
-      
-      addNode(goalInput, formattedTimeframe, x, y);
-      setGoalInput("");
-      setTimeframeInput("");
-      
-      toast({
-        title: "Goal added",
-        description: "Your goal has been added to the success map."
-      });
+    
+    // Get canvas dimensions for positioning
+    const canvas = canvasRef.current;
+    let x = 100;
+    let y = 100;
+    
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      x = Math.random() * (rect.width - 200) + 100;
+      y = Math.random() * (rect.height - 200) + 100;
+    }
+    
+    // Add the node at the position
+    addNode(goalInput, timeframeInput || '', x, y);
+    setGoalInput("");
+    setTimeframeInput("");
+  };
+  
+  // Reset the canvas
+  const handleReset = () => {
+    if (confirm("Are you sure you want to reset your Success Map? This cannot be undone.")) {
+      clearCanvas();
     }
   };
-
-  // Handle saving the map
+  
+  // Save the map
   const handleSaveMap = () => {
-    // First save to localStorage for offline use
-    const data = {
-      nodes,
-      connections,
-      lastUpdated: Date.now()
+    if (nodes.length === 0) {
+      toast({
+        title: "Map is empty",
+        description: "Please add at least one goal before saving.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    const mapData: GoalMapData = {
+      name: mapName,
+      nodes: nodes,
+      connections: connections,
+      lastUpdated: Date.now(),
     };
     
-    const success = saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, data);
+    // First save to localStorage for offline use
+    const success = saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, mapData);
     
     if (!success) {
       toast({
         title: "Error saving locally",
-        description: "There was a problem saving your success map to local storage.",
+        description: "There was a problem saving your map to local storage.",
         variant: "destructive"
       });
+      setIsLoading(false);
       return;
     }
     
     // Then save to database if user is logged in
-    if (user) {
-      // Get current project ID from localStorage
-      const projectId = localStorage.getItem('selectedProjectId');
-      
-      if (!projectId) {
-        toast({
-          title: "Warning",
-          description: "No project selected. The map will be saved but not linked to any project.",
-          variant: "destructive"
+    if (user && projectId) {
+      // If we have a server goal map already, update it
+      if (serverGoalMap?.id) {
+        updateMapMutation.mutate({
+          id: serverGoalMap.id,
+          name: mapName,
+          data: {
+            ...mapData,
+            projectId,
+          }
+        });
+      } else {
+        // Otherwise create a new one
+        saveMapMutation.mutate({
+          name: mapName,
+          data: {
+            ...mapData,
+            projectId,
+          },
+          projectId
         });
       }
-      
-      saveMapMutation.mutate({
-        name: mapName,
-        data: data,
-        projectId: projectId || undefined
-      });
     } else {
       toast({
         title: "Map saved locally",
-        description: "Your success map has been saved locally. Sign in to save it to your account.",
+        description: "Your map has been saved locally. Sign in to save it to your account.",
+      });
+      setIsLoading(false);
+    }
+  };
+  
+  // Export as PDF
+  const handleExportPDF = () => {
+    if (containerRef.current) {
+      elementToPDF(containerRef.current, `${mapName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      toast({
+        title: "PDF generated",
+        description: "Your success map has been exported as PDF."
       });
     }
   };
-
-  // Handle exporting the map
-  const handleExportMap = () => {
-    try {
-      // Create a downloadable JSON file
-      const dataStr = JSON.stringify({ nodes, connections });
-      const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-      
-      const exportName = `success-map-${new Date().toISOString().slice(0, 10)}`;
-      
-      const linkElement = document.createElement("a");
-      linkElement.setAttribute("href", dataUri);
-      linkElement.setAttribute("download", `${exportName}.json`);
-      linkElement.click();
-      
-      toast({
-        title: "Map exported",
-        description: "Your success map has been exported as JSON."
-      });
-    } catch (error) {
-      toast({
-        title: "Export failed",
-        description: "There was a problem exporting your success map.",
-        variant: "destructive"
-      });
-    }
+  
+  // Handle form input
+  const handleMapNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMapName(e.target.value);
   };
-
-  // Handle clearing the canvas
-  const handleClearCanvas = () => {
-    if (confirm("Are you sure you want to clear the canvas? This action cannot be undone.")) {
-      clearCanvas();
-      toast({
-        title: "Canvas cleared",
-        description: "All goals and connections have been removed."
-      });
-    }
-  };
-
+  
+  // Show loading state while fetching data
+  if (goalMapLoading && !hasLoadedData) {
+    return (
+      <section className="min-h-[400px] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-tcof-teal mx-auto mb-4" />
+          <p className="text-tcof-dark">Loading your goal map...</p>
+        </div>
+      </section>
+    );
+  }
+  
   return (
     <section>
       <ToolNavigation currentTool="goal-mapping" />
@@ -326,233 +393,150 @@ export default function GoalMappingTool() {
               <p>You need to know where you're going, before you can work out how to get there.</p>
               
               <h4 className="font-bold mt-4 mb-2">How to create your Success Map:</h4>
-              <ol className="list-decimal pl-5 space-y-2">
-                <li>Start with the Success Map, working top down</li>
-                <li>Focus on organisational Value Goals and outcomes (Levels 3-5) first. You can focus on Delivery Goals later (Levels 1-2)</li>
-                <li>Set one clear goal per level, or up to three if needed</li>
-                <li>Try to keep your total under 10. Fewer goals mean more focus, less stress, and better follow-through</li>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Enter your goals at different levels (strategic, business, product)</li>
+                <li>Drag to position goals on the canvas</li>
+                <li>Connect related goals by clicking and dragging between them</li>
+                <li>Name and save your map when you're done</li>
               </ol>
-              
-              <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
-                <p className="text-blue-800 font-medium">Key Tip: Don't overthink this exercise, it is best done as an individual or a very small group. We focus much more on this in Stage 1 and the first success factor.</p>
-              </div>
             </div>
           </CardContent>
         </Card>
       )}
       
-      <Card>
-        <CardContent className="p-4 md:p-6">
-          <div className="mb-6">
-            <h3 className="font-bold text-lg mb-3">Start Your Success Map</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
-                <h4 className="font-medium text-blue-800">Level 5. Strategic Success</h4>
-                <p className="text-sm text-gray-700">Big-picture impact, beyond the business.</p>
-                <p className="text-xs mt-2 text-blue-700 italic">Ask: What would 10x success look like?</p>
-                <p className="text-xs mt-1 text-gray-500">Example: Influence 100,000 project managers to adopt this approach.</p>
+      {/* View mode - show static visualization */}
+      {!isEditing && serverGoalMap ? (
+        <GoalMappingView 
+          map={serverGoalMap} 
+          onEdit={handleEditClick}
+          isLoading={isLoading || goalMapLoading}
+          svgRef={svgRef}
+        />
+      ) : (
+        /* Edit mode - show interactive editor */
+        <>
+          <Card className="mb-6">
+            <CardContent className="p-4 md:p-6 space-y-4">
+              {/* Map Name Input */}
+              <div>
+                <Input 
+                  type="text" 
+                  placeholder="Name your success map"
+                  value={mapName}
+                  onChange={handleMapNameChange}
+                  className="text-lg font-semibold"
+                />
               </div>
               
-              <div className="p-4 border rounded-lg bg-green-50 border-green-200">
-                <h4 className="font-medium text-green-800">Level 4. Business Success</h4>
-                <p className="text-sm text-gray-700">Tangible value delivered to the organisation.</p>
-                <p className="text-xs mt-2 text-green-700 italic">Ask: What value will this project deliver?</p>
-                <p className="text-xs mt-1 text-gray-500">Example: Reduce operating costs by 10% in 12 months.</p>
-              </div>
-              
-              <div className="p-4 border rounded-lg bg-purple-50 border-purple-200">
-                <h4 className="font-medium text-purple-800">Level 3. Product Success</h4>
-                <p className="text-sm text-gray-700">Whether the solution works and meets user needs.</p>
-                <p className="text-xs mt-2 text-purple-700 italic">Ask: How will we know users are satisfied?</p>
-                <p className="text-xs mt-1 text-gray-500">Example: Net promoter score of 8 out of 10.</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="md:w-1/4 space-y-2">
-              <label htmlFor="level-select" className="block text-sm font-medium text-gray-700">
-                Success Level
-              </label>
-              <Select value={goalLevel} onValueChange={(value) => setGoalLevel(value as SuccessMapLevel)}>
-                <SelectTrigger id="level-select">
-                  <SelectValue placeholder="Select level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="strategic">Level 5: Strategic Success</SelectItem>
-                  <SelectItem value="business">Level 4: Business Success</SelectItem>
-                  <SelectItem value="product">Level 3: Product Success</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex-grow space-y-2">
-              <label htmlFor="goal-input" className="block text-sm font-medium text-gray-700">
-                Add Goal
-              </label>
-              <Input
-                id="goal-input"
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                placeholder="Enter your goal..."
-              />
-            </div>
-            
-            <div className="md:w-1/5 space-y-2">
-              <label htmlFor="timeframe-input" className="block text-sm font-medium text-gray-700">
-                Timeframe (Optional)
-              </label>
-              <Input
-                id="timeframe-input"
-                value={timeframeInput}
-                onChange={(e) => setTimeframeInput(e.target.value)}
-                placeholder="e.g., 12 months"
-              />
-            </div>
-            
-            <div className="flex items-end">
-              <Button onClick={handleAddGoal} className="h-10">Add Goal</Button>
-            </div>
-          </div>
-          
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
-            <div className="w-full md:w-1/3">
-              <label htmlFor="map-name" className="block text-sm font-medium text-gray-700 mb-1">
-                Map Name
-              </label>
-              <Input
-                id="map-name"
-                value={mapName}
-                onChange={(e) => setMapName(e.target.value)}
-                placeholder="Enter a name for your map"
-              />
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button onClick={handleSaveMap} variant="secondary" className="flex items-center gap-1">
-                <Save className="h-4 w-4" /> Save Map
-              </Button>
-              <Button onClick={handleExportMap} variant="outline" className="flex items-center gap-1">
-                <Download className="h-4 w-4" /> Export JSON
-              </Button>
-              <Button 
-                onClick={() => {
-                  if (canvasRef.current) {
-                    elementToPDF(canvasRef.current, 'goal-mapping-tool.pdf');
-                    toast({
-                      title: "PDF generated",
-                      description: "Your success map has been exported as PDF."
-                    });
-                  }
-                }} 
-                variant="outline" 
-                className="flex items-center gap-1 bg-tcof-light text-tcof-dark border-tcof-teal"
-              >
-                <FileDown className="h-4 w-4" /> Download as PDF
-              </Button>
-            </div>
-          </div>
-
-          <div 
-            className="border border-gray-200 rounded-lg h-96 relative" 
-            ref={containerRef}
-          >
-            <div id="goal-canvas" className="absolute inset-0 bg-gray-50 overflow-hidden" ref={canvasRef}>
-              <svg 
-                width="100%" 
-                height="100%" 
-                ref={svgRef}
-                style={{ position: 'absolute', top: 0, left: 0, zIndex: -1 }}
-              >
-                {/* Render connections */}
-                {connections.map(connection => {
-                  const sourceNode = nodes.find(n => n.id === connection.sourceId);
-                  const targetNode = nodes.find(n => n.id === connection.targetId);
-                  
-                  if (sourceNode && targetNode) {
-                    return (
-                      <line
-                        key={connection.id}
-                        x1={sourceNode.x + 75} // Approximate center of node
-                        y1={sourceNode.y + 25}
-                        x2={targetNode.x + 75}
-                        y2={targetNode.y + 25}
-                        stroke="hsl(var(--primary))"
-                        strokeWidth="2"
-                        strokeDasharray="5,5"
-                      />
-                    );
-                  }
-                  return null;
-                })}
-              </svg>
-              
-              {/* Render nodes */}
-              {nodes.map(node => (
-                <div
-                  key={node.id}
-                  className="text-node"
-                  style={{ top: node.y, left: node.x }}
-                  data-id={node.id}
+              {/* Goal Input Form */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <Input 
+                  type="text" 
+                  placeholder="Enter your goal"
+                  value={goalInput}
+                  onChange={(e) => setGoalInput(e.target.value)}
+                  className="flex-grow"
+                />
+                
+                <Select 
+                  value={goalLevel} 
+                  onValueChange={(value) => setGoalLevel(value as SuccessMapLevel)}
                 >
-                  <button 
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 z-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteNode(node.id);
-                      toast({
-                        title: "Goal deleted",
-                        description: "The goal has been removed from your map."
-                      });
-                    }}
-                  >
-                    ×
-                  </button>
-                  <div className="text-sm font-medium">{node.text}</div>
-                  {node.timeframe && (
-                    <div className="text-xs text-gray-500">{node.timeframe}</div>
-                  )}
-                </div>
-              ))}
+                  <SelectTrigger className="w-full md:w-40">
+                    <SelectValue placeholder="Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="strategic">Strategic</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="product">Product</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Input 
+                  type="text" 
+                  placeholder="Timeframe (optional)"
+                  value={timeframeInput}
+                  onChange={(e) => setTimeframeInput(e.target.value)}
+                  className="w-full md:w-40"
+                />
+                
+                <Button 
+                  onClick={handleAddGoal}
+                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                >
+                  Add Goal
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Canvas for Goal Mapping */}
+          <div ref={containerRef} className="bg-white border rounded-md p-4 min-h-[500px] mb-6 relative">
+            {/* Canvas SVG */}
+            <div ref={canvasRef} className="w-full h-[500px]">
+              {/* This div will contain the SVG element */}
+              <svg ref={svgRef} width="100%" height="100%"></svg>
             </div>
             
-            {/* Help overlay */}
-            {showHelp && (
-              <div className="absolute inset-0 bg-gray-800 bg-opacity-70 flex items-center justify-center z-10">
-                <div className="bg-white p-6 rounded-lg max-w-md">
-                  <h3 className="text-lg font-bold mb-2">Success Map Instructions</h3>
-                  <ul className="list-disc pl-5 mb-4 text-sm">
-                    <li>Choose a success level, enter your goal, and click "Add Goal"</li>
-                    <li>Drag goals to reposition them on the canvas</li>
-                    <li>Click the X on a goal to delete it</li>
-                    <li>Save your map to keep track of your strategic goals</li>
-                  </ul>
-                  <Button onClick={() => setShowHelp(false)}>Got it!</Button>
+            {/* Goal Explanation */}
+            {nodes.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center p-6 bg-white bg-opacity-90 rounded-md">
+                  <TargetIcon className="h-12 w-12 text-tcof-teal mx-auto mb-4" />
+                  <h3 className="text-xl font-bold mb-2">Start Building Your Success Map</h3>
+                  <p className="text-gray-600 max-w-md">
+                    Add goals, position them on the canvas, and connect related goals to visualize your success path.
+                  </p>
                 </div>
               </div>
             )}
           </div>
           
-          <div className="mt-4 flex justify-between items-center">
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-3 justify-between">
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                className="border-red-200 text-red-600 hover:bg-red-50"
+                onClick={handleReset}
+                disabled={isLoading}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Reset Canvas
+              </Button>
+              
+              <Button 
+                variant="outline"
+                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                onClick={handleExportPDF}
+                disabled={isLoading || nodes.length === 0}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Export as PDF
+              </Button>
+            </div>
+            
             <Button 
-              variant="ghost" 
-              onClick={handleClearCanvas}
-              className="text-gray-600 hover:text-red-500 text-sm font-medium transition flex items-center"
+              className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+              onClick={handleSaveMap}
+              disabled={isLoading || nodes.length === 0}
             >
-              <i className="ri-delete-bin-line mr-1"></i> Clear Canvas
-            </Button>
-            <Button 
-              variant="ghost"
-              onClick={() => setShowHelp(true)}
-              className="text-gray-600 hover:text-gray-800 text-sm font-medium transition flex items-center"
-            >
-              <i className="ri-question-line mr-1"></i> How to use
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Map
+                </>
+              )}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </>
+      )}
     </section>
   );
 }

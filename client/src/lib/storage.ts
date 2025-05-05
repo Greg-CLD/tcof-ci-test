@@ -21,9 +21,12 @@ export interface Connection {
 }
 
 export interface GoalMapData {
+  name: string;
   nodes: GoalNode[];
   connections: Connection[];
   lastUpdated: number;
+  id?: string;
+  projectId?: string;
 }
 
 // Cynefin types
@@ -122,6 +125,7 @@ export async function loadFromLocalStorage<T>(key: string): Promise<T | null> {
 
 // Initial data structures
 export const initialGoalMapData: GoalMapData = {
+  name: "My Success Map",
   nodes: [],
   connections: [],
   lastUpdated: Date.now()

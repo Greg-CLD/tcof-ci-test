@@ -142,6 +142,14 @@ export function useCanvas({
     onNodeChange?.([]);
     onConnectionChange?.([]);
   }, [onNodeChange, onConnectionChange]);
+  
+  // Load existing data into the canvas
+  const loadCanvasData = useCallback(({nodes: loadedNodes, connections: loadedConnections}: {nodes: GoalNode[], connections: Connection[]}) => {
+    setNodes(loadedNodes || []);
+    setConnections(loadedConnections || []);
+    onNodeChange?.(loadedNodes || []);
+    onConnectionChange?.(loadedConnections || []);
+  }, [onNodeChange, onConnectionChange]);
 
   // Set up node dragging behavior
   useEffect(() => {
@@ -229,6 +237,7 @@ export function useCanvas({
     addConnection,
     deleteConnection,
     clearCanvas,
+    loadCanvasData,
     activeNodeId,
     drawingConnection
   };
