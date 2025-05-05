@@ -580,16 +580,19 @@ export default function Home() {
                 Pick a meaningful project or change initiative you're working on and apply our tools to gain clarity and structure.
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Link href="/auth">
-                  <Button className="bg-white text-tcof-dark hover:bg-gray-100">
-                    Sign In / Register <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/pro-tools">
-                  <Button variant="outline" className="border-white text-white hover:bg-white/10">
-                    Learn About Pro Tools <Lock className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
+                <Button 
+                  className="bg-white text-tcof-dark hover:bg-gray-100"
+                  onClick={() => setLocation("/auth")}
+                >
+                  Sign In / Register <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-white text-white hover:bg-white/10"
+                  onClick={() => setLocation("/pro-tools")}
+                >
+                  Learn About Pro Tools <Lock className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </div>
           </section>
