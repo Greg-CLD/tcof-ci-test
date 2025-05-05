@@ -44,26 +44,30 @@ export default function AuthPage() {
     },
   });
 
-  const onLoginSubmit = (data: LoginFormValues) => {
-    // First try to login
-    loginMutation.mutate(data, {
-      onError: () => {
-        // If login fails, try to register with the same credentials
-        registerMutation.mutate({
-          username: data.username,
-          password: data.password,
-        });
-      }
-    });
-  };
-
-  // Redirect if user is already authenticated
+  // Handle successful login redirects
   useEffect(() => {
     if (user) {
       // The useEffect prevents redirect during render
       setLocation("/organisations");
     }
   }, [user, setLocation]);
+  
+  // Handle login/register mutations
+  const onLoginSubmit = (data: LoginFormValues) => {
+    // First try to login
+    loginMutation.mutate(data, {
+      onSuccess: () => setLocation("/organisations"),
+      onError: () => {
+        // If login fails, try to register with the same credentials
+        registerMutation.mutate({
+          username: data.username,
+          password: data.password,
+        }, {
+          onSuccess: () => setLocation("/organisations")
+        });
+      }
+    });
+  };
 
   if (user) {
     return null;

@@ -1,0 +1,110 @@
+Prompt 3 — Organisation Dashboard & Project Creation
+Goal
+Inside a selected organisation (/organisations/:orgId), display its projects and let members create new ones. New projects should automatically inherit the organisation’s default heuristics.
+
+✅ Checklist
+Routing & Guard
+
+Add a route in App.tsx (or your router) for /organisations/:orgId:
+
+jsx
+Copy
+Edit
+<Route path="/organisations/:orgId">
+  {user ? (
+    <ProtectedRouteGuard>
+      <OrganisationDashboard />
+    </ProtectedRouteGuard>
+  ) : (
+    navigate("/")
+  )}
+</Route>
+Ensure you extract orgId from the URL (via Wouter’s useParams or equivalent).
+
+OrganisationDashboard Component
+
+Location: client/src/pages/OrganisationDashboard.tsx
+
+Data Fetch:
+
+ts
+Copy
+Edit
+const { data: projects = [], isLoading, error } = useQuery(
+  ["/api/organisations", orgId, "projects"],
+  () => apiRequest("GET", `/api/organisations/${orgId}/projects`).then(r => r.json())
+);
+const { data: defaults = [], isLoading: dLoading } = useQuery(
+  ["/api/organisations", orgId, "heuristics"],
+  () => apiRequest("GET", `/api/organisations/${orgId}/heuristics`).then(r => r.json())
+);
+Render:
+
+Organisation name and description at the top.
+
+Projects List: if isLoading, spinner; if empty, “No projects yet.” Otherwise show cards with project names.
+
+“New Project” button visible to all members.
+
+“New Project” Flow
+
+Clicking New Project opens a form (modal or inline) with only:
+
+Project Name (required)
+
+Hidden fields (auto-filled):
+
+organisationId = orgId
+
+Copy of defaults into project’s heuristics (client-side or let backend clone).
+
+On submit, call:
+
+ts
+Copy
+Edit
+const payload = { name, organisationId: orgId };
+await apiRequest("POST", "/api/projects", payload);
+On success:
+
+Close form
+
+Refetch /organisations/${orgId}/projects
+
+Show success toast
+
+Inheritance of Heuristics
+
+Backend: ensure POST /api/projects handler, when given organisationId, clones all rows from organisation_heuristics into project_heuristics for the new project.
+
+Client: no need to manually send heuristics; trust backend to apply defaults.
+
+Error Handling & Feedback
+
+Show error toast if fetch or creation fails.
+
+Disable New Project button while creation is in progress.
+
+✅ Definition of Done
+Navigating to /organisations/:orgId displays the organisation header and its project list.
+
+Clicking New Project creates a project scoped to that org; it appears immediately in the list.
+
+The backend has cloned the organisation’s default heuristics into the new project (verify with backend logs or a fetch of /api/projects/:projectId/heuristics).
+
+🧪 Smoke Tests
+Dashboard Load
+
+Visit /organisations/{existingOrgId} → see org name + “No projects yet” or existing projects.
+
+Project Creation
+
+Click New Project, enter “TestProj”, submit → “TestProj” card appears.
+
+Heuristic Inheritance
+
+After creation, call GET /api/projects/{newProjId}/heuristics → should return the org’s default rows.
+
+Guard
+
+Log out → hit /organisations/{orgId} → redirected to /.

@@ -1,4 +1,5 @@
 import { Switch, Route, Link, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -75,21 +76,25 @@ const TCOFJourneyPage = () => (
 function Router() {
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  
+  // Use useEffect for redirects to avoid React render-phase updates
+  useEffect(() => {
+    // If user is authenticated and at home route, redirect to organisations
+    if (user && location === '/') {
+      navigate("/organisations");
+    }
+    
+    // If user is not authenticated and tries to access restricted routes
+    if (!user && location === '/organisations') {
+      navigate("/");
+    }
+  }, [user, location, navigate]);
   
   return (
     <Switch>
       <Route path="/">
-        {user ? (
-          // If authenticated, redirect to organisations page
-          (() => {
-            navigate("/organisations");
-            return null;
-          })()
-        ) : (
-          // Otherwise show public landing page
-          <Home />
-        )}
+        <Home />
       </Route>
       
       {/* Organizations management - authenticated users only */}
@@ -99,10 +104,22 @@ function Router() {
             <OrganisationListPage />
           </ProtectedRouteGuard>
         ) : (
-          (() => {
-            navigate("/");
-            return null;
-          })()
+          <div className="min-h-screen flex flex-col bg-white">
+            <main className="flex-grow container mx-auto px-4 py-12">
+              <div className="max-w-2xl mx-auto text-center">
+                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
+                <p className="text-gray-600 mb-6">You need to sign in to access this page.</p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link href="/auth">
+                    <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
+                      Sign In
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </main>
+            <SiteFooter />
+          </div>
         )}
       </Route>
       
