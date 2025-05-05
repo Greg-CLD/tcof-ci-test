@@ -19,6 +19,17 @@ import {
 import { elementToPDF } from "@/lib/pdf-utils";
 import { FileDown, Save, Loader2 } from "lucide-react";
 
+// API response type for Cynefin selections
+interface CynefinSelectionResponse {
+  id: string;
+  name: string;
+  data: CynefinSelection;
+  userId: number;
+  projectId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Quadrant data structure
 const quadrantData: Record<CynefinQuadrant, {
   title: string;
@@ -135,7 +146,7 @@ export default function CynefinOrientationTool() {
     data: serverSelection,
     isLoading: selectionLoading,
     error: selectionError
-  } = useQuery<CynefinSelection>({
+  } = useQuery<CynefinSelectionResponse | null>({
     queryKey: ['/api/cynefin-selections', projectId],
     queryFn: async () => {
       if (!projectId) throw new Error("No project selected");
@@ -151,9 +162,16 @@ export default function CynefinOrientationTool() {
     enabled: !!projectId,
   });
   
+  // Interface for the mutation data
+  interface SaveSelectionData {
+    name: string;
+    data: CynefinSelection;
+    projectId: string;
+  }
+  
   // Database save mutation
   const saveSelectionMutation = useMutation({
-    mutationFn: async (data: { name: string, data: any }) => {
+    mutationFn: async (data: SaveSelectionData) => {
       const response = await apiRequest("POST", "/api/cynefin-selections", data);
       if (!response.ok) {
         throw new Error("Failed to save selection to database");
@@ -161,7 +179,7 @@ export default function CynefinOrientationTool() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cynefin-selections"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cynefin-selections", projectId] });
       toast({
         title: "Assessment saved",
         description: "Your Cynefin assessment has been saved to your account.",
@@ -175,6 +193,25 @@ export default function CynefinOrientationTool() {
       });
     },
   });
+
+  // Load data from server when available
+  useEffect(() => {
+    if (serverSelection && !hasLoadedData) {
+      console.log("Loading Cynefin selection data from server:", serverSelection);
+      
+      // Set selection name
+      if (serverSelection.name) {
+        setSelectionName(serverSelection.name);
+      }
+      
+      // Set selected quadrant if available
+      if (serverSelection.data?.quadrant) {
+        setSelectedQuadrant(serverSelection.data.quadrant);
+      }
+      
+      setHasLoadedData(true);
+    }
+  }, [serverSelection, hasLoadedData]);
 
   // Handle quadrant selection
   const handleQuadrantSelect = (quadrant: CynefinQuadrant) => {
@@ -197,6 +234,15 @@ export default function CynefinOrientationTool() {
       return;
     }
 
+    if (!projectId) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project before saving.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // First save to localStorage for offline use
     const data = {
       quadrant: selectedQuadrant,
@@ -214,13 +260,22 @@ export default function CynefinOrientationTool() {
       return;
     }
     
+    // Set loading state
+    setIsLoading(true);
+    
     // Then save to database if user is logged in
     if (user) {
       saveSelectionMutation.mutate({
         name: selectionName,
-        data: data
+        data: data,
+        projectId: projectId
+      }, {
+        onSettled: () => {
+          setIsLoading(false);
+        }
       });
     } else {
+      setIsLoading(false);
       toast({
         title: "Assessment saved locally",
         description: "Your assessment has been saved locally. Sign in to save it to your account.",
@@ -248,6 +303,15 @@ export default function CynefinOrientationTool() {
         <h2 className="text-2xl font-bold mb-2">🧭 Cynefin Orientation Tool</h2>
         <p className="text-gray-600">Do a situation assessment to find your bearings and choose the right approach.</p>
       </div>
+      
+      {selectionLoading && !hasLoadedData && (
+        <Card className="mb-6">
+          <CardContent className="p-6 flex justify-center items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-tcof-teal mr-2" />
+            <p>Loading your saved assessment...</p>
+          </CardContent>
+        </Card>
+      )}
       
       {showIntro && (
         <Card className="mb-6">
@@ -345,9 +409,18 @@ export default function CynefinOrientationTool() {
               <Button 
                 variant="secondary" 
                 onClick={handleSave}
+                disabled={isLoading}
                 className="flex items-center gap-1"
               >
-                <Save className="h-4 w-4 mr-1" /> Save Result
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-1" /> Save Result
+                  </>
+                )}
               </Button>
               {selectedQuadrant && (
                 <Button 
