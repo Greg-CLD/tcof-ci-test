@@ -4,7 +4,7 @@ import { CheckCircle, Circle, AlertCircle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { loadPlan, savePlan, PlanRecord } from '@/lib/plan-db';
+import { loadPlan, savePlan, PlanRecord, Stage, TaskItem } from '@/lib/plan-db';
 
 // Types
 interface FactorTask {
@@ -18,7 +18,11 @@ interface FactorTask {
   };
 }
 
-type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
+// Define extended TaskItem that includes factorId
+interface FactorTaskItem extends TaskItem {
+  factorId?: string;
+  source?: string;
+}
 
 interface TaskStatus {
   [key: string]: boolean;
@@ -60,8 +64,10 @@ export default function StageTabs({ factor, projectId }: StageTabsProps) {
             const tasks = stageData.tasks || [];
             
             tasks.forEach((task) => {
-              if (task.factorId === factor.id) {
-                initialStatus[task.id] = task.completed;
+              // Cast to FactorTaskItem to access factorId
+              const factorTask = task as FactorTaskItem;
+              if (factorTask.factorId === factor.id) {
+                initialStatus[task.id] = task.completed || false;
               }
             });
           });
@@ -106,9 +112,10 @@ export default function StageTabs({ factor, projectId }: StageTabsProps) {
         // Find the task in this stage
         const taskIndex = stageData.tasks.findIndex((t) => t.id === taskId);
         
-        if (taskIndex >= 0) {
-          // Update the task completion status
-          updatedPlan.stages[stageName].tasks[taskIndex].completed = completed;
+        if (taskIndex >= 0 && stageName in updatedPlan.stages) {
+          // Update the task completion status (safely cast to Stage to fix TypeScript error)
+          const stageKey = stageName as Stage;
+          updatedPlan.stages[stageKey].tasks[taskIndex].completed = completed;
           taskUpdated = true;
         }
       });
@@ -116,21 +123,32 @@ export default function StageTabs({ factor, projectId }: StageTabsProps) {
       // If task wasn't found (new task), add it to the appropriate stage
       if (!taskUpdated) {
         // Parse taskId to get stage and factor info
-        const [factorId, stageName, taskIndex] = taskId.split('-');
-        const taskText = factor.tasks[stageName as Stage][parseInt(taskIndex)];
+        const [factorId, stageName, taskIndexStr] = taskId.split('-');
+        const stageKey = stageName as Stage;
+        const taskIndex = parseInt(taskIndexStr);
         
-        // Add task to the appropriate stage
-        if (!updatedPlan.stages[stageName].tasks) {
-          updatedPlan.stages[stageName].tasks = [];
+        // Make sure stage is valid and task index is within range
+        if (stageKey in updatedPlan.stages && 
+            factor.tasks[stageKey] && 
+            taskIndex < factor.tasks[stageKey].length) {
+          
+          const taskText = factor.tasks[stageKey][taskIndex];
+          
+          // Add task to the appropriate stage
+          if (!updatedPlan.stages[stageKey].tasks) {
+            updatedPlan.stages[stageKey].tasks = [];
+          }
+          
+          updatedPlan.stages[stageKey].tasks.push({
+            id: taskId,
+            text: taskText,
+            stage: stageKey,  // Add required stage property
+            origin: 'factor', // Add required origin property
+            completed: completed,
+            factorId: factorId, // Will be added as extended property
+            source: 'factor',   // Will be added as extended property 
+          } as TaskItem); // Cast to TaskItem to satisfy TypeScript
         }
-        
-        updatedPlan.stages[stageName].tasks.push({
-          id: taskId,
-          text: taskText,
-          completed: completed,
-          factorId: factorId,
-          source: 'factor',
-        });
       }
       
       // Save updated plan

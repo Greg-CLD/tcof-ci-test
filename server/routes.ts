@@ -1643,6 +1643,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to export success factors data' });
     }
   });
+  
+  // Public API endpoint for success factors (accessible to all authenticated users)
+  app.get('/api/factors', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // Get factors from the database
+      const factors = factorsDb.getAll();
+      
+      if (!factors || factors.length === 0) {
+        console.warn('No success factors found in database, attempting to load from file');
+        // Try to load from file if database is empty
+        const factorsFromFile = await getFactors(true);
+        if (factorsFromFile && factorsFromFile.length > 0) {
+          return res.json(factorsFromFile);
+        }
+        return res.status(404).json({ message: 'No success factors found' });
+      }
+      
+      res.json(factors);
+    } catch (error: any) {
+      console.error('Error getting success factors:', error);
+      res.status(500).json({ message: 'Failed to get success factors' });
+    }
+  });
 
   const httpServer = createServer(app);
 
