@@ -211,6 +211,26 @@ export const relationsDb = {
       return [];
     }
   },
+  
+  /**
+   * Create a new relation between entities
+   * @param fromId Source entity ID
+   * @param toId Target entity ID
+   * @param relType Relation type
+   * @param projectId Project ID
+   * @param meta Optional metadata
+   * @returns Created relation or null if error
+   */
+  createRelation: async (
+    fromId: string,
+    toId: string,
+    relType: RelationType,
+    projectId: string,
+    meta?: { stage?: string; origin?: string }
+  ): Promise<Relation | null> => {
+    // Use the existing createRelation function that's already defined above
+    return createRelation(fromId, toId, relType, projectId, meta);
+  },
 
   /**
    * Delete relations for a specific project

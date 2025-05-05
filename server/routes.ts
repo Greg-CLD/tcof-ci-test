@@ -674,28 +674,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
-      // Find and delete associated plans
-      try {
-        // Get all plans to find those associated with this project
-        const plans = await storage.list();
-        console.log(`Checking ${plans.length} plans for project ${projectId}`);
-        
-        for (const planId of plans) {
-          try {
-            const planData = await storage.load(planId);
-            if (planData && planData.projectId === projectId) {
-              console.log(`Deleting plan ${planId} associated with project ${projectId}`);
-              await storage.delete(planId);
-            }
-          } catch (planError) {
-            console.error(`Error processing plan ${planId}:`, planError);
-            // Continue with other plans even if one fails
-          }
-        }
-      } catch (plansError) {
-        console.error(`Error finding associated plans for project ${projectId}:`, plansError);
-        // Continue with project deletion even if plan deletion fails
-      }
+      // For plan deletion, we'll just log a message since plans are stored client-side
+      // The client will handle cleaning up plans from localStorage when needed
+      console.log(`Plans for project ${projectId} should be cleaned up client-side`);
+      // Note: storage in this context refers to server-side database storage, not plan storage
       
       // Delete the project
       const deleted = await projectsDb.deleteProject(projectId);
