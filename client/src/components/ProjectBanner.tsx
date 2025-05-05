@@ -116,24 +116,12 @@ export default function ProjectBanner() {
             <span className="font-medium">Working on:</span>
             {isLoading ? (
               <div className="ml-2 w-4 h-4 border-2 border-tcof-teal border-t-transparent rounded-full animate-spin"></div>
-            ) : projects.length > 0 ? (
-              <Select
-                value={selectedProjectId || ''}
-                onValueChange={handleProjectChange}
-              >
-                <SelectTrigger className="ml-2 w-56 border-none shadow-none focus:ring-0">
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            ) : selectedProject ? (
+              <span className="ml-2 font-semibold text-tcof-teal">
+                {selectedProject.name}
+              </span>
             ) : (
-              <span className="ml-2 text-gray-500 italic">No projects</span>
+              <span className="ml-2 text-gray-500 italic">No project selected</span>
             )}
           </div>
           

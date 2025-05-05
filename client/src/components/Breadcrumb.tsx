@@ -37,18 +37,32 @@ const Breadcrumb = () => {
     'starter-access': 'Starter Access'
   };
 
-  // Build the breadcrumb items with cumulative paths
-  const breadcrumbItems = pathSegments.map((segment, index) => {
-    const path = '/' + pathSegments.slice(0, index + 1).join('/');
-    const label = pathLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
-    const isLast = index === pathSegments.length - 1;
+  // Special case for project-profile route
+  let breadcrumbItems = [];
+  
+  if (location === '/get-your-bearings/project-profile') {
+    // For project-profile, only show "Home > Project Profile"
+    breadcrumbItems = [
+      {
+        path: '/get-your-bearings/project-profile',
+        label: 'Project Profile',
+        isLast: true
+      }
+    ];
+  } else {
+    // Build the breadcrumb items with cumulative paths for other routes
+    breadcrumbItems = pathSegments.map((segment, index) => {
+      const path = '/' + pathSegments.slice(0, index + 1).join('/');
+      const label = pathLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
+      const isLast = index === pathSegments.length - 1;
 
-    return {
-      path,
-      label,
-      isLast
-    };
-  });
+      return {
+        path,
+        label,
+        isLast
+      };
+    });
+  }
 
   return (
     <div className="bg-gray-50 py-2 border-b border-gray-200">

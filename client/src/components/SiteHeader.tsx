@@ -24,7 +24,8 @@ import {
   BookOpen,
   Monitor,
   DollarSign,
-  Filter
+  Filter,
+  Briefcase
 } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
@@ -90,16 +91,10 @@ export default function SiteHeader() {
               Home
             </Link>
             <Link 
-              href="/get-your-bearings" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/get-your-bearings' || location.includes('goal-mapping') || location.includes('cynefin-orientation') || location.includes('tcof-journey') ? 'nav-link active font-medium' : 'nav-link'}`}
+              href="/get-your-bearings/project-profile" 
+              className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location.includes('project-profile') ? 'nav-link active font-medium' : 'nav-link'}`}
             >
-              <Compass className="h-4 w-4 mr-1" /> Get Your Bearings
-            </Link>
-            <Link 
-              href="/make-a-plan" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/make-a-plan' ? 'nav-link active font-medium' : 'nav-link'}`}
-            >
-              <ClipboardList className="h-4 w-4 mr-1" /> Make a Plan
+              <Briefcase className="h-4 w-4 mr-1" /> Project Profile
             </Link>
             <Link 
               href="/checklist" 
@@ -212,19 +207,11 @@ export default function SiteHeader() {
               </Link>
               
               <Link 
-                href="/get-your-bearings"
-                onClick={() => handleNavigation("/get-your-bearings")}
-                className={`flex items-center py-2 px-3 rounded-md ${location === '/get-your-bearings' || location.includes('goal-mapping') || location.includes('cynefin-orientation') || location.includes('tcof-journey') ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+                href="/get-your-bearings/project-profile"
+                onClick={() => handleNavigation("/get-your-bearings/project-profile")}
+                className={`flex items-center py-2 px-3 rounded-md ${location.includes('project-profile') ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
               >
-                <Compass className="h-5 w-5 mr-2" /> Get Your Bearings
-              </Link>
-              
-              <Link 
-                href="/make-a-plan"
-                onClick={() => handleNavigation("/make-a-plan")}
-                className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
-              >
-                <ClipboardList className="h-5 w-5 mr-2" /> Make a Plan
+                <Briefcase className="h-5 w-5 mr-2" /> Project Profile
               </Link>
               
               <Link 
