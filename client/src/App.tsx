@@ -26,6 +26,7 @@ import UserHistory from "@/pages/UserHistory";
 import ProfilePage from "@/pages/ProfilePage";
 import ProjectProfile from "@/pages/ProjectProfile";
 import Dashboard from "@/pages/Dashboard";
+import OutcomeManagement from "@/pages/OutcomeManagement";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProgressProvider } from "@/hooks/use-progress";
@@ -126,6 +127,12 @@ function Router() {
       <Route path="/factor-checklist">
         <ProtectedRouteGuard>
           <FactorChecklist />
+        </ProtectedRouteGuard>
+      </Route>
+      
+      <Route path="/projects/:projectId/outcomes">
+        <ProtectedRouteGuard>
+          <OutcomeManagement />
         </ProtectedRouteGuard>
       </Route>
       
@@ -259,6 +266,7 @@ function Router() {
 // Dev-only import for accessibility audit
 import A11yAuditProvider from '@/components/A11yAuditProvider';
 import { PlanProvider } from '@/contexts/PlanContext';
+import { ProjectProvider } from '@/contexts/ProjectContext';
 
 function App() {
   // Check if we're in development mode
@@ -272,15 +280,17 @@ function App() {
           <A11yAuditProvider disabled={!isDev}>
             <ProgressProvider>
               <PlanProvider>
-                <div className="flex flex-col min-h-screen">
-                  <GlobalNav />
-                  <Breadcrumb />
-                  <ProjectBanner />
-                  <div className="flex-grow">
-                    <Router />
+                <ProjectProvider>
+                  <div className="flex flex-col min-h-screen">
+                    <GlobalNav />
+                    <Breadcrumb />
+                    <ProjectBanner />
+                    <div className="flex-grow">
+                      <Router />
+                    </div>
+                    <Toaster />
                   </div>
-                  <Toaster />
-                </div>
+                </ProjectProvider>
               </PlanProvider>
             </ProgressProvider>
           </A11yAuditProvider>
