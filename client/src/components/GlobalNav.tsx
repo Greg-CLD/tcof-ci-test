@@ -21,8 +21,7 @@ const GlobalNav = () => {
   // Navigation items with their paths and condition to show
   const navItems = [
     { path: '/', label: 'Home', show: true },
-    { path: '/get-your-bearings', label: 'Get Your Bearings', show: true },
-    { path: '/make-a-plan', label: 'Make a Plan', show: true },
+    { path: '/get-your-bearings/project-profile', label: 'Project Profile', show: true },
     { path: '/checklist', label: 'Checklist', show: true },
     { path: '/make-a-plan/admin', label: 'Admin', show: admin }
   ];

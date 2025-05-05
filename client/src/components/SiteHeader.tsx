@@ -88,7 +88,7 @@ export default function SiteHeader() {
               href="/" 
               className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/' ? 'nav-link active font-medium' : 'nav-link'}`}
             >
-              Home
+              <Home className="h-4 w-4 mr-1" /> Home
             </Link>
             <Link 
               href="/get-your-bearings/project-profile" 
@@ -102,6 +102,14 @@ export default function SiteHeader() {
             >
               <CheckSquare className="h-4 w-4 mr-1" /> Checklist
             </Link>
+            {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
+              <Link 
+                href="/make-a-plan/admin" 
+                className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location.includes('/make-a-plan/admin') ? 'nav-link active font-medium' : 'nav-link'}`}
+              >
+                <Filter className="h-4 w-4 mr-1" /> Admin
+              </Link>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -221,6 +229,17 @@ export default function SiteHeader() {
               >
                 <CheckSquare className="h-5 w-5 mr-2" /> Checklist
               </Link>
+              
+              {/* Admin link (mobile) */}
+              {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
+                <Link 
+                  href="/make-a-plan/admin"
+                  onClick={() => handleNavigation("/make-a-plan/admin")}
+                  className={`flex items-center py-2 px-3 rounded-md ${location.includes('/make-a-plan/admin') ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+                >
+                  <Filter className="h-5 w-5 mr-2" /> Admin
+                </Link>
+              )}
               
               {/* Tools Submenu */}
               <div className="border-t border-gray-100 mt-2 pt-2">

@@ -43,7 +43,7 @@ import GlobalNav from "@/components/GlobalNav";
 import Breadcrumb from "@/components/Breadcrumb";
 import ProjectBanner from "@/components/ProjectBanner";
 
-// Tool components wrapped with layout (without SiteHeader since it's now part of GlobalNav)
+// Tool components wrapped with layout
 const GoalMappingPage = () => (
   <div className="min-h-screen flex flex-col bg-white">
     <main className="flex-grow container mx-auto px-4 py-12">
@@ -289,7 +289,7 @@ function App() {
               <PlanProvider>
                 <ProjectProvider>
                   <div className="flex flex-col min-h-screen">
-                    <GlobalNav />
+                    <SiteHeader />
                     <Breadcrumb />
                     <ProjectBanner />
                     <div className="flex-grow">
