@@ -113,7 +113,9 @@ function SortableTaskCard({
   
   // Get owner from task if available
   const getOwner = (): string | undefined => {
-    // We don't currently store owner, but the TaskCard expects it
+    if ('owner' in task && task.owner) {
+      return task.owner;
+    }
     return undefined;
   };
   
@@ -251,7 +253,9 @@ export default function StageAccordion({
       if (updates.title !== undefined) {
         task.text = updates.title;
       }
-      // Other properties like owner and status are currently not stored in the model
+      if (updates.owner !== undefined) {
+        task.owner = updates.owner;
+      }
     } else {
       // Update regular task
       const taskIndex = updatedPlan.stages[stage].tasks?.findIndex(t => t.id === taskId) ?? -1;
@@ -270,7 +274,9 @@ export default function StageAccordion({
       if (updates.title !== undefined) {
         task.text = updates.title;
       }
-      // Other properties like owner and status are currently not stored in the model
+      if (updates.owner !== undefined) {
+        task.owner = updates.owner;
+      }
     }
     
     // Save plan and update UI
