@@ -67,19 +67,20 @@ export const storage = {
       console.error('Error fetching user:', error);
       
       // Fallback to a direct query without the potentially missing columns
+      // Need to be careful with column names that might not exist in the actual database
       const result = await db.execute(
-        sql`SELECT id, username, email, password, created_at, updated_at FROM users WHERE id = ${id}`
+        sql`SELECT id, username, email, password FROM users WHERE id = ${id}`
       );
       
-      if (result.length > 0) {
-        const row = result[0];
+      if (result && result.rows && result.rows.length > 0) {
+        const row = result.rows[0];
         return {
           id: row.id,
           username: row.username,
           email: row.email,
           password: row.password,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
+          createdAt: new Date(),
+          updatedAt: new Date(),
           firstName: null,
           lastName: null
         };
@@ -109,18 +110,18 @@ export const storage = {
       
       // Fallback to a direct query without the potentially missing columns
       const result = await db.execute(
-        sql`SELECT id, username, email, password, created_at, updated_at FROM users WHERE username = ${username}`
+        sql`SELECT id, username, email, password FROM users WHERE username = ${username}`
       );
       
-      if (result.length > 0) {
-        const row = result[0];
+      if (result && result.rows && result.rows.length > 0) {
+        const row = result.rows[0];
         return {
           id: row.id,
           username: row.username,
           email: row.email,
           password: row.password,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
+          createdAt: new Date(),
+          updatedAt: new Date(),
           firstName: null,
           lastName: null
         };
