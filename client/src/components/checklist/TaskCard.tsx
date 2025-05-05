@@ -9,7 +9,9 @@ import {
   MoreHorizontal,
   Calendar,
   GripVertical,
-  User
+  User,
+  AlertTriangle,
+  Mail
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -249,12 +251,24 @@ export default function TaskCard({
               className="text-left w-full"
               onClick={() => setIsExpanded(true)}
             >
-              <p className={cn(
-                'text-sm font-medium',
-                (completed || status === 'Done') && 'line-through text-gray-500'
-              )}>
-                {cleanTaskTitle}
-              </p>
+              <div className="flex items-center">
+                <p className={cn(
+                  'text-sm font-medium flex-grow',
+                  (completed || status === 'Done') && 'line-through text-gray-500'
+                )}>
+                  {cleanTaskTitle}
+                </p>
+                
+                {/* Warning icon for unassigned tasks */}
+                {!owner && !completed && (
+                  <div className="ml-2 group relative" data-testid="unassigned-warning">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 warning-icon" />
+                    <div className="absolute hidden group-hover:block bg-black text-white text-xs rounded py-1 px-2 right-0 bottom-full mb-1 whitespace-nowrap z-10">
+                      Assign an owner to this task
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {notes && (
                 <div className="mt-1 text-xs text-gray-600 truncate">
@@ -355,6 +369,24 @@ export default function TaskCard({
                     Clear Priority
                   </DropdownMenuItem>
                 )}
+                
+                <DropdownMenuSeparator />
+                
+                {/* Send via Email option */}
+                <DropdownMenuItem 
+                  onClick={() => {
+                    // Create a mailto link with task information
+                    const subject = "Task Assignment";
+                    const body = `Task: ${cleanTaskTitle}\n\nDue: ${dueDate ? format(new Date(dueDate), 'MMM d, yyyy') : 'No due date'}\n\nAssigned to: ${owner || 'Unassigned'}\n\nStatus: ${status}\n\nNotes: ${notes || 'None'}`;
+                    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                  }}
+                  data-testid="send-via-email-button"
+                >
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send via Email
+                  </div>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
