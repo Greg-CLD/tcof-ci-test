@@ -118,7 +118,9 @@ export default function StageTabs({ factor, projectId }: StageTabsProps) {
         if (taskIndex >= 0 && stageName in updatedPlan.stages) {
           // Update the task completion status (safely cast to Stage to fix TypeScript error)
           const stageKey = stageName as Stage;
-          updatedPlan.stages[stageKey].tasks[taskIndex].completed = completed;
+          if (updatedPlan.stages[stageKey].tasks && updatedPlan.stages[stageKey].tasks[taskIndex]) {
+            updatedPlan.stages[stageKey].tasks[taskIndex].completed = completed;
+          }
           taskUpdated = true;
         }
       });
@@ -154,8 +156,8 @@ export default function StageTabs({ factor, projectId }: StageTabsProps) {
         }
       }
       
-      // Save updated plan
-      await savePlan(updatedPlan);
+      // Save updated plan - pass the plan ID and the updated plan data
+      await savePlan(projectId, updatedPlan as unknown as Partial<PlanRecord>);
       setPlan(updatedPlan);
       
     } catch (error) {
