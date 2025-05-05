@@ -90,15 +90,13 @@ export const outcomeProgress = pgTable("outcome_progress", {
 });
 
 // Users table - for authentication and user management
+// Note: This schema now matches the actual database structure
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: text("password").notNull(),
   email: varchar("email", { length: 255 }).unique(),
-  firstName: varchar("first_name", { length: 100 }),
-  lastName: varchar("last_name", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Plan metadata (serialized as JSON in DB, but with schema for validation)

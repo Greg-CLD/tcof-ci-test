@@ -56,7 +56,8 @@ function setupAuth(app: Express) {
           return done(null, false, { message: "Incorrect username." });
         }
         
-        const isPasswordValid = await storage.comparePasswords(password, user.password);
+        // Ensure password is treated as string
+        const isPasswordValid = await storage.comparePasswords(password, String(user.password));
         if (!isPasswordValid) {
           return done(null, false, { message: "Incorrect password." });
         }

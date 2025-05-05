@@ -52,7 +52,7 @@ export const storage = {
     try {
       // Use a direct SQL query to avoid the ORM column mapping issue
       const result = await db.execute(
-        sql`SELECT id, username, email, password, created_at, updated_at FROM users WHERE id = ${id}`
+        sql`SELECT id, username, email, password, created_at FROM users WHERE id = ${id}`
       );
       
       if (result && result.rows && result.rows.length > 0) {
@@ -63,9 +63,9 @@ export const storage = {
           email: row.email,
           password: row.password,
           createdAt: row.created_at,
-          updatedAt: row.updated_at,
-          firstName: null,
-          lastName: null
+          updatedAt: null, // This column doesn't exist in the database
+          firstName: null, // This column doesn't exist in the database
+          lastName: null   // This column doesn't exist in the database
         };
       }
       
