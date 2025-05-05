@@ -11,17 +11,5 @@
     "orgType": "startup",
     "teamSize": "solo",
     "currentStage": "identify"
-  },
-  {
-    "id": "8f381a87-3919-4e13-b3ef-be1631d412ef",
-    "userId": 3,
-    "name": "Test Project 0927",
-    "description": "Text",
-    "createdAt": "2025-05-05T08:27:12.680Z",
-    "updatedAt": "2025-05-05T08:33:55.842Z",
-    "sector": "private",
-    "orgType": "micro_business",
-    "teamSize": "small",
-    "currentStage": "identify"
   }
 ]

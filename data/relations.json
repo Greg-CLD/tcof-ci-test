@@ -8,17 +8,6 @@
     "meta": {
       "origin": "selectProject"
     },
-    "timestamp": "2025-05-05T07:52:34.208Z"
-  },
-  {
-    "id": "6ef465f9-a677-4197-b10a-d44fe55d403d",
-    "fromId": "3",
-    "toId": "8f381a87-3919-4e13-b3ef-be1631d412ef",
-    "relType": "BELONGS_TO_PROJECT",
-    "projectId": "8f381a87-3919-4e13-b3ef-be1631d412ef",
-    "meta": {
-      "origin": "selectProject"
-    },
-    "timestamp": "2025-05-05T08:49:31.731Z"
+    "timestamp": "2025-05-05T13:17:25.537Z"
   }
 ]
