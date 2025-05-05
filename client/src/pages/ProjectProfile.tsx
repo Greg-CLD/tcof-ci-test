@@ -7,6 +7,8 @@ import { useProjects, Project, CreateProjectData } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useQueryClient } from '@tanstack/react-query';
+import { useProjectContext } from '@/contexts/ProjectContext';
 import {
   Form,
   FormControl,
@@ -46,6 +48,8 @@ export default function ProjectProfile() {
   const { projects, isLoading, createProject, updateProject } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const queryClient = useQueryClient();
+  const { setCurrentProject } = useProjectContext();
   
   // Track if sector is "other" to show custom sector field
   const [showCustomSector, setShowCustomSector] = useState(false);
@@ -141,6 +145,16 @@ export default function ProjectProfile() {
           data: projectData,
         });
         
+        // Also manually invalidate the individual project query to ensure ProjectContext gets updated
+        await queryClient.invalidateQueries({
+          queryKey: ['/api/projects', selectedProjectId]
+        });
+        
+        // If we have a result, update the ProjectContext directly
+        if (result) {
+          setCurrentProject(result);
+        }
+        
         toast({
           title: 'Project Updated',
           description: 'Your project details have been updated successfully.',
@@ -154,6 +168,11 @@ export default function ProjectProfile() {
         
         // Set as selected project
         localStorage.setItem('selectedProjectId', result.id);
+        
+        // If we have a result, update the ProjectContext directly
+        if (result) {
+          setCurrentProject(result);
+        }
         
         toast({
           title: 'Project Created',
