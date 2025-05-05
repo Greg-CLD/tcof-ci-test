@@ -31,6 +31,33 @@ export interface UpdateProjectParams {
   data: Partial<CreateProjectData>;
 }
 
+/**
+ * Hook to fetch a single project by ID with full details
+ */
+export function useProject(projectId?: string) {
+  const enabled = !!projectId;
+  
+  const { data: project, isLoading, error } = useQuery<Project>({
+    queryKey: ['/api/projects', projectId],
+    queryFn: async () => {
+      if (!projectId) throw new Error('Project ID is required');
+      const response = await fetch(`/api/projects?id=${projectId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch project details');
+      }
+      return response.json();
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+  
+  return {
+    project,
+    isLoading,
+    error,
+  };
+}
+
 export function useProjects() {
   const queryClient = useQueryClient();
   

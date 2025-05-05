@@ -1,21 +1,8 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { useLocation } from 'wouter';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-
-// Project interface
-export interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  sector?: string;
-  customSector?: string;
-  orgType?: string;
-  teamSize?: string;
-  currentStage?: string;
-  selectedOutcomeIds?: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+import { useQueryClient } from '@tanstack/react-query';
+import { Project, useProject } from '@/hooks/useProjects';
+import { apiRequest } from '@/lib/queryClient';
 
 interface ProjectContextType {
   currentProject: Project | null;
@@ -46,10 +33,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   })();
   
   // Fetch project data if we have a project ID
-  const { data: project, isLoading } = useQuery({
-    queryKey: ['/api/projects', projectIdFromUrl],
-    enabled: !!projectIdFromUrl,
-  });
+  const { project, isLoading } = useProject(projectIdFromUrl || undefined);
   
   // Function to refresh the current project data
   const refreshProject = async (): Promise<void> => {
@@ -59,14 +43,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-      await queryClient.invalidateQueries({
-        queryKey: ['/api/projects', currentProject.id]
-      });
+      // Fetch the complete updated project data
+      const response = await apiRequest('GET', `/api/projects?id=${currentProject.id}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to refresh project data');
+      }
+      
+      const updatedProject = await response.json();
+      setCurrentProject(updatedProject);
+      
+      // Update cache
+      queryClient.setQueryData(['/api/projects', currentProject.id], updatedProject);
       
       // Also invalidate the main projects list
       await queryClient.invalidateQueries({
         queryKey: ['/api/projects']
       });
+      
+      console.log('Project data refreshed successfully', updatedProject);
     } catch (error) {
       console.error('Error refreshing project data:', error);
     }
@@ -74,8 +69,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   
   // Update current project when project data changes
   useEffect(() => {
-    if (project && typeof project === 'object') {
-      setCurrentProject(project as Project);
+    if (project) {
+      console.log('Setting current project from API', project);
+      setCurrentProject(project);
+      
+      // Also track this as the selected project in localStorage
+      localStorage.setItem('selectedProjectId', project.id);
     }
   }, [project]);
   

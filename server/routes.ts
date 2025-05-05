@@ -295,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const relations = loadRelations().filter(rel => 
             rel.fromId === map.id.toString() && 
             rel.toId === projectId && 
-            rel.type === 'GOAL_MAP_FOR_PROJECT'
+            rel.relType === 'GOAL_MAP_FOR_PROJECT'
           );
           return relations.length > 0;
         });
@@ -407,7 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const relations = loadRelations().filter(rel => 
             rel.fromId === selection.id.toString() && 
             rel.toId === projectId && 
-            rel.type === 'CYNEFIN_SELECTION_FOR_PROJECT'
+            rel.relType === 'CYNEFIN_SELECTION_FOR_PROJECT'
           );
           return relations.length > 0;
         });
@@ -519,7 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const relations = loadRelations().filter(rel => 
             rel.fromId === journey.id.toString() && 
             rel.toId === projectId && 
-            rel.type === 'TCOF_JOURNEY_FOR_PROJECT'
+            rel.relType === 'TCOF_JOURNEY_FOR_PROJECT'
           );
           return relations.length > 0;
         });
@@ -615,9 +615,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const projects = await projectsDb.listProjects(userId);
-      console.log(`Found ${projects.length} projects for user ${userId}`);
-      res.json(projects);
+      const projectId = req.query.id as string;
+      
+      if (projectId) {
+        // Return full project details for a specific project
+        const project = await projectsDb.getProject(projectId);
+        
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+        
+        // Ensure user owns this project
+        if (project.userId !== userId) {
+          return res.status(403).json({ message: "Unauthorized access" });
+        }
+        
+        console.log(`Fetched detailed project: ${projectId}`);
+        return res.json(project);
+      } else {
+        // Return list of all projects for this user
+        const projects = await projectsDb.listProjects(userId);
+        console.log(`Found ${projects.length} projects for user ${userId}`);
+        res.json(projects);
+      }
     } catch (error: any) {
       console.error("Error fetching projects:", error);
       res.status(500).json({ message: "Error fetching projects" });
