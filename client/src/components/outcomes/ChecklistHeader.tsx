@@ -25,7 +25,9 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
   const { toast } = useToast();
   const [isSelectingOutcomes, setIsSelectingOutcomes] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isEmailingTaskList, setIsEmailingTaskList] = useState(false);
   const radarChartRef = useRef<OutcomeRadarChartRef>(null);
+  const { selectedPlanId } = usePlan();
   
   // Get project details for the PDF header
   const { data: projectData } = useQuery<{ id: string; name: string; description: string }>({
@@ -118,6 +120,111 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
       });
     } finally {
       setIsExporting(false);
+    }
+  };
+  
+  // Handle Email Task List
+  const handleEmailTaskList = async () => {
+    try {
+      setIsEmailingTaskList(true);
+      
+      if (!selectedPlanId) {
+        toast({
+          title: "No plan selected",
+          description: "Please select a project plan first.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Get project name from data
+      const projectName = projectData && 'name' in projectData 
+        ? projectData.name 
+        : 'Project';
+      
+      // Load the current plan
+      const plan = await loadPlan(selectedPlanId);
+      if (!plan) {
+        toast({
+          title: "Plan not found",
+          description: "Unable to load the current project plan.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Collect all tasks across stages
+      const tasksByStage: Record<Stage, Array<TaskItem | GoodPracticeTask>> = {
+        'Identification': [],
+        'Definition': [],
+        'Delivery': [],
+        'Closure': []
+      };
+      
+      // Process tasks for each stage
+      Object.keys(plan.stages).forEach((stageName) => {
+        const stage = stageName as Stage;
+        const stageData = plan.stages[stage];
+        
+        // Regular tasks
+        if (stageData.tasks && stageData.tasks.length > 0) {
+          tasksByStage[stage].push(...stageData.tasks);
+        }
+        
+        // Good practice tasks
+        if (stageData.goodPractice?.tasks && stageData.goodPractice.tasks.length > 0) {
+          tasksByStage[stage].push(...stageData.goodPractice.tasks);
+        }
+      });
+      
+      // Format email body
+      const currentDate = format(new Date(), 'yyyy-MM-dd');
+      let emailBody = `Project: ${projectName}\nDate: ${currentDate}\n\n`;
+      
+      // Add tasks by stage
+      Object.keys(tasksByStage).forEach((stageName) => {
+        const stage = stageName as Stage;
+        const stageTasks = tasksByStage[stage];
+        
+        if (stageTasks.length > 0) {
+          emailBody += `${stage}:\n`;
+          
+          stageTasks.forEach((task) => {
+            const checkbox = task.completed ? '[x]' : '[ ]';
+            const taskText = task.text;
+            const owner = 'owner' in task ? task.owner || 'Unassigned' : 'Unassigned';
+            const status = task.completed ? 'Done' : 'To Do';
+            
+            emailBody += ` • ${checkbox} ${taskText} — Owner: ${owner} — Status: ${status}\n`;
+          });
+          
+          emailBody += '\n';
+        }
+      });
+      
+      // Create and open mailto link
+      const subject = `TCOF Task List – ${projectName}`;
+      const encodedBody = encodeURIComponent(emailBody);
+      const encodedSubject = encodeURIComponent(subject);
+      const mailtoLink = `mailto:?subject=${encodedSubject}&body=${encodedBody}`;
+      
+      // Open the email client
+      window.location.href = mailtoLink;
+      
+      // Show confirmation toast
+      toast({
+        title: "Launching email client",
+        description: "Your task list will open in your mail app.",
+      });
+    } catch (error) {
+      console.error('Email task list error:', error);
+      toast({
+        title: "Error sending task list",
+        description: "Unable to generate the email.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEmailingTaskList(false);
     }
   };
   
@@ -251,6 +358,38 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
           </CardContent>
         </Card>
       )}
+      
+      {/* Email Task List button card */}
+      <Card className="bg-white shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Task Management</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Share and collaborate on project tasks
+              </p>
+            </div>
+            
+            <div className="mt-3 md:mt-0">
+              <Button
+                variant="outline"
+                size="default"
+                className="flex items-center gap-2"
+                onClick={handleEmailTaskList}
+                disabled={isEmailingTaskList || !selectedPlanId}
+                data-testid="email-task-list-button"
+              >
+                {isEmailingTaskList ? (
+                  <div className="animate-spin mr-1 h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
+                <span>{isEmailingTaskList ? "Generating..." : "Email Task List"}</span>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       
       {selectedOutcomes.length === 0 && (
         <Card className="bg-white shadow-sm">
