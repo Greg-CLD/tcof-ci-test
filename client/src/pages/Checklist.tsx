@@ -19,9 +19,9 @@ import { usePlan } from '@/contexts/PlanContext';
 export default function Checklist() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { selectedPlanId } = usePlan();
   
   // Plan state
-  const [planId, setPlanId] = useState<string | undefined>();
   const [plan, setPlan] = useState<PlanRecord | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -34,45 +34,40 @@ export default function Checklist() {
   
   // Load plan data when component mounts
   useEffect(() => {
-    const loadPlanData = async () => {
-      setLoading(true);
-      
-      // Check if there's an existing plan
-      if (!hasExistingPlan()) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const currentPlanId = getLatestPlanId();
-        if (!currentPlanId) {
-          setLoading(false);
-          return;
-        }
-        
-        const loadedPlan = await loadPlan(currentPlanId);
-        if (loadedPlan) {
-          setPlan(loadedPlan);
-          setPlanId(currentPlanId);
-        }
-      } catch (error) {
-        console.error('Error loading plan:', error);
-        toast({
-          title: "Error loading plan",
-          description: "There was a problem loading your plan data.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    if (!selectedPlanId) {
+      setLoading(false);
+      return;
+    }
     
-    loadPlanData();
-  }, [toast]);
+    loadPlan(selectedPlanId)
+      .then(pl => {
+        setPlan(pl || null);
+      })
+      .catch(err => {
+        console.error('Error loading plan:', err);
+        toast({ 
+          title: 'Error loading plan', 
+          description: 'Please try again.', 
+          variant: 'destructive' 
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [selectedPlanId, toast]);
   
   // Handle plan update
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
     setPlan(updatedPlan);
+    // Save the updated plan to storage
+    savePlan(updatedPlan)
+      .catch(err => {
+        console.error('Error saving plan:', err);
+        toast({
+          title: "Error saving plan",
+          description: "There was a problem saving your changes.",
+          variant: "destructive",
+        });
+      });
   };
   
   // Handle exporting the plan

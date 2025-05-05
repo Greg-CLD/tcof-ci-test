@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlanRecord, loadPlan } from '@/lib/plan-db';
+import { PlanRecord, loadPlan, savePlan } from '@/lib/plan-db';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { CircleX, Download, FileText, Loader2 } from 'lucide-react';
@@ -8,52 +8,40 @@ import SummaryBar from '@/components/checklist/SummaryBar';
 import FactorAccordion from '@/components/checklist/FactorAccordion';
 import { useToast } from '@/hooks/use-toast';
 import { exportPlanPDF, exportCSV } from '@/lib/exportUtils';
-import { useProjects } from '@/hooks/useProjects';
+import { usePlan } from '@/contexts/PlanContext';
 
 export default function FactorChecklist() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { getSelectedProject } = useProjects();
+  const { selectedPlanId } = usePlan();
   
   // Plan state
   const [plan, setPlan] = useState<PlanRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'tasks' | 'factors'>('factors'); // Set 'factors' as default
   
-  // Get the selected project ID
-  const selectedProject = getSelectedProject();
-  const selectedProjectId = selectedProject?.id;
-  
   // Load plan data when component mounts
   useEffect(() => {
-    const loadPlanData = async () => {
-      setLoading(true);
-      
-      // Check if there's a selected project
-      if (!selectedProjectId) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const loadedPlan = await loadPlan(selectedProjectId);
-        if (loadedPlan) {
-          setPlan(loadedPlan);
-        }
-      } catch (error) {
-        console.error('Error loading plan:', error);
+    setLoading(true);
+    if (!selectedPlanId) {
+      setLoading(false);
+      return;
+    }
+    
+    loadPlan(selectedPlanId)
+      .then(pl => {
+        setPlan(pl || null);
+      })
+      .catch(err => {
+        console.error('Error loading plan:', err);
         toast({
           title: "Error loading plan",
           description: "There was a problem loading your plan data.",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadPlanData();
-  }, [selectedProjectId, toast]);
+      })
+      .finally(() => setLoading(false));
+  }, [selectedPlanId, toast]);
   
   // Handle plan update
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
@@ -202,7 +190,7 @@ export default function FactorChecklist() {
           
           <TabsContent value="factors" className="mt-4">
             {/* Factor Accordion component */}
-            <FactorAccordion selectedProjectId={selectedProjectId || ''} />
+            <FactorAccordion selectedProjectId={selectedPlanId || ''} />
           </TabsContent>
         </Tabs>
       </div>
