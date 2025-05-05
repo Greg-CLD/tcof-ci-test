@@ -1,0 +1,79 @@
+🛠️ Replit Agent Prompt – Add “View then Edit” Flow to Project Profile
+🎯 Goal
+Stop losing data and stop fighting the dropdown.
+Instead, show the last-saved values as static text.
+When the user clicks Edit, swap in a form pre-filled with those same values.
+After saving, return to View mode and re-fetch the data to prove persistence.
+
+✅ Checklist
+Add a View/Edit switch
+
+ In ProjectProfile.tsx, introduce const [isEditing, setIsEditing] = useState(false);.
+
+ Default to View mode (isEditing === false).
+
+View mode component
+
+ Create a small ProjectProfileView component that receives a project object and renders a summary list:
+
+yaml
+Copy
+Edit
+Sector: Private Sector
+Org Type: SME
+Team Size: 6-10
+Current Stage: Discovery
+Use a <Card> or simple <dl>; keep it plain.
+
+ Add a single “Edit” button that sets setIsEditing(true).
+
+Edit mode component
+
+ Re-use the existing React-Hook-Form and dropdowns, but initialise via:
+
+ts
+Copy
+Edit
+const form = useForm<ProjectForm>({
+  defaultValues: project    // comes straight from server
+});
+ On Save: call updateProject; onSuccess does
+
+ts
+Copy
+Edit
+queryClient.invalidateQueries(['/api/projects', project.id]);
+setIsEditing(false);
+ Add a “Cancel” button → setIsEditing(false) (no API call).
+
+Data source
+
+ Ensure const { data: project } = useProject(projectId) is the single source of truth throughout both modes.
+
+ Remove the old list-filtering logic that looked up the project in an array.
+
+UX polish
+
+ While isLoading, show a centred spinner.
+
+ When isEditing === false, never render the dropdowns—only static text—so there is no chance of empty values flashing.
+
+✅ Definition of Done
+Load /project-profile
+→ Sees static summary with correct last-saved values.
+
+Click Edit, change Sector, click Save
+→ Returns to summary showing new value.
+
+Refresh browser hard (⌘R / Ctrl-R)
+→ Summary still shows new value (proves persistence).
+
+Cancel in Edit mode leaves data unchanged.
+
+🧪 Smoke Tests
+Step	Expectation
+Open profile of Project A	Summary values match DB
+Edit “Org Type” to “Public” → Save	Summary shows “Public”
+Hard reload page	“Public” still visible
+Click Edit then Cancel	Summary unchanged
+Repeat with another project	Works independently
