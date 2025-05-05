@@ -425,7 +425,7 @@ export const loadSuccessFactorTasks = async (): Promise<Record<Stage, {
 };
 
 /**
- * Ensures a plan exists for a given project ID
+ * Ensures a plan exists for a given project ID and populates it with success factor tasks
  * @param projectId The ID of the project
  * @returns Promise resolving to the plan ID
  */
@@ -453,6 +453,35 @@ export const ensurePlanForProject = async (projectId: string): Promise<string> =
       
       // Set this as the active plan
       setLatestPlanId(planId);
+      
+      // Load success factor tasks and add them to the plan
+      console.log('Loading success factor tasks for new plan');
+      const successFactorTasks = await loadSuccessFactorTasks();
+      
+      // Load the plan to update it
+      const plan = await loadPlan(planId);
+      if (!plan) {
+        console.error('Failed to load newly created plan');
+        return planId; // Return planId even if we fail to populate tasks
+      }
+      
+      // Add success factor tasks to the plan
+      Object.keys(successFactorTasks).forEach((stageName) => {
+        const stage = stageName as Stage;
+        plan.stages[stage].tasks = [
+          ...(plan.stages[stage].tasks || []),
+          ...successFactorTasks[stage]
+        ];
+      });
+      
+      // Save the updated plan
+      const saved = await savePlan(planId, plan);
+      
+      if (!saved) {
+        console.error('Failed to save plan with success factor tasks');
+      } else {
+        console.log(`Plan ${planId} successfully populated with success factor tasks`);
+      }
       
       return planId;
     }
