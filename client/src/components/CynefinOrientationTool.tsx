@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useProjectContext } from "@/contexts/ProjectContext";
 import {
   STORAGE_KEYS,
   CynefinQuadrant,
@@ -16,7 +17,7 @@ import {
   saveToLocalStorage
 } from "@/lib/storage";
 import { elementToPDF } from "@/lib/pdf-utils";
-import { FileDown, Save } from "lucide-react";
+import { FileDown, Save, Loader2 } from "lucide-react";
 
 // Quadrant data structure
 const quadrantData: Record<CynefinQuadrant, {
@@ -112,7 +113,15 @@ const quadrantData: Record<CynefinQuadrant, {
 };
 
 export default function CynefinOrientationTool() {
-  // Load existing selection from local storage
+  // Get the current project from context
+  const { currentProject } = useProjectContext();
+  const projectId = currentProject?.id;
+  
+  // State to track if we've loaded data from server
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Load existing selection from local storage as fallback
   const storedData = loadFromLocalStorage<CynefinSelection>(STORAGE_KEYS.CYNEFIN_SELECTION) || initialCynefinSelection;
   
   const [selectedQuadrant, setSelectedQuadrant] = useState<CynefinQuadrant | null>(storedData.quadrant);
@@ -120,6 +129,27 @@ export default function CynefinOrientationTool() {
   const [selectionName, setSelectionName] = useState("My Cynefin Assessment");
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Fetch Cynefin selection data from server for the current project
+  const {
+    data: serverSelection,
+    isLoading: selectionLoading,
+    error: selectionError
+  } = useQuery<CynefinSelection>({
+    queryKey: ['/api/cynefin-selections', projectId],
+    queryFn: async () => {
+      if (!projectId) throw new Error("No project selected");
+      const res = await apiRequest("GET", `/api/cynefin-selections?projectId=${projectId}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          return null; // No Cynefin selection found for this project
+        }
+        throw new Error("Failed to fetch Cynefin selection");
+      }
+      return await res.json();
+    },
+    enabled: !!projectId,
+  });
   
   // Database save mutation
   const saveSelectionMutation = useMutation({
