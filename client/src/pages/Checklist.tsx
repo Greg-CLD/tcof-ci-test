@@ -46,6 +46,7 @@ export default function Checklist() {
           // If we have a project but no plan, ensure one exists
           console.log('Ensuring plan exists for project:', selectedProject.id);
           const planId = await ensurePlanForProject(selectedProject.id);
+          console.log('ensurePlanForProject →', planId);
           
           if (!selectedPlanId || selectedPlanId !== planId) {
             console.log('Setting new plan ID:', planId);
