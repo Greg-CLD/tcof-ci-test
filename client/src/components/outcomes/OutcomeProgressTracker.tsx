@@ -41,8 +41,8 @@ export function OutcomeProgressTracker({
   const saveProgressMutation = useMutation({
     mutationFn: async ({ outcomeId, value }: { outcomeId: string; value: number }) => {
       const res = await apiRequest(
-        "POST", 
-        `/api/projects/${projectId}/outcomes/${outcomeId}/progress`, 
+        "PATCH", 
+        `/api/projects/${projectId}/outcomes/${outcomeId}`, 
         { value }
       );
       return res.json();

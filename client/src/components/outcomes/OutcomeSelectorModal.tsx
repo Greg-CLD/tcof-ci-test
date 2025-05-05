@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Info, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -135,6 +136,11 @@ export function OutcomeSelectorModal({
     });
   };
   
+  // Check if an outcome should be disabled (if it's not selected and we're at the limit)
+  const isOutcomeDisabled = (outcomeId: string): boolean => {
+    return !selectedOutcomeIds.includes(outcomeId) && selectedOutcomeIds.length >= 5;
+  };
+  
   // Save selected outcomes
   const handleSave = () => {
     updateOutcomesMutation.mutate(selectedOutcomeIds);
@@ -235,15 +241,36 @@ export function OutcomeSelectorModal({
               <div className="space-y-2">
                 {allOutcomes.map((outcome) => (
                   <div key={outcome.id} className="flex items-start space-x-2 py-1">
-                    <Checkbox
-                      id={`outcome-${outcome.id}`}
-                      checked={selectedOutcomeIds.includes(outcome.id)}
-                      onCheckedChange={() => handleOutcomeSelect(outcome.id)}
-                    />
+                    {isOutcomeDisabled(outcome.id) ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div>
+                              <Checkbox
+                                id={`outcome-${outcome.id}`}
+                                checked={selectedOutcomeIds.includes(outcome.id)}
+                                onCheckedChange={() => handleOutcomeSelect(outcome.id)}
+                                disabled={true}
+                              />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Maximum of 5 outcomes allowed</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <Checkbox
+                        id={`outcome-${outcome.id}`}
+                        checked={selectedOutcomeIds.includes(outcome.id)}
+                        onCheckedChange={() => handleOutcomeSelect(outcome.id)}
+                        disabled={false}
+                      />
+                    )}
                     <div className="grid gap-1.5 leading-none">
                       <label
                         htmlFor={`outcome-${outcome.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className={`text-sm font-medium leading-none ${isOutcomeDisabled(outcome.id) ? 'text-muted-foreground cursor-not-allowed' : ''}`}
                       >
                         {outcome.title}
                       </label>
