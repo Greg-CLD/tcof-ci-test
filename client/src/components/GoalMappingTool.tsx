@@ -100,10 +100,11 @@ export default function GoalMappingTool() {
   const [timeframeInput, setTimeframeInput] = useState("");
   const [showHelp, setShowHelp] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
-  const [mapName, setMapName] = useState("My Success Map");
-  const [isEditing, setIsEditing] = useState(true);
+  // Use a fixed map name instead of user input
+  const mapName = "Project Goal Map";
+  const [isEditing, setIsEditing] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
   const { currentProject } = useProjectContext();
@@ -208,27 +209,36 @@ export default function GoalMappingTool() {
     setIsEditing(true);
   };
   
-  // Load data when it becomes available
+  // Load data when component mounts or project changes
   useEffect(() => {
-    if (serverGoalMap && !hasLoadedData) {
-      console.log("Loading goal map data from server:", serverGoalMap);
+    // Reset loading state when project changes
+    if (projectId) {
+      setIsLoading(true);
       
-      // Set map name
-      setMapName(serverGoalMap.name || "My Success Map");
-      
-      // Load canvas data
-      if (serverGoalMap.nodes && serverGoalMap.connections) {
-        loadCanvasData({
-          nodes: serverGoalMap.nodes,
-          connections: serverGoalMap.connections
-        });
+      // When we have a response from the server
+      if (!goalMapLoading) {
+        if (serverGoalMap && serverGoalMap.nodes && serverGoalMap.connections) {
+          console.log("Loading goal map data from server:", serverGoalMap);
+          
+          // Load canvas data
+          loadCanvasData({
+            nodes: serverGoalMap.nodes,
+            connections: serverGoalMap.connections
+          });
+          
+          // Start in view mode for existing maps
+          setIsEditing(false);
+        } else {
+          // If no map exists, start in edit mode with empty canvas
+          clearCanvas();
+          setIsEditing(true);
+        }
+        
+        setHasLoadedData(true);
+        setIsLoading(false);
       }
-      
-      setHasLoadedData(true);
-      // For existing maps, start in view mode
-      setIsEditing(false);
     }
-  }, [serverGoalMap, hasLoadedData, loadCanvasData]);
+  }, [projectId, serverGoalMap, goalMapLoading, loadCanvasData, clearCanvas]);
   
   // Handle adding a goal
   const handleAddGoal = () => {
