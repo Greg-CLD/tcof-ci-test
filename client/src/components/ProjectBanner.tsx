@@ -13,12 +13,14 @@ import { useProjects } from '@/hooks/useProjects';
 import { useAuthProtection } from '@/hooks/use-auth-protection';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
+import { useProjectContext } from '@/contexts/ProjectContext';
 
 export default function ProjectBanner() {
   const [location, navigate] = useLocation();
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
   const { projects, isLoading } = useProjects();
+  const { currentProject, setCurrentProject, refreshProject } = useProjectContext();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   
@@ -44,18 +46,38 @@ export default function ProjectBanner() {
     setShowBanner(shouldShowBanner && isAuthorized);
   }, [location, isAuthorized]);
   
-  // Load selected project from localStorage
+  // Synchronize state between local component and ProjectContext
   useEffect(() => {
-    const storedProjectId = localStorage.getItem('selectedProjectId');
-    if (storedProjectId) {
-      setSelectedProjectId(storedProjectId);
+    // If currentProject from context is set, update local state
+    if (currentProject?.id) {
+      setSelectedProjectId(currentProject.id);
+    } else {
+      // Otherwise, load from localStorage as fallback
+      const storedProjectId = localStorage.getItem('selectedProjectId');
+      if (storedProjectId) {
+        setSelectedProjectId(storedProjectId);
+        
+        // Try to find the project in the loaded projects
+        const project = projects.find(p => p.id === storedProjectId);
+        if (project) {
+          // Update the context if we found a valid project
+          setCurrentProject(project);
+        }
+      }
     }
-  }, []);
+  }, [currentProject, projects, setCurrentProject]);
   
   // Handle project change
   const handleProjectChange = async (projectId: string) => {
     setSelectedProjectId(projectId);
     localStorage.setItem('selectedProjectId', projectId);
+    
+    // Find the project in our loaded projects
+    const selectedProject = projects.find(p => p.id === projectId);
+    if (selectedProject) {
+      // Update the global project context
+      setCurrentProject(selectedProject);
+    }
     
     // Track relationship between user and project (will be handled by the backend)
     try {
@@ -65,12 +87,12 @@ export default function ProjectBanner() {
       // Continue even if tracking fails
     }
     
-    // Refresh the current page to reflect the project change
-    window.location.reload();
+    // Refresh the data instead of reloading the page
+    await refreshProject();
   };
   
-  // Find the current selected project
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  // Use currentProject from context first, or fall back to local state
+  const selectedProject = currentProject || projects.find(p => p.id === selectedProjectId);
   
   if (!showBanner || !isAuthorized) {
     return null;
@@ -128,7 +150,7 @@ export default function ProjectBanner() {
                 size="sm" 
                 variant="ghost" 
                 className="ml-2 text-tcof-teal"
-                onClick={() => navigate(`/get-your-bearings/project-profile?edit=${selectedProjectId}`)}
+                onClick={() => navigate(`/get-your-bearings/project-profile?edit=${selectedProject.id}`)}
               >
                 <Briefcase className="w-4 h-4 mr-1" />
                 Edit Profile
