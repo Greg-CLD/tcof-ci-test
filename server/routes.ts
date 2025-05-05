@@ -713,14 +713,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any).id;
       const projectId = req.params.projectId;
       
-      // Get the project to verify existence and ownership
+      // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Ensure user owns this project
-      if (existingProject.userId !== userId) {
+      // Verify access to the project
+      if (existingProject.organisationId) {
+        // For organization projects, check membership
+        const membership = await db.query.organisationMemberships.findFirst({
+          where: and(
+            eq(organisationMemberships.userId, userId),
+            eq(organisationMemberships.organisationId, existingProject.organisationId)
+          )
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ 
+            message: "You are not a member of this organization" 
+          });
+        }
+      } else if (existingProject.userId !== userId) {
+        // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
@@ -749,14 +764,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "selectedOutcomeIds must be an array" });
       }
       
-      // Get the project to verify existence and ownership
+      // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Ensure user owns this project
-      if (existingProject.userId !== userId) {
+      // Verify access to the project
+      if (existingProject.organisationId) {
+        // For organization projects, check membership
+        const membership = await db.query.organisationMemberships.findFirst({
+          where: and(
+            eq(organisationMemberships.userId, userId),
+            eq(organisationMemberships.organisationId, existingProject.organisationId)
+          )
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ 
+            message: "You are not a member of this organization" 
+          });
+        }
+      } else if (existingProject.userId !== userId) {
+        // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
@@ -785,14 +815,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Title is required" });
       }
       
-      // Get the project to verify existence and ownership
+      // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Ensure user owns this project
-      if (existingProject.userId !== userId) {
+      // Verify access to the project
+      if (existingProject.organisationId) {
+        // For organization projects, check membership
+        const membership = await db.query.organisationMemberships.findFirst({
+          where: and(
+            eq(organisationMemberships.userId, userId),
+            eq(organisationMemberships.organisationId, existingProject.organisationId)
+          )
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ 
+            message: "You are not a member of this organization" 
+          });
+        }
+      } else if (existingProject.userId !== userId) {
+        // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
@@ -816,14 +861,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any).id;
       const projectId = req.params.projectId;
       
-      // Get the project to verify existence and ownership
+      // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Ensure user owns this project
-      if (existingProject.userId !== userId) {
+      // Verify access to the project
+      if (existingProject.organisationId) {
+        // For organization projects, check membership
+        const membership = await db.query.organisationMemberships.findFirst({
+          where: and(
+            eq(organisationMemberships.userId, userId),
+            eq(organisationMemberships.organisationId, existingProject.organisationId)
+          )
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ 
+            message: "You are not a member of this organization" 
+          });
+        }
+      } else if (existingProject.userId !== userId) {
+        // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
@@ -848,14 +908,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Value must be a number between 0 and 100" });
       }
       
-      // Get the project to verify existence and ownership
+      // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Ensure user owns this project
-      if (existingProject.userId !== userId) {
+      // Verify access to the project
+      if (existingProject.organisationId) {
+        // For organization projects, check membership
+        const membership = await db.query.organisationMemberships.findFirst({
+          where: and(
+            eq(organisationMemberships.userId, userId),
+            eq(organisationMemberships.organisationId, existingProject.organisationId)
+          )
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ 
+            message: "You are not a member of this organization" 
+          });
+        }
+      } else if (existingProject.userId !== userId) {
+        // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
@@ -884,14 +959,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Value must be a number between 0 and 100" });
       }
       
-      // Get the project to verify existence and ownership
+      // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Ensure user owns this project
-      if (existingProject.userId !== userId) {
+      // Verify access to the project
+      if (existingProject.organisationId) {
+        // For organization projects, check membership
+        const membership = await db.query.organisationMemberships.findFirst({
+          where: and(
+            eq(organisationMemberships.userId, userId),
+            eq(organisationMemberships.organisationId, existingProject.organisationId)
+          )
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ 
+            message: "You are not a member of this organization" 
+          });
+        }
+      } else if (existingProject.userId !== userId) {
+        // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
