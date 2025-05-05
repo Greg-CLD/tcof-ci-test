@@ -5,8 +5,9 @@ import ForceGraph2D from 'react-force-graph-2d';
 import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download, FileJson, FileSpreadsheet, BarChart } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
+import { toast } from '@/hooks/use-toast';
 
 // Type definitions
 interface GraphNode {
@@ -32,6 +33,12 @@ export default function GraphExplorer() {
   const [projectId, setProjectId] = useState<string>('all_projects');
   const [relTypeFilter, setRelTypeFilter] = useState<string>('all');
   const [nodeId, setNodeId] = useState<string | null>(null);
+  const [exportLoading, setExportLoading] = useState<{[key: string]: boolean}>({
+    relations: false,
+    factorsJson: false,
+    factorsCsv: false,
+    factorsIntegrity: false
+  });
   const { projects } = useProjects();
   const graphRef = useRef<any>(null);
 
@@ -151,6 +158,161 @@ export default function GraphExplorer() {
     }
   }, [graphData]);
   
+  // Export relations data
+  const exportRelations = async () => {
+    try {
+      setExportLoading(prev => ({ ...prev, relations: true }));
+      
+      // Build the URL with optional project filter
+      let url = '/api/admin/relations-export';
+      if (projectId && projectId !== 'all_projects') {
+        url += `?projectId=${projectId}`;
+      }
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to export relations: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Create file download
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const dataUrl = URL.createObjectURL(dataBlob);
+      
+      // Create and trigger download link
+      const downloadLink = document.createElement('a');
+      downloadLink.href = dataUrl;
+      downloadLink.download = `relations-export${projectId !== 'all_projects' ? `-${projectId}` : ''}.json`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      
+      toast({
+        title: "Export Successful",
+        description: `${data.length} relations exported to JSON`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Error exporting relations:', error);
+      toast({
+        title: "Export Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setExportLoading(prev => ({ ...prev, relations: false }));
+    }
+  };
+  
+  // Export success factors
+  const exportSuccessFactors = async (format: 'json' | 'csv') => {
+    try {
+      setExportLoading(prev => ({ 
+        ...prev, 
+        [format === 'json' ? 'factorsJson' : 'factorsCsv']: true 
+      }));
+      
+      // Use the new factors-export endpoint
+      const url = `/api/admin/factors-export?format=${format}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to export success factors: ${response.statusText}`);
+      }
+      
+      // Get the data as text for CSV or JSON for json format
+      let data;
+      let fileName;
+      let mimeType;
+      
+      if (format === 'csv') {
+        data = await response.text();
+        fileName = 'success-factors-export.csv';
+        mimeType = 'text/csv';
+      } else {
+        data = await response.json();
+        data = JSON.stringify(data, null, 2);
+        fileName = 'success-factors-export.json';
+        mimeType = 'application/json';
+      }
+      
+      // Create file download
+      const dataBlob = new Blob([data], { type: mimeType });
+      const dataUrl = URL.createObjectURL(dataBlob);
+      
+      // Create and trigger download link
+      const downloadLink = document.createElement('a');
+      downloadLink.href = dataUrl;
+      downloadLink.download = fileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      
+      toast({
+        title: "Export Successful",
+        description: `Success factors exported to ${format.toUpperCase()}`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error(`Error exporting success factors as ${format}:`, error);
+      toast({
+        title: "Export Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setExportLoading(prev => ({ 
+        ...prev, 
+        [format === 'json' ? 'factorsJson' : 'factorsCsv']: false 
+      }));
+    }
+  };
+  
+  // Get success factors integrity report
+  const getFactorsIntegrityReport = async () => {
+    try {
+      setExportLoading(prev => ({ ...prev, factorsIntegrity: true }));
+      
+      // Use the factors-integrity endpoint
+      const response = await fetch('/api/admin/factors-integrity');
+      if (!response.ok) {
+        throw new Error(`Failed to get factors integrity report: ${response.statusText}`);
+      }
+      
+      const report = await response.json();
+      
+      // Create formatted report text
+      const reportStr = JSON.stringify(report, null, 2);
+      const reportBlob = new Blob([reportStr], { type: 'application/json' });
+      const reportUrl = URL.createObjectURL(reportBlob);
+      
+      // Create and trigger download link
+      const downloadLink = document.createElement('a');
+      downloadLink.href = reportUrl;
+      downloadLink.download = 'success-factors-integrity-report.json';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      
+      toast({
+        title: "Integrity Report Generated",
+        description: `Factors: ${report.factorCount}, Tasks: ${Object.values(report.taskDistribution).reduce((a: any, b: any) => a + b, 0)}`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Error getting factors integrity report:', error);
+      toast({
+        title: "Report Generation Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setExportLoading(prev => ({ ...prev, factorsIntegrity: false }));
+    }
+  };
+
   // Handle window resize to redraw the graph
   useEffect(() => {
     const handleResize = () => {
@@ -292,6 +454,82 @@ export default function GraphExplorer() {
                 <p>No graph data found with current filters.</p>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Export Options</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-md font-semibold mb-2">Relations Data</h3>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  Export the relationships graph data as JSON for external analysis
+                </p>
+                <Button 
+                  onClick={exportRelations} 
+                  disabled={exportLoading.relations}
+                  className="w-full"
+                >
+                  {exportLoading.relations ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting...</>
+                  ) : (
+                    <><FileJson className="mr-2 h-4 w-4" /> Export Relations JSON</>
+                  )}
+                </Button>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-md font-semibold mb-2">Success Factors Data</h3>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  Export success factors data for backup or external processing
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => exportSuccessFactors('json')} 
+                    disabled={exportLoading.factorsJson}
+                    className="flex-1"
+                    variant="outline"
+                  >
+                    {exportLoading.factorsJson ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting...</>
+                    ) : (
+                      <><FileJson className="mr-2 h-4 w-4" /> JSON</>
+                    )}
+                  </Button>
+                  <Button 
+                    onClick={() => exportSuccessFactors('csv')} 
+                    disabled={exportLoading.factorsCsv}
+                    className="flex-1"
+                    variant="outline"
+                  >
+                    {exportLoading.factorsCsv ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting...</>
+                    ) : (
+                      <><FileSpreadsheet className="mr-2 h-4 w-4" /> CSV</>
+                    )}
+                  </Button>
+                </div>
+                <Button 
+                  onClick={getFactorsIntegrityReport} 
+                  disabled={exportLoading.factorsIntegrity}
+                  className="w-full"
+                  variant="secondary"
+                >
+                  {exportLoading.factorsIntegrity ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
+                  ) : (
+                    <><BarChart className="mr-2 h-4 w-4" /> Integrity Report</>
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
