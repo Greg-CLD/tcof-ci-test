@@ -1,5 +1,5 @@
 import express from 'express';
-import { db } from '../db/index.js';
+import { db } from '../../db/index.js';
 import { 
   organisations, 
   organisationMemberships, 

@@ -13,11 +13,14 @@ import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
 import { relationsDb, createRelation, loadRelations } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
+import { eq, and } from 'drizzle-orm';
+import { db } from '../db/index';
 import {
   userInsertSchema as insertUserSchema,
   projectInsertSchema,
   outcomeInsertSchema,
-  outcomeProgressInsertSchema
+  outcomeProgressInsertSchema,
+  organisationMemberships
 } from "@shared/schema";
 
 // Initialize Stripe with your secret key
@@ -935,10 +938,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const { name, description, sector, customSector, orgType, teamSize, currentStage } = req.body;
+      const { 
+        name, 
+        description, 
+        sector, 
+        customSector, 
+        orgType, 
+        teamSize, 
+        currentStage,
+        organisationId 
+      } = req.body;
       
       if (!name) {
         return res.status(400).json({ message: "Project name is required" });
+      }
+      
+      // If organisationId is provided, verify user's membership
+      if (organisationId) {
+        try {
+          // Check if the user is a member of this organization
+          const membership = await db.query.organisationMemberships.findFirst({
+            where: and(
+              eq(organisationMemberships.userId, userId),
+              eq(organisationMemberships.organisationId, organisationId)
+            )
+          });
+          
+          if (!membership) {
+            return res.status(403).json({ 
+              message: "You are not a member of this organization" 
+            });
+          }
+        } catch (orgError) {
+          console.error("Error checking organization membership:", orgError);
+          return res.status(500).json({ 
+            message: "Error verifying organization membership" 
+          });
+        }
       }
       
       // Create project with minimal data - only name is required
@@ -952,7 +988,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customSector: customSector || undefined,
           orgType: orgType || undefined,
           teamSize: teamSize || undefined,
-          currentStage: currentStage || undefined
+          currentStage: currentStage || undefined,
+          organisationId: organisationId || undefined
         }
       );
       

@@ -1,0 +1,91 @@
+Prompt 2 — Auth-Aware Routing & Organisations List Page
+Goal
+After signing in, users should land on an Organisations overview page (/organisations) rather than the Home/dashboard. This page lists all the organisations they belong to and lets them create new ones.
+
+✅ Checklist
+Routing
+
+Add a new route in your router setup (e.g. in App.tsx or wherever you configure Wouter):
+
+jsx
+Copy
+Edit
+<Route path="/organisations" component={OrganisationList} />
+In your login success handler, replace the current redirect with:
+
+ts
+Copy
+Edit
+navigate("/organisations");
+Ensure that any direct hits to / when signed in also navigate("/organisations").
+
+OrganisationList Component
+
+Create client/src/pages/OrganisationList.tsx.
+
+On mount, call GET /api/organisations.
+
+Render a card or list item for each organisation with:
+
+Name (clickable → /organisations/:id)
+
+Description
+
+Role badge (owner/member)
+
+If the array is empty, show a friendly message:
+
+“You don’t have any organisations yet. Create one to get started.”
+
+Create Organisation UI
+
+On the OrganisationList page, add a “New Organisation” button.
+
+Clicking it opens a modal or inline form with fields: Name (required), Description (optional).
+
+On submit, call POST /api/organisations with { name, description }.
+
+On success: close the form, re-fetch the list, and display the new org.
+
+Auth Gating
+
+Wrap the /organisations route in your isAuthenticated check.
+
+If a non-authenticated user hits /organisations, redirect them to / (the public landing page).
+
+Styling & Feedback
+
+Show a spinner while fetching organisations.
+
+Show error toast if the fetch or creation fails.
+
+Use existing UI components (e.g. Card, Button, Modal) for consistency.
+
+✅ Definition of Done
+Sign In → automatically goes to /organisations.
+
+The /organisations page displays the user’s orgs or a “no organisations” message.
+
+“New Organisation” form creates and lists organisations immediately.
+
+Unauthenticated users cannot access /organisations.
+
+🧪 Smoke Tests
+Login Flow
+
+Log out → go to /organsations → you’re redirected to /.
+
+Log in → you land on /organisations.
+
+Empty State
+
+If user has no orgs → see the “create one” prompt.
+
+Create Org
+
+Fill “Name” and submit → new org appears in list with correct role badge.
+
+List Navigation
+
+Click an org name → navigates to /organisations/:id (404 or placeholder view is OK for now).
+
