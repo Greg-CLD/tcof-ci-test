@@ -279,8 +279,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const goalMaps = await storage.getGoalMaps(userId);
-      res.json(goalMaps);
+      const projectId = req.query.projectId as string;
+      
+      if (projectId) {
+        // First ensure user owns this project
+        const project = await projectsDb.getProject(projectId);
+        if (!project || project.userId !== userId) {
+          return res.status(403).json({ message: "Unauthorized access to project" });
+        }
+        
+        // Get the latest goal map for this project
+        const goalMaps = await storage.getGoalMaps(userId);
+        const projectGoalMaps = goalMaps.filter(map => {
+          // Check for relationship between map and project
+          const relations = loadRelations().filter(rel => 
+            rel.fromId === map.id.toString() && 
+            rel.toId === projectId && 
+            rel.type === 'GOAL_MAP_FOR_PROJECT'
+          );
+          return relations.length > 0;
+        });
+        
+        // Sort by lastUpdated to get the most recent
+        projectGoalMaps.sort((a, b) => 
+          new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+        );
+        
+        if (projectGoalMaps.length > 0) {
+          return res.json(projectGoalMaps[0]);
+        } else {
+          return res.status(404).json({ message: "No goal maps found for this project" });
+        }
+      } else {
+        // Get all user's goal maps (original behavior)
+        const goalMaps = await storage.getGoalMaps(userId);
+        res.json(goalMaps);
+      }
     } catch (error: any) {
       console.error("Error fetching goal maps:", error);
       res.status(500).json({ message: "Error fetching goal maps" });
@@ -357,8 +391,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const selections = await storage.getCynefinSelections(userId);
-      res.json(selections);
+      const projectId = req.query.projectId as string;
+      
+      if (projectId) {
+        // First ensure user owns this project
+        const project = await projectsDb.getProject(projectId);
+        if (!project || project.userId !== userId) {
+          return res.status(403).json({ message: "Unauthorized access to project" });
+        }
+        
+        // Get the latest cynefin selection for this project
+        const selections = await storage.getCynefinSelections(userId);
+        const projectSelections = selections.filter(selection => {
+          // Check for relationship between selection and project
+          const relations = loadRelations().filter(rel => 
+            rel.fromId === selection.id.toString() && 
+            rel.toId === projectId && 
+            rel.type === 'CYNEFIN_SELECTION_FOR_PROJECT'
+          );
+          return relations.length > 0;
+        });
+        
+        // Sort by lastUpdated to get the most recent
+        projectSelections.sort((a, b) => 
+          new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+        );
+        
+        if (projectSelections.length > 0) {
+          return res.json(projectSelections[0]);
+        } else {
+          return res.status(404).json({ message: "No cynefin selections found for this project" });
+        }
+      } else {
+        // Get all user's cynefin selections (original behavior)
+        const selections = await storage.getCynefinSelections(userId);
+        res.json(selections);
+      }
     } catch (error: any) {
       console.error("Error fetching cynefin selections:", error);
       res.status(500).json({ message: "Error fetching cynefin selections" });
@@ -435,8 +503,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tcof-journeys", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const journeys = await storage.getTCOFJourneys(userId);
-      res.json(journeys);
+      const projectId = req.query.projectId as string;
+      
+      if (projectId) {
+        // First ensure user owns this project
+        const project = await projectsDb.getProject(projectId);
+        if (!project || project.userId !== userId) {
+          return res.status(403).json({ message: "Unauthorized access to project" });
+        }
+        
+        // Get the latest TCOF journey for this project
+        const journeys = await storage.getTCOFJourneys(userId);
+        const projectJourneys = journeys.filter(journey => {
+          // Check for relationship between journey and project
+          const relations = loadRelations().filter(rel => 
+            rel.fromId === journey.id.toString() && 
+            rel.toId === projectId && 
+            rel.type === 'TCOF_JOURNEY_FOR_PROJECT'
+          );
+          return relations.length > 0;
+        });
+        
+        // Sort by lastUpdated to get the most recent
+        projectJourneys.sort((a, b) => 
+          new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+        );
+        
+        if (projectJourneys.length > 0) {
+          return res.json(projectJourneys[0]);
+        } else {
+          return res.status(404).json({ message: "No TCOF journeys found for this project" });
+        }
+      } else {
+        // Get all user's TCOF journeys (original behavior)
+        const journeys = await storage.getTCOFJourneys(userId);
+        res.json(journeys);
+      }
     } catch (error: any) {
       console.error("Error fetching TCOF journeys:", error);
       res.status(500).json({ message: "Error fetching TCOF journeys" });

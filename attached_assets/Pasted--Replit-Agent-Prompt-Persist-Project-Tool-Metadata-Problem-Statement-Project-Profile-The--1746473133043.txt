@@ -1,0 +1,89 @@
+🛠️ Replit Agent Prompt – Persist Project & Tool Metadata
+🗂 Problem Statement
+Project Profile
+
+The list endpoint GET /api/projects returns only a subset of columns (id, name, maybe description).
+
+When the edit page mounts it looks up the project in this list and resets the form.
+
+Because metadata fields (sector, orgType, teamSize, currentStage, customSector) are missing, React-Hook-Form sets them to empty strings → every refresh wipes them visually.
+
+Goal-Mapping, Cynefin Orientation, TCOF Journey
+
+Each tool saves to the server (POST) but only loads from localStorage.
+
+On a hard refresh – or if the dev sub-domain changes – localStorage is empty, so the UI falls back to default states.
+
+🎯 Goal
+All project metadata and tool data must persist across sessions and page reloads.
+
+✅ Checklist
+A. Backend – Projects
+Update listProjects query in server/projectsDb.ts to SELECT * (or explicitly include sector, custom_sector, org_type, team_size, current_stage).
+
+Add a new route GET /api/projects/:id that returns the full project row.
+
+Re-use the same ownership check as the PUT handler.
+
+B. Backend – Tools
+Add GET endpoints to fetch the latest record for each tool by projectId (or userId if projectless):
+
+GET /api/goal-maps?projectId=<id>
+
+GET /api/cynefin-selections?projectId=<id>
+
+GET /api/tcof-journeys?projectId=<id>
+Each should return the most recent entry for that project.
+
+C. Client – Data Hooks
+Create useProject(projectId) (React-Query) → calls GET /api/projects/:id and caches under ['/api/projects', projectId].
+
+Update ProjectProfile.tsx:
+
+Replace list lookup with useProject(selectedProjectId).
+
+Keep the existing form.reset but now it receives complete data.
+
+Extend Project TypeScript interface to include all metadata fields.
+
+Tools: in each component’s useEffect on mount:
+
+If user is logged in and projectId exists, call the matching GET endpoint first.
+
+Fallback to loadFromLocalStorage only if the server returns 404.
+
+D. Validation & Local Storage
+Ensure we do not write default data to localStorage on first mount; only write when the user explicitly saves.
+
+✅ Definition of Done
+Editing a project’s sector/orgType/teamSize/currentStage, saving, and refreshing shows the same values.
+
+Goal-Mapping, Cynefin, and TCOF tools load the latest saved data after a full browser refresh.
+
+Manual test matrix passes:
+
+Save → refresh → data persists (logged-in).
+
+Save while not logged-in → data persists via localStorage.
+
+Log in after using tools locally → tools pull server copy on next save.
+
+🧪 Smoke Tests (Manual OK)
+Projects
+
+Edit sector to “Health”, save, reload → field reads “Health”.
+
+Goal-Mapping
+
+Add a node, save, reload → node still present.
+
+Cynefin
+
+Pick “Complex”, save, reload → same domain pre-selected.
+
+TCOF Journey
+
+Change stage to “Scaling”, save, reload → UI shows “Scaling”.
+
+🚨 Environment Note
+This is a dev box. Make direct edits.
