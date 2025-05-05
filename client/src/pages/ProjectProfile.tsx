@@ -198,37 +198,35 @@ export default function ProjectProfile() {
       if (isEditing && selectedProjectId) {
         console.log('Updating project with data:', projectData);
         
-        // Update existing project
-        const result = await updateProject.mutateAsync({
-          id: selectedProjectId,
-          data: projectData,
-        });
-        
-        // Force a refetch of the project details
-        await queryClient.invalidateQueries({
-          queryKey: ['/api/projects', selectedProjectId]
-        });
-        
-        // Explicitly fetch the updated project
-        const updatedResponse = await fetch(`/api/projects?id=${selectedProjectId}`);
-        if (!updatedResponse.ok) {
-          throw new Error('Failed to fetch updated project after save');
-        }
-        
-        const updatedProject = await updatedResponse.json();
-        
-        // If we have a result, update the ProjectContext directly
-        if (updatedProject) {
-          console.log('Successfully fetched updated project:', updatedProject);
-          setCurrentProject(updatedProject);
-          
-          // Invalidate the main projects list too
-          await queryClient.invalidateQueries({
-            queryKey: ['/api/projects']
+        try {
+          // Update existing project
+          const updatedProject = await updateProject.mutateAsync({
+            id: selectedProjectId,
+            data: projectData,
           });
           
-          // Update the project cache
-          queryClient.setQueryData(['/api/projects', selectedProjectId], updatedProject);
+          console.log('Successfully updated project:', updatedProject);
+          
+          // If we have a result, update the ProjectContext directly
+          if (updatedProject) {
+            // Set the current project in the context
+            setCurrentProject(updatedProject);
+            
+            // Make sure the project is cached properly
+            queryClient.setQueryData(['/api/projects', selectedProjectId], updatedProject);
+            
+            // Also update the project in the projects array cache
+            const projects = queryClient.getQueryData<Project[]>(['/api/projects']);
+            if (projects) {
+              const updatedProjects = projects.map(p => 
+                p.id === selectedProjectId ? updatedProject : p
+              );
+              queryClient.setQueryData(['/api/projects'], updatedProjects);
+            }
+          }
+        } catch (updateError) {
+          console.error('Failed to update project:', updateError);
+          throw updateError;
         }
         
         // Show success message via toast

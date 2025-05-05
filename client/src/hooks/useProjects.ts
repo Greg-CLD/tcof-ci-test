@@ -97,13 +97,14 @@ export function useProjects() {
   // Update an existing project
   const updateProject = useMutation({
     mutationFn: async ({ id, data }: UpdateProjectParams): Promise<Project> => {
+      console.log(`Updating project with ID ${id} and data:`, data);
+      // NOTE: The response is already checked in apiRequest, so we don't need to check again
       const response = await apiRequest('PUT', `/api/projects/${id}`, data);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update project');
-      }
+      // Log the response to help with debugging
+      console.log(`Update project response:`, response);
       
+      // We don't check response.ok again because apiRequest already does that
       return response.json();
     },
     onSuccess: (updatedProject) => {
@@ -148,12 +149,10 @@ export function useProjects() {
   // Delete a project
   const deleteProject = useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const response = await apiRequest('DELETE', `/api/projects/${id}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete project');
-      }
+      console.log(`Deleting project with ID ${id}`);
+      // apiRequest will throw an error if the response is not ok
+      await apiRequest('DELETE', `/api/projects/${id}`);
+      console.log(`Project deleted successfully`);
     },
     onSuccess: () => {
       // Invalidate projects query to force a refetch

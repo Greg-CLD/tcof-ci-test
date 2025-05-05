@@ -43,23 +43,27 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-      // Fetch the complete updated project data
-      const response = await apiRequest('GET', `/api/projects?id=${currentProject.id}`);
+      console.log('Refreshing project data for ID:', currentProject.id);
       
-      if (!response.ok) {
-        throw new Error('Failed to refresh project data');
-      }
-      
-      const updatedProject = await response.json();
-      setCurrentProject(updatedProject);
-      
-      // Update cache
-      queryClient.setQueryData(['/api/projects', currentProject.id], updatedProject);
+      // Force invalidation of the project data query to trigger a refetch
+      await queryClient.invalidateQueries({
+        queryKey: ['/api/projects', currentProject.id]
+      });
       
       // Also invalidate the main projects list
       await queryClient.invalidateQueries({
         queryKey: ['/api/projects']
       });
+      
+      // Refetch the project data immediately with a direct fetch 
+      const response = await apiRequest('GET', `/api/projects?id=${currentProject.id}`);
+      const updatedProject = await response.json();
+      
+      // Update the context state with the fresh data
+      setCurrentProject(updatedProject);
+      
+      // Update cache directly
+      queryClient.setQueryData(['/api/projects', currentProject.id], updatedProject);
       
       console.log('Project data refreshed successfully', updatedProject);
     } catch (error) {
