@@ -7,9 +7,12 @@ import { db } from "../db";
 import {
   users,
   projects,
-  plans
+  plans,
+  goalMaps,
+  cynefinSelections,
+  tcofJourneys
 } from "../shared/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import session from "express-session";
 import pkg from "pg";
@@ -46,15 +49,85 @@ export const storage = {
 
   // User methods
   async getUser(id: number) {
-    return await db.query.users.findFirst({
-      where: eq(users.id, id)
-    });
+    try {
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, id)
+      });
+      
+      // Ensure we return a valid user object even if some fields are missing
+      if (user) {
+        return {
+          ...user,
+          firstName: user.firstName || null,
+          lastName: user.lastName || null
+        };
+      }
+      return user;
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      
+      // Fallback to a direct query without the potentially missing columns
+      const result = await db.execute(
+        sql`SELECT id, username, email, password, created_at, updated_at FROM users WHERE id = ${id}`
+      );
+      
+      if (result.length > 0) {
+        const row = result[0];
+        return {
+          id: row.id,
+          username: row.username,
+          email: row.email,
+          password: row.password,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          firstName: null,
+          lastName: null
+        };
+      }
+      
+      return null;
+    }
   },
 
   async getUserByUsername(username: string) {
-    return await db.query.users.findFirst({
-      where: eq(users.username, username)
-    });
+    try {
+      const user = await db.query.users.findFirst({
+        where: eq(users.username, username)
+      });
+      
+      // Ensure we return a valid user object even if some fields are missing
+      if (user) {
+        return {
+          ...user,
+          firstName: user.firstName || null,
+          lastName: user.lastName || null
+        };
+      }
+      return user;
+    } catch (error) {
+      console.error('Error fetching user by username:', error);
+      
+      // Fallback to a direct query without the potentially missing columns
+      const result = await db.execute(
+        sql`SELECT id, username, email, password, created_at, updated_at FROM users WHERE username = ${username}`
+      );
+      
+      if (result.length > 0) {
+        const row = result[0];
+        return {
+          id: row.id,
+          username: row.username,
+          email: row.email,
+          password: row.password,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          firstName: null,
+          lastName: null
+        };
+      }
+      
+      return null;
+    }
   },
 
   async createUser(userData: { username: string; password: string; email?: string }) {
