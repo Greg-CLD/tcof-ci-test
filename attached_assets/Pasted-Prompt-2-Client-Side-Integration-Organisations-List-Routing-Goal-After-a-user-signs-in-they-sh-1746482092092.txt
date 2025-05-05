@@ -1,0 +1,114 @@
+Prompt 2 — Client-Side Integration: Organisations List & Routing
+Goal
+After a user signs in, they should land on an Organisations overview page (/organisations) that lists every organisation they belong to and lets them create new ones. All other UI (projects, tools) will later be scoped under a chosen organisation.
+
+✅ Checklist
+Routing
+
+Add a route in your React router (e.g. in App.tsx or wherever you configure Wouter):
+
+jsx
+Copy
+Edit
+<Route path="/organisations" component={OrganisationListPage} />
+In your login success handler, replace any redirect to / with:
+
+ts
+Copy
+Edit
+navigate("/organisations");
+Update the root route so that if user is truthy, it automatically navigate("/organisations"); otherwise show the public landing page.
+
+OrganisationListPage Component
+
+Location: client/src/pages/OrganisationListPage.tsx
+
+Data Fetch:
+
+ts
+Copy
+Edit
+const { data: orgs = [], isLoading, error } = useQuery("/api/organisations", fetchOrgs);
+Render:
+
+If isLoading, show a spinner.
+
+If error, show an error toast.
+
+If orgs.length === 0, display:
+
+“You don’t have any organisations yet. Create one to get started.”
+
+Otherwise, map orgs to cards showing:
+
+Name (clickable → /organisations/${id})
+
+Description
+
+Role badge (owner / member)
+
+Create Organisation UI
+
+On OrganisationListPage, add a “New Organisation” button.
+
+Clicking it opens a modal or inline form with:
+
+Name (required)
+
+Description (optional)
+
+On submit, call:
+
+ts
+Copy
+Edit
+await apiRequest("POST", "/api/organisations", { name, description });
+On success:
+
+Close the form
+
+Refetch /api/organisations to update the list
+
+Show a success toast
+
+Auth Gating
+
+Wrap the /organisations route in your isAuthenticated check or redirect logic.
+
+If a non-authenticated user visits /organisations, redirect them to / (public landing).
+
+Navigation Updates
+
+In your primary <Header /> or nav bar, add a “Organisations” link when user is signed in.
+
+Ensure the other signed-in links (Project Profile, Checklist) remain.
+
+✅ Definition of Done
+Sign In → user lands on /organisations instead of /.
+
+The Organisations page correctly displays the user’s organisations or an empty-state message.
+
+The New Organisation flow creates a row in the DB and refreshes the list.
+
+Unauthenticated users cannot access /organisations.
+
+🧪 Smoke Tests
+Login Flow
+
+Log out → navigate to /organisations → you’re redirected to /.
+
+Log in → you land on /organisations.
+
+Empty State
+
+If user has no orgs → see prompt to create one.
+
+Create Organisation
+
+Click “New Organisation,” enter valid Name, submit → new card appears with correct data.
+
+Navigation
+
+Verify “Organisations” link appears in header when signed in and navigates to the list.
+
+Please implement and confirm all smoke tests before we proceed to the organisation dashboard and project‐creation flow.

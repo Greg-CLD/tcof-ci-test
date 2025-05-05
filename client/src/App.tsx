@@ -1,4 +1,4 @@
-import { Switch, Route, Link } from "wouter";
+import { Switch, Route, Link, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,6 +27,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import ProjectProfile from "@/pages/ProjectProfile";
 import Dashboard from "@/pages/Dashboard";
 import OutcomeManagement from "@/pages/OutcomeManagement";
+import OrganisationListPage from "@/pages/OrganisationListPage";
 import TestAuth from "@/pages/TestAuth";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -74,10 +75,37 @@ const TCOFJourneyPage = () => (
 function Router() {
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/">
+        {user ? (
+          // If authenticated, redirect to organisations page
+          (() => {
+            navigate("/organisations");
+            return null;
+          })()
+        ) : (
+          // Otherwise show public landing page
+          <Home />
+        )}
+      </Route>
+      
+      {/* Organizations management - authenticated users only */}
+      <Route path="/organisations">
+        {user ? (
+          <ProtectedRouteGuard>
+            <OrganisationListPage />
+          </ProtectedRouteGuard>
+        ) : (
+          (() => {
+            navigate("/");
+            return null;
+          })()
+        )}
+      </Route>
+      
       <Route path="/pro-tools" component={ProTools} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/test-auth" component={TestAuth} />

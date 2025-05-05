@@ -1,59 +1,25 @@
 [
   {
-    "id": "bb486862-9c57-4ae6-b207-438bc9e474d1",
+    "id": "72f03b15-3f4a-49ff-8f24-fe0dd4004ecf",
     "fromId": "3",
-    "toId": "969d41ac-74d5-4839-990c-babfc68349d7",
+    "toId": "2ec22678-b581-4206-bd04-943ac8d45071",
     "relType": "BELONGS_TO_PROJECT",
-    "projectId": "969d41ac-74d5-4839-990c-babfc68349d7",
-    "meta": {
-      "origin": "selectProject"
-    },
-    "timestamp": "2025-05-05T20:35:14.308Z"
-  },
-  {
-    "id": "fcc380d6-9120-41a8-a4ac-3da06ecaefdc",
-    "fromId": "3",
-    "toId": "b2b894bb-2dbf-443e-b538-18f77b6baa2b",
-    "relType": "BELONGS_TO_PROJECT",
-    "projectId": "b2b894bb-2dbf-443e-b538-18f77b6baa2b",
-    "meta": {
-      "origin": "selectProject"
-    },
-    "timestamp": "2025-05-05T19:47:11.332Z"
-  },
-  {
-    "id": "80a49cfe-1751-4338-9251-f2cb671fe7cf",
-    "fromId": "5dc88130-9bdc-4826-88e7-ae1b1035ec74",
-    "toId": "b2b894bb-2dbf-443e-b538-18f77b6baa2b",
-    "relType": "PLAN_FOR_PROJECT",
-    "projectId": "b2b894bb-2dbf-443e-b538-18f77b6baa2b",
-    "meta": {
-      "origin": "createProject",
-      "stage": "initial"
-    },
-    "timestamp": "2025-05-05T19:47:02.651Z"
-  },
-  {
-    "id": "9db04031-9b10-4a95-9db4-33d06e18a768",
-    "fromId": "3",
-    "toId": "9040d651-a6ea-442a-b77e-70e351fa45c7",
-    "relType": "BELONGS_TO_PROJECT",
-    "projectId": "9040d651-a6ea-442a-b77e-70e351fa45c7",
+    "projectId": "2ec22678-b581-4206-bd04-943ac8d45071",
     "meta": {
       "origin": "createProject"
     },
-    "timestamp": "2025-05-05T20:29:17.501Z"
+    "timestamp": "2025-05-05T21:54:17.823Z"
   },
   {
-    "id": "d0bbbab1-d051-47b2-8e53-31926a02a325",
-    "fromId": "442b0b7a-1597-4482-8994-1cf0f372d908",
-    "toId": "9040d651-a6ea-442a-b77e-70e351fa45c7",
+    "id": "ca6e4ad5-f709-47d0-be59-559ee3ca7d81",
+    "fromId": "bf6f2d60-56dd-4dbd-a738-f7bc6090d243",
+    "toId": "2ec22678-b581-4206-bd04-943ac8d45071",
     "relType": "PLAN_FOR_PROJECT",
-    "projectId": "9040d651-a6ea-442a-b77e-70e351fa45c7",
+    "projectId": "2ec22678-b581-4206-bd04-943ac8d45071",
     "meta": {
       "origin": "createProject",
       "stage": "initial"
     },
-    "timestamp": "2025-05-05T20:29:17.502Z"
+    "timestamp": "2025-05-05T21:54:17.823Z"
   }
 ]

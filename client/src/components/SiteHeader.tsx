@@ -116,6 +116,14 @@ export default function SiteHeader() {
             >
               <CheckSquare className="h-4 w-4 mr-1" /> Checklist
             </Link>
+            {user && (
+              <Link 
+                href="/organisations" 
+                className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/organisations' ? 'nav-link active font-medium' : 'nav-link'}`}
+              >
+                <Briefcase className="h-4 w-4 mr-1" /> Organisations
+              </Link>
+            )}
             {!isLoggedIn && (
               <Link 
                 href="/pricing" 
@@ -251,6 +259,17 @@ export default function SiteHeader() {
               >
                 <CheckSquare className="h-5 w-5 mr-2" /> Checklist
               </Link>
+              
+              {/* Organizations link (mobile) - only shown when logged in */}
+              {user && (
+                <Link 
+                  href="/organisations"
+                  onClick={() => handleNavigation("/organisations")}
+                  className={`flex items-center py-2 px-3 rounded-md ${location === '/organisations' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+                >
+                  <Briefcase className="h-5 w-5 mr-2" /> Organisations
+                </Link>
+              )}
               
               {/* Pricing link (mobile) - only shown when not logged in */}
               {!isLoggedIn && (

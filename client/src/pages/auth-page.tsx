@@ -61,7 +61,7 @@ export default function AuthPage() {
   useEffect(() => {
     if (user) {
       // The useEffect prevents redirect during render
-      setLocation("/");
+      setLocation("/organisations");
     }
   }, [user, setLocation]);
 
