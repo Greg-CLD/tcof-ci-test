@@ -98,7 +98,7 @@ export default function ProjectPage() {
   const handleEditProject = () => {
     // Navigate to edit project page with current project ID
     if (project) {
-      navigate(`/projects/${projectId}/edit`);
+      navigate(`/projects/${projectId}/profile/edit`);
     }
   };
 
