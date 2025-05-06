@@ -251,6 +251,13 @@ function Router() {
         </ProtectedRouteGuard>
       </Route>
       
+      {/* Project Detail Page */}
+      <Route path="/projects/:projectId">
+        <ProtectedRouteGuard>
+          <ProjectPage />
+        </ProtectedRouteGuard>
+      </Route>
+      
       {/* Dashboard route - protected like other tools */}
       <Route path="/dashboard">
         {isAuthenticated('starter-access') || user ? (

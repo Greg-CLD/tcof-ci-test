@@ -22,6 +22,7 @@ import {
   outcomeProgressInsertSchema,
   organisationMemberships
 } from "@shared/schema";
+import projectsRouter from './routes/projects.js';
 
 // Initialize Stripe with your secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -236,6 +237,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   } catch (error) {
     console.error('Error registering organisation routes:', error);
+  }
+  
+  // Register projects routes
+  try {
+    app.use('/api/projects-detail', projectsRouter);
+    console.log('Projects detail routes registered successfully');
+  } catch (error) {
+    console.error('Error registering projects detail routes:', error);
   }
 
   // Setup basic health check endpoint
