@@ -1,0 +1,73 @@
+Prompt to Replit Agent — Fix “Complete setup” Button and Ensure Setup Route Exists
+
+Hi Agent,
+
+The “Complete setup” button on the project card view still does nothing. We need to wire it up properly and guarantee the setup page is routable. Please implement the following:
+
+1. Add Click Handler to “Complete setup” Button
+In the component where the button is defined (likely ProjectDashboardPage.tsx or ProjectOverview.tsx):
+
+Import the useLocation hook from wouter:
+
+ts
+Copy
+Edit
+import { useLocation } from 'wouter';
+Initialize navigate:
+
+ts
+Copy
+Edit
+const [, navigate] = useLocation();
+Add an onClick to the button:
+
+tsx
+Copy
+Edit
+<Button
+  variant="default"
+  onClick={() => {
+    console.log('Complete setup clicked for project:', project.id);
+    navigate(`/projects/${project.id}/setup`);
+  }}
+>
+  Complete Setup
+</Button>
+Remove any stale or empty handlers so only this onClick remains.
+
+2. Define and Wire the Setup Route
+In your router (App.tsx or wherever routes are declared):
+
+Add a route for /projects/:projectId/setup before any catch-alls:
+
+tsx
+Copy
+Edit
+<Route path="/projects/:projectId/setup">
+  {user ? (
+    <ProtectedRouteGuard>
+      <ProjectProfilePage editMode={true} />
+    </ProtectedRouteGuard>
+  ) : (
+    <AuthRequired />
+  )}
+</Route>
+Ensure ProjectProfilePage (or equivalent) accepts an editMode prop and, when true, displays the project profile form pre‐filled for editing.
+
+3. Verify and Test
+Console Logs: Confirm you see Complete setup clicked for project: <id> in the browser console.
+
+Navigation: Clicking “Complete setup” routes to /projects/<id>/setup.
+
+Page Behavior: The project profile form appears in edit mode with all fields pre‐filled.
+
+Fallback: If projectId is missing or invalid, redirect back to /organisations.
+
+Definition of Done
+“Complete setup” button navigates correctly on click.
+
+Setup URL /projects/:projectId/setup exists and renders the edit form.
+
+No console errors, no empty handlers, and pre‐filled form loads every time.
+
+Please implement these changes and confirm the button now works end-to-end.
