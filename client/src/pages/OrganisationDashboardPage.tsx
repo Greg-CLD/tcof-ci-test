@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Building, Plus, Loader2, ArrowLeft } from "lucide-react";
+import { Building, Plus, Loader2, ArrowLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -194,6 +194,43 @@ export default function OrganisationDashboardPage() {
   const navigateToOrganisations = () => {
     navigate("/organisations");
   };
+  
+  // Delete project mutation
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const res = await apiRequest("DELETE", `/api/projects/${projectId}`);
+      if (!res.ok) {
+        throw new Error("Failed to delete project");
+      }
+      return projectId;
+    },
+    onSuccess: (deletedProjectId) => {
+      // Invalidate the query to refetch projects
+      queryClient.invalidateQueries({
+        queryKey: ['orgProjects', orgId]
+      });
+      
+      toast({
+        title: "Project deleted",
+        description: "The project has been successfully deleted."
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error deleting project",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Handle project deletion
+  const handleDeleteProject = (projectId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    deleteProjectMutation.mutate(projectId);
+  };
 
   // Display error toasts using useEffect to prevent infinite re-renders
   useEffect(() => {
@@ -301,7 +338,7 @@ export default function OrganisationDashboardPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {projects.map((project: Project) => (
-                    <Card key={project.id} className="hover:shadow-md transition-shadow">
+                    <Card key={project.id} className="relative group hover:shadow-md transition-shadow">
                       <CardHeader>
                         <CardTitle 
                           className="cursor-pointer hover:text-tcof-teal transition-colors"
@@ -335,6 +372,13 @@ export default function OrganisationDashboardPage() {
                           View Project
                         </Button>
                       </CardFooter>
+                      <div className="absolute top-2 right-2 invisible group-hover:visible">
+                        <X 
+                          className="h-5 w-5 text-red-500 cursor-pointer" 
+                          aria-label="Delete project" 
+                          onClick={(e) => handleDeleteProject(project.id, e)} 
+                        />
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -353,7 +397,7 @@ export default function OrganisationDashboardPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {projects.map((project: Project) => (
-                <Card key={project.id} className="hover:shadow-md transition-shadow">
+                <Card key={project.id} className="relative group hover:shadow-md transition-shadow">
                   <CardHeader>
                     <CardTitle 
                       className="cursor-pointer hover:text-tcof-teal transition-colors"
@@ -387,6 +431,13 @@ export default function OrganisationDashboardPage() {
                       View Project
                     </Button>
                   </CardFooter>
+                  <div className="absolute top-2 right-2 invisible group-hover:visible">
+                    <X 
+                      className="h-5 w-5 text-red-500 cursor-pointer" 
+                      aria-label="Delete project" 
+                      onClick={(e) => handleDeleteProject(project.id, e)} 
+                    />
+                  </div>
                 </Card>
               ))}
             </div>
