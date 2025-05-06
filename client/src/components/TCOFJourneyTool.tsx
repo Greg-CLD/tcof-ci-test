@@ -160,35 +160,6 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [journeyName, setJourneyName] = useState("My TCOF Journey");
   
-  // Load existing data from local storage on component mount
-  useEffect(() => {
-    async function loadSavedData() {
-      try {
-        const storedData = await loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY);
-        if (storedData) {
-          console.log("Loading TCOF journey from local storage:", storedData);
-          
-          // Set journey stage if available
-          if (storedData.stage) {
-            setStage(storedData.stage);
-            setDetermined(true);
-          }
-          
-          // Set notes if available
-          if (storedData.notes) {
-            setNotes(storedData.notes);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading TCOF journey from local storage:", error);
-      }
-    }
-    
-    if (!hasLoadedData && !serverJourney) {
-      loadSavedData();
-    }
-  }, [hasLoadedData, serverJourney]);
-  
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -244,6 +215,35 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
       });
     },
   });
+  
+  // Load existing data from local storage on component mount
+  useEffect(() => {
+    async function loadSavedData() {
+      try {
+        const storedData = await loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY);
+        if (storedData) {
+          console.log("Loading TCOF journey from local storage:", storedData);
+          
+          // Set journey stage if available
+          if (storedData.stage) {
+            setStage(storedData.stage);
+            setDetermined(true);
+          }
+          
+          // Set notes if available
+          if (storedData.notes) {
+            setNotes(storedData.notes);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading TCOF journey from local storage:", error);
+      }
+    }
+    
+    if (!hasLoadedData && !serverJourney) {
+      loadSavedData();
+    }
+  }, [hasLoadedData, serverJourney]);
   
   // Load data from server when available
   useEffect(() => {
