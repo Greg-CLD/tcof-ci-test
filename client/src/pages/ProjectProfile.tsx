@@ -362,8 +362,14 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           onClick={() => {
             if (editMode || matchesProfile || matchesSetup) {
               // Back to organisation dashboard when in setup/edit mode
-              const orgId = localStorage.getItem('selectedOrgId');
-              navigate(orgId ? `/organisations/${orgId}` : '/organisations');
+              // First check if the project has an organisation ID
+              if (project?.organisationId) {
+                navigate(`/organisations/${project.organisationId}`);
+              } else {
+                // Fallback to selectedOrgId in localStorage if no project org ID
+                const orgId = localStorage.getItem('selectedOrgId');
+                navigate(orgId ? `/organisations/${orgId}` : '/organisations');
+              }
             } else {
               // Regular behavior for non-setup mode
               navigate('/get-your-bearings');

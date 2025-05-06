@@ -12,6 +12,7 @@ export interface Project {
   orgType?: string;
   teamSize?: string;
   currentStage?: string;
+  organisationId?: string;
   createdAt: string;
   updatedAt: string;
 }
