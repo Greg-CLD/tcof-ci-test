@@ -16,8 +16,8 @@ import AdminPresetEditor from "@/pages/AdminPresetEditor";
 import AdminFactorEditor from "@/pages/AdminFactorEditor";
 import GraphExplorer from "@/pages/GraphExplorer";
 import Block1Discover from "@/pages/make-a-plan/Block1Discover";
-import Block2Design from "@/pages/Block2Design";
-import Block3Deliver from "@/pages/Block3Deliver";
+import Block2Design from "@/pages/make-a-plan/Block2Design";
+import Block3Deliver from "@/pages/make-a-plan/Block3Deliver";
 import Block3Complete from "@/pages/Block3Complete";
 import Checklist from "@/pages/Checklist";
 import FactorChecklist from "@/pages/FactorChecklist";
@@ -322,6 +322,16 @@ function Router() {
       <Route path="/make-a-plan/:projectId/block-1">
         <ProtectedRouteGuard>
           <Block1Discover />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/:projectId/block-2">
+        <ProtectedRouteGuard>
+          <Block2Design />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/:projectId/block-3">
+        <ProtectedRouteGuard>
+          <Block3Deliver />
         </ProtectedRouteGuard>
       </Route>
       <Route path="/make-a-plan/:projectId">
