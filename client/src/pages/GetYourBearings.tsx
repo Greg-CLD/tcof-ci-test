@@ -18,10 +18,10 @@ export default function GetYourBearings() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Redirect to projects page if no projectId
+  // Redirect to organisations page if no projectId
   useEffect(() => {
     if (!projectId && !projectsLoading) {
-      navigate("/projects");
+      navigate("/organisations");
     }
   }, [projectId, projectsLoading, navigate]);
   
