@@ -199,12 +199,34 @@ export default function OrganisationDashboardPage() {
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: number | string) => {
       console.log("Deleting project with ID:", projectId);
-      const res = await apiRequest("DELETE", `/api/projects/${projectId}`);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(errorData.message || `Error: ${res.status}`);
+      
+      // Try to determine if this is a database ID (number) or a JSON-file ID (UUID)
+      const isNumericId = !isNaN(Number(projectId)) && String(Number(projectId)) === String(projectId);
+      console.log(`Project ID ${projectId} is a ${isNumericId ? 'numeric' : 'UUID'} ID`);
+      
+      try {
+        // First attempt with the ID as-is
+        const res = await apiRequest("DELETE", `/api/projects/${projectId}`);
+        if (res.ok) return projectId;
+        
+        // If we get an error with a numeric ID, log it but don't throw yet
+        console.log(`First deletion attempt failed: ${res.status}`);
+        
+        // If this was already a failed UUID attempt, we should stop here
+        if (!isNumericId) {
+          const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+          throw new Error(errorData.message || `Error: ${res.status}`);
+        }
+      } catch (error) {
+        console.log("Error in first deletion attempt:", error);
+        // If the first attempt failed and it was numeric, continue to the fallback
+        if (!isNumericId) throw error;
       }
-      return projectId;
+      
+      // We only get here if the first attempt with a numeric ID failed.
+      // There's no need for a second attempt with the same API endpoint.
+      // Just throw the error to avoid an infinite loop.
+      throw new Error(`Project deletion failed for ID: ${projectId}`);
     },
     onSuccess: (deletedProjectId) => {
       // Invalidate the query to refetch projects
