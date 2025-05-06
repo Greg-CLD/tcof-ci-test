@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SiteFooter from "@/components/SiteFooter";
+import Breadcrumb from "@/components/Breadcrumb";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -105,13 +106,16 @@ export default function ProjectPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <main className="flex-grow container mx-auto px-4 py-8">
-        <Button 
-          variant="outline" 
-          onClick={handleBack}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+          <Breadcrumb />
+          <Button 
+            variant="outline" 
+            onClick={handleBack}
+            className="mt-2 md:mt-0"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+        </div>
         
         {isLoading ? (
           <div className="flex items-center justify-center min-h-[300px]">

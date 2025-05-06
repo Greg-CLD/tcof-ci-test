@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import SiteFooter from "@/components/SiteFooter";
+import Breadcrumb from "@/components/Breadcrumb";
 
 interface Project {
   id: string;
@@ -232,13 +233,16 @@ export default function OrganisationDashboardPage() {
     <div className="min-h-screen flex flex-col bg-white">
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="mb-6">
-          <Button 
-            variant="outline" 
-            onClick={navigateToOrganisations}
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Organisations
-          </Button>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <Breadcrumb />
+            <Button 
+              variant="outline" 
+              onClick={navigateToOrganisations}
+              className="mt-2 md:mt-0"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Organisations
+            </Button>
+          </div>
           
           {isLoading ? (
             <div className="flex items-center space-x-2">

@@ -154,7 +154,12 @@ export default function ProjectBanner() {
                 className={`ml-2 ${!isProfileComplete ? "bg-yellow-50 text-amber-600" : "text-tcof-teal"}`}
                 onClick={() => {
                   console.log('Navigating to edit profile for', selectedProject.id);
-                  navigate(`/projects/${selectedProject.id}/profile/edit`);
+                  if (selectedProject.organisationId) {
+                    navigate(`/organisations/${selectedProject.organisationId}/projects/${selectedProject.id}/profile/edit`);
+                  } else {
+                    // Fallback to old path if no organization ID
+                    navigate(`/projects/${selectedProject.id}/profile/edit`);
+                  }
                 }}
               >
                 <Briefcase className="w-4 h-4 mr-1" />
