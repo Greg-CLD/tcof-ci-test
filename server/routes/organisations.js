@@ -140,13 +140,12 @@ router.get('/:id/projects', isOrgMember, async (req, res) => {
     // Only select fields that we know exist in the projects table
     const organisationProjects = await db.query.projects.findMany({
       where: eq(projects.organisationId, organisationId),
-      orderBy: desc(projects.updatedAt),
+      orderBy: desc(projects.createdAt), // Use createdAt for ordering instead of updatedAt
       columns: {
         id: true,
         name: true,
         description: true,
-        createdAt: true,
-        updatedAt: true
+        createdAt: true
       }
     });
     
