@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Redirect, useLocation } from 'wouter';
+import { Redirect, useLocation, useParams } from 'wouter';
 import { useProjects } from '@/hooks/useProjects';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -14,29 +14,34 @@ interface ProtectedRouteGuardProps {
  * before allowing access to protected routes
  */
 export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
-  const { isLoading, isSelectedProjectProfileComplete, getSelectedProject } = useProjects();
+  const { isLoading, isSelectedProjectProfileComplete, getSelectedProject, setSelectedProjectId } = useProjects();
   const [location, navigate] = useLocation();
-  
+  const { projectId } = useParams<{ projectId?: string }>();
+
   // Bypass check for organization routes and profile edit routes
   if (location.startsWith('/organisations') || location.includes('/profile/edit') || location.includes('/setup')) {
     console.log('ProtectedRouteGuard: Bypassing check for route:', location);
     return <>{children}</>;
   }
-  
+
   // Show nothing while loading
   if (isLoading) {
     return null;
   }
-  
+
   const selectedProject = getSelectedProject();
-  
-  // If no project is selected, redirect to organisations
+
+  // If no project is selected, try to get it from URL params
   if (!selectedProject) {
+    if (projectId) {
+      console.log(`ProtectedRouteGuard: found projectId in URL: ${projectId}, setting it.`);
+      setSelectedProjectId(projectId);
+      return <>{children}</>; // Allow access since projectId was found
+    }
     return <Redirect to="/organisations" />;
   }
-  
+
   if (!isSelectedProjectProfileComplete()) {
-    return <>{children}</>; // Allow access
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
@@ -48,8 +53,8 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
               Please complete all required fields to continue.
             </AlertDescription>
           </Alert>
-          
-          <Button 
+
+          <Button
             variant="default"
             className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
             onClick={() => {
@@ -63,7 +68,7 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
       </div>
     );
   }
-  
+
   // Profile is complete, allow access to the protected content
   return <>{children}</>;
 }
