@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,33 +64,7 @@ export default function OrganisationHeuristicsPage() {
     }
   });
 
-  // Update heuristics mutation
-  const updateHeuristicsMutation = useMutation({
-    mutationFn: async (updatedHeuristics: Heuristic[]) => {
-      const res = await apiRequest("PUT", `/api/organisations/${orgId}/heuristics`, updatedHeuristics);
-      if (!res.ok) {
-        throw new Error("Failed to update heuristics");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['orgHeuristics', orgId]
-      });
-      setIsEditing(false);
-      toast({
-        title: "Success",
-        description: "Organisation heuristics updated successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update heuristics",
-        variant: "destructive",
-      });
-    }
-  });
+
 
   // Handle navigation back to organisation dashboard
   const navigateToOrganisation = () => {
@@ -120,16 +94,6 @@ export default function OrganisationHeuristicsPage() {
 
   const isLoading = orgLoading || heuristicsLoading;
   const canEdit = organisation?.role === 'owner' || organisation?.role === 'admin';
-
-  const handleSaveHeuristics = async (updatedHeuristics: Heuristic[]) => {
-    // Make sure organisationId is set correctly on all heuristics
-    const preparedHeuristics = updatedHeuristics.map(h => ({
-      ...h,
-      organisationId: orgId
-    }));
-
-    updateHeuristicsMutation.mutate(preparedHeuristics);
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -177,8 +141,8 @@ export default function OrganisationHeuristicsPage() {
             ) : isEditing ? (
               <HeuristicsEditor 
                 defaults={heuristics}
-                onSave={handleSaveHeuristics}
-                onCancel={() => setIsEditing(false)}
+                organisationId={orgId}
+                onClose={() => setIsEditing(false)}
               />
             ) : heuristics.length === 0 ? (
               <div className="bg-gray-50 rounded-lg p-8 text-center">

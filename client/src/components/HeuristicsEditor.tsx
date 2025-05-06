@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Heuristic {
   id: string;
@@ -21,8 +22,9 @@ interface Heuristic {
 
 interface HeuristicsEditorProps {
   defaults: Heuristic[];
-  onSave: (updated: Heuristic[]) => void;
-  onCancel?: () => void;
+  organisationId: string;
+  onSave?: (updated: Heuristic[]) => void;
+  onClose: () => void;
 }
 
 // Use a utility function to generate an ID for new heuristics
@@ -30,7 +32,9 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
-export function HeuristicsEditor({ defaults = [], onSave, onCancel }: HeuristicsEditorProps) {
+export function HeuristicsEditor({ defaults = [], organisationId, onSave, onClose }: HeuristicsEditorProps) {
+  const { toast } = useToast();
+  
   // Store the current state of heuristics being edited
   const [heuristics, setHeuristics] = useState<Heuristic[]>(
     defaults.length > 0 ? 
@@ -40,7 +44,36 @@ export function HeuristicsEditor({ defaults = [], onSave, onCancel }: Heuristics
   
   // Store the available success factors from the database
   const [availableFactors, setAvailableFactors] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // Save heuristics mutation
+  const saveDefaults = useMutation({
+    mutationFn: (updated: Omit<Heuristic, 'id' | 'organisationId' | 'createdAt' | 'updatedAt'>[]) => 
+      apiRequest('PUT', `/api/organisations/${organisationId}/heuristics`, updated)
+      .then(r => {
+        if (!r.ok) {
+          throw new Error('Failed to save defaults');
+        }
+        return r.json();
+      }),
+    onSuccess: (newDefaults) => {
+      queryClient.setQueryData(['orgHeuristics', organisationId], newDefaults);
+      toast({ 
+        title: 'Success',
+        description: 'Default heuristics updated successfully'
+      });
+      if (onSave) {
+        onSave(newDefaults);
+      }
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error saving defaults',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
   
   // Load success factors from the database
   const { data: successFactors, isLoading: factorsLoading } = useQuery({
@@ -75,7 +108,7 @@ export function HeuristicsEditor({ defaults = [], onSave, onCancel }: Heuristics
     // Create a new heuristic with a placeholder success factor
     const newHeuristic: Heuristic = {
       id: generateId(),
-      organisationId: defaults[0]?.organisationId || "", // Keep the same organisation ID
+      organisationId: organisationId, 
       successFactor: availableFactors[0] || "Select a success factor",
       goal: null,
       metric: null,
@@ -104,14 +137,19 @@ export function HeuristicsEditor({ defaults = [], onSave, onCancel }: Heuristics
   
   // Handle save button click
   const handleSave = () => {
-    setIsLoading(true);
     // Filter out incomplete heuristics (those without a success factor)
     const validHeuristics = heuristics.filter(
       h => h.successFactor && h.successFactor !== "Select a success factor"
     );
     
-    onSave(validHeuristics);
-    setIsLoading(false);
+    // Prepare payload: strip out metadata fields
+    const payload = validHeuristics.map(h => ({
+      successFactor: h.successFactor,
+      goal: h.goal,
+      metric: h.metric
+    }));
+    
+    saveDefaults.mutate(payload);
   };
   
   return (
@@ -119,20 +157,18 @@ export function HeuristicsEditor({ defaults = [], onSave, onCancel }: Heuristics
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-tcof-dark">Edit Success Factors</h2>
         <div className="space-x-2">
-          {onCancel && (
-            <Button 
-              variant="outline" 
-              onClick={onCancel}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            disabled={saveDefaults.isPending}
+          >
+            Cancel
+          </Button>
           <Button 
             onClick={handleSave}
-            disabled={isLoading || heuristics.length === 0}
+            disabled={saveDefaults.isPending || heuristics.length === 0}
           >
-            {isLoading ? (
+            {saveDefaults.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
@@ -156,21 +192,12 @@ export function HeuristicsEditor({ defaults = [], onSave, onCancel }: Heuristics
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor={`successFactor-${heuristic.id}`}>Success Factor</Label>
-                    <Select
+                    <Input
+                      id={`successFactor-${heuristic.id}`}
                       value={heuristic.successFactor}
-                      onValueChange={(value) => handleHeuristicChange(heuristic.id, 'successFactor', value)}
-                    >
-                      <SelectTrigger id={`successFactor-${heuristic.id}`}>
-                        <SelectValue placeholder="Select a success factor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableFactors.map((factor) => (
-                          <SelectItem key={factor} value={factor}>
-                            {factor}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(e) => handleHeuristicChange(heuristic.id, 'successFactor', e.target.value)}
+                      placeholder="Enter a success factor name"
+                    />
                   </div>
                   
                   <div className="space-y-2">
@@ -200,6 +227,7 @@ export function HeuristicsEditor({ defaults = [], onSave, onCancel }: Heuristics
                   size="icon"
                   className="absolute top-4 right-4 text-gray-500 hover:text-red-500"
                   onClick={() => handleRemoveHeuristic(heuristic.id)}
+                  disabled={saveDefaults.isPending}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -211,7 +239,7 @@ export function HeuristicsEditor({ defaults = [], onSave, onCancel }: Heuristics
             variant="outline" 
             className="w-full py-6 border-dashed"
             onClick={handleAddHeuristic}
-            disabled={false} // Remove the disabled condition to always enable the button
+            disabled={saveDefaults.isPending}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Success Factor

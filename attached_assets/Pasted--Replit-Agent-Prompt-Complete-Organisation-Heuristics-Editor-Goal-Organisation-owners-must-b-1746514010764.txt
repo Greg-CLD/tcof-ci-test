@@ -1,0 +1,101 @@
+🛠️ Replit Agent Prompt – Complete Organisation Heuristics Editor
+🎯 Goal
+Organisation owners must be able to view, add, edit, and delete their default heuristics. Changes should persist to the backend (PUT /api/organisations/:id/heuristics) and immediately reflect in the UI.
+
+✅ Checklist
+Mutation Setup
+
+In HeuristicsEditor.tsx, import and configure a useMutation for the PUT endpoint:
+
+ts
+Copy
+Edit
+const saveDefaults = useMutation({
+  mutationFn: (updated: Omit<Heuristic,'id' | 'organisationId' | 'createdAt' | 'updatedAt'>[]) =>
+    apiRequest('PUT', `/api/organisations/${organisationId}/heuristics`, updated).then(r => r.json()),
+  onSuccess: (newDefaults) => {
+    queryClient.setQueryData(['orgHeuristics', organisationId], newDefaults);
+    toast({ title: 'Defaults updated' });
+    onClose();
+  },
+});
+handleSave Implementation
+
+Replace the stub in HeuristicsEditor:
+
+ts
+Copy
+Edit
+const handleSave = () => {
+  // Prepare payload: strip out metadata fields
+  const payload = heuristics.map(h => ({
+    successFactor: h.successFactor,
+    goal: h.goal,
+    metric: h.metric
+  }));
+  saveDefaults.mutate(payload);
+};
+UI Table Refinement
+
+Render each heuristic in a row with two controlled inputs (successFactor, metric) and a delete button.
+
+Add “Add Heuristic” row insertion.
+
+Disable Save button while saveDefaults.isLoading is true.
+
+Dashboard Integration
+
+In OrganisationDashboardPage.tsx:
+
+Ensure you pass the live defaults from the org query into <HeuristicsEditor />.
+
+Confirm the Edit Defaults button is enabled only when organisation.role === 'owner'.
+
+On opening the modal, do not refetch defaults; rely on the cached data under ['orgHeuristics', orgId].
+
+Query Invalidation
+
+Confirm that after saving, the key ['orgHeuristics', orgId] is invalidated or overwritten via setQueryData.
+
+No manual refetch should be necessary; the UI should pick up the updated defaults immediately.
+
+✅ Definition of Done
+Organisation owners can open the editor, modify the list (add/edit/delete rows), and click Save.
+
+On save success:
+
+A toast “Defaults updated” appears.
+
+The HeuristicsEditor modal closes.
+
+Subsequent opens of the editor show the new defaults.
+
+Non-owners see the defaults list but the Edit Defaults button is hidden or disabled.
+
+Creating a new project still clones these updated defaults into project_heuristics.
+
+🧪 Smoke Tests
+Owner Edit Flow
+
+Open org dashboard → click Edit Defaults → add two rows → change text → click Save → toast appears → reopen editor → see both new rows.
+
+Role Restriction
+
+Log in as a non-owner → org dashboard shows defaults but no Edit Defaults button.
+
+Clone Verification
+
+Create a project in this org → GET /api/projects/:newId/heuristics returns the updated defaults.
+
+No UI Flicker
+
+During saveDefaults.isLoading, the Save button is disabled; UI does not flicker or throw errors.
+
+Please implement these changes and confirm all smoke tests pass.
+
+
+
+
+
+
+
