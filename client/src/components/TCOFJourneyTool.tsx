@@ -152,16 +152,42 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load existing data from local storage as fallback
-  const storedData = loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY) || initialTCOFJourneyData;
-
-  // Decision tree states
+  // Decision tree states with default empty values
   const [currentQuestion, setCurrentQuestion] = useState<string>("q1");
-  const [determined, setDetermined] = useState<boolean>(!!storedData.stage);
-  const [stage, setStage] = useState<ImplementationStage | null>(storedData.stage);
-  const [notes, setNotes] = useState<Record<string, string>>(storedData.notes || {});
+  const [determined, setDetermined] = useState<boolean>(false);
+  const [stage, setStage] = useState<ImplementationStage | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [journeyName, setJourneyName] = useState("My TCOF Journey");
+  
+  // Load existing data from local storage on component mount
+  useEffect(() => {
+    async function loadSavedData() {
+      try {
+        const storedData = await loadFromLocalStorage<TCOFJourneyData>(STORAGE_KEYS.TCOF_JOURNEY);
+        if (storedData) {
+          console.log("Loading TCOF journey from local storage:", storedData);
+          
+          // Set journey stage if available
+          if (storedData.stage) {
+            setStage(storedData.stage);
+            setDetermined(true);
+          }
+          
+          // Set notes if available
+          if (storedData.notes) {
+            setNotes(storedData.notes);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading TCOF journey from local storage:", error);
+      }
+    }
+    
+    if (!hasLoadedData && !serverJourney) {
+      loadSavedData();
+    }
+  }, [hasLoadedData, serverJourney]);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -297,7 +323,7 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
     }
 
     const journeyData: TCOFJourneyData = {
-      ...storedData,
+      ...initialTCOFJourneyData,
       stage,
       notes,
       lastUpdated: Date.now()

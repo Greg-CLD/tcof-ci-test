@@ -141,12 +141,11 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Load existing selection from local storage as fallback
-  const storedData = loadFromLocalStorage<CynefinSelection>(STORAGE_KEYS.CYNEFIN_SELECTION) || initialCynefinSelection;
-  
-  const [selectedQuadrant, setSelectedQuadrant] = useState<CynefinQuadrant | null>(storedData.quadrant);
+  // State for persisting between sessions
+  const [selectedQuadrant, setSelectedQuadrant] = useState<CynefinQuadrant | null>(null);
   const [showIntro, setShowIntro] = useState(true);
   const [selectionName, setSelectionName] = useState("My Cynefin Assessment");
+  
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -170,6 +169,25 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
     },
     enabled: !!projectId,
   });
+  
+  // Load existing selection from local storage on component mount
+  useEffect(() => {
+    async function loadSavedData() {
+      try {
+        const storedData = await loadFromLocalStorage<CynefinSelection>(STORAGE_KEYS.CYNEFIN_SELECTION);
+        if (storedData && storedData.quadrant) {
+          console.log("Loading Cynefin selection from local storage:", storedData);
+          setSelectedQuadrant(storedData.quadrant);
+        }
+      } catch (error) {
+        console.error("Error loading Cynefin selection from local storage:", error);
+      }
+    }
+    
+    if (!hasLoadedData && !serverSelection) {
+      loadSavedData();
+    }
+  }, [hasLoadedData, serverSelection]);
   
   // Interface for the mutation data
   interface SaveSelectionData {
