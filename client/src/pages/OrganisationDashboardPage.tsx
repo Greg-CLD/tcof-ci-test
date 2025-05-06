@@ -197,10 +197,12 @@ export default function OrganisationDashboardPage() {
   
   // Delete project mutation
   const deleteProjectMutation = useMutation({
-    mutationFn: async (projectId: string) => {
+    mutationFn: async (projectId: number | string) => {
+      console.log("Deleting project with ID:", projectId);
       const res = await apiRequest("DELETE", `/api/projects/${projectId}`);
       if (!res.ok) {
-        throw new Error("Failed to delete project");
+        const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(errorData.message || `Error: ${res.status}`);
       }
       return projectId;
     },
@@ -216,6 +218,7 @@ export default function OrganisationDashboardPage() {
       });
     },
     onError: (error: Error) => {
+      console.error("Project deletion error:", error);
       toast({
         title: "Error deleting project",
         description: error.message,
