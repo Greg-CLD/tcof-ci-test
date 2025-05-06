@@ -22,7 +22,7 @@ import { Link } from "wouter";
 import { 
   FileDown, ArrowLeft, Target as TargetIcon, Compass as CompassIcon, 
   GitBranch as GitBranchIcon, File as FileIcon, Save, Download, Trash2,
-  History, Loader2
+  History, Loader2, Clock
 } from "lucide-react";
 
 // Success Map Level types
@@ -480,22 +480,131 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
             </CardContent>
           </Card>
           
-          {/* Canvas for Goal Mapping */}
-          <div ref={containerRef} className="bg-white border rounded-md p-4 min-h-[500px] mb-6 relative">
-            {/* Canvas SVG */}
-            <div ref={canvasRef} className="w-full h-[500px]">
-              {/* This div will contain the SVG element */}
-              <svg ref={svgRef} width="100%" height="100%"></svg>
-            </div>
-            
-            {/* Goal Explanation */}
-            {nodes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center p-6 bg-white bg-opacity-90 rounded-md">
+          {/* Goals Table Display */}
+          <div ref={containerRef} className="bg-white border rounded-md p-4 mb-6 relative">
+            {nodes.length > 0 ? (
+              <div className="space-y-6">
+                {/* Group nodes by type/level */}
+                {(() => {
+                  // Group nodes by level (or type)
+                  const goalsByLevel = nodes.reduce((acc: Record<string, any[]>, node: any) => {
+                    // Default to the selected goal level if no type is available
+                    const level = node.type || goalLevel;
+                    if (!acc[level]) {
+                      acc[level] = [];
+                    }
+                    acc[level].push(node);
+                    return acc;
+                  }, {});
+                  
+                  // Get a user-friendly level name
+                  const getLevelName = (level: string) => {
+                    switch(level) {
+                      case 'strategic': return 'Strategic Goals';
+                      case 'business': return 'Business Goals';
+                      case 'product': return 'Product Goals';
+                      case 'custom': return 'Custom Goals';
+                      default: return `${level.charAt(0).toUpperCase() + level.slice(1)} Goals`;
+                    }
+                  };
+                  
+                  return Object.entries(goalsByLevel).map(([level, goals]) => (
+                    <div key={level} className="border rounded-lg overflow-hidden">
+                      <div className="bg-gray-50 p-3 border-b font-medium text-gray-700">
+                        {getLevelName(level)} ({goals.length})
+                      </div>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="py-2 px-4 text-left font-medium text-gray-600">Goal</th>
+                            <th className="py-2 px-4 text-left font-medium text-gray-600 w-1/4">Timeframe</th>
+                            <th className="py-2 px-4 text-left font-medium text-gray-600 w-1/5">Related Goals</th>
+                            <th className="py-2 px-4 text-right font-medium text-gray-600 w-[100px]">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {goals.map((goal) => {
+                            // Find related goals based on connections
+                            const relatedGoals = connections
+                              .filter(conn => conn.sourceId === goal.id || conn.targetId === goal.id)
+                              .map(conn => {
+                                const relatedId = conn.sourceId === goal.id ? conn.targetId : conn.sourceId;
+                                const related = nodes.find(n => n.id === relatedId);
+                                return related?.text || '';
+                              });
+                            
+                            return (
+                              <tr key={goal.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="py-3 px-4">
+                                  <div className="flex items-start">
+                                    <TargetIcon className="w-5 h-5 text-tcof-teal mt-0.5 mr-2 flex-shrink-0" />
+                                    <span>{goal.text}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  {goal.timeframe ? (
+                                    <div className="flex items-center text-gray-600">
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="w-4 h-4 mr-1 text-gray-400"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12 6 12 12 16 14" />
+                                      </svg>
+                                      <span>{goal.timeframe}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400 italic">No timeframe</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4">
+                                  {relatedGoals.length > 0 ? (
+                                    <div className="text-xs space-y-1">
+                                      {relatedGoals.map((text, i) => (
+                                        <div key={i} className="bg-gray-100 rounded px-2 py-1 inline-block mr-1 mb-1 truncate max-w-[150px]" title={text}>
+                                          {text.length > 20 ? `${text.substring(0, 20)}...` : text}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400 italic">None</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                                    onClick={() => deleteNode(goal.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete</span>
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ));
+                })()}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[300px]">
+                <div className="text-center p-6 bg-white rounded-md">
                   <TargetIcon className="h-12 w-12 text-tcof-teal mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-2">Start Building Your Success Map</h3>
                   <p className="text-gray-600 max-w-md">
-                    Add goals, position them on the canvas, and connect related goals to visualize your success path.
+                    Add goals using the form above and organize them by level to create your success map.
                   </p>
                 </div>
               </div>
@@ -512,7 +621,7 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
                 disabled={isLoading}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Reset Canvas
+                Reset Goals
               </Button>
               
               <Button 

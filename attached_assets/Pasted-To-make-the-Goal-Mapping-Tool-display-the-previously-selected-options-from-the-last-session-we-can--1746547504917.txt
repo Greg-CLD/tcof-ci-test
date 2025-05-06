@@ -1,0 +1,37 @@
+To make the Goal-Mapping Tool display the previously selected options from the last session, we can load the saved data when the component mounts. The data should be stored locally and fetched on initialization. Let's implement these changes in client/src/components/GoalMappingTool.tsx.
+
+Load previously saved data: When the component mounts or when the project changes, check if there is any locally saved data. If so, load it into the component's state to display it.
+
+UseEffect hook: Update the useEffect hook to include logic for loading data from local storage to initialize the component state.
+
+Option to Edit: Ensure that the tool has an option to edit this previously loaded data.
+
+Here's how you might implement these changes:
+
+import { loadFromLocalStorage } from '@/lib/storage';
+// Within the GoalMappingTool component
+useEffect(() => {
+  // Reset loading state when project changes
+  if (projectId) {
+    setIsLoading(true);
+    const loadSavedData = async () => {
+      let localData = await loadFromLocalStorage<GoalMapData>(STORAGE_KEYS.GOAL_MAP);
+      if (!localData) {
+        // Fallback to server data if no local data
+        // Existing logic for handling server data...
+      } else {
+        if (localData.nodes && localData.connections) {
+          console.log("Loading goal map data from local storage:", localData);
+          loadCanvasData({ nodes: localData.nodes, connections: localData.connections });
+          setIsEditing(false); // Start in view mode
+        }
+      }
+      setHasLoadedData(true);
+      setIsLoading(false);
+    };
+    loadSavedData();
+  }
+}, [projectId, loadCanvasData]);
+This code snippet adds logic in the useEffect hook to load goal map data from local storage when the component mounts or the project changes. If local data is found, it initializes the component's state with this data, displaying the previously selected options. You still maintain the capability to edit the data as needed.
+
+Feel free to apply this approach directly to your code, adapting paths and variable names where necessary. If you need further modifications, please let me know!
