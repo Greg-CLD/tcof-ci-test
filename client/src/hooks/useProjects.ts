@@ -268,6 +268,15 @@ export function useProjects() {
     return isProjectProfileComplete(selectedProject);
   };
   
+  /**
+   * Sets the currently selected project ID in localStorage
+   * @param id The project ID to set as selected
+   */
+  const setSelectedProjectId = (id: string) => {
+    localStorage.setItem('selectedProjectId', id);
+    queryClient.invalidateQueries(['/api/projects']);
+  };
+
   return {
     projects,
     isLoading,
@@ -279,5 +288,6 @@ export function useProjects() {
     getMissingProfileFields,
     getSelectedProject,
     isSelectedProjectProfileComplete,
+    setSelectedProjectId,
   };
 }
