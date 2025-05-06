@@ -15,14 +15,6 @@ export default function MakeAPlan() {
   const { user } = useAuth();
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Use declarative redirect instead of useEffect
-  const isDirectMakeAPlanRoute = location === "/make-a-plan";
-  
-  // If we're on the main route with no project ID, redirect to organizations
-  if (isDirectMakeAPlanRoute && !projectId) {
-    return <Redirect to="/organisations" />;
-  }
-  
   // Fetch project details if projectId is provided
   const { 
     data: project, 
@@ -42,6 +34,14 @@ export default function MakeAPlan() {
     },
     enabled: !!projectId
   });
+  
+  // Use declarative redirect instead of useEffect
+  const isDirectMakeAPlanRoute = location === "/make-a-plan";
+  
+  // If we're on the main route with no project ID, redirect to organizations
+  if (isDirectMakeAPlanRoute && !projectId) {
+    return <Redirect to="/organisations" />;
+  }
   
   // Authentication check component
   const AuthCheck = () => (

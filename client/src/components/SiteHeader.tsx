@@ -36,7 +36,7 @@ import logoImage from "../assets/logo.png";
 const instanceCounter = {count: 0};
 
 export default function SiteHeader() {
-  const [location, setLocation] = useLocation();
+  const [location, navigate] = useLocation();
   const { isAuthenticated, clearAuth } = useAuthProtection();
   const { user, logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -80,7 +80,7 @@ export default function SiteHeader() {
   
   // Handle navigation and close mobile menu
   const handleNavigation = (path: string) => {
-    setLocation(path);
+    navigate(path);
     setMobileMenuOpen(false);
   };
   
@@ -175,30 +175,30 @@ export default function SiteHeader() {
                       Account
                     </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setLocation("/dashboard")}>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                       <BarChartIcon className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLocation("/profile")}>
+                    <DropdownMenuItem onClick={() => navigate("/profile")}>
                       <User className="mr-2 h-4 w-4" />
                       <span>My Profile</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLocation("/history")}>
+                    <DropdownMenuItem onClick={() => navigate("/history")}>
                       <History className="mr-2 h-4 w-4" />
                       <span>View History</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLocation("/pricing")}>
+                    <DropdownMenuItem onClick={() => navigate("/pricing")}>
                       <Key className="mr-2 h-4 w-4" />
                       <span>Upgrade Plan</span>
                     </DropdownMenuItem>
                     {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
                       <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setLocation("/make-a-plan/admin/factors")}>
+                        <DropdownMenuItem onClick={() => navigate("/make-a-plan/admin/factors")}>
                           <Filter className="mr-2 h-4 w-4" />
                           <span>Admin - Factors</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setLocation("/make-a-plan/admin")}>
+                        <DropdownMenuItem onClick={() => navigate("/make-a-plan/admin")}>
                           <Filter className="mr-2 h-4 w-4" />
                           <span>Admin - Presets</span>
                         </DropdownMenuItem>

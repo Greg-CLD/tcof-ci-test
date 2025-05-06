@@ -18,14 +18,6 @@ export default function GetYourBearings() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Use declarative redirect instead of useEffect
-  const isDirectGetYourBearingsRoute = location === "/get-your-bearings";
-  
-  // If we're on the main route with no project ID, redirect to organizations
-  if (isDirectGetYourBearingsRoute && !projectId && !projectsLoading) {
-    return <Redirect to="/organisations" />;
-  }
-  
   // Fetch project details if projectId is provided
   const { 
     data: project, 
@@ -45,22 +37,6 @@ export default function GetYourBearings() {
     },
     enabled: !!projectId
   });
-  
-  // Update selectedProjectId when projectId param changes
-  useEffect(() => {
-    if (projectId) {
-      console.log(`Setting selected project ID from URL param: ${projectId}`);
-      setSelectedProjectId(projectId);
-      localStorage.setItem('selectedProjectId', projectId);
-    } else {
-      // Check for selectedProjectId in localStorage when no projectId in URL
-      const storedProjectId = localStorage.getItem('selectedProjectId');
-      if (storedProjectId) {
-        console.log(`Setting selected project ID from localStorage: ${storedProjectId}`);
-        setSelectedProjectId(storedProjectId);
-      }
-    }
-  }, [projectId]);
   
   // Authentication check component
   const AuthCheck = () => (
@@ -84,6 +60,30 @@ export default function GetYourBearings() {
       </div>
     </div>
   );
+  
+  // Update selectedProjectId when projectId param changes
+  useEffect(() => {
+    if (projectId) {
+      console.log(`Setting selected project ID from URL param: ${projectId}`);
+      setSelectedProjectId(projectId);
+      localStorage.setItem('selectedProjectId', projectId);
+    } else {
+      // Check for selectedProjectId in localStorage when no projectId in URL
+      const storedProjectId = localStorage.getItem('selectedProjectId');
+      if (storedProjectId) {
+        console.log(`Setting selected project ID from localStorage: ${storedProjectId}`);
+        setSelectedProjectId(storedProjectId);
+      }
+    }
+  }, [projectId]);
+  
+  // Use declarative redirect instead of useEffect
+  const isDirectGetYourBearingsRoute = location === "/get-your-bearings";
+  
+  // If we're on the main route with no project ID, redirect to organizations
+  if (isDirectGetYourBearingsRoute && !projectId && !projectsLoading) {
+    return <Redirect to="/organisations" />;
+  }
   
   return (
     <>
