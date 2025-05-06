@@ -2,7 +2,7 @@ import { Switch, Route, Link, useLocation } from "wouter";
 import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
+
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import ProTools from "@/pages/ProTools";
@@ -42,38 +42,28 @@ import { Button } from "@/components/ui/button";
 import GoalMappingTool from "@/components/GoalMappingTool";
 import CynefinOrientationTool from "@/components/CynefinOrientationTool";
 import TCOFJourneyTool from "@/components/TCOFJourneyTool";
-import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
+import AppLayout from "@/layouts/AppLayout";
 import GlobalNav from "@/components/GlobalNav";
-import Breadcrumb from "@/components/Breadcrumb";
-import ProjectBanner from "@/components/ProjectBanner";
+import AuthRequired from "@/components/AuthRequired";
+import SiteFooter from "@/components/SiteFooter";
 
-// Tool components wrapped with layout
+// Tool components with consistent layout
 const GoalMappingPage = () => (
-  <div className="min-h-screen flex flex-col bg-white">
-    <main className="flex-grow container mx-auto px-4 py-12">
-      <GoalMappingTool />
-    </main>
-    <SiteFooter />
-  </div>
+  <main className="flex-grow container mx-auto px-4 py-12">
+    <GoalMappingTool />
+  </main>
 );
 
 const CynefinOrientationPage = () => (
-  <div className="min-h-screen flex flex-col bg-white">
-    <main className="flex-grow container mx-auto px-4 py-12">
-      <CynefinOrientationTool />
-    </main>
-    <SiteFooter />
-  </div>
+  <main className="flex-grow container mx-auto px-4 py-12">
+    <CynefinOrientationTool />
+  </main>
 );
 
 const TCOFJourneyPage = () => (
-  <div className="min-h-screen flex flex-col bg-white">
-    <main className="flex-grow container mx-auto px-4 py-12">
-      <TCOFJourneyTool />
-    </main>
-    <SiteFooter />
-  </div>
+  <main className="flex-grow container mx-auto px-4 py-12">
+    <TCOFJourneyTool />
+  </main>
 );
 
 function Router() {
@@ -112,23 +102,7 @@ function Router() {
             <OrganisationListPage />
           </ProtectedRouteGuard>
         ) : (
-          <div className="min-h-screen flex flex-col bg-white">
-            <main className="flex-grow container mx-auto px-4 py-12">
-              <div className="max-w-2xl mx-auto text-center">
-                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
-                <p className="text-gray-600 mb-6">You need to sign in to access this page.</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
-                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                    onClick={() => navigate("/auth")}
-                  >
-                    Sign In
-                  </Button>
-                </div>
-              </div>
-            </main>
-            <SiteFooter />
-          </div>
+          <AuthRequired />
         )}
       </Route>
       
@@ -139,23 +113,7 @@ function Router() {
             <OrganisationDashboardPage />
           </ProtectedRouteGuard>
         ) : (
-          <div className="min-h-screen flex flex-col bg-white">
-            <main className="flex-grow container mx-auto px-4 py-12">
-              <div className="max-w-2xl mx-auto text-center">
-                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
-                <p className="text-gray-600 mb-6">You need to sign in to access this page.</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
-                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                    onClick={() => navigate("/auth")}
-                  >
-                    Sign In
-                  </Button>
-                </div>
-              </div>
-            </main>
-            <SiteFooter />
-          </div>
+          <AuthRequired />
         )}
       </Route>
       
@@ -166,23 +124,7 @@ function Router() {
             <OrganisationHeuristicsPage />
           </ProtectedRouteGuard>
         ) : (
-          <div className="min-h-screen flex flex-col bg-white">
-            <main className="flex-grow container mx-auto px-4 py-12">
-              <div className="max-w-2xl mx-auto text-center">
-                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
-                <p className="text-gray-600 mb-6">You need to sign in to access this page.</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
-                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                    onClick={() => navigate("/auth")}
-                  >
-                    Sign In
-                  </Button>
-                </div>
-              </div>
-            </main>
-            <SiteFooter />
-          </div>
+          <AuthRequired />
         )}
       </Route>
       
@@ -275,27 +217,10 @@ function Router() {
             <Dashboard />
           </ProtectedRouteGuard>
         ) : (
-          <div className="min-h-screen flex flex-col bg-white">
-            <main className="flex-grow container mx-auto px-4 py-12">
-              <div className="max-w-2xl mx-auto text-center">
-                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
-                <p className="text-gray-600 mb-6">You need to sign in to access your dashboard.</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/auth">
-                    <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/tools/starter-access">
-                    <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light">
-                      Enter Access Password
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </main>
-            <SiteFooter />
-          </div>
+          <AuthRequired 
+            message="You need to sign in to access your dashboard." 
+            showPasswordOption={true} 
+          />
         )}
       </Route>
       
@@ -306,27 +231,10 @@ function Router() {
             <GoalMappingPage />
           </ProtectedRouteGuard>
         ) : (
-          <div className="min-h-screen flex flex-col bg-white">
-            <main className="flex-grow container mx-auto px-4 py-12">
-              <div className="max-w-2xl mx-auto text-center">
-                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
-                <p className="text-gray-600 mb-6">You need to purchase a license or sign in to access this tool.</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/auth">
-                    <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/tools/starter-access">
-                    <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light">
-                      Enter Access Password
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </main>
-            <SiteFooter />
-          </div>
+          <AuthRequired 
+            message="You need to purchase a license or sign in to access this tool." 
+            showPasswordOption={true} 
+          />
         )}
       </Route>
       
@@ -336,27 +244,10 @@ function Router() {
             <CynefinOrientationPage />
           </ProtectedRouteGuard>
         ) : (
-          <div className="min-h-screen flex flex-col bg-white">
-            <main className="flex-grow container mx-auto px-4 py-12">
-              <div className="max-w-2xl mx-auto text-center">
-                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
-                <p className="text-gray-600 mb-6">You need to purchase a license or sign in to access this tool.</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/auth">
-                    <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/tools/starter-access">
-                    <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light">
-                      Enter Access Password
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </main>
-            <SiteFooter />
-          </div>
+          <AuthRequired 
+            message="You need to purchase a license or sign in to access this tool." 
+            showPasswordOption={true} 
+          />
         )}
       </Route>
       
@@ -366,27 +257,10 @@ function Router() {
             <TCOFJourneyPage />
           </ProtectedRouteGuard>
         ) : (
-          <div className="min-h-screen flex flex-col bg-white">
-            <main className="flex-grow container mx-auto px-4 py-12">
-              <div className="max-w-2xl mx-auto text-center">
-                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
-                <p className="text-gray-600 mb-6">You need to purchase a license or sign in to access this tool.</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/auth">
-                    <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/tools/starter-access">
-                    <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light">
-                      Enter Access Password
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </main>
-            <SiteFooter />
-          </div>
+          <AuthRequired 
+            message="You need to purchase a license or sign in to access this tool." 
+            showPasswordOption={true} 
+          />
         )}
       </Route>
       
@@ -413,15 +287,9 @@ function App() {
             <ProgressProvider>
               <PlanProvider>
                 <ProjectProvider>
-                  <div className="flex flex-col min-h-screen">
-                    <SiteHeader />
-                    <Breadcrumb />
-                    <ProjectBanner />
-                    <div className="flex-grow">
-                      <Router />
-                    </div>
-                    <Toaster />
-                  </div>
+                  <AppLayout>
+                    <Router />
+                  </AppLayout>
                 </ProjectProvider>
               </PlanProvider>
             </ProgressProvider>
