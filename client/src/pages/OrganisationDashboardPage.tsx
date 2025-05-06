@@ -215,10 +215,20 @@ export default function OrganisationDashboardPage() {
                   <p className="text-gray-600 mt-2">{organisation.description}</p>
                 )}
               </div>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Project
-              </Button>
+              <div className="flex gap-2">
+                {(organisation?.role === 'owner' || organisation?.role === 'admin') && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate(`/organisations/${orgId}/heuristics`)}
+                  >
+                    Manage Success Factors
+                  </Button>
+                )}
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Project
+                </Button>
+              </div>
             </div>
           )}
         </div>

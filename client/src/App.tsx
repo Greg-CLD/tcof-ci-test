@@ -30,6 +30,7 @@ import Dashboard from "@/pages/Dashboard";
 import OutcomeManagement from "@/pages/OutcomeManagement";
 import OrganisationListPage from "@/pages/OrganisationListPage";
 import OrganisationDashboardPage from "@/pages/OrganisationDashboardPage";
+import OrganisationHeuristicsPage from "@/pages/OrganisationHeuristicsPage";
 import TestAuth from "@/pages/TestAuth";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -135,6 +136,33 @@ function Router() {
         {user ? (
           <ProtectedRouteGuard>
             <OrganisationDashboardPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <div className="min-h-screen flex flex-col bg-white">
+            <main className="flex-grow container mx-auto px-4 py-12">
+              <div className="max-w-2xl mx-auto text-center">
+                <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
+                <p className="text-gray-600 mb-6">You need to sign in to access this page.</p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button 
+                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                    onClick={() => navigate("/auth")}
+                  >
+                    Sign In
+                  </Button>
+                </div>
+              </div>
+            </main>
+            <SiteFooter />
+          </div>
+        )}
+      </Route>
+      
+      {/* Organisation Heuristics - authenticated users only */}
+      <Route path="/organisations/:orgId/heuristics">
+        {user ? (
+          <ProtectedRouteGuard>
+            <OrganisationHeuristicsPage />
           </ProtectedRouteGuard>
         ) : (
           <div className="min-h-screen flex flex-col bg-white">
