@@ -1,0 +1,99 @@
+Prompt 3.1 — Fix Infinite Re-renders & Scaffold Heuristics Editor
+🎯 Goal
+Fix the “Too many re-renders” error when clicking View on an organisation.
+
+Scaffold the next story: add a placeholder Heuristics Editor in the Organisation Dashboard.
+
+✅ Checklist
+A. Fix Infinite Re-renders
+OrganisationListPage
+
+Ensure the View button uses an onClick handler only:
+
+jsx
+Copy
+Edit
+<Button onClick={() => navigate(`/organisations/${org.id}`)}>
+  View
+</Button>
+Remove any navigate() calls inside JSX render or unguarded useEffect loops.
+
+App.tsx Redirect Logic
+
+Move all navigate() calls into a useEffect with proper guards:
+
+tsx
+Copy
+Edit
+useEffect(() => {
+  if (user && location === '/') {
+    navigate('/organisations');
+  }
+}, [user, location, navigate]);
+Do not call navigate() directly inside the component body or render.
+
+OrganisationDashboardPage
+
+Confirm no direct navigate() in render; only in event handlers (e.g. project card clicks).
+
+B. Scaffold Heuristics Editor
+Add “Edit Defaults” Button
+
+In OrganisationDashboardPage.tsx, below the defaults list, add:
+
+jsx
+Copy
+Edit
+<Button onClick={() => setIsEditorOpen(true)}>
+  Edit Defaults
+</Button>
+Placeholder Modal/Drawer
+
+Introduce state isEditorOpen and render:
+
+jsx
+Copy
+Edit
+{isEditorOpen && (
+  <Modal onClose={() => setIsEditorOpen(false)}>
+    <HeuristicsEditor 
+      defaults={defaults} 
+      onSave={(updated) => {
+        /* TODO: call PUT /api/organisations/:orgId/heuristics */
+        setIsEditorOpen(false);
+      }}
+    />
+  </Modal>
+)}
+Stub Component
+
+Create client/src/components/HeuristicsEditor.tsx with minimal props:
+
+tsx
+Copy
+Edit
+export function HeuristicsEditor({ defaults, onSave }) {
+  return (
+    <div>
+      <h2>Edit Organisation Defaults</h2>
+      {/* Render defaults in editable fields */}
+      <Button onClick={() => onSave(defaults)}>Save</Button>
+    </div>
+  );
+}
+✅ Definition of Done
+View button navigates to /organisations/:orgId without rendering errors.
+
+OrganisationDashboardPage renders normally.
+
+Edit Defaults button appears and opens the HeuristicsEditor stub modal.
+
+🧪 Smoke Tests
+Infinite Loop Fix
+
+Create an org, click View → you land on dashboard; no error in console.
+
+Heuristics Editor
+
+Click Edit Defaults → modal opens with stub UI; click Save → modal closes.
+

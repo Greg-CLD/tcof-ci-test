@@ -5,6 +5,10 @@
     "name": "Test TCOF",
     "description": "",
     "createdAt": "2025-05-05T21:54:17.822Z",
-    "updatedAt": "2025-05-05T21:54:17.822Z"
+    "updatedAt": "2025-05-06T05:25:57.105Z",
+    "sector": "education",
+    "orgType": "government",
+    "teamSize": "solo",
+    "currentStage": "define"
   }
 ]

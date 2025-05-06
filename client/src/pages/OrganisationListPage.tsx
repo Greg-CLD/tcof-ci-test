@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { Building, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,6 +23,7 @@ interface Organisation {
 export default function OrganisationListPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [location, navigate] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [formState, setFormState] = useState({
     name: "",
@@ -169,10 +170,11 @@ export default function OrganisationListPage() {
             <Card key={org.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <CardTitle>
-                    <Link href={`/organisations/${org.id}`} className="hover:text-tcof-primary transition-colors">
-                      {org.name}
-                    </Link>
+                  <CardTitle 
+                    className="hover:text-tcof-primary transition-colors cursor-pointer"
+                    onClick={() => navigate(`/organisations/${org.id}`)}
+                  >
+                    {org.name}
                   </CardTitle>
                   <Badge variant={org.role === 'owner' ? "default" : "outline"}>
                     {org.role}
@@ -186,10 +188,11 @@ export default function OrganisationListPage() {
                 {/* Additional content could go here, such as member count or stats */}
               </CardContent>
               <CardFooter className="flex justify-end">
-                <Button variant="outline" asChild>
-                  <Link href={`/organisations/${org.id}`}>
-                    View
-                  </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate(`/organisations/${org.id}`)}
+                >
+                  View
                 </Button>
               </CardFooter>
             </Card>
