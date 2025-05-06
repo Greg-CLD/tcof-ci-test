@@ -1,0 +1,25 @@
+#!/bin/sh
+# pre-commit hook that prevents deletion or corrupting of critical files
+# to run this manually: sh .husky/pre-commit
+
+# Check if the OrganisationListPage.tsx file exists and has a minimum size
+FILE="client/src/pages/OrganisationListPage.tsx"
+MIN_SIZE=200 # bytes
+
+if [ ! -f "$FILE" ]; then
+  echo "ERROR: $FILE does not exist. Commit aborted."
+  echo "This file is required for the organization management functionality."
+  exit 1
+fi
+
+# Get file size
+FILE_SIZE=$(wc -c < "$FILE")
+
+if [ "$FILE_SIZE" -lt "$MIN_SIZE" ]; then
+  echo "ERROR: $FILE is too small ($FILE_SIZE bytes). Minimum required size is $MIN_SIZE bytes."
+  echo "This suggests the file might be corrupted or most content deleted."
+  exit 1
+fi
+
+echo "Critical file check passed. $FILE exists and contains valid content."
+exit 0

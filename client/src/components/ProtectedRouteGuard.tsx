@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Redirect } from 'wouter';
+import { Redirect, useLocation } from 'wouter';
 import { useProjects } from '@/hooks/useProjects';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -15,6 +15,13 @@ interface ProtectedRouteGuardProps {
  */
 export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
   const { isLoading, isSelectedProjectProfileComplete, getSelectedProject } = useProjects();
+  const [location] = useLocation();
+  
+  // Bypass check for organization routes 
+  if (location.startsWith('/organisations')) {
+    console.log('ProtectedRouteGuard: Bypassing check for organisation route:', location);
+    return <>{children}</>;
+  }
   
   // Show nothing while loading
   if (isLoading) {
