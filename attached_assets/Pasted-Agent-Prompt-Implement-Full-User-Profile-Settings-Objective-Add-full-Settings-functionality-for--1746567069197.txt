@@ -1,0 +1,96 @@
+Agent Prompt: Implement Full User Profile Settings
+
+Objective
+Add full “Settings” functionality for user profiles, including update and delete endpoints on the backend and a corresponding UI on the frontend.
+
+Details to Implement
+
+Backend – Express Routes & Schema
+
+New Endpoints
+
+PUT /api/users/:id – update user fields
+
+DELETE /api/users/:id – delete user account
+
+Authentication & Authorization
+
+Only allow the authenticated user (or an admin) to update/delete their own record
+
+Return 403 for unauthorized attempts, 404 if user not found
+
+Fields & Validation
+
+Fields: username, email, password, avatarUrl, notificationPrefs (JSON), locale, timezone
+
+Enforce password strength (e.g. min-length, complexity)
+
+Restrict avatarUrl uploads to JPEG/PNG ≤1 MB
+
+CSRF Protection
+
+Integrate CSRF tokens on state-changing requests
+
+Database Migration
+
+If missing, alter users table to add columns: avatar_url, notification_prefs (JSON), locale, timezone
+
+Create & run a migration
+
+Frontend – Profile Settings Page
+
+UI Components
+
+Add editable form controls for each field under “Settings” tab
+
+“Change Password” inputs with confirmation field
+
+File‐upload control for avatar, with client‐side file-type/size validation
+
+Toggles or selects for notificationPrefs, locale, timezone
+
+Delete Account button with confirmation modal
+
+API Integration
+
+Call PUT /api/users/:id on “Save”
+
+Call DELETE /api/users/:id on confirm delete, then redirect to /auth
+
+Show success/error toasts for both
+
+State & UX
+
+After save, remain on “Settings” tab with a success toast
+
+Before delete, require a two-step confirmation modal (“Are you sure?” + “Type DELETE to confirm”)
+
+Testing
+
+Unit Tests
+
+Jest tests for the new backend routes (200, 400, 403, 404 scenarios)
+
+React Testing Library for the profile form component
+
+E2E Tests
+
+Playwright test for changing each field and verifying persistence
+
+Test delete flow with confirmation
+
+Implementation Checklist
+
+ Define and secure PUT /api/users/:id and DELETE /api/users/:id
+
+ Add missing columns and run migration
+
+ Build or extend the ProfilePage “Settings” tab with all controls
+
+ Integrate API calls and handle toasts
+
+ Add confirmation modal for delete
+
+ Write unit and E2E tests
+
+Please implement these changes and report back once all settings are functional, validated, and tested.

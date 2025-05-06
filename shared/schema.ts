@@ -125,13 +125,17 @@ export const outcomeProgress = pgTable("outcome_progress", {
 });
 
 // Users table - for authentication and user management
-// Note: This schema now matches the actual database structure
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 255 }).notNull().unique(),
   password: text("password").notNull(),
   email: varchar("email", { length: 255 }).unique(),
+  avatarUrl: varchar("avatar_url", { length: 255 }),
+  notificationPrefs: jsonb("notification_prefs").default('{}'),
+  locale: varchar("locale", { length: 50 }).default('en-US'),
+  timezone: varchar("timezone", { length: 50 }).default('UTC'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Plan metadata (serialized as JSON in DB, but with schema for validation)
@@ -265,7 +269,34 @@ export const outcomeSelectSchema = createSelectSchema(outcomes);
 export const outcomeProgressInsertSchema = createInsertSchema(outcomeProgress);
 export const outcomeProgressSelectSchema = createSelectSchema(outcomeProgress);
 
-export const userInsertSchema = createInsertSchema(users);
+// Enhance user schema with validations
+export const userInsertSchema = createInsertSchema(users, {
+  username: (schema) => schema.min(3, "Username must be at least 3 characters"),
+  email: (schema) => schema.email("Must provide a valid email"),
+  password: (schema) => schema.min(8, "Password must be at least 8 characters"),
+  avatarUrl: (schema) => schema.url().optional().nullable(),
+});
+
+// Custom update schema without required password and username
+export const userUpdateSchema = z.object({
+  email: z.string().email("Must provide a valid email").optional(),
+  avatarUrl: z.string().url().optional().nullable(),
+  notificationPrefs: z.record(z.boolean()).optional(),
+  locale: z.string().optional(),
+  timezone: z.string().optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
+});
+
+// Schema for password change
+export const passwordChangeSchema = z.object({
+  currentPassword: z.string(),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 export const userSelectSchema = createSelectSchema(users);
 
 export const planInsertSchema = createInsertSchema(plans);
@@ -293,6 +324,8 @@ export type InsertOutcomeProgress = z.infer<typeof outcomeProgressInsertSchema>;
 
 export type User = z.infer<typeof userSelectSchema>;
 export type InsertUser = z.infer<typeof userInsertSchema>;
+export type UpdateUser = z.infer<typeof userUpdateSchema>;
+export type PasswordChange = z.infer<typeof passwordChangeSchema>;
 
 export type Plan = z.infer<typeof planSelectSchema>;
 export type InsertPlan = z.infer<typeof planInsertSchema>;
