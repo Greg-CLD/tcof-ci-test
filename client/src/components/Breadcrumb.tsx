@@ -50,31 +50,32 @@ export function Breadcrumb() {
   });
 
   // Build crumbs
-  const crumbs: { href: string; label: string }[] = [
-    { href: "/", label: "Home" },
-    { href: "/organisations", label: "Organisations" },
-    // only if we have an orgId in the URL
-    ...(orgId
-      ? [{
-          href: `/organisations/${orgId}`,
-          label: orgLoading
-            ? "Loading..."
-            : orgError || !org
-              ? "Unknown Org"
-              : org.name
-        }]
-      : []),
-    // only if we have a projectId in the URL
-    ...(projectId
-      ? [{
-          href: `/organisations/${orgId}/projects/${projectId}`,
-          label: projLoading
-            ? "Loading..."
-            : projError || !proj
-              ? "Unknown Project"
-              : proj.name
-        }]
-      : []),
+  const crumbs: { href: string; label: string }[] = React.useMemo(() => {
+    const baseCrumbs = [{ href: "/", label: "Home" }];
+    if (location.startsWith("/organisations")) {
+      baseCrumbs.push({ href: "/organisations", label: "Organisations" });
+    }
+    if (orgId) {
+      baseCrumbs.push({
+        href: `/organisations/${orgId}`,
+        label: orgLoading ? "Loading..." : orgError || !org ? "Unknown Org" : org.name
+      });
+    }
+    if (projectId) {
+      baseCrumbs.push({
+        href: `/organisations/${orgId}/projects/${projectId}`,
+        label: projLoading ? "Loading..." : projError || !proj ? "Unknown Project" : proj.name
+      });
+    }
+    // additional sub-pages
+    if (location.endsWith("/profile/edit")) {
+      baseCrumbs.push({ href: "", label: "Edit Profile" });
+    }
+    if (location.includes("/tools/goal-mapping")) {
+      baseCrumbs.push({ href: "", label: "Goal Mapping" });
+    }
+    return baseCrumbs;
+  }, [location, org, orgLoading, orgError, proj, projLoading, projError, orgId, projectId]);
     // any deeper pages
     ...(location.endsWith("/profile/edit")
       ? [{ href: "", label: "Edit Profile" }]
