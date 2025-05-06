@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { Home, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -9,109 +9,77 @@ interface Project      { id: string; name: string; }
 
 export function Breadcrumb() {
   const [location] = useLocation();
-  // Wouter uses ":id" in your route, so we grab that and rename to orgId
-  const { id: orgId, projectId } = useParams<{
-    id?: string;
-    projectId?: string;
-  }>();
+  const { orgId, projectId } = useParams<{ orgId?: string; projectId?: string }>();
 
-  // Fetch org when we have an orgId
-  const {
-    data: org,
-    isLoading: orgLoading,
-    isError: orgError
-  } = useQuery<Organisation>({
+  // fetch organisation (falls back to ID)
+  const { data: org, isLoading: orgLoading } = useQuery({
     queryKey: ["organisation", orgId],
-    queryFn: async () => {
-      if (!orgId) throw new Error("No orgId");
-      const res = await apiRequest("GET", `/api/organisations/${orgId}`);
-      if (!res.ok) throw new Error("Failed to load org");
-      return res.json();
-    },
-    enabled: Boolean(orgId),
-    staleTime: 60_000
+    queryFn: () => apiRequest("GET", `/api/organisations/${orgId}`).then(r => r.json()),
+    enabled: !!orgId,
   });
 
-  // Fetch project when we have a projectId
-  const {
-    data: proj,
-    isLoading: projLoading,
-    isError: projError
-  } = useQuery<Project>({
+  // fetch project (falls back to ID)
+  const { data: proj, isLoading: projLoading } = useQuery({
     queryKey: ["project", projectId],
-    queryFn: async () => {
-      if (!projectId) throw new Error("No projectId");
-      const res = await apiRequest("GET", `/api/projects/${projectId}`);
-      if (!res.ok) throw new Error("Failed to load project");
-      return res.json();
-    },
-    enabled: Boolean(projectId),
-    staleTime: 60_000
+    queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()),
+    enabled: !!projectId,
   });
 
-  // Build crumbs
-  const crumbs: { href: string; label: string }[] = React.useMemo(() => {
-    const baseCrumbs = [{ href: "/", label: "Home" }];
+  const crumbs = useMemo(() => {
+    const c: { href: string; label: string }[] = [
+      { href: "/", label: "Home" },
+    ];
+
     if (location.startsWith("/organisations")) {
-      baseCrumbs.push({ href: "/organisations", label: "Organisations" });
+      c.push({ href: "/organisations", label: "Organisations" });
     }
+
     if (orgId) {
-      baseCrumbs.push({
+      c.push({
         href: `/organisations/${orgId}`,
-        label: orgLoading ? "Loading..." : orgError || !org ? "Unknown Org" : org.name
+        label: orgLoading
+          ? orgId
+          : org?.name || orgId
       });
     }
+
     if (projectId) {
-      baseCrumbs.push({
+      c.push({
         href: `/organisations/${orgId}/projects/${projectId}`,
-        label: projLoading ? "Loading..." : projError || !proj ? "Unknown Project" : proj.name
+        label: projLoading
+          ? projectId
+          : proj?.name || projectId
       });
     }
-    // additional sub-pages
+
+    // example sub-page
     if (location.endsWith("/profile/edit")) {
-      baseCrumbs.push({ href: "", label: "Edit Profile" });
+      c.push({ href: "", label: "Edit Profile" });
     }
+
     if (location.includes("/tools/goal-mapping")) {
-      baseCrumbs.push({ href: "", label: "Goal Mapping" });
+      c.push({ href: "", label: "Goal Mapping" });
     }
-    return baseCrumbs;
-  }, [location, org, orgLoading, orgError, proj, projLoading, projError, orgId, projectId]);
-    // any deeper pages
-    ...(location.endsWith("/profile/edit")
-      ? [{ href: "", label: "Edit Profile" }]
-      : []),
-    ...(location.includes("/tools/goal-mapping")
-      ? [{ href: "", label: "Goal Mapping" }]
-      : []),
-    // add other tool crumbs here...
-  ];
+
+    return c;
+  }, [location, orgId, projectId, org, proj, orgLoading, projLoading]);
 
   return (
-    <nav
-      aria-label="Breadcrumb"
-      className="flex items-center text-sm text-gray-500 mb-4 overflow-x-auto px-4"
-    >
+    <nav className="flex items-center text-sm text-gray-500 mb-4 overflow-x-auto px-4" aria-label="Breadcrumb">
       {crumbs.map((crumb, idx) => (
         <span key={crumb.href + idx} className="flex items-center">
           <Link
             href={crumb.href || location}
-            className={`hover:text-tcof-teal ${
-              idx === crumbs.length - 1 ? "font-medium text-tcof-dark" : ""
-            }`}
+            className={idx === crumbs.length - 1 ? "font-medium text-tcof-dark" : "hover:text-tcof-teal"}
             aria-current={idx === crumbs.length - 1 ? "page" : undefined}
           >
-            {idx === 0 ? (
-              <Home className="inline h-4 w-4" aria-hidden="true" />
-            ) : (
-              crumb.label
-            )}
-            {idx === 0 && <span className="sr-only">Home</span>}
+            {idx === 0
+              ? <Home className="inline h-4 w-4" />
+              : crumb.label
+            }
           </Link>
           {idx < crumbs.length - 1 && (
-            <ChevronRight
-              className="h-4 w-4 mx-1"
-              aria-hidden="true"
-            />
+            <ChevronRight className="h-4 w-4 mx-1" />
           )}
         </span>
       ))}

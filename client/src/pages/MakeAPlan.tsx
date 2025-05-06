@@ -4,16 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
-import { ClipboardList, Clock, Award, ChevronRight, ArrowLeft } from "lucide-react";
+import { ClipboardList, Clock, Award, ChevronRight, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useProgress } from "@/contexts/ProgressContext";
 
 export default function MakeAPlan() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
+  const { progress } = useProgress();
   const isAuthorized = isAuthenticated('starter-access') || !!user;
+  
+  // Check if all three prerequisite tools are completed
+  const allThreeCompleted = 
+    progress?.tools?.goalMapping?.completed &&
+    progress?.tools?.cynefinOrientation?.completed &&
+    progress?.tools?.tcofJourney?.completed;
   
   // Fetch project details if projectId is provided
   const { 
@@ -128,57 +136,82 @@ export default function MakeAPlan() {
       {/* Intro Section */}
       <section className="py-12 container mx-auto px-4">
         <div className="max-w-4xl mx-auto bg-gradient-to-r from-tcof-light to-white p-8 rounded-xl shadow-md">
-          <h2 className="text-2xl font-bold mb-6 text-tcof-dark">Step-by-Step Planning Tool</h2>
-          <p className="text-gray-700 mb-6">
-            Based on your current position in the delivery journey, this tool will guide you through creating a
-            comprehensive action plan tailored to your specific context and challenges.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-tcof-light rounded-full flex items-center justify-center mb-4">
-                <ClipboardList className="h-8 w-8 text-tcof-teal" />
+          {allThreeCompleted ? (
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold mb-4 text-tcof-dark">
+                Congratulations on getting your bearings!
+              </h2>
+              <div className="flex items-center justify-center mb-8">
+                <CheckCircle2 className="text-green-500 h-12 w-12 mr-3" />
+                <p className="text-gray-700 text-lg">
+                  You've completed all the prerequisite tools. Now you're ready to create your plan!
+                </p>
               </div>
-              <h3 className="font-bold mb-2">Structured Process</h3>
-              <p className="text-sm text-gray-600">Follow a proven methodology to create your delivery plan</p>
+              <Button 
+                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white px-6 py-3 text-lg"
+                onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}
+              >
+                Go to Block 1 <ChevronRight className="h-5 w-5 ml-2" />
+              </Button>
             </div>
-            
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-tcof-light rounded-full flex items-center justify-center mb-4">
-                <Clock className="h-8 w-8 text-tcof-teal" />
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold mb-6 text-tcof-dark">Step-by-Step Planning Tool</h2>
+              <p className="text-gray-700 mb-6">
+                Based on your current position in the delivery journey, this tool will guide you through creating a
+                comprehensive action plan tailored to your specific context and challenges.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-tcof-light rounded-full flex items-center justify-center mb-4">
+                    <ClipboardList className="h-8 w-8 text-tcof-teal" />
+                  </div>
+                  <h3 className="font-bold mb-2">Structured Process</h3>
+                  <p className="text-sm text-gray-600">Follow a proven methodology to create your delivery plan</p>
+                </div>
+                
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-tcof-light rounded-full flex items-center justify-center mb-4">
+                    <Clock className="h-8 w-8 text-tcof-teal" />
+                  </div>
+                  <h3 className="font-bold mb-2">Save Time</h3>
+                  <p className="text-sm text-gray-600">Our templates and guidance help you plan efficiently</p>
+                </div>
+                
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-tcof-light rounded-full flex items-center justify-center mb-4">
+                    <Award className="h-8 w-8 text-tcof-teal" />
+                  </div>
+                  <h3 className="font-bold mb-2">Research-Based</h3>
+                  <p className="text-sm text-gray-600">Built on Oxford University's research on successful delivery</p>
+                </div>
               </div>
-              <h3 className="font-bold mb-2">Save Time</h3>
-              <p className="text-sm text-gray-600">Our templates and guidance help you plan efficiently</p>
-            </div>
-            
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-tcof-light rounded-full flex items-center justify-center mb-4">
-                <Award className="h-8 w-8 text-tcof-teal" />
+              
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8">
+                <p className="text-amber-800">
+                  <strong>Recommendation:</strong> Complete the tools in "Get Your Bearings" before using this planning tool for best results.
+                </p>
               </div>
-              <h3 className="font-bold mb-2">Research-Based</h3>
-              <p className="text-sm text-gray-600">Built on Oxford University's research on successful delivery</p>
-            </div>
-          </div>
-          
-          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8">
-            <p className="text-amber-800">
-              <strong>Recommendation:</strong> Complete the tools in "Get Your Bearings" before using this planning tool for best results.
-            </p>
-          </div>
-          
-          <div className="text-center">
-            <Button 
-              variant="outline" 
-              className="border-tcof-teal text-tcof-teal hover:bg-tcof-light mr-4"
-              onClick={() => navigate(projectId ? `/get-your-bearings/${projectId}` : "/get-your-bearings")}
-            >
-              First, Get Your Bearings
-            </Button>
-            
-            <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-              Coming Soon <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
+              
+              <div className="text-center">
+                <Button 
+                  variant="outline" 
+                  className="border-tcof-teal text-tcof-teal hover:bg-tcof-light mr-4"
+                  onClick={() => navigate(projectId ? `/get-your-bearings/${projectId}` : "/get-your-bearings")}
+                >
+                  First, Get Your Bearings
+                </Button>
+                
+                <Button 
+                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                  disabled={true}
+                >
+                  Complete Prerequisites First <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </section>
       
@@ -219,21 +252,23 @@ export default function MakeAPlan() {
         </div>
       </section>
       
-      {/* Coming Soon Banner */}
-      <section className="py-16 bg-gradient-to-r from-tcof-dark to-tcof-teal">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl text-white font-bold mb-4">Coming Soon</h2>
-          <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8">
-            Our planning tool is currently in development. Sign up to be notified when it launches.
-          </p>
-          <Button 
-            className="bg-white text-tcof-dark hover:bg-gray-100"
-            onClick={() => navigate("/auth")}
-          >
-            Create Account for Updates
-          </Button>
-        </div>
-      </section>
+      {/* Coming Soon Banner - shown only when prerequisites are not complete */}
+      {!allThreeCompleted && (
+        <section className="py-16 bg-gradient-to-r from-tcof-dark to-tcof-teal">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl text-white font-bold mb-4">Coming Soon</h2>
+            <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8">
+              Our planning tool is currently in development. Sign up to be notified when it launches.
+            </p>
+            <Button 
+              className="bg-white text-tcof-dark hover:bg-gray-100"
+              onClick={() => navigate("/auth")}
+            >
+              Create Account for Updates
+            </Button>
+          </div>
+        </section>
+      )}
     </>
   );
 }

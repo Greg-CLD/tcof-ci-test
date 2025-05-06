@@ -15,7 +15,7 @@ import MakeAPlanFull from "@/pages/MakeAPlanFull";
 import AdminPresetEditor from "@/pages/AdminPresetEditor";
 import AdminFactorEditor from "@/pages/AdminFactorEditor";
 import GraphExplorer from "@/pages/GraphExplorer";
-import Block1Discover from "@/pages/Block1Discover";
+import Block1Discover from "@/pages/make-a-plan/Block1Discover";
 import Block2Design from "@/pages/Block2Design";
 import Block3Deliver from "@/pages/Block3Deliver";
 import Block3Complete from "@/pages/Block3Complete";
@@ -36,7 +36,7 @@ import BasicProjectEditPage from "@/pages/BasicProjectEditPage";
 import TestAuth from "@/pages/TestAuth";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
-import { ProgressProvider } from "@/hooks/use-progress";
+import { ProgressProvider } from "@/contexts/ProgressContext";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ProtectedRouteGuard } from "@/components/ProtectedRouteGuard";
 import { Button } from "@/components/ui/button";
@@ -317,6 +317,11 @@ function Router() {
       <Route path="/make-a-plan/landing">
         <ProtectedRouteGuard>
           <MakeAPlanLanding />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/:projectId/block-1">
+        <ProtectedRouteGuard>
+          <Block1Discover />
         </ProtectedRouteGuard>
       </Route>
       <Route path="/make-a-plan/:projectId">

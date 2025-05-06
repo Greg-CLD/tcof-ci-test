@@ -1,0 +1,71 @@
+Objective:
+Enhance the Make A Plan flow so that once the user has completed all three prerequisite tools (Goal Mapping, Cynefin Orientation, TCOF Journey), the page displays a “Congratulations on getting your bearings!” message and a “Go to Block 1” button that navigates to /make-a-plan/:projectId/block-1. Otherwise, preserve the existing “Please complete Get Your Bearings first” fallback.
+
+Changes to implement:
+
+MakeAPlan.tsx (client/src/pages/MakeAPlan.tsx)
+
+Import the progress hook:
+
+ts
+Copy
+Edit
+import { useProgress } from "@/hooks/use-progress";
+After reading projectId and navigate, add:
+
+ts
+Copy
+Edit
+const { progress } = useProgress();
+const allThreeCompleted =
+  progress?.tools?.goalMapping?.completed &&
+  progress?.tools?.cynefinOrientation?.completed &&
+  progress?.tools?.tcofJourney?.completed;
+Replace the current render block with:
+
+tsx
+Copy
+Edit
+return (
+  <div className="container mx-auto p-8">
+    {allThreeCompleted ? (
+      <div className="text-center">
+        <h2 className="text-2xl font-semibold mb-4">
+          Congratulations on getting your bearings!
+        </h2>
+        <Button onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}>
+          Go to Block 1
+        </Button>
+      </div>
+    ) : (
+      <div className="text-center">
+        <h2 className="text-2xl font-semibold mb-4">
+          Please complete Get Your Bearings first.
+        </h2>
+        {/* Preserve existing fallback UI here */}
+      </div>
+    )}
+  </div>
+);
+Routing (client/src/App.tsx or wherever your routes live)
+
+Ensure a route exists for Block 1:
+
+tsx
+Copy
+Edit
+<Route path="/make-a-plan/:projectId/block-1">
+  <ProtectedRouteGuard>
+    <Block1Discover />
+  </ProtectedRouteGuard>
+</Route>
+If absent, add it immediately after your /make-a-plan/:projectId route.
+
+Verification:
+
+Test with a project where all three completion flags are true. The “congratulations” panel and button should appear.
+
+Click the button: you should land on the Block 1 page.
+
+Test again with incomplete flags: you should see the original “Please complete…” message.
+
