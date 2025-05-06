@@ -225,11 +225,14 @@ export default function OrganisationDashboardPage() {
   });
   
   // Handle project deletion
-  const handleDeleteProject = (projectId: string, event?: React.MouseEvent) => {
-    if (event) {
-      event.stopPropagation();
+  const handleDeleteProject = async (projectId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    console.log("Deleting project:", projectId);
+    try {
+      await deleteProjectMutation.mutateAsync(projectId);
+    } catch (error) {
+      console.error("Error deleting project:", error);
     }
-    deleteProjectMutation.mutate(projectId);
   };
 
   // Display error toasts using useEffect to prevent infinite re-renders
