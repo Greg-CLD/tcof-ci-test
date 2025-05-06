@@ -1,0 +1,78 @@
+🛠 Replit Agent Prompt — Root Redirect & Rogue Navigation FINAL FIX
+Hi Agent,
+
+Despite multiple patches, the app still forces every login (and /organisations request) to /get-your-bearings, then crashes with the infinite-update error.
+
+We need a root-level fix—no more work-arounds.
+
+✅ Mandatory Actions
+Audit for ANY reference to /get-your-bearings in client code
+
+Run a repo-wide search:
+
+nginx
+Copy
+Edit
+rg "/get-your-bearings"
+Delete or refactor every line that automatically navigates to that path.
+Likely offenders: legacy selectedProjectId loaders, old useEffect hooks, mis-configured guards.
+
+Centralize Redirect Logic in App.tsx
+
+Add one—and only one—post-login redirect:
+
+tsx
+Copy
+Edit
+const hasRedirected = useRef(false);
+if (user && location === '/' && !hasRedirected.current) {
+  hasRedirected.current = true;
+  navigate('/organisations');
+  return null;        // stop render loop
+}
+Remove any other “push to /get-your-bearings” or “push to /projects” logic scattered in components.
+
+Fix “Home” Route Once
+
+In SiteHeader.tsx:
+
+tsx
+Copy
+Edit
+const homePath = user ? '/organisations' : '/';
+<Link href={homePath}>Home</Link>
+No onClick override. Let wouter handle navigation.
+
+Guard Tool Pages
+
+At top of each tool page (GetYourBearings, MakeAPlan, etc.):
+
+ts
+Copy
+Edit
+if (!projectId) {
+  navigate('/organisations');
+  return null;
+}
+Ensure they have no extra redirects on mount.
+
+Add Failsafe Console Logs
+
+In App.tsx root: console.log('NAV', location)
+
+After fix, you must see: / → /organisations (once) → no automatic /get-your-bearings.
+
+Smoke Test
+
+Log in → lands on /organisations, header shows Home → Organisations nav works.
+
+Click Home → stays on /organisations.
+
+Typing /organisations in address bar does not redirect anywhere else.
+
+Navigate to a project and tool → still no rogue redirect.
+
+🔁 Reminder
+No DB changes expected. If you touch any models, create migration + run.
+
+Please implement this root fix and confirm smoke tests pass—then we can safely move back to the organisation story.

@@ -23,9 +23,9 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
   
   const selectedProject = getSelectedProject();
   
-  // If no project is selected or project profile is incomplete, redirect to project profile
+  // If no project is selected, redirect to organisations
   if (!selectedProject) {
-    return <Redirect to="/get-your-bearings" />;
+    return <Redirect to="/organisations" />;
   }
   
   if (!isSelectedProjectProfileComplete()) {
@@ -44,9 +44,9 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
           <Button 
             variant="default"
             className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-            onClick={() => window.location.href = `/get-your-bearings/project-profile?edit=${selectedProject.id}`}
+            onClick={() => window.location.href = `/projects/${selectedProject.id}`}
           >
-            Complete Project Profile
+            Go to Project
           </Button>
         </div>
       </div>

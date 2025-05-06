@@ -32,11 +32,11 @@ export default function ProjectBanner() {
   useEffect(() => {
     // List of paths that should display the project banner
     const projectContextPaths = [
-      '/get-your-bearings',
       '/make-a-plan',
       '/tools',
       '/dashboard',
       '/checklist',
+      '/projects'
     ];
     
     // Check if current path starts with any of the project context paths
@@ -137,7 +137,7 @@ export default function ProjectBanner() {
               size="sm" 
               variant="ghost" 
               className="ml-4 text-tcof-teal"
-              onClick={() => navigate('/get-your-bearings/project-profile')}
+              onClick={() => navigate('/organisations')}
             >
               <PlusCircle className="w-4 h-4 mr-1" />
               New Project
@@ -148,7 +148,7 @@ export default function ProjectBanner() {
                 size="sm" 
                 variant="ghost" 
                 className={`ml-2 ${!isProfileComplete ? "bg-yellow-50 text-amber-600" : "text-tcof-teal"}`}
-                onClick={() => navigate(`/get-your-bearings/project-profile?edit=${selectedProject.id}`)}
+                onClick={() => navigate(`/projects/${selectedProject.id}`)}
               >
                 <Briefcase className="w-4 h-4 mr-1" />
                 {isProfileComplete ? "Edit Profile" : "Complete Profile"}
