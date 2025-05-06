@@ -160,13 +160,27 @@ export const projectsDb = {
    * @param projectId Project ID
    * @returns The project or null if not found
    */
-  getProject: async (projectId: string): Promise<Project | null> => {
+  getProject: async (projectId: string | number): Promise<Project | null> => {
     try {
       // Load all projects
       const projects = loadProjects();
       
+      console.log(`Getting project with ID: ${projectId} (type: ${typeof projectId})`);
+      
+      // Convert numeric IDs to strings for comparison if needed
+      const searchId = typeof projectId === 'number' ? String(projectId) : projectId;
+      
       // Find project by ID
-      const project = projects.find(p => p.id === projectId);
+      const project = projects.find(p => {
+        console.log(`Comparing project ID: ${p.id} (${typeof p.id}) with searchId: ${searchId} (${typeof searchId})`);
+        return p.id === searchId || p.id === projectId;
+      });
+      
+      if (!project) {
+        console.log(`Project with ID ${projectId} not found`);
+      } else {
+        console.log(`Found project: `, project);
+      }
       
       return project || null;
     } catch (error) {
@@ -232,21 +246,40 @@ export const projectsDb = {
    * @param projectId Project ID
    * @returns Success status
    */
-  deleteProject: async (projectId: string): Promise<boolean> => {
+  deleteProject: async (projectId: string | number): Promise<boolean> => {
     try {
       // Load all projects
       const projects = loadProjects();
       
-      // Filter out the project to delete
-      const updatedProjects = projects.filter(p => p.id !== projectId);
+      console.log(`Deleting project with ID: ${projectId} (type: ${typeof projectId})`);
+      
+      // Convert numeric IDs to strings for comparison if needed
+      const searchId = typeof projectId === 'number' ? String(projectId) : projectId;
+      
+      // Show all projects for debugging
+      console.log('Current projects:', projects.map(p => ({ id: p.id, name: p.name })));
+      
+      // Filter out the project to delete, handling both string and number comparisons
+      const updatedProjects = projects.filter(p => {
+        // Keep projects that DON'T match the ID we want to delete
+        const keepProject = p.id !== searchId && p.id !== projectId;
+        if (!keepProject) {
+          console.log(`Found matching project to delete: ${p.id}`);
+        }
+        return keepProject;
+      });
       
       if (updatedProjects.length === projects.length) {
         // No project was removed
+        console.log(`No project found with ID ${projectId} to delete`);
         return false;
       }
       
       // Save updated projects list
-      return saveProjects(updatedProjects);
+      console.log(`Removing project ${projectId}, projects count: ${projects.length} -> ${updatedProjects.length}`);
+      const result = saveProjects(updatedProjects);
+      console.log(`Project deletion result: ${result}`);
+      return result;
     } catch (error) {
       console.error('Error deleting project:', error);
       return false;

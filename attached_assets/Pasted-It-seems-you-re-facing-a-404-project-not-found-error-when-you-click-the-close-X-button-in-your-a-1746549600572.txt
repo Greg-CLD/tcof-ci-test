@@ -1,0 +1,39 @@
+It seems you're facing a "404 project not found" error when you click the close (X) button in your application. This could be due to several reasons, such as the project ID not being retrieved correctly or the project not existing in your database.
+
+Here is a step-by-step approach to troubleshoot and possibly resolve the issue:
+
+Check Project ID: Ensure that the project ID is correctly being set and that it exists in your database. If you have a function that fetches project details, make sure it properly checks for the existence of the project before attempting to load it.
+
+Error Handling in Fetching: Examine the network requests made during this action. If the request to retrieve the project fails and returns a 404 status, log the project ID that is being used to fetch the details. This will help you ensure that the request is being made with the correct ID.
+
+Update State in Your Context: When a project is deleted or the selected project changes, ensure that your context updates properly. You have a setLocation function that redirects users if the project doesn't exist. Double-check that it's being called at the right point in your code.
+
+Here's a suggested update to the checkProjectExists function to log the project ID and handle the 404 error appropriately, in case your implementation is similar:
+
+const checkProjectExists = async () => {
+  const projectId = localStorage.getItem('selectedProjectId');
+  if (!projectId) return;
+  try {
+    const projects = await queryClient.fetchQuery({ 
+      queryKey: ['/api/projects'],
+      staleTime: 0
+    });
+    
+    const projectExists = Array.isArray(projects) && 
+      projects.some((project) => project.id === projectId);
+    
+    if (!projectExists) {
+      console.log('Selected project no longer exists, redirecting to home');
+      localStorage.removeItem('selectedProjectId');
+      setSelectedPlanId(null);
+      toast({
+        title: "Project Deleted",
+        description: "The project you were viewing has been deleted.",
+      });
+      setLocation('/');
+    }
+  } catch (error) {
+    console.error('Error checking if project exists:', error); // Log error for debugging
+  }
+};
+Make sure your API handles the project ID correctly, which is likely the source of the 404 error. If the problem persists, please provide additional context on how the project loading works, and I can assist you further.
