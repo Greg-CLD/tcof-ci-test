@@ -1,0 +1,49 @@
+Objective
+Users are still being bounced back to /organisations when they click any tool button on a project page (e.g. /organisations/…/projects/2).
+Fix the navigation so each button really lands on the tool route and stays there.
+
+Key facts you’ll need
+Button label (from ProjectOverview)	Target path that must work
+Get Your Bearings	/tools/goal-mapping/:projectId
+Make a Plan	/make-a-plan/:projectId
+Goal Mapping Tool	/tools/goal-mapping/:projectId
+Cynefin Orientation	/tools/cynefin-orientation/:projectId
+TCOF Journey	/tools/tcof-journey/:projectId
+
+ProjectOverview.tsx buttons currently write localStorage.setItem('currentProjectId', projectId) then call navigate("/tools/goal-mapping"), but the new route definitions expect the projectId in the URL.
+
+ProtectedRouteGuard still redirects to /organisations when getSelectedProject() returns null. That happens because selectedProjectId is coming from localStorage, not the URL parameter.
+
+Your tasks (one PR)
+Button fixes
+Change each navigate() so the projectId is part of the path exactly as the table shows.
+
+Guard improvement
+In ProtectedRouteGuard.tsx, if selectedProject is null, try to read projectId from useParams() (URL) before redirecting. If found, call setSelectedProjectId(projectId) so the guard lets the request through.
+
+Quick test script (Playwright)
+One happy-path e2e:
+
+Log in.
+
+Visit /organisations/<orgId>/projects/<projectId>.
+
+Click Get Your Bearings.
+
+Assert URL now matches /tools/goal-mapping/<projectId> and HTTP 200.
+
+Constraints
+Do not change any layout or header components.
+
+Do not remove existing profile-incomplete banner logic.
+
+Touch only: client/src/pages/ProjectOverview.tsx, client/src/components/ProtectedRouteGuard.tsx, and add the e2e test under tests/e2e/projectTools.spec.ts.
+
+Acceptance check-list
+All five buttons route to the correct tool URLs (manual test in browser).
+
+Refreshing the tool page no longer redirects to /organisations.
+
+New Playwright test passes in npm run test:e2e.
+
+No other routes or pages are affected.
