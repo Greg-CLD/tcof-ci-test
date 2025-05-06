@@ -1,7 +1,7 @@
-const { sql } = require('drizzle-orm');
-const { db } = require('../../db');
+import { sql } from 'drizzle-orm';
+import { db } from '../../db/index.js';
 
-async function runMigration() {
+export async function runMigration() {
   console.log('Starting migration: Adding organisation_id column to projects table');
   
   try {
@@ -25,7 +25,7 @@ async function runMigration() {
 }
 
 // For direct execution with Node.js
-if (require.main === module) {
+if (import.meta.url === process.argv[1]) {
   runMigration()
     .then(success => {
       if (success) {
@@ -41,5 +41,3 @@ if (require.main === module) {
       process.exit(1);
     });
 }
-
-module.exports = { runMigration };
