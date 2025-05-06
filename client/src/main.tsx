@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import * as ReactDOM from "react-dom";
 import App from "./App";
 import "./index.css";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Initialize accessibility testing in development mode
 if (import.meta.env.DEV) {
@@ -12,6 +13,10 @@ if (import.meta.env.DEV) {
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary
+      onError={(e) => console.error('Global error caught by ErrorBoundary:', e)}
+    >
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );

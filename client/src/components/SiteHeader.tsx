@@ -79,10 +79,9 @@ export default function SiteHeader() {
   };
   
   // Handle navigation and close mobile menu - WITHOUT causing re-renders
-  const handleNavigation = (e: React.MouseEvent) => {
-    // Just close the mobile menu, but let the Link component handle navigation
+  const handleNavigation = () => {
+    // ONLY close the mobile menu, let the Link component handle the navigation
     // This prevents the infinite loop caused by calling navigate()
-    e.preventDefault(); // This is important to prevent double navigation
     setMobileMenuOpen(false);
   };
   

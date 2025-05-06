@@ -1,0 +1,83 @@
+🔧 Replit Agent Prompt — Root-Cause Debug & Safe-Mode Guard
+Problem (still reproducible)
+No matter what URL I hit after login, the app redirects to /get-your-bearings and crashes with
+Maximum update depth exceeded.
+
+We have patched useEffect multiple times but the loop persists. We need a systematic approach:
+
+1️⃣ Add “Safe-Mode” Guard (temporary)
+In client/src/main.tsx (or root), wrap the entire app in an Error Boundary:
+
+tsx
+Copy
+Edit
+<ErrorBoundary
+  fallback={<h1>App Error – Safe Mode</h1>}
+  onError={(e)=> console.error('Global error', e)}
+>
+   <App />
+</ErrorBoundary>
+Inside the boundary, offer a “Go to /organisations” button so testers are not trapped.
+
+2️⃣ Instrument the Redirect Logic
+In App.tsx router section add:
+
+ts
+Copy
+Edit
+console.log('ROUTER MOUNT', { user, location });
+In every file that calls navigate() in a useEffect, log:
+
+ts
+Copy
+Edit
+console.log('NAVIGATE FROM', currentPath, 'TO', nextPath);
+Deploy and reproduce. Capture console log sequence and identify the first unexpected navigate().
+
+3️⃣ Likely Culprit to Fix
+If logs show GetYourBearings fires setSelectedProjectId every render → triggers state update → router redirect loop:
+
+Move the localStorage.setItem and setSelectedProjectId logic into a one-time action (e.g., when user selects a project, not inside tool page).
+
+In GetYourBearings.tsx remove any side-effects except data fetch.
+
+4️⃣ Hard-Stop Redirect Rule
+At the top of App.tsx routing:
+
+ts
+Copy
+Edit
+if (user && location === '/') {
+  navigate('/organisations');          // only once
+  return null;                         // DO NOT render a second time
+}
+Add a hasRedirectedRef to ensure this runs once per mount.
+
+5️⃣ Automated Regression Test
+Add Jest test:
+
+ts
+Copy
+Edit
+it('login redirects to /organisations only once', async () => {
+  const res = await supertest(app).post('/login').send({user:'t',pass:'t'});
+  expect(res.header.location).toBe('/organisations');
+});
+✅ Definition of Done
+Login lands at /organisations without ever touching /get-your-bearings automatically.
+
+Visiting /projects/:id → Get Your Bearings loads once, no runtime error.
+
+Console shows no repeated NAVIGATE logs.
+
+Error Boundary never triggers in normal flow.
+
+Reminder: no schema change expected, but any model edit → migration + apply.
+
+Please instrument, capture logs, identify the offending navigate loop, patch it, and confirm all smoke tests pass.
+
+
+
+
+
+
