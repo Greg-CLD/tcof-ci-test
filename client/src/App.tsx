@@ -308,6 +308,17 @@ function Router() {
         </ProtectedRouteGuard>
       </Route>
       
+      {/* Project Setup Page (for editing project profile) */}
+      <Route path="/projects/:projectId/setup">
+        {user ? (
+          <ProtectedRouteGuard>
+            <ProjectProfile editMode={true} />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
+      
       {/* Project Detail Page */}
       <Route path="/projects/:projectId">
         <ProtectedRouteGuard>

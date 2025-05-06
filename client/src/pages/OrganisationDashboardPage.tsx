@@ -314,7 +314,16 @@ export default function OrganisationDashboardPage() {
                           Created: {new Date(project.createdAt).toLocaleDateString()}
                         </p>
                       </CardContent>
-                      <CardFooter className="flex justify-end">
+                      <CardFooter className="flex justify-end gap-2">
+                        <Button 
+                          variant="default" 
+                          onClick={() => {
+                            console.log('Complete setup clicked for project:', project.id);
+                            navigate(`/projects/${project.id}/setup`);
+                          }}
+                        >
+                          Complete Setup
+                        </Button>
                         <Button 
                           variant="outline" 
                           onClick={() => navigateToProject(project.id)}
@@ -357,7 +366,16 @@ export default function OrganisationDashboardPage() {
                       Created: {new Date(project.createdAt).toLocaleDateString()}
                     </p>
                   </CardContent>
-                  <CardFooter className="flex justify-end">
+                  <CardFooter className="flex justify-end gap-2">
+                    <Button 
+                      variant="default" 
+                      onClick={() => {
+                        console.log('Complete setup clicked for project:', project.id);
+                        navigate(`/projects/${project.id}/setup`);
+                      }}
+                    >
+                      Complete Setup
+                    </Button>
                     <Button 
                       variant="outline" 
                       onClick={() => navigateToProject(project.id)}
