@@ -58,12 +58,20 @@ interface ProjectProfileProps {
 
 export default function ProjectProfile({ editMode = false }: ProjectProfileProps) {
   const [location, navigate] = useLocation();
-  const [, params] = useRoute('/get-your-bearings/project-profile');
-  const { projects, isLoading: projectsLoading, createProject, updateProject } = useProjects();
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   
-  // View/Edit state - default to view mode unless editMode prop is true
-  const [isEditing, setIsEditing] = useState(editMode);
+  // Get projectId from URL if available
+  const [matchesProfile] = useRoute('/projects/:projectId/profile/edit');
+  const [matchesSetup] = useRoute('/projects/:projectId/setup');
+  const [, profileParams] = useRoute('/projects/:projectId/profile/edit');
+  const [, setupParams] = useRoute('/projects/:projectId/setup');
+  
+  const { projects, isLoading: projectsLoading, createProject, updateProject } = useProjects();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    profileParams?.projectId || setupParams?.projectId || null
+  );
+  
+  // View/Edit state - default to edit mode if on /profile/edit or /setup route, or if editMode prop is true
+  const [isEditing, setIsEditing] = useState(editMode || matchesProfile || matchesSetup);
   
   const [isFormValid, setIsFormValid] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -145,30 +153,39 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
     }
   }, [projectsLoading, projects, navigate]);
 
-  // On mount, check query params and localStorage for projectId
+  // On mount, check localStorage for projectId if one is not already set from the route
   useEffect(() => {
-    // Check URL query parameters first (for edit mode)
-    const params = new URLSearchParams(window.location.search);
-    const editProjectId = params.get('edit');
+    // If we already have a selectedProjectId from the route, skip this step
+    if (selectedProjectId) {
+      console.log('Using projectId from route:', selectedProjectId);
+      return;
+    }
+    
+    // Check URL query parameters (for edit mode)
+    const queryParams = new URLSearchParams(window.location.search);
+    const editProjectId = queryParams.get('edit');
     
     if (editProjectId) {
       // If we have an edit parameter, set it as selected and enable edit mode
+      console.log('Loading project from query parameter:', editProjectId);
       setSelectedProjectId(editProjectId);
       setIsEditing(true);
     } else {
       // Otherwise, check localStorage for a selected project
       const storedProjectId = localStorage.getItem('selectedProjectId');
       if (storedProjectId) {
+        console.log('Loading project from localStorage:', storedProjectId);
         setSelectedProjectId(storedProjectId);
-        // Start in view mode by default
-        setIsEditing(false);
+        // Start in view mode by default, unless editMode prop is true
+        setIsEditing(editMode);
       } else {
         // If no project ID is found, redirect to dashboard
+        console.log('No project ID found, redirecting to dashboard');
         setIsRedirecting(true);
         navigate('/');
       }
     }
-  }, []);
+  }, [selectedProjectId, editMode, navigate]);
 
   // Fill form when project data is loaded from server
   useEffect(() => {
@@ -263,8 +280,8 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           description: 'Your project details have been updated successfully.',
         });
         
-        if (editMode) {
-          // When in setup mode, navigate back to organisation dashboard after successful update
+        if (editMode || matchesProfile || matchesSetup) {
+          // When in setup/edit mode, navigate back to organisation dashboard after successful update
           setTimeout(() => {
             const orgId = localStorage.getItem('selectedOrgId');
             navigate(orgId ? `/organisations/${orgId}` : '/organisations');
@@ -343,8 +360,8 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           variant="ghost" 
           className="mb-4 flex items-center text-tcof-teal"
           onClick={() => {
-            if (editMode) {
-              // Back to organisation dashboard when in setup mode
+            if (editMode || matchesProfile || matchesSetup) {
+              // Back to organisation dashboard when in setup/edit mode
               const orgId = localStorage.getItem('selectedOrgId');
               navigate(orgId ? `/organisations/${orgId}` : '/organisations');
             } else {
@@ -354,7 +371,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           }}
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          {editMode ? 'Back to Organisation' : 'Back to Get Your Bearings'}
+          {editMode || matchesProfile || matchesSetup ? 'Back to Organisation' : 'Back to Get Your Bearings'}
         </Button>
         
         {/* View mode - show static summary */}

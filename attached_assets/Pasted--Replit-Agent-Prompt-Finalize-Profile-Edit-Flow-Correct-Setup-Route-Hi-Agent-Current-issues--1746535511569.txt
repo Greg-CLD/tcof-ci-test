@@ -1,0 +1,87 @@
+🛠 Replit Agent Prompt — Finalize Profile-Edit Flow & Correct Setup Route
+Hi Agent,
+
+Current issues:
+
+“Complete setup” button in Organisation → Project card still navigates to /projects/:id instead of /projects/:id/profile/edit.
+
+On /projects/:id the “Complete Profile” button does nothing (stays on same page) even though route /projects/:id/profile/edit exists.
+
+/projects/:id/profile/edit renders only the banner, not the editable form.
+
+We need an end-to-end, fully working profile-edit flow.
+
+Required Fixes
+A Wire Correct Navigation
+OrganisationDashboardPage
+
+tsx
+Copy
+Edit
+<Button onClick={() => navigate(`/projects/${project.id}/profile/edit`)}>
+  Complete Setup
+</Button>
+ProjectBanner / ProjectPage
+
+“Complete Profile” button should call the same path.
+
+B Route Ordering
+In App.tsx ensure order:
+
+tsx
+Copy
+Edit
+<Route path="/projects/:projectId/profile/edit" component={ProjectProfilePage} />
+<Route path="/projects/:projectId" component={ProjectPage} />
+/profile/edit must precede the generic /projects/:id route or it’s swallowed.
+
+C ProjectProfilePage Edit Mode
+Accept editMode or detect path .includes('/profile/edit')
+
+On mount, run form.reset(project) to pre-fill.
+
+Render the full form (sector, orgType, stage, etc.) plus Save button.
+
+D Save Handler
+PUT /api/projects/:id with updated fields.
+
+OnSuccess:
+
+mark isProfileComplete=true.
+
+queryClient.invalidateQueries(['project', id])
+
+navigate('/projects/' + id).
+
+E Guard Logic
+In ProtectedRouteGuard (or ProjectProfileGate):
+
+ts
+Copy
+Edit
+if (!project.isProfileComplete && !path.includes('/profile/edit')) {
+  return <IncompleteBanner projectId={project.id} />;
+}
+F Quick Smoke Tests
+Login → Organisations → Project → Complete setup → lands on edit form.
+
+Fill required fields → Save → redirected to /projects/:id, banner gone.
+
+Tools (Get Your Bearings) now load without red gate.
+
+G Provide Evidence
+Path of updated files.
+
+Console log confirming navigate path.
+
+Screenshot or text output of successful PUT response.
+
+No DB schema changes; if you add isProfileComplete, ensure migration + default false for existing rows.
+
+Please implement and confirm flow end-to-end.
+
+
+
+
+
+
