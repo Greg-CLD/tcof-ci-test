@@ -51,7 +51,10 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
           <Button 
             variant="default"
             className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-            onClick={() => navigate(`/projects/${selectedProject.id}/profile/edit`)}
+            onClick={() => {
+              console.log('Navigating to edit profile for', selectedProject.id);
+              navigate(`/projects/${selectedProject.id}/profile/edit`);
+            }}
           >
             Complete Profile
           </Button>
