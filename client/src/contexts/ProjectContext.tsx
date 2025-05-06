@@ -1,16 +1,10 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 
-interface Project {
-  id: string;
-  name: string;
-  description: string | null;
-  organisationId: string;
-  createdAt: string;
-  isProfileComplete?: boolean;
-  // Other project fields can be added as needed
-  [key: string]: any;
-}
+import { Project as ProjectType } from '@/hooks/useProjects';
+
+// Use the same Project type from useProjects
+type Project = ProjectType;
 
 interface ProjectContextType {
   currentProject: Project | null;

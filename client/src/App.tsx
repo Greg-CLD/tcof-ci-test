@@ -64,6 +64,18 @@ const GoalMappingPage = () => {
     }
   }, [projectId, storedProjectId]);
   
+  // Handler for navigation back to the project
+  const handleBackToProject = () => {
+    // Get saved organisation ID from localStorage
+    const orgId = localStorage.getItem('currentOrgId');
+    if (orgId && projectId) {
+      navigate(`/organisations/${orgId}/projects/${projectId}`);
+    } else {
+      // Fallback to old path if no organization ID available
+      navigate(`/projects/${projectId}`);
+    }
+  };
+  
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
       <div className="mb-6 flex justify-between items-center">
@@ -71,7 +83,7 @@ const GoalMappingPage = () => {
         {projectId && (
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/projects/${projectId}`)}
+            onClick={handleBackToProject}
           >
             Back to Project
           </Button>
@@ -98,6 +110,18 @@ const CynefinOrientationPage = () => {
     }
   }, [projectId, storedProjectId]);
   
+  // Handler for navigation back to the project
+  const handleBackToProject = () => {
+    // Get saved organisation ID from localStorage
+    const orgId = localStorage.getItem('currentOrgId');
+    if (orgId && projectId) {
+      navigate(`/organisations/${orgId}/projects/${projectId}`);
+    } else {
+      // Fallback to old path if no organization ID available
+      navigate(`/projects/${projectId}`);
+    }
+  };
+  
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
       <div className="mb-6 flex justify-between items-center">
@@ -105,7 +129,7 @@ const CynefinOrientationPage = () => {
         {projectId && (
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/projects/${projectId}`)}
+            onClick={handleBackToProject}
           >
             Back to Project
           </Button>
@@ -132,6 +156,18 @@ const TCOFJourneyPage = () => {
     }
   }, [projectId, storedProjectId]);
   
+  // Handler for navigation back to the project
+  const handleBackToProject = () => {
+    // Get saved organisation ID from localStorage
+    const orgId = localStorage.getItem('currentOrgId');
+    if (orgId && projectId) {
+      navigate(`/organisations/${orgId}/projects/${projectId}`);
+    } else {
+      // Fallback to old path if no organization ID available
+      navigate(`/projects/${projectId}`);
+    }
+  };
+  
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
       <div className="mb-6 flex justify-between items-center">
@@ -139,7 +175,7 @@ const TCOFJourneyPage = () => {
         {projectId && (
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/projects/${projectId}`)}
+            onClick={handleBackToProject}
           >
             Back to Project
           </Button>
