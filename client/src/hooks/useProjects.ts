@@ -13,6 +13,7 @@ export interface Project {
   teamSize?: string;
   currentStage?: string;
   organisationId?: string;
+  isProfileComplete?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,9 +43,11 @@ export function useProject(projectId?: string) {
     queryKey: ['/api/projects', projectId],
     queryFn: async () => {
       if (!projectId) throw new Error('Project ID is required');
-      const response = await fetch(`/api/projects?id=${projectId}`);
+      // Use the projects-detail endpoint which is specifically for single project retrieval
+      const response = await apiRequest("GET", `/api/projects-detail/${projectId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch project details');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch project details');
       }
       return response.json();
     },

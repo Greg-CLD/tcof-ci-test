@@ -1,0 +1,111 @@
+🛠 Replit Agent – Break-Fix: Profile Edit Still Stuck
+Context
+
+“Complete Setup” now routes to /projects/:id/profile/edit, but
+
+the edit page only shows the banner (no form)
+
+clicking Complete Profile does nothing
+
+guard still thinks the profile is incomplete and blocks everything.
+
+We’ve tried several small tweaks; let’s take a holistic, fail-safe approach:
+
+1 Render the Profile Form (not just banner)
+ProjectProfilePage / ProjectProfile.tsx
+
+Detect edit path:
+
+ts
+Copy
+Edit
+const isEditRoute = location.includes('/profile/edit');
+If isEditRoute, always render <ProjectProfileForm … /> (sector, orgType, teamSize, currentStage, etc.) and skip the completeness banner.
+
+tsx
+Copy
+Edit
+if (isEditRoute) {
+  return (
+    <ProjectProfileForm
+      project={project}
+      onSuccess={(updated) => {
+        queryClient.invalidateQueries(['project', project.id]);
+        navigate(`/projects/${project.id}`);
+      }}
+    />
+  );
+}
+2 Mutation: Mark Profile Complete
+In the PUT /api/projects/:id handler & updateProject mutation:
+
+After validating required fields, set is_profile_complete = true.
+
+Return the updated project with that flag.
+
+Add migration if column missing:
+
+sql
+Copy
+Edit
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_profile_complete boolean DEFAULT false;
+3 Guard Logic
+ProtectedRouteGuard.tsx (or ProjectProfileGate)
+
+ts
+Copy
+Edit
+const path = location.pathname;
+if (!project.isProfileComplete && !path.includes('/profile/edit')) {
+  return (
+    <AlertIncomplete
+      projectId={project.id}
+      onComplete={() => navigate(`/projects/${project.id}/profile/edit`)}
+    />
+  );
+}
+No redirects or navigate loops inside the guard itself.
+
+4 Route Ordering (double-check)
+tsx
+Copy
+Edit
+<Route path="/projects/:projectId/profile/edit" component={ProjectProfilePage} />
+<Route path="/projects/:projectId"              component={ProjectPage} />
+5 Smoke / Regression Tests
+Add Playwright test profile-edit.spec.ts:
+
+Login → org → project card → Complete Setup.
+
+Expect /profile/edit URL and form inputs present.
+
+Fill sector, orgType, stage → click Save.
+
+Expect redirect to /projects/:id and banner not visible.
+
+Navigate to /get-your-bearings/:id → page loads (no block).
+
+Add Jest unit test for isProjectProfileComplete to cover “other + customSector” edge case.
+
+6 Safety Net – Page Deletion Guard
+Add a Husky pre-commit hook:
+
+bash
+Copy
+Edit
+#!/usr/bin/env sh
+# .husky/pre-commit
+if git diff --cached --name-status | grep -E 'D.*client/src/pages/OrganisationListPage.tsx'; then
+  echo "🛑  Critical page deletion detected. Commit aborted."
+  exit 1
+fi
+Deliverables
+Updated ProjectProfilePage, guard, router.
+
+Migration for is_profile_complete.
+
+Playwright & Jest tests.
+
+Confirmation (gif / screenshot or console logs) that the flow now works.
+
+Please implement end-to-end and confirm.
