@@ -18,6 +18,13 @@ export default function GetYourBearings() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
+  // Redirect to projects page if no projectId
+  useEffect(() => {
+    if (!projectId && !projectsLoading) {
+      navigate("/projects");
+    }
+  }, [projectId, projectsLoading, navigate]);
+  
   // Fetch project details if projectId is provided
   const { 
     data: project, 
@@ -60,16 +67,19 @@ export default function GetYourBearings() {
       <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
       <p className="text-gray-600 mb-6">You need to sign in or enter the access password to use these tools.</p>
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Link href="/auth">
-          <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-            Sign In
-          </Button>
-        </Link>
-        <Link href="/tools/starter-access">
-          <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light">
-            Enter Access Password
-          </Button>
-        </Link>
+        <Button 
+          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+          onClick={() => navigate("/auth")}
+        >
+          Sign In
+        </Button>
+        <Button 
+          variant="outline" 
+          className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
+          onClick={() => navigate("/tools/starter-access")}
+        >
+          Enter Access Password
+        </Button>
       </div>
     </div>
   );
@@ -129,11 +139,12 @@ export default function GetYourBearings() {
                     <li>When your team lacks clear direction</li>
                     <li>To align stakeholders on desired outcomes</li>
                   </ul>
-                  <Link href="/tools/goal-mapping">
-                    <Button className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                      Start Goal Mapping
-                    </Button>
-                  </Link>
+                  <Button 
+                    className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                    onClick={() => navigate(projectId ? `/tools/goal-mapping/${projectId}` : "/tools/goal-mapping")}
+                  >
+                    Start Goal Mapping
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -153,11 +164,12 @@ export default function GetYourBearings() {
                     <li>To determine appropriate planning method</li>
                     <li>Before committing to a delivery strategy</li>
                   </ul>
-                  <Link href="/tools/cynefin-orientation">
-                    <Button className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                      Start Cynefin Assessment
-                    </Button>
-                  </Link>
+                  <Button 
+                    className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                    onClick={() => navigate(projectId ? `/tools/cynefin-orientation/${projectId}` : "/tools/cynefin-orientation")}
+                  >
+                    Start Cynefin Assessment
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -177,11 +189,12 @@ export default function GetYourBearings() {
                     <li>To assess progress in your delivery</li>
                     <li>To identify appropriate next steps</li>
                   </ul>
-                  <Link href="/tools/tcof-journey">
-                    <Button className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                      Start Journey Assessment
-                    </Button>
-                  </Link>
+                  <Button 
+                    className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                    onClick={() => navigate(projectId ? `/tools/tcof-journey/${projectId}` : "/tools/tcof-journey")}
+                  >
+                    Start Journey Assessment
+                  </Button>
                 </div>
               </CardContent>
             </Card>
