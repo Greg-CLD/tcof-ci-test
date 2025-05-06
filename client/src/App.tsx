@@ -83,29 +83,18 @@ function Router() {
   useEffect(() => {
     // Extract org ID from location if present
     const orgIdMatch = location.match(/\/organisations\/([^\/]+)/);
-    const orgIdParam = orgIdMatch ? orgIdMatch[1] : null;
     
     // If user is authenticated and at home route, redirect to organisations
     if (user && location === '/') {
       navigate("/organisations");
-      return;
-    }
-    
-    // Allow user to access organization list and dashboard if authenticated
-    if (user && location === '/organisations') {
-      // let them use the org list
-      return;
-    }
-    
-    if (user && orgIdParam && location === `/organisations/${orgIdParam}`) {
-      // allow dashboard
-      return;
     }
     
     // If user is not authenticated and tries to access restricted routes
     if (!user && (location === '/organisations' || location.startsWith('/organisations/'))) {
       navigate("/");
     }
+    
+    // Note: We don't need to return early for authenticated routes as that's handled by the Route components
   }, [user, location, navigate]);
   
   return (
