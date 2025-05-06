@@ -370,7 +370,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-4 mt-6">
-                    <Link href="/get-your-bearings">
+                    <Link href="/organisations">
                       <Button variant="outline" className="border-tcof-teal text-tcof-dark hover:bg-tcof-teal/10">
                         Learn About Our Tools
                       </Button>
@@ -471,7 +471,7 @@ export default function Home() {
                           <span className="text-gray-600">Determine your current journey stage</span>
                         </li>
                       </ul>
-                      <Link href="/get-your-bearings">
+                      <Link href="/auth">
                         <Button className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white">
                           Get Your Bearings <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>

@@ -224,10 +224,10 @@ export default function ProjectPage() {
                             variant="outline" 
                             className="justify-start"
                             onClick={() => {
-                              console.log(`Navigating to Get Your Bearings with projectId: ${projectId}`);
+                              console.log(`Navigating to Goal Mapping tool with projectId: ${projectId}`);
                               // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
-                              navigate(`/get-your-bearings`);
+                              navigate("/tools/goal-mapping");
                             }}
                           >
                             Get Your Bearings
