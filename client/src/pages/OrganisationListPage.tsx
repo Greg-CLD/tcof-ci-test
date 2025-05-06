@@ -37,11 +37,15 @@ export default function OrganisationListPage() {
   const { data: organisations = [], isLoading, error } = useQuery({
     queryKey: ["/api/organisations"], 
     queryFn: async () => {
+      console.log("Fetching organisations from API...");
       const res = await apiRequest("GET", "/api/organisations");
       if (!res.ok) {
+        console.error("Failed to fetch organisations:", res.status, res.statusText);
         throw new Error("Failed to fetch organisations");
       }
-      return res.json();
+      const data = await res.json();
+      console.log("ORG QUERY", data);
+      return data;
     }
   });
 

@@ -1,0 +1,93 @@
+— Restore Organisation List & Fix Mis-Applied “Project Profile Incomplete” Guard
+Hi Agent,
+
+Two new problems:
+
+/organisations still renders blank (no cards, no “New Organisation” UI).
+
+Visiting /organisations sometimes shows the “Project Profile Incomplete – Go to project” gate, which should never fire at organisation level.
+
+We also see no sign of the promised pre-commit hook or test scripts.
+
+✅ Tasks to Complete
+1 — Restore Organisation List UI
+In OrganisationListPage.tsx
+
+Ensure the useQuery call hits GET /api/organisations.
+
+Add console log of the response; if array length > 0, render cards.
+
+If length === 0, render friendly “No organisations yet” plus “New Organisation” button.
+
+tsx
+Copy
+Edit
+{isLoading ? (
+   <div>Loading…</div>
+) : error ? (
+   <div className="text-red-600">Failed to load organisations</div>
+) : organisations.length === 0 ? (
+   <EmptyState />
+) : (
+   <OrgCardGrid orgs={organisations} />
+)}
+2 — Fix False “Project Profile Incomplete” Guard
+The guard lives in a shared component (likely ProjectProfileGate or similar) that wraps tool pages.
+
+It should NOT run on /organisations or organisation dashboard routes.
+
+Steps:
+
+Search for Project Profile Incomplete string.
+
+Confirm it is only imported in project-level pages (/projects/:id/*).
+
+Remove or conditionally bypass it when path starts with /organisations.
+
+Example guard patch:
+
+ts
+Copy
+Edit
+const path = window.location.pathname;
+if (path.startsWith('/organisations')) return children;   // bypass
+3 — Add Missing Safeguards
+Pre-commit hook:
+
+Place in .husky/pre-commit (if Husky installed)
+
+Deny commit if client/src/pages/OrganisationListPage.tsx is deleted or < 200 bytes.
+
+Jest snapshot (tests/pages/OrganisationListPage.test.tsx)
+
+Mock useQuery to return two orgs, expect snapshot to match.
+
+Playwright smoke test (tests/e2e/organisations.spec.ts)
+
+Login, go to /organisations, expect at least one .org-card.
+
+4 — Smoke Test Checklist (manual)
+Login → lands on /organisations.
+
+Existing organisations render, can add & delete with confirm dialog.
+
+No “Project profile incomplete” banner appears on organisation routes.
+
+Navigate into a project → project profile guard still works inside tools.
+
+5 — Logs & Confirmation
+Keep console.log('ORG QUERY', data) until verified.
+
+After successful fix, provide file paths of:
+
+OrganisationListPage.tsx (showing render logic)
+
+.husky/pre-commit (or script)
+
+Jest snapshot test
+
+Playwright spec
+
+Reminder: No schema change expected; if any model changes, update migrations & run them.
+
+Finish these tasks and confirm the smoke test passes.
