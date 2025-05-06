@@ -231,7 +231,7 @@ export default function ProjectPage() {
                               console.log(`Navigating to Goal Mapping tool with projectId: ${projectId}`);
                               // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
-                              navigate("/tools/goal-mapping");
+                              navigate(`/tools/goal-mapping/${projectId}`);
                             }}
                           >
                             Get Your Bearings
@@ -243,7 +243,7 @@ export default function ProjectPage() {
                               console.log(`Navigating to Make a Plan with projectId: ${projectId}`);
                               // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
-                              navigate(`/make-a-plan`);
+                              navigate(`/make-a-plan/${projectId}`);
                             }}
                           >
                             Make a Plan
@@ -271,7 +271,7 @@ export default function ProjectPage() {
                               console.log(`Navigating to Goal Mapping tool with projectId: ${projectId}`);
                               // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
-                              navigate("/tools/goal-mapping");
+                              navigate(`/tools/goal-mapping/${projectId}`);
                             }}
                           >
                             Goal Mapping Tool
@@ -283,7 +283,7 @@ export default function ProjectPage() {
                               console.log(`Navigating to Cynefin Orientation tool with projectId: ${projectId}`);
                               // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
-                              navigate("/tools/cynefin-orientation");
+                              navigate(`/tools/cynefin-orientation/${projectId}`);
                             }}
                           >
                             Cynefin Orientation
@@ -295,7 +295,7 @@ export default function ProjectPage() {
                               console.log(`Navigating to TCOF Journey tool with projectId: ${projectId}`);
                               // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
-                              navigate("/tools/tcof-journey");
+                              navigate(`/tools/tcof-journey/${projectId}`);
                             }}
                           >
                             TCOF Journey
