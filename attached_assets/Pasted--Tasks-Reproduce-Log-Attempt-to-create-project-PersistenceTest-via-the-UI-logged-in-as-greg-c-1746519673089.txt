@@ -1,0 +1,73 @@
+✅ Tasks
+Reproduce & Log
+
+Attempt to create project “PersistenceTest” via the UI (logged in as greg@confluity.co.uk).
+
+Capture the full stack trace in the server console.
+
+Fix the POST Handler (server/routes/organisations.js)
+
+Accept URL param organisationId = req.params.id.
+
+Body schema → only { name: string, description?: string }.
+
+Remove any requirement for organisationId in the body.
+
+Pass membership middleware (isOrgMember, isOrgOwner) and ensure it recognizes Greg as owner.
+
+Insert project row and return the inserted object.
+
+js
+Copy
+Edit
+router.post('/:id/projects', isOrgMember, async (req,res) => {
+  const organisationId = req.params.id;
+  const { name, description } = req.body;
+  if (!name?.trim()) return res.status(400).json({ message:'Name required' });
+
+  const newProject = await db.insert(projects).values({
+    name: name.trim(),
+    description: description?.trim() || null,
+    organisationId,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }).returning().then(r=>r[0]);
+
+  console.log('Inserted project:', newProject);
+  res.status(201).json(newProject);
+});
+Client Alignment (OrganisationDashboardPage.tsx)
+
+Mutation must send only { name, description } to
+POST /api/organisations/${orgId}/projects.
+
+On success:
+
+ts
+Copy
+Edit
+queryClient.invalidateQueries(['orgProjects', orgId]);
+Remove any extra refetch logic that may overwrite cache.
+
+Verify Persistence
+
+After mutation succeeds, reload /organisations/:orgId → project list shows “PersistenceTest”.
+
+Check server log: GET handler prints array containing the new project.
+
+Run direct curl GET endpoint; response contains “PersistenceTest”.
+
+Regression Check
+
+Create a second project; both remain after refresh.
+
+Non-owner users cannot create projects (403).
+
+🔍 Deliverables
+Brief explanation of the root cause (schema mismatch, membership failure, etc.).
+
+Confirmation logs showing insertion and subsequent GET with new project.
+
+Screenshots or console output of UI list persisting after reload.
+
+Implement these fixes and report results.

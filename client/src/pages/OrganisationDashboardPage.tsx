@@ -131,49 +131,17 @@ export default function OrganisationDashboardPage() {
     onSuccess: (newProject) => {
       console.log("Project created successfully:", newProject);
       
-      // Make sure organisationId is set in the newProject
-      const projectWithOrgId = {
-        ...newProject,
-        organisationId: orgId // Ensure this field is explicitly set
-      };
-      
-      console.log("Project with org ID confirmed:", projectWithOrgId);
-      
       // Reset form and close dialog
       setFormState({ name: "", description: "" });
       setIsCreateDialogOpen(false);
       
-      // Directly update the projects in cache first (optimistic update)
-      queryClient.setQueryData(
-        ['orgProjects', orgId],
-        (oldData: any) => {
-          console.log("Updating cache with current data:", oldData);
-          // If we have existing data, append the new project to it
-          // Make sure we don't overwrite with null or undefined
-          if (Array.isArray(oldData)) {
-            const newData = [...oldData, projectWithOrgId];
-            console.log("New projects array:", newData);
-            return newData;
-          } else {
-            // If we don't have existing data, create a new array with just this project
-            console.log("No existing data, setting new array with project");
-            return [projectWithOrgId];
-          }
-        }
-      );
-      
-      // Then force a background refetch to ensure consistency
+      // Simply invalidate the query to refetch fresh data from server
       queryClient.invalidateQueries({
-        queryKey: ['orgProjects', orgId],
-        // Don't refetch immediately to avoid UI flicker
-        refetchType: 'inactive'
+        queryKey: ['orgProjects', orgId]
       });
       
-      // Log the final state for debugging
-      setTimeout(() => {
-        const updatedProjects = queryClient.getQueryData(['orgProjects', orgId]);
-        console.log("Projects in cache after 500ms:", updatedProjects);
-      }, 500);
+      // Log success for debugging
+      console.log("Invalidated projects query to refetch latest data");
       
       toast({
         title: "Success",

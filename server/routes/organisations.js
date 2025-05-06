@@ -170,35 +170,29 @@ router.post('/:id/projects', isOrgMember, async (req, res) => {
     const organisationId = req.params.id;
     const { name, description } = req.body;
     
-    if (!name) {
+    if (!name?.trim()) {
       return res.status(400).json({ message: "Project name is required" });
     }
     
-    // Create the project with organization ID
+    // Create the project with organization ID - only using fields we know exist
     const [newProject] = await db.insert(projects)
       .values({
-        name,
-        description: description || '',
+        name: name.trim(),
+        description: description?.trim() || null,
         userId, // Include user ID as creator
         organisationId, // Set organization ID from URL parameter
+        sector: null, // Setting explicit nulls for fields that exist in the schema
+        customSector: null,
+        orgType: null,
+        teamSize: null,
+        currentStage: null,
+        selectedOutcomeIds: null,
         createdAt: new Date(),
         updatedAt: new Date()
       })
       .returning();
     
     console.log(`Created new project in organisation ${organisationId}:`, JSON.stringify(newProject));
-    
-    // Verify DB count for debugging
-    const count = await db.query.projects.count({
-      where: eq(projects.organisationId, organisationId)
-    });
-    console.log(`Project count for org ${organisationId}: ${count}`);
-    
-    // If the project was not successfully inserted, fail the request
-    if (count === 0) {
-      console.error(`Organization project insertion appears to have failed for org ${organisationId}`);
-      return res.status(500).json({ message: "Project creation failed - post-insertion verification failed" });
-    }
     
     return res.status(201).json(newProject);
   } catch (error) {
