@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "wouter";
+import React, { useEffect } from "react";
+import { useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
@@ -14,6 +14,13 @@ export default function MakeAPlan() {
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
   const isAuthorized = isAuthenticated('starter-access') || !!user;
+  
+  // Redirect to projects page if no projectId is provided
+  useEffect(() => {
+    if (!projectId) {
+      navigate("/projects");
+    }
+  }, [projectId, navigate]);
   
   // Fetch project details if projectId is provided
   const { 
@@ -41,16 +48,19 @@ export default function MakeAPlan() {
       <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
       <p className="text-gray-600 mb-6">You need to sign in or enter the access password to use these tools.</p>
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Link href="/auth">
-          <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-            Sign In
-          </Button>
-        </Link>
-        <Link href="/tools/starter-access">
-          <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light">
-            Enter Access Password
-          </Button>
-        </Link>
+        <Button 
+          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+          onClick={() => navigate("/auth")}
+        >
+          Sign In
+        </Button>
+        <Button 
+          variant="outline" 
+          className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
+          onClick={() => navigate("/tools/starter-access")}
+        >
+          Enter Access Password
+        </Button>
       </div>
     </div>
   );
@@ -133,11 +143,13 @@ export default function MakeAPlan() {
           </div>
           
           <div className="text-center">
-            <Link href="/get-your-bearings">
-              <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light mr-4">
-                First, Get Your Bearings
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              className="border-tcof-teal text-tcof-teal hover:bg-tcof-light mr-4"
+              onClick={() => navigate(projectId ? `/get-your-bearings/${projectId}` : "/get-your-bearings")}
+            >
+              First, Get Your Bearings
+            </Button>
             
             <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
               Coming Soon <ChevronRight className="h-4 w-4 ml-2" />
@@ -190,11 +202,12 @@ export default function MakeAPlan() {
           <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8">
             Our planning tool is currently in development. Sign up to be notified when it launches.
           </p>
-          <Link href="/auth">
-            <Button className="bg-white text-tcof-dark hover:bg-gray-100">
-              Create Account for Updates
-            </Button>
-          </Link>
+          <Button 
+            className="bg-white text-tcof-dark hover:bg-gray-100"
+            onClick={() => navigate("/auth")}
+          >
+            Create Account for Updates
+          </Button>
         </div>
       </section>
     </>
