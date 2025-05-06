@@ -15,10 +15,10 @@ export default function MakeAPlan() {
   const { user } = useAuth();
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Redirect to projects page if no projectId is provided
+  // Redirect to organisations page if no projectId is provided
   useEffect(() => {
     if (!projectId) {
-      navigate("/projects");
+      navigate("/organisations");
     }
   }, [projectId, navigate]);
   
