@@ -3,8 +3,10 @@ import { Project } from '@/hooks/useProjects';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Edit, Briefcase, Building2, Users, Activity, Clock, Target, Compass, Map } from 'lucide-react';
 import { useProgress } from '@/contexts/ProgressContext';
+import { useProjects } from '@/hooks/useProjects';
 
 interface ProjectProfileViewProps {
   project: Project | undefined;
@@ -15,6 +17,9 @@ interface ProjectProfileViewProps {
 export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfileViewProps) {
   // Get progress data from the context
   const { progress } = useProgress();
+  
+  // Get function to check if project profile is complete
+  const { isSelectedProjectProfileComplete } = useProjects();
   
   // Handle case where project is undefined
   if (!project) {
@@ -162,6 +167,16 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
             TCOF Journey
           </Badge>
         </div>
+        
+        {/* Prerequisite Completion */}
+        {!isSelectedProjectProfileComplete() && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTitle>Prerequisites Incomplete</AlertTitle>
+            <AlertDescription>
+              You must complete all three "Get Your Bearings" tools (Goal Mapping, Cynefin Orientation, TCOF Journey) before proceeding.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex items-start gap-3">
