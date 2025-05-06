@@ -1,0 +1,94 @@
+🛠️ Replit Agent Prompt – Ensure Project Persistence After Reload
+Context
+New projects appear momentarily but vanish after a full page reload at /organisations/5c1691a0-6412-4319-a547-6ea9347377b1/projects. We’ve confirmed the GET handler filters correctly by organisationId and the React Query key is correct. The likely culprit is the POST route not persisting—or the client using the wrong endpoint.
+
+✅ Your Tasks
+A. Backend Fixes
+Confirm or Create POST Endpoint
+
+If not already present, create POST /api/organisations/:id/projects in server/routes/organisations.js.
+
+Otherwise, ensure the existing POST handler for project creation honors the URL param :id as organisationId.
+
+Insert Logic
+
+In POST /api/organisations/:id/projects, do:
+
+js
+Copy
+Edit
+const organisationId = req.params.id;
+const { name, description } = req.body;
+const newProject = await db.insert(projects)
+  .values({ name, description, organisationId, createdAt: new Date(), updatedAt: new Date() })
+  .returning('*');
+Return res.status(201).json(newProject[0]);
+
+Debug Logging
+
+Temporarily add console.log('GET projects for org', organisationId, organisationProjects) in the GET handler to verify what the API returns on reload.
+
+Also log the inserted newProject in the POST handler.
+
+Database Check
+
+After insertion, immediately query the DB:
+
+js
+Copy
+Edit
+const count = await db.query.projects.count({ where: eq(projects.organisationId, organisationId) });
+console.log('Project count for org', organisationId, count);
+Fail the request (500) if count is 0, to catch broken logic.
+
+B. Frontend Alignment
+Use Correct Endpoint
+
+In OrganisationDashboardPage.tsx, ensure the project-creation mutation calls:
+
+ts
+Copy
+Edit
+apiRequest('POST', `/api/organisations/${orgId}/projects`, { name, description });
+Remove any calls to /api/projects for org-scoped creations.
+
+Invalidate & Refetch
+
+On mutation success:
+
+ts
+Copy
+Edit
+queryClient.invalidateQueries(['orgProjects', orgId]);
+setIsCreateDialogOpen(false);
+Optionally, immediately call:
+
+ts
+Copy
+Edit
+await queryClient.fetchQuery(['orgProjects', orgId]);
+C. Verification & Smoke Tests
+Manual Smoke Test
+
+As greg@confluity.co.uk, create “PersistenceTest”.
+
+Hard-refresh browser → “PersistenceTest” appears in the list.
+
+Backend Logs
+
+Check console logs for:
+
+The inserted newProject object.
+
+The organisationProjects array returned by GET on reload.
+
+The DB count for the organisation’s projects.
+
+✅ Definition of Done
+Hard reload at /organisations/5c1691a0-6412-4319-a547-6ea9347377b1/projects shows all created projects—including “PersistenceTest”—without exception.
+
+Console logs confirm correct insertion and retrieval from the database.
+
+No React errors or missing-row glitches.
+
+Please implement these changes and report back your findings from the logs and smoke tests.

@@ -159,5 +159,51 @@
       "stage": "initial"
     },
     "timestamp": "2025-05-06T07:47:04.466Z"
+  },
+  {
+    "id": "df894101-1a23-4223-9677-a468b00f6d51",
+    "fromId": "3",
+    "toId": "f52c1bee-b558-4573-b6e8-021a39ba5cb7",
+    "relType": "BELONGS_TO_PROJECT",
+    "projectId": "f52c1bee-b558-4573-b6e8-021a39ba5cb7",
+    "meta": {
+      "origin": "createProject"
+    },
+    "timestamp": "2025-05-06T07:58:08.605Z"
+  },
+  {
+    "id": "8cad9f44-4938-402f-abd1-d2185ab76031",
+    "fromId": "74bb2d06-fce9-4f59-95d1-6a3bfc377785",
+    "toId": "f52c1bee-b558-4573-b6e8-021a39ba5cb7",
+    "relType": "PLAN_FOR_PROJECT",
+    "projectId": "f52c1bee-b558-4573-b6e8-021a39ba5cb7",
+    "meta": {
+      "origin": "createProject",
+      "stage": "initial"
+    },
+    "timestamp": "2025-05-06T07:58:08.605Z"
+  },
+  {
+    "id": "bb2c9cbe-7dc1-4915-9330-40304511eb84",
+    "fromId": "3",
+    "toId": "88830659-5773-43d0-a8c2-556c09551239",
+    "relType": "BELONGS_TO_PROJECT",
+    "projectId": "88830659-5773-43d0-a8c2-556c09551239",
+    "meta": {
+      "origin": "createProject"
+    },
+    "timestamp": "2025-05-06T08:00:18.377Z"
+  },
+  {
+    "id": "f209d6fe-2279-4773-b777-82d520634e46",
+    "fromId": "7b45216a-4c55-4de7-b0f2-852ab6ddb95e",
+    "toId": "88830659-5773-43d0-a8c2-556c09551239",
+    "relType": "PLAN_FOR_PROJECT",
+    "projectId": "88830659-5773-43d0-a8c2-556c09551239",
+    "meta": {
+      "origin": "createProject",
+      "stage": "initial"
+    },
+    "timestamp": "2025-05-06T08:00:18.378Z"
   }
 ]
