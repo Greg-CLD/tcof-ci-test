@@ -340,9 +340,8 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
   
   // Determine if we should force show the edit form
   // Force edit form if URL path contains 'profile/edit' or 'setup'
-  const urlIncludesProfileEdit = location.includes('/profile/edit');
-  const urlIncludesSetup = location.includes('/setup');
-  const shouldForceEditForm = matchesProfile || matchesSetup || urlIncludesProfileEdit || urlIncludesSetup;
+  const shouldForceEditForm = matchesProfile || matchesSetup || 
+                             location.includes('/profile/edit') || location.includes('/setup');
   
   // Debug logging - Remove after fixing
   console.log('ProjectProfile Render Debug:', { 
@@ -351,8 +350,8 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
     isEditing, 
     matchesProfile: !!matchesProfile, 
     matchesSetup: !!matchesSetup,
-    urlIncludesProfileEdit,
-    urlIncludesSetup,
+    urlIncludesProfileEdit: location.includes('/profile/edit'),
+    urlIncludesSetup: location.includes('/setup'),
     shouldForceEditForm,
     projectId: project?.id || selectedProjectId
   });
@@ -364,7 +363,8 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           variant="ghost" 
           className="mb-4 flex items-center text-tcof-teal"
           onClick={() => {
-            if (editMode || matchesProfile || matchesSetup || urlIncludesProfileEdit || urlIncludesSetup) {
+            if (editMode || matchesProfile || matchesSetup || 
+                location.includes('/profile/edit') || location.includes('/setup')) {
               // Back to organisation dashboard when in setup/edit mode
               // First check if the project has an organisation ID
               if (project?.organisationId) {
@@ -381,7 +381,9 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           }}
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          {editMode || matchesProfile || matchesSetup || urlIncludesProfileEdit || urlIncludesSetup ? 'Back to Organisation' : 'Back to Get Your Bearings'}
+          {editMode || matchesProfile || matchesSetup || 
+           location.includes('/profile/edit') || location.includes('/setup') ? 
+           'Back to Organisation' : 'Back to Get Your Bearings'}
         </Button>
         
         {/* Conditional Rendering: Either show View or Edit Form */}
