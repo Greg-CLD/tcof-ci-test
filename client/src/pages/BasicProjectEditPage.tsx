@@ -133,6 +133,10 @@ export default function BasicProjectEditPage() {
       console.log('Updating project with data:', projectData);
       
       try {
+        // Add detailed logging before making the request
+        console.log('Updating project with ID:', projectId);
+        console.log('Update payload:', JSON.stringify(projectData, null, 2));
+        
         // Update existing project
         const updatedProject = await updateProject.mutateAsync({
           id: projectId,
@@ -176,6 +180,18 @@ export default function BasicProjectEditPage() {
         }, 1000);
       } catch (updateError) {
         console.error('Failed to update project:', updateError);
+        // Try to extract more details about the error
+        if (updateError instanceof Error) {
+          console.error('Error message:', updateError.message);
+          
+          // If it's a response with details
+          if ('response' in updateError) {
+            const responseError = updateError as any;
+            console.error('Response status:', responseError.response?.status);
+            console.error('Response data:', responseError.response?.data);
+          }
+        }
+        
         setIsSaved(false);
         throw updateError;
       }

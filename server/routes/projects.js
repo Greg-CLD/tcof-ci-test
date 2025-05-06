@@ -102,6 +102,109 @@ router.get("/:id", isAuthenticated, async (req, res) => {
 });
 
 /**
+ * PUT /api/projects/:id
+ * Update a specific project by ID
+ */
+router.put("/:id", isAuthenticated, async (req, res) => {
+  try {
+    console.log('Updating project', req.params.id, req.body);
+    
+    // Get the project ID as integer (since our schema uses serial)
+    const projectId = parseInt(req.params.id);
+    
+    if (isNaN(projectId)) {
+      console.error(`Invalid project ID format: ${req.params.id}`);
+      return res.status(400).json({ message: "Invalid project ID" });
+    }
+    
+    // First, check if project exists and user has permission
+    console.log(`Getting project with ID: ${projectId} (type: ${typeof projectId})`);
+    
+    // Find the project
+    const allProjects = await db.query.projects.findMany();
+    console.log("Available projects:", allProjects.map(p => ({ id: p.id, type: typeof p.id })));
+    
+    // Debug log to check all project IDs
+    for (const project of allProjects) {
+      console.log(`Comparing project ID: ${project.id} (${typeof project.id}) with searchId: ${projectId} (${typeof projectId})`);
+    }
+    
+    const project = await db.query.projects.findFirst({
+      where: eq(projects.id, projectId)
+    });
+    
+    if (!project) {
+      console.error(`Project with ID ${projectId} not found`);
+      return res.status(404).json({ message: "Project not found" });
+    }
+    
+    // Check if user is authorized to edit this project
+    if (project.organisationId) {
+      // For organisation projects, check membership
+      try {
+        const organisationId = project.organisationId;
+        const userId = req.user.id;
+        
+        // Check if user is a member of this org
+        const membership = await db.query.organisationMemberships.findFirst({
+          where: (memberships, { and, eq }) => 
+            and(
+              eq(memberships.userId, userId),
+              eq(memberships.organisationId, organisationId)
+            )
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ message: "You don't have permission to edit this project" });
+        }
+      } catch (error) {
+        console.error("Error checking org membership for project update:", error);
+        return res.status(500).json({ message: "Internal server error" });
+      }
+    } 
+    // For personal projects, check ownership
+    else if (project.userId !== req.user.id) {
+      return res.status(403).json({ message: "You don't have permission to edit this project" });
+    }
+    
+    // Extract the fields we want to update
+    const { sector, orgType, currentStage, customSector, isProfileComplete } = req.body;
+    
+    // Build update object with only provided fields
+    const updateData = {};
+    
+    // Only include fields that are provided in the request
+    if (sector !== undefined) updateData.sector = sector;
+    if (orgType !== undefined) updateData.orgType = orgType;
+    if (currentStage !== undefined) updateData.currentStage = currentStage;
+    if (customSector !== undefined) updateData.customSector = customSector;
+    if (isProfileComplete !== undefined) updateData.isProfileComplete = isProfileComplete;
+    
+    // Add lastUpdated field
+    updateData.lastUpdated = new Date();
+    
+    console.log('Updating project with data:', updateData);
+    
+    // Perform the update
+    const [updatedProject] = await db
+      .update(projects)
+      .set(updateData)
+      .where(eq(projects.id, projectId))
+      .returning();
+    
+    console.log('Project updated successfully:', updatedProject);
+    
+    return res.status(200).json(updatedProject);
+  } catch (error) {
+    console.error("Error updating project:", error);
+    return res.status(500).json({ 
+      message: "Internal server error", 
+      error: error.message 
+    });
+  }
+});
+
+/**
  * DELETE /api/projects/:id
  * Delete a specific project by ID
  */
