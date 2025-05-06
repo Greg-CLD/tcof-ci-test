@@ -34,7 +34,7 @@ export default function ProjectPage() {
   } = useQuery({
     queryKey: ['project', projectId],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/projects-detail/${projectId}`);
+      const res = await apiRequest("GET", `/api/projects/${projectId}`);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to fetch project details");
