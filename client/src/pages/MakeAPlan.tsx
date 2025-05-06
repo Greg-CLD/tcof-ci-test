@@ -8,6 +8,7 @@ import { ClipboardList, Clock, Award, ChevronRight, ArrowLeft, CheckCircle2 } fr
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProgress } from "@/contexts/ProgressContext";
+import { PlanProvider } from "@/contexts/PlanContext";
 
 export default function MakeAPlan() {
   const [location, navigate] = useLocation();

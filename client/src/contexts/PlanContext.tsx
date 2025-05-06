@@ -64,32 +64,9 @@ export const PlanProvider: React.FC<{children: ReactNode}> = ({children}) => {
       if (!projectId) return null;
       
       try {
-        const res = await apiRequest("GET", `/api/plans/${projectId}`);
+        const res = await apiRequest("GET", `/api/plans/project/${projectId}`);
         if (!res.ok) {
-          // If no plan exists yet, return a default empty plan structure
-          if (res.status === 404) {
-            return {
-              projectId,
-              blocks: {
-                block1: {
-                  successFactors: [],
-                  personalHeuristics: [],
-                  completed: false
-                },
-                block2: {
-                  tasks: [],
-                  stakeholders: [],
-                  completed: false
-                },
-                block3: {
-                  timeline: null,
-                  deliveryApproach: "",
-                  deliveryNotes: "",
-                  completed: false
-                }
-              }
-            };
-          }
+          console.error(`Failed to fetch plan: ${res.status} ${res.statusText}`);
           return null;
         }
         
@@ -105,9 +82,10 @@ export const PlanProvider: React.FC<{children: ReactNode}> = ({children}) => {
   // Mutation to save the entire plan
   const savePlanMutation = useMutation({
     mutationFn: async (planData: PlanData) => {
+      // Always use POST as our API handles both create and update
       const response = await apiRequest(
-        planData.id ? "PUT" : "POST",
-        planData.id ? `/api/plans/${planData.id}` : "/api/plans",
+        "POST",
+        "/api/plans",
         planData
       );
       
@@ -138,40 +116,72 @@ export const PlanProvider: React.FC<{children: ReactNode}> = ({children}) => {
     await savePlanMutation.mutateAsync(planData);
   };
   
+  // Mutation for updating just one block
+  const saveBlockMutation = useMutation({
+    mutationFn: async ({ planId, blockId, blockData }: { planId: string, blockId: string, blockData: any }) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/plans/${planId}/block/${blockId}`,
+        blockData
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to save block ${blockId}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ["plan", projectId]});
+      toast({
+        title: "Block saved",
+        description: "Your changes have been saved successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error saving block",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Save just one block of the plan
   const saveBlock = async (blockId: string, blockData: any) => {
     if (!plan) return;
     
-    const updatedPlan = {
-      ...plan,
-      blocks: {
-        ...plan.blocks,
-        [blockId]: {
-          ...plan.blocks[blockId as keyof typeof plan.blocks],
-          ...blockData
+    if (plan.id) {
+      // If the plan already exists, use the PATCH endpoint for the specific block
+      await saveBlockMutation.mutateAsync({
+        planId: plan.id,
+        blockId,
+        blockData
+      });
+    } else {
+      // If the plan doesn't exist yet, update the whole plan
+      const updatedPlan = {
+        ...plan,
+        blocks: {
+          ...plan.blocks,
+          [blockId]: {
+            ...plan.blocks[blockId as keyof typeof plan.blocks],
+            ...blockData
+          }
         }
-      }
-    };
-    
-    await savePlan(updatedPlan);
+      };
+      
+      await savePlan(updatedPlan);
+    }
   };
   
   // Mark a block as complete
   const markBlockComplete = async (blockId: string) => {
     if (!plan) return;
     
-    const updatedPlan = {
-      ...plan,
-      blocks: {
-        ...plan.blocks,
-        [blockId]: {
-          ...plan.blocks[blockId as keyof typeof plan.blocks],
-          completed: true
-        }
-      }
-    };
-    
-    await savePlan(updatedPlan);
+    // Use the saveBlock function that will either use PATCH for an existing plan
+    // or POST for a new plan
+    await saveBlock(blockId, { completed: true });
     
     toast({
       title: "Block completed",

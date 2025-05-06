@@ -137,10 +137,27 @@ export const users = pgTable("users", {
 // Plan metadata (serialized as JSON in DB, but with schema for validation)
 export const plans = pgTable("plans", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   userId: integer("user_id").references(() => users.id),
   name: varchar("name", { length: 255 }),
-  data: jsonb("data").notNull(),
+  blocks: jsonb("blocks").notNull().default(JSON.stringify({
+    block1: {
+      successFactors: [],
+      personalHeuristics: [],
+      completed: false
+    },
+    block2: {
+      tasks: [],
+      stakeholders: [],
+      completed: false
+    },
+    block3: {
+      timeline: null,
+      deliveryApproach: "",
+      deliveryNotes: "",
+      completed: false
+    }
+  })),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
