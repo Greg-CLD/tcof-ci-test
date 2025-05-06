@@ -279,7 +279,9 @@ function Router() {
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
       {/* Make sure we use the most specific routes first */}
-      <Route path="/get-your-bearings/project-profile" component={ProjectProfile} />
+      <Route path="/get-your-bearings/project-profile">
+        <ProjectProfile />
+      </Route>
       <Route path="/get-your-bearings/:projectId">
         <Redirect to="/organisations" />
       </Route>
@@ -349,7 +351,7 @@ function Router() {
       <Route path="/projects/:projectId/setup">
         {user ? (
           <ProtectedRouteGuard>
-            {() => <ProjectProfile editMode={true} />}
+            <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired />
@@ -383,7 +385,7 @@ function Router() {
       <Route path="/projects/:projectId/profile/edit">
         {user ? (
           <ProtectedRouteGuard>
-            {() => <ProjectProfile editMode={true} />}
+            <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired />
@@ -402,7 +404,7 @@ function Router() {
       <Route path="/organisations/:orgId/projects/:projectId/profile/edit">
         {user ? (
           <ProtectedRouteGuard>
-            {() => <ProjectProfile editMode={true} />}
+            <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired />

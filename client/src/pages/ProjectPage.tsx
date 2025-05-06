@@ -97,9 +97,11 @@ export default function ProjectPage() {
   
   // Handle edit project
   const handleEditProject = () => {
-    // Navigate to edit project page with current project ID
-    if (project) {
-      navigate(`/organisations/${project.organisationId}/projects/${projectId}/profile/edit`);
+    // Navigate to simplified edit project page with current project ID
+    if (project && project.organisationId) {
+      navigate(`/organisations/${project.organisationId}/projects/${projectId}/edit-basic`);
+    } else {
+      navigate(`/projects/${projectId}/edit-basic`);
     }
   };
 
