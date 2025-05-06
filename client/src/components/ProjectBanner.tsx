@@ -97,11 +97,15 @@ export default function ProjectBanner() {
   
   // Check if selected project has a complete profile
   const isProfileComplete = selectedProject ? (
-    !!selectedProject.name && 
-    !!selectedProject.sector && 
-    (selectedProject.sector !== 'other' || !!selectedProject.customSector) && 
-    !!selectedProject.orgType &&
-    !!selectedProject.currentStage
+    // First check the flag from the database
+    !!selectedProject.isProfileComplete || (
+      // Fallback calculation if flag not set in database
+      !!selectedProject.name && 
+      !!selectedProject.sector && 
+      (selectedProject.sector !== 'other' || !!selectedProject.customSector) && 
+      !!selectedProject.orgType &&
+      !!selectedProject.currentStage
+    )
   ) : false;
   
   if (!showBanner || !isAuthorized) {

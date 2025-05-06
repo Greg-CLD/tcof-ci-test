@@ -89,6 +89,13 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   // Add organisation reference as nullable foreign key
   organisationId: uuid("organisation_id").references(() => organisations.id, { onDelete: "cascade" }),
+  // Profile-related fields
+  sector: varchar("sector", { length: 100 }),
+  customSector: varchar("custom_sector", { length: 100 }),
+  orgType: varchar("org_type", { length: 100 }),
+  teamSize: varchar("team_size", { length: 100 }),
+  currentStage: varchar("current_stage", { length: 100 }),
+  isProfileComplete: boolean("is_profile_complete").default(false),
 });
 
 // Outcomes table - standard outcomes from the framework + custom user outcomes

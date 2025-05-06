@@ -216,7 +216,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
         orgType: data.orgType,
         teamSize: data.teamSize,
         currentStage: data.currentStage,
-        // Set isProfileComplete to true if all required fields are provided
+        // Set isProfileComplete to true when all required fields are filled
         isProfileComplete: true
       };
       

@@ -1,0 +1,74 @@
+🛠 Replit Agent Prompt – Structured Checklist to FIX “Complete Profile” Flow
+1 — Problem Statement
+Clicking “Complete Profile” on /projects/:id (and “Complete Setup” in org view) still does nothing.
+
+The route /projects/:projectId/profile/edit loads but only shows the banner—no form—and no save action works.
+
+2 — Expected Behavior
+“Complete Setup” button ⇒ /projects/:id/profile/edit.
+
+Edit form renders with all profile fields pre-filled.
+
+Save triggers PUT /api/projects/:id, sets isProfileComplete=true, invalidates query, and navigates to /projects/:id.
+
+Banner disappears; tools load without guard.
+
+3 — Technical Requirements
+Frontend
+
+Files:
+
+OrganisationDashboardPage.tsx (button path)
+
+ProjectPage.tsx (complete-profile button)
+
+ProjectProfilePage.tsx / form component
+
+ProtectedRouteGuard.tsx
+
+Verify router ordering in App.tsx (/profile/edit before generic /projects/:id).
+
+Backend
+
+Ensure is_profile_complete boolean column exists in projects table (add migration if missing).
+
+API PUT /api/projects/:id sets is_profile_complete=true when required fields are filled.
+
+React Query
+
+Invalidate ['project', id] and ['projects'] after update.
+
+Tests
+
+Jest: unit test isProjectProfileComplete.
+
+Playwright: flow test—create incomplete project, complete profile, assert banner gone.
+
+4 — System Safeguards
+Do NOT touch unrelated routes (/organisations, tool pages) or global layout components.
+
+Do NOT delete existing working pages.
+
+Add a pre-commit check to block deletion of ProjectProfilePage.tsx.
+
+5 — Post-Change Validation (manual)
+Login → Organisations → Project card → Complete Setup.
+
+URL shows /profile/edit; form visible.
+
+Fill sector, orgType, stage; click Save.
+
+Redirect to /projects/:id; no “Profile Incomplete” banner.
+
+Navigate to /get-your-bearings/:id; page loads (no guard).
+
+Deliverables / Audit
+Files modified (list paths).
+
+Migration file name (if added).
+
+Console log showing successful PUT response.
+
+Screenshot or description confirming banner removal.
+
+Locations of Jest & Playwright tests.
