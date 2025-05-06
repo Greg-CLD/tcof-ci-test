@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import SiteHeader from "@/components/SiteHeader";
@@ -7,23 +7,54 @@ import SiteFooter from "@/components/SiteFooter";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
 import { useProjects } from "@/hooks/useProjects";
-import { Compass, Map, GitBranch, PlusCircle, Briefcase } from "lucide-react";
+import { Compass, Map, GitBranch, PlusCircle, Briefcase, ArrowLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function GetYourBearings() {
   const [location, navigate] = useLocation();
+  const { projectId } = useParams<{ projectId?: string }>();
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
-  const { projects, isLoading } = useProjects();
+  const { projects, isLoading: projectsLoading } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Check for selectedProjectId in localStorage on mount
+  // Fetch project details if projectId is provided
+  const { 
+    data: project, 
+    isLoading: projectLoading 
+  } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: async () => {
+      if (!projectId) return null;
+      
+      console.log(`Fetching project details for: ${projectId}`);
+      const res = await apiRequest("GET", `/api/projects-detail/${projectId}`);
+      if (!res.ok) {
+        console.error("Failed to fetch project details");
+        return null;
+      }
+      return res.json();
+    },
+    enabled: !!projectId
+  });
+  
+  // Update selectedProjectId when projectId param changes
   useEffect(() => {
-    const storedProjectId = localStorage.getItem('selectedProjectId');
-    if (storedProjectId) {
-      setSelectedProjectId(storedProjectId);
+    if (projectId) {
+      console.log(`Setting selected project ID from URL param: ${projectId}`);
+      setSelectedProjectId(projectId);
+      localStorage.setItem('selectedProjectId', projectId);
+    } else {
+      // Check for selectedProjectId in localStorage when no projectId in URL
+      const storedProjectId = localStorage.getItem('selectedProjectId');
+      if (storedProjectId) {
+        console.log(`Setting selected project ID from localStorage: ${storedProjectId}`);
+        setSelectedProjectId(storedProjectId);
+      }
     }
-  }, []);
+  }, [projectId]);
   
   // Authentication check component
   const AuthCheck = () => (
@@ -50,14 +81,36 @@ export default function GetYourBearings() {
       <SiteHeader />
       
       <main className="flex-grow">
+        {projectId && (
+          <div className="container mx-auto px-4 py-4">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(`/projects/${projectId}`)}
+              className="mb-2"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
+            </Button>
+          </div>
+        )}
+        
         {/* Hero Section */}
         <section className="bg-gradient-to-b from-white to-tcof-light py-12">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4 text-tcof-dark">Get Your Bearings</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-4 text-tcof-dark">
+              {project ? `${project.name}: Get Your Bearings` : "Get Your Bearings"}
+            </h1>
             <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-6">
               Use these three tools to understand where you are and what you're trying to achieve
               before diving into your delivery journey.
             </p>
+            {project && (
+              <div className="bg-white shadow rounded-lg p-4 max-w-md mx-auto mb-6">
+                <p className="font-medium text-tcof-dark">Project Context:</p>
+                <p className="text-gray-600">
+                  {project.description || "No project description available"}
+                </p>
+              </div>
+            )}
             <div className="h-1 w-20 bg-tcof-teal mx-auto mb-12"></div>
           </div>
         </section>

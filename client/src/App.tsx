@@ -194,8 +194,18 @@ function Router() {
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/get-your-bearings" component={GetYourBearings} />
+      <Route path="/get-your-bearings/:projectId">
+        <ProtectedRouteGuard>
+          <GetYourBearings />
+        </ProtectedRouteGuard>
+      </Route>
       <Route path="/get-your-bearings/project-profile" component={ProjectProfile} />
       <Route path="/make-a-plan">
+        <ProtectedRouteGuard>
+          <MakeAPlan />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/:projectId">
         <ProtectedRouteGuard>
           <MakeAPlan />
         </ProtectedRouteGuard>
