@@ -319,7 +319,7 @@ export default function OrganisationDashboardPage() {
                           variant="default" 
                           onClick={() => {
                             console.log('Complete setup clicked for project:', project.id);
-                            navigate(`/projects/${project.id}/setup`);
+                            navigate(`/projects/${project.id}/profile/edit`);
                           }}
                         >
                           Complete Setup

@@ -15,7 +15,7 @@ interface ProtectedRouteGuardProps {
  */
 export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
   const { isLoading, isSelectedProjectProfileComplete, getSelectedProject } = useProjects();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   
   // Bypass check for organization routes and profile edit routes
   if (location.startsWith('/organisations') || location.includes('/profile/edit') || location.includes('/setup')) {
@@ -51,7 +51,7 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
           <Button 
             variant="default"
             className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-            onClick={() => window.location.href = `/projects/${selectedProject.id}/profile/edit`}
+            onClick={() => navigate(`/projects/${selectedProject.id}/profile/edit`)}
           >
             Complete Profile
           </Button>

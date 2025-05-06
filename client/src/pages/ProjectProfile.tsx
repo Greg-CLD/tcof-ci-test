@@ -314,8 +314,8 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
         
         // Wait a moment to show the saved state before navigating away
         setTimeout(() => {
-          if (editMode) {
-            // When in setup mode, navigate back to organisation dashboard after project creation
+          if (editMode || matchesProfile || matchesSetup) {
+            // When in setup/edit mode, navigate back to organisation dashboard after project creation
             const orgId = localStorage.getItem('selectedOrgId');
             navigate(orgId ? `/organisations/${orgId}` : '/organisations');
           } else {
