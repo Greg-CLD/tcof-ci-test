@@ -223,23 +223,34 @@ export default function ProjectPage() {
                           <Button 
                             variant="outline" 
                             className="justify-start"
-                            onClick={() => navigate(`/get-your-bearings/${projectId}`)}
+                            onClick={() => {
+                              console.log(`Navigating to Get Your Bearings with projectId: ${projectId}`);
+                              navigate(`/get-your-bearings/${projectId}`);
+                            }}
                           >
                             Get Your Bearings
                           </Button>
                           <Button 
                             variant="outline" 
                             className="justify-start"
-                            onClick={() => navigate(`/make-a-plan/${projectId}`)}
+                            onClick={() => {
+                              console.log(`Navigating to Make a Plan with projectId: ${projectId}`);
+                              navigate(`/make-a-plan/${projectId}`);
+                            }}
                           >
                             Make a Plan
                           </Button>
                           <Button 
                             variant="outline" 
                             className="justify-start"
-                            onClick={() => navigate(`/delegate-tasks/${projectId}`)}
+                            onClick={() => {
+                              console.log(`Navigating to Delegate Tasks with projectId: ${projectId}`);
+                              // Store projectId in localStorage to ensure it's available across pages
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate(`/projects/${projectId}/outcomes`);
+                            }}
                           >
-                            Delegate Tasks
+                            Outcomes & Delegation
                           </Button>
                         </div>
                       </div>

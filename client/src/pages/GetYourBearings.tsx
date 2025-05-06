@@ -141,7 +141,14 @@ export default function GetYourBearings() {
                   </ul>
                   <Button 
                     className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                    onClick={() => navigate(projectId ? `/tools/goal-mapping/${projectId}` : "/tools/goal-mapping")}
+                    onClick={() => {
+                      console.log(`Navigating to Goal Mapping tool with projectId: ${projectId}`);
+                      // Store projectId in localStorage for cross-page availability
+                      if (projectId) {
+                        localStorage.setItem('currentProjectId', projectId);
+                      }
+                      navigate("/tools/goal-mapping");
+                    }}
                   >
                     Start Goal Mapping
                   </Button>
@@ -166,7 +173,14 @@ export default function GetYourBearings() {
                   </ul>
                   <Button 
                     className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                    onClick={() => navigate(projectId ? `/tools/cynefin-orientation/${projectId}` : "/tools/cynefin-orientation")}
+                    onClick={() => {
+                      console.log(`Navigating to Cynefin Orientation tool with projectId: ${projectId}`);
+                      // Store projectId in localStorage for cross-page availability
+                      if (projectId) {
+                        localStorage.setItem('currentProjectId', projectId);
+                      }
+                      navigate("/tools/cynefin-orientation");
+                    }}
                   >
                     Start Cynefin Assessment
                   </Button>
@@ -191,7 +205,14 @@ export default function GetYourBearings() {
                   </ul>
                   <Button 
                     className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                    onClick={() => navigate(projectId ? `/tools/tcof-journey/${projectId}` : "/tools/tcof-journey")}
+                    onClick={() => {
+                      console.log(`Navigating to TCOF Journey tool with projectId: ${projectId}`);
+                      // Store projectId in localStorage for cross-page availability
+                      if (projectId) {
+                        localStorage.setItem('currentProjectId', projectId);
+                      }
+                      navigate("/tools/tcof-journey");
+                    }}
                   >
                     Start Journey Assessment
                   </Button>

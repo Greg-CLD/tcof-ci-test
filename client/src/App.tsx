@@ -48,23 +48,71 @@ import AuthRequired from "@/components/AuthRequired";
 import SiteFooter from "@/components/SiteFooter";
 
 // Tool components with consistent layout
-const GoalMappingPage = () => (
-  <main className="flex-grow container mx-auto px-4 py-12">
-    <GoalMappingTool />
-  </main>
-);
+const GoalMappingPage = () => {
+  const projectId = localStorage.getItem('currentProjectId');
+  console.log(`GoalMappingPage: Retrieved projectId from localStorage: ${projectId}`);
+  
+  return (
+    <main className="flex-grow container mx-auto px-4 py-12">
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-tcof-dark">Goal Mapping Tool</h1>
+        {projectId && (
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.href = `/projects/${projectId}`}
+          >
+            Back to Project
+          </Button>
+        )}
+      </div>
+      <GoalMappingTool projectId={projectId} />
+    </main>
+  );
+};
 
-const CynefinOrientationPage = () => (
-  <main className="flex-grow container mx-auto px-4 py-12">
-    <CynefinOrientationTool />
-  </main>
-);
+const CynefinOrientationPage = () => {
+  const projectId = localStorage.getItem('currentProjectId');
+  console.log(`CynefinOrientationPage: Retrieved projectId from localStorage: ${projectId}`);
+  
+  return (
+    <main className="flex-grow container mx-auto px-4 py-12">
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-tcof-dark">Cynefin Orientation Tool</h1>
+        {projectId && (
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.href = `/projects/${projectId}`}
+          >
+            Back to Project
+          </Button>
+        )}
+      </div>
+      <CynefinOrientationTool projectId={projectId} />
+    </main>
+  );
+};
 
-const TCOFJourneyPage = () => (
-  <main className="flex-grow container mx-auto px-4 py-12">
-    <TCOFJourneyTool />
-  </main>
-);
+const TCOFJourneyPage = () => {
+  const projectId = localStorage.getItem('currentProjectId');
+  console.log(`TCOFJourneyPage: Retrieved projectId from localStorage: ${projectId}`);
+  
+  return (
+    <main className="flex-grow container mx-auto px-4 py-12">
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-tcof-dark">TCOF Journey Tool</h1>
+        {projectId && (
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.href = `/projects/${projectId}`}
+          >
+            Back to Project
+          </Button>
+        )}
+      </div>
+      <TCOFJourneyTool projectId={projectId} />
+    </main>
+  );
+};
 
 function Router() {
   const { isAuthenticated } = useAuthProtection();
