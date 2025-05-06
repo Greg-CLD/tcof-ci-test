@@ -170,8 +170,16 @@ function Router() {
     return null; // Critical: DO NOT render anything during redirect
   }
   
+  // If user tries to go to /get-your-bearings, redirect to /organisations
+  if (location === '/get-your-bearings' && !hasRedirectedRef.current) {
+    console.log("Intercepting /get-your-bearings, redirecting to /organisations");
+    hasRedirectedRef.current = true;
+    navigate('/organisations');
+    return null; // Critical: DO NOT render during navigation
+  }
+  
   // Don't allow users to directly access tool pages without selecting a project
-  if (user && (location === '/get-your-bearings' || location === '/make-a-plan') && !localStorage.getItem('selectedProjectId')) {
+  if (user && location === '/make-a-plan' && !localStorage.getItem('selectedProjectId')) {
     console.log("Missing projectId, redirecting to /organisations");
     if (!hasRedirectedRef.current) {
       hasRedirectedRef.current = true;

@@ -100,8 +100,8 @@ export default function SiteHeader() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link 
-              href="/" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/' ? 'nav-link active font-medium' : 'nav-link'}`}
+              href={user ? '/organisations' : '/'} 
+              className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/' || location === '/organisations' ? 'nav-link active font-medium' : 'nav-link'}`}
             >
               <Home className="h-4 w-4 mr-1" /> Home
             </Link>
@@ -226,9 +226,9 @@ export default function SiteHeader() {
           <div className="md:hidden pt-4 pb-2 border-t border-gray-200 mt-4">
             <nav className="flex flex-col space-y-3">
               <Link 
-                href="/"
+                href={user ? '/organisations' : '/'}
                 onClick={handleNavigation}
-                className={`flex items-center py-2 px-3 rounded-md ${location === '/' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+                className={`flex items-center py-2 px-3 rounded-md ${location === '/' || location === '/organisations' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
               >
                 <Home className="h-5 w-5 mr-2" /> Home
               </Link>

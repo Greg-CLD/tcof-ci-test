@@ -1,0 +1,68 @@
+🛠 Replit Agent Prompt — Eliminate Rogue Redirects & Fix “Home” Navigation
+Hi Agent,
+
+Navigation is still mis-routing:
+
+After login I’m pushed to /get-your-bearings (now 404) instead of /organisations.
+
+Clicking “Home” still sends me to a Project Dashboard instead of /organisations.
+
+Manually typing /organisations redirects back to Get Your Bearings.
+
+We need a hard, systemic fix.
+
+✅ Required Actions
+1. Remove Legacy Redirect Logic
+Search the entire client codebase (client/src) for any of:
+
+ts
+Copy
+Edit
+'/get-your-bearings',
+navigate('/get-your-bearings',
+window.location.pathname.startsWith('/get-your-bearings')
+Delete or refactor any code that forces navigation to /get-your-bearings (likely in an old useEffect, auth guard, or localStorage restore routine).
+
+2. Fix “Home” Link Once and for All
+In SiteHeader.tsx:
+
+<Link href="/"> should navigate to /organisations when user is authenticated, and / (public landing) otherwise.
+
+Implement:
+
+tsx
+Copy
+Edit
+const homePath = user ? '/organisations' : '/';
+<Link href={homePath} …>
+Remove any hidden onClick handlers that override href.
+
+3. Ensure Post-Login Redirect is Single-Source
+In App.tsx (or top router):
+
+tsx
+Copy
+Edit
+if (user && location === '/') {
+  navigate('/organisations');
+  return null;          // Guard: avoid re-render loop
+}
+Delete any other redirect code doing similar work elsewhere.
+
+4. Disable Legacy localStorage “selectedProjectId” Auto-Load
+The old logic in GetYourBearings.tsx writes/reads selectedProjectId and triggers redirects.
+
+Comment it out or gate it so it only runs when the user explicitly opens a project, not on every mount.
+
+5. Smoke Tests
+Login → lands at /organisations.
+
+Click Home → returns to /organisations (never project dashboard).
+
+Directly visit /organisations → remains on page (no redirect).
+
+Navigate: Org → Project → Tool → back → everything works, no 404.
+
+Add console logs (ROUTE:) while testing; ensure no unexpected /get-your-bearings navigation appears.
+
+If you touch any model, create & run migrations and verify DB.
