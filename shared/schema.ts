@@ -76,27 +76,19 @@ export const organisationHeuristics = pgTable("organisation_heuristics", {
 });
 
 // Project table - main entity for storing project metadata
+// Important: This schema reflects the actual database columns
 export const projects = pgTable("projects", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  sector: varchar("sector", { length: 100 }),
-  customSector: varchar("custom_sector", { length: 100 }),
-  orgType: varchar("org_type", { length: 100 }),
-  teamSize: varchar("team_size", { length: 100 }),
-  currentStage: varchar("current_stage", { length: 100 }),
-  selectedOutcomeIds: jsonb("selected_outcome_ids").$type<string[]>(),
-  // Add organisation reference as nullable foreign key
-  organisationId: uuid("organisation_id").references(() => organisations.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  
-  // Legacy fields for compatibility
   userId: integer("user_id"),
-  lastUpdated: timestamp("last_updated").defaultNow(),
   goalMapId: integer("goal_map_id"),
   cynefinSelectionId: integer("cynefin_selection_id"),
   tcofJourneyId: integer("tcof_journey_id"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Add organisation reference as nullable foreign key
+  organisationId: uuid("organisation_id").references(() => organisations.id, { onDelete: "cascade" }),
 });
 
 // Outcomes table - standard outcomes from the framework + custom user outcomes

@@ -174,21 +174,15 @@ router.post('/:id/projects', isOrgMember, async (req, res) => {
       return res.status(400).json({ message: "Project name is required" });
     }
     
-    // Create the project with organization ID - only using fields we know exist
+    // Create the project with organization ID - using ONLY fields that actually exist in the database
     const [newProject] = await db.insert(projects)
       .values({
         name: name.trim(),
         description: description?.trim() || null,
-        userId, // Include user ID as creator
+        userId: userId, // Include user ID as creator (matches user_id column)
         organisationId, // Set organization ID from URL parameter
-        sector: null, // Setting explicit nulls for fields that exist in the schema
-        customSector: null,
-        orgType: null,
-        teamSize: null,
-        currentStage: null,
-        selectedOutcomeIds: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date(), // This maps to created_at
+        lastUpdated: new Date() // This maps to last_updated
       })
       .returning();
     
