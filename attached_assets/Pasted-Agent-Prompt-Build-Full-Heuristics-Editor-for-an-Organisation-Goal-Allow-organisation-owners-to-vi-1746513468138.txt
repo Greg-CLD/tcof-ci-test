@@ -1,0 +1,84 @@
+Agent Prompt — Build Full Heuristics Editor for an Organisation
+Goal
+Allow organisation owners to view, add, edit, and delete default heuristics (Success Factors) from their dashboard. Saved defaults are stored in organisation_heuristics and cloned to new projects.
+
+📋 Checklist
+Backend API
+
+PUT /api/organisations/:id/heuristics
+Accepts an array of { id? name value }.
+
+Upsert rows (insert new, update existing, delete those omitted).
+
+Validate requester is role === 'owner'.
+
+GET /api/organisations/:id/heuristics (already exists).
+
+HeuristicsEditor Component
+
+Props: organisationId, defaults, onClose.
+
+Display editable table:
+
+Success Factor	Metric / Value	
+text input	text input	✕
+
+Add Row button appends empty row.
+
+Each row has delete ✕.
+
+Save Logic
+
+Save button triggers PUT with edited list.
+
+On success:
+
+Invalidate ['orgDefaults', organisationId].
+
+Toast “Defaults updated”.
+
+onClose().
+
+Integration in Dashboard
+
+In OrganisationDashboardPage, replace stub:
+
+jsx
+Copy
+Edit
+<Button onClick={() => setEditorOpen(true)}>Edit Defaults</Button>
+{editorOpen && (
+  <Modal>
+    <HeuristicsEditor
+      organisationId={orgId}
+      defaults={defaults}
+      onClose={() => setEditorOpen(false)}
+    />
+  </Modal>
+)}
+Button enabled only for organisation.role === 'owner'.
+
+Clone on Project Creation
+
+Ensure POST /api/projects already clones; write unit check:
+
+ts
+Copy
+Edit
+const defaults = await db.query.organisationHeuristics.findMany({ where: { organisationId }});
+// for each defaults row insert into project_heuristics
+✅ Definition of Done
+Owners can open the editor, add/edit/delete rows, click Save, see toast → updated defaults persist and refetch without page reload.
+
+Non-owners see the defaults list but no edit button.
+
+Creating a new project copies the latest organisation defaults.
+
+🧪 Smoke Tests
+As owner, add two heuristics → save → reopen editor → both rows visible.
+
+Create a new project → call GET /api/projects/:id/heuristics → contains two copied rows.
+
+Log in as member (not owner) → dashboard shows defaults table, Edit button hidden/disabled.
+
+Implement and verify these tests, then summarize what changed.

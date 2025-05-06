@@ -38,7 +38,7 @@ export default function OrganisationHeuristicsPage() {
     isLoading: orgLoading, 
     error: orgError 
   } = useQuery({
-    queryKey: [`/api/organisations/${orgId}`],
+    queryKey: ['organisation', orgId],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/organisations/${orgId}`);
       if (!res.ok) {
@@ -54,7 +54,7 @@ export default function OrganisationHeuristicsPage() {
     isLoading: heuristicsLoading,
     error: heuristicsError
   } = useQuery({
-    queryKey: [`/api/organisations/${orgId}/heuristics`],
+    queryKey: ['orgHeuristics', orgId],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/organisations/${orgId}/heuristics`);
       if (!res.ok) {
@@ -75,7 +75,7 @@ export default function OrganisationHeuristicsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [`/api/organisations/${orgId}/heuristics`]
+        queryKey: ['orgHeuristics', orgId]
       });
       setIsEditing(false);
       toast({

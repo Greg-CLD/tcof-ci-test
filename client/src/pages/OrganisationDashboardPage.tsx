@@ -30,8 +30,11 @@ interface Organisation {
 interface Heuristic {
   id: string;
   organisationId: string;
-  name: string;
-  value: string;
+  successFactor: string;
+  goal?: string | null;
+  metric?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function OrganisationDashboardPage() {
@@ -382,7 +385,7 @@ export default function OrganisationDashboardPage() {
               {heuristics.length > 0 && (
                 <div className="p-3 bg-blue-50 rounded-md">
                   <p className="text-sm text-blue-700">
-                    This project will use {heuristics.length} default heuristic values from this organisation.
+                    This project will use {heuristics.length} default success factors from this organisation.
                   </p>
                 </div>
               )}
