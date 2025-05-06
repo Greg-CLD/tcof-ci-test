@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown, Settings } from 'lucide-react';
 import { isAdmin } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
 
 const GlobalNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [location] = useLocation();
   const admin = isAdmin();
+  const { user } = useAuth();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -53,6 +55,20 @@ const GlobalNav = () => {
                 {item.label}
               </Link>
             ))}
+            
+            {user && (
+              <Link 
+                href="/settings"
+                className={cn(
+                  "text-white hover:text-tcof-teal transition-colors flex items-center gap-1",
+                  location === "/settings" && "text-tcof-teal font-semibold"
+                )}
+                onClick={closeMenu}
+              >
+                <Settings size={16} />
+                <span>Settings</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -85,6 +101,20 @@ const GlobalNav = () => {
                 {item.label}
               </Link>
             ))}
+            
+            {user && (
+              <Link 
+                href="/settings"
+                className={cn(
+                  "flex items-center gap-2 py-2 px-4 text-white hover:text-tcof-teal transition-colors",
+                  location === "/settings" && "text-tcof-teal font-semibold"
+                )}
+                onClick={closeMenu}
+              >
+                <Settings size={16} />
+                <span>Settings</span>
+              </Link>
+            )}
           </div>
         )}
       </div>
