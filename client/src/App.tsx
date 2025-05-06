@@ -218,28 +218,18 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
-      <Route path="/get-your-bearings" component={GetYourBearings} />
+      {/* Make sure we use the most specific routes first */}
+      <Route path="/get-your-bearings/project-profile" component={ProjectProfile} />
       <Route path="/get-your-bearings/:projectId">
         <ProtectedRouteGuard>
           <GetYourBearings />
         </ProtectedRouteGuard>
       </Route>
-      <Route path="/get-your-bearings/project-profile" component={ProjectProfile} />
-      <Route path="/make-a-plan">
-        <ProtectedRouteGuard>
-          <MakeAPlan />
-        </ProtectedRouteGuard>
-      </Route>
-      <Route path="/make-a-plan/:projectId">
-        <ProtectedRouteGuard>
-          <MakeAPlan />
-        </ProtectedRouteGuard>
-      </Route>
-      <Route path="/make-a-plan/landing">
-        <ProtectedRouteGuard>
-          <MakeAPlanLanding />
-        </ProtectedRouteGuard>
-      </Route>
+      <Route path="/get-your-bearings" component={GetYourBearings} />
+      {/* Make a Plan routes - most specific first */}
+      <Route path="/make-a-plan/admin/factors" component={AdminFactorEditor} />
+      <Route path="/make-a-plan/admin/graph-explorer" component={GraphExplorer} />
+      <Route path="/make-a-plan/admin" component={AdminPresetEditor} />
       <Route path="/make-a-plan/full/intro">
         <ProtectedRouteGuard>
           <MakeAPlanFullIntro />
@@ -265,9 +255,21 @@ function Router() {
           <MakeAPlanFull />
         </ProtectedRouteGuard>
       </Route>
-      <Route path="/make-a-plan/admin" component={AdminPresetEditor} />
-      <Route path="/make-a-plan/admin/factors" component={AdminFactorEditor} />
-      <Route path="/make-a-plan/admin/graph-explorer" component={GraphExplorer} />
+      <Route path="/make-a-plan/landing">
+        <ProtectedRouteGuard>
+          <MakeAPlanLanding />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/:projectId">
+        <ProtectedRouteGuard>
+          <MakeAPlan />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan">
+        <ProtectedRouteGuard>
+          <MakeAPlan />
+        </ProtectedRouteGuard>
+      </Route>
       <Route path="/checklist">
         <ProtectedRouteGuard>
           <Checklist />
@@ -307,8 +309,10 @@ function Router() {
         )}
       </Route>
       
-      {/* Protected routes with dual authentication (old password system + new database auth) */}
-      <Route path="/tools/goal-mapping">
+      {/* Tools routes - Most specific first */}
+      
+      {/* Goal mapping with project ID */}
+      <Route path="/tools/goal-mapping/:projectId">
         {isAuthenticated('starter-access') || user ? (
           <ProtectedRouteGuard>
             <GoalMappingPage />
@@ -321,8 +325,36 @@ function Router() {
         )}
       </Route>
       
-      {/* Add route with explicit projectId parameter */}
-      <Route path="/tools/goal-mapping/:projectId">
+      {/* Cynefin orientation with project ID */}
+      <Route path="/tools/cynefin-orientation/:projectId">
+        {isAuthenticated('starter-access') || user ? (
+          <ProtectedRouteGuard>
+            <CynefinOrientationPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired 
+            message="You need to purchase a license or sign in to access this tool." 
+            showPasswordOption={true} 
+          />
+        )}
+      </Route>
+      
+      {/* TCOF journey with project ID */}
+      <Route path="/tools/tcof-journey/:projectId">
+        {isAuthenticated('starter-access') || user ? (
+          <ProtectedRouteGuard>
+            <TCOFJourneyPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired 
+            message="You need to purchase a license or sign in to access this tool." 
+            showPasswordOption={true} 
+          />
+        )}
+      </Route>
+      
+      {/* Base routes without project IDs */}
+      <Route path="/tools/goal-mapping">
         {isAuthenticated('starter-access') || user ? (
           <ProtectedRouteGuard>
             <GoalMappingPage />
@@ -348,35 +380,7 @@ function Router() {
         )}
       </Route>
       
-      {/* Add route with explicit projectId parameter */}
-      <Route path="/tools/cynefin-orientation/:projectId">
-        {isAuthenticated('starter-access') || user ? (
-          <ProtectedRouteGuard>
-            <CynefinOrientationPage />
-          </ProtectedRouteGuard>
-        ) : (
-          <AuthRequired 
-            message="You need to purchase a license or sign in to access this tool." 
-            showPasswordOption={true} 
-          />
-        )}
-      </Route>
-      
       <Route path="/tools/tcof-journey">
-        {isAuthenticated('starter-access') || user ? (
-          <ProtectedRouteGuard>
-            <TCOFJourneyPage />
-          </ProtectedRouteGuard>
-        ) : (
-          <AuthRequired 
-            message="You need to purchase a license or sign in to access this tool." 
-            showPasswordOption={true} 
-          />
-        )}
-      </Route>
-      
-      {/* Add route with explicit projectId parameter */}
-      <Route path="/tools/tcof-journey/:projectId">
         {isAuthenticated('starter-access') || user ? (
           <ProtectedRouteGuard>
             <TCOFJourneyPage />

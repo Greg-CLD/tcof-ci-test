@@ -78,9 +78,11 @@ export default function SiteHeader() {
     setMobileMenuOpen(false);
   };
   
-  // Handle navigation and close mobile menu
-  const handleNavigation = (path: string) => {
-    navigate(path);
+  // Handle navigation and close mobile menu - WITHOUT causing re-renders
+  const handleNavigation = (e: React.MouseEvent) => {
+    // Just close the mobile menu, but let the Link component handle navigation
+    // This prevents the infinite loop caused by calling navigate()
+    e.preventDefault(); // This is important to prevent double navigation
     setMobileMenuOpen(false);
   };
   
@@ -238,7 +240,7 @@ export default function SiteHeader() {
             <nav className="flex flex-col space-y-3">
               <Link 
                 href="/"
-                onClick={() => handleNavigation("/")}
+                onClick={handleNavigation}
                 className={`flex items-center py-2 px-3 rounded-md ${location === '/' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
               >
                 <Home className="h-5 w-5 mr-2" /> Home
@@ -246,7 +248,7 @@ export default function SiteHeader() {
               
               <Link 
                 href="/get-your-bearings/project-profile"
-                onClick={() => handleNavigation("/get-your-bearings/project-profile")}
+                onClick={handleNavigation}
                 className={`flex items-center py-2 px-3 rounded-md ${location.includes('project-profile') ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
               >
                 <Briefcase className="h-5 w-5 mr-2" /> Project Profile
@@ -254,7 +256,7 @@ export default function SiteHeader() {
               
               <Link 
                 href="/checklist"
-                onClick={() => handleNavigation("/checklist")}
+                onClick={handleNavigation}
                 className={`flex items-center py-2 px-3 rounded-md ${location === '/checklist' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
               >
                 <CheckSquare className="h-5 w-5 mr-2" /> Checklist
@@ -264,7 +266,7 @@ export default function SiteHeader() {
               {user && (
                 <Link 
                   href="/organisations"
-                  onClick={() => handleNavigation("/organisations")}
+                  onClick={handleNavigation}
                   className={`flex items-center py-2 px-3 rounded-md ${location === '/organisations' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
                 >
                   <Briefcase className="h-5 w-5 mr-2" /> Organisations
@@ -275,7 +277,7 @@ export default function SiteHeader() {
               {!isLoggedIn && (
                 <Link 
                   href="/pricing"
-                  onClick={() => handleNavigation("/pricing")}
+                  onClick={handleNavigation}
                   className={`flex items-center py-2 px-3 rounded-md ${location === '/pricing' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
                 >
                   <DollarSign className="h-5 w-5 mr-2" /> Pricing
