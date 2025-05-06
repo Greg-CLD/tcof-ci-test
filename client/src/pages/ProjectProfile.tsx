@@ -52,14 +52,18 @@ const projectFormSchema = z.object({
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
-export default function ProjectProfile() {
+interface ProjectProfileProps {
+  editMode?: boolean;
+}
+
+export default function ProjectProfile({ editMode = false }: ProjectProfileProps) {
   const [location, navigate] = useLocation();
   const [, params] = useRoute('/get-your-bearings/project-profile');
   const { projects, isLoading: projectsLoading, createProject, updateProject } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   
-  // View/Edit state - default to view mode
-  const [isEditing, setIsEditing] = useState(false);
+  // View/Edit state - default to view mode unless editMode prop is true
+  const [isEditing, setIsEditing] = useState(editMode);
   
   const [isFormValid, setIsFormValid] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -259,11 +263,19 @@ export default function ProjectProfile() {
           description: 'Your project details have been updated successfully.',
         });
         
-        // Switch back to view mode
-        setTimeout(() => {
-          setIsEditing(false);
-          setIsSaved(false);
-        }, 500);
+        if (editMode) {
+          // When in setup mode, navigate back to organisation dashboard after successful update
+          setTimeout(() => {
+            const orgId = localStorage.getItem('selectedOrgId');
+            navigate(orgId ? `/organisations/${orgId}` : '/organisations');
+          }, 1000);
+        } else {
+          // Switch back to view mode for normal use
+          setTimeout(() => {
+            setIsEditing(false);
+            setIsSaved(false);
+          }, 500);
+        }
       } else {
         // Create new project
         console.log('Creating new project with data:', projectData);
@@ -285,7 +297,13 @@ export default function ProjectProfile() {
         
         // Wait a moment to show the saved state before navigating away
         setTimeout(() => {
-          navigate('/get-your-bearings');
+          if (editMode) {
+            // When in setup mode, navigate back to organisation dashboard after project creation
+            const orgId = localStorage.getItem('selectedOrgId');
+            navigate(orgId ? `/organisations/${orgId}` : '/organisations');
+          } else {
+            navigate('/get-your-bearings');
+          }
         }, 1500);
       }
     } catch (error) {
@@ -324,10 +342,19 @@ export default function ProjectProfile() {
         <Button 
           variant="ghost" 
           className="mb-4 flex items-center text-tcof-teal"
-          onClick={() => navigate('/get-your-bearings')}
+          onClick={() => {
+            if (editMode) {
+              // Back to organisation dashboard when in setup mode
+              const orgId = localStorage.getItem('selectedOrgId');
+              navigate(orgId ? `/organisations/${orgId}` : '/organisations');
+            } else {
+              // Regular behavior for non-setup mode
+              navigate('/get-your-bearings');
+            }
+          }}
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Get Your Bearings
+          {editMode ? 'Back to Organisation' : 'Back to Get Your Bearings'}
         </Button>
         
         {/* View mode - show static summary */}
