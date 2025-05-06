@@ -70,8 +70,9 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
     profileParams?.projectId || setupParams?.projectId || null
   );
   
-  // View/Edit state - default to edit mode if on /profile/edit or /setup route, or if editMode prop is true
-  const [isEditing, setIsEditing] = useState(editMode || matchesProfile || matchesSetup);
+  // View/Edit state - determine if we should be in edit mode based on URL or props
+  const [isEditing, setIsEditing] = useState(editMode || matchesProfile || matchesSetup || 
+                                           location.includes('/profile/edit') || location.includes('/setup'));
   
   const [isFormValid, setIsFormValid] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -338,7 +339,23 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
   }
   
   // Determine if we should force show the edit form
-  const shouldForceEditForm = matchesProfile || matchesSetup || location.includes('/profile/edit');
+  // Force edit form if URL path contains 'profile/edit' or 'setup'
+  const urlIncludesProfileEdit = location.includes('/profile/edit');
+  const urlIncludesSetup = location.includes('/setup');
+  const shouldForceEditForm = matchesProfile || matchesSetup || urlIncludesProfileEdit || urlIncludesSetup;
+  
+  // Debug logging - Remove after fixing
+  console.log('ProjectProfile Render Debug:', { 
+    location, 
+    editMode, 
+    isEditing, 
+    matchesProfile: !!matchesProfile, 
+    matchesSetup: !!matchesSetup,
+    urlIncludesProfileEdit,
+    urlIncludesSetup,
+    shouldForceEditForm,
+    projectId: project?.id || selectedProjectId
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -347,7 +364,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           variant="ghost" 
           className="mb-4 flex items-center text-tcof-teal"
           onClick={() => {
-            if (editMode || matchesProfile || matchesSetup) {
+            if (editMode || matchesProfile || matchesSetup || urlIncludesProfileEdit || urlIncludesSetup) {
               // Back to organisation dashboard when in setup/edit mode
               // First check if the project has an organisation ID
               if (project?.organisationId) {
@@ -364,7 +381,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           }}
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          {editMode || matchesProfile || matchesSetup ? 'Back to Organisation' : 'Back to Get Your Bearings'}
+          {editMode || matchesProfile || matchesSetup || urlIncludesProfileEdit || urlIncludesSetup ? 'Back to Organisation' : 'Back to Get Your Bearings'}
         </Button>
         
         {/* Conditional Rendering: Either show View or Edit Form */}
