@@ -101,4 +101,77 @@ router.get("/:id", isAuthenticated, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/projects/:id
+ * Delete a specific project by ID
+ */
+router.delete("/:id", isAuthenticated, async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    
+    if (isNaN(projectId)) {
+      console.log(`Invalid project ID format for deletion: ${req.params.id}`);
+      return res.status(400).json({ message: "Invalid project ID" });
+    }
+    
+    console.log(`Attempting to delete project: ${projectId}`);
+    
+    // Find the project first to verify it exists and user has permission
+    const project = await db.query.projects.findFirst({
+      where: eq(projects.id, projectId)
+    });
+    
+    if (!project) {
+      console.log(`Project not found for deletion: ${projectId}`);
+      return res.status(404).json({ message: "Project not found" });
+    }
+    
+    // Check if user is authorized to delete this project
+    if (project.organisationId) {
+      // We use isOrgMember middleware functionality directly
+      try {
+        const organisationId = project.organisationId;
+        const userId = req.user.id;
+        
+        // Check if user is a member of this org with appropriate permissions
+        const membership = await db.query.organisationMemberships.findFirst({
+          where: (memberships, { and, eq }) => 
+            and(
+              eq(memberships.userId, userId),
+              eq(memberships.organisationId, organisationId)
+            )
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ message: "You don't have permission to delete this project" });
+        }
+        
+        // Only admin or owner can delete projects
+        if (membership.role !== 'admin' && membership.role !== 'owner') {
+          return res.status(403).json({
+            message: "Only organization admins or owners can delete projects"
+          });
+        }
+      } catch (error) {
+        console.error("Error checking org membership for deletion:", error);
+        return res.status(500).json({ message: "Internal server error" });
+      }
+    } 
+    // If project doesn't have organisationId, must be user's own project
+    else if (project.userId !== req.user.id) {
+      return res.status(403).json({ message: "You don't have permission to delete this project" });
+    }
+    
+    // Perform the deletion
+    const result = await db.delete(projects).where(eq(projects.id, projectId));
+    
+    console.log(`Project deletion result:`, result);
+    
+    return res.status(204).end();
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 export default router;
