@@ -28,5 +28,14 @@
     "organisationId": "5c1691a0-6412-4319-a547-6ea9347377b1",
     "createdAt": "2025-05-06T05:46:21.410Z",
     "updatedAt": "2025-05-06T05:46:21.410Z"
+  },
+  {
+    "id": "753449f1-3d3e-43fb-9dac-02d58bf6e70a",
+    "userId": 3,
+    "name": "Test Project 3",
+    "description": "",
+    "organisationId": "5c1691a0-6412-4319-a547-6ea9347377b1",
+    "createdAt": "2025-05-06T05:50:09.583Z",
+    "updatedAt": "2025-05-06T05:50:09.583Z"
   }
 ]

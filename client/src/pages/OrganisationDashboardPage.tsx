@@ -50,7 +50,7 @@ export default function OrganisationDashboardPage() {
     isLoading: orgLoading, 
     error: orgError 
   } = useQuery({
-    queryKey: [`/api/organisations/${orgId}`],
+    queryKey: ['organisation', orgId],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/organisations/${orgId}`);
       if (!res.ok) {
@@ -63,10 +63,12 @@ export default function OrganisationDashboardPage() {
   // Fetch projects for the organisation
   const { 
     data: projects = [], 
-    isLoading: projLoading, 
-    error: projError 
+    isLoading: projLoading,
+    isFetching: projFetching,
+    error: projError,
+    refetch: refetchProjects
   } = useQuery({
-    queryKey: [`/api/organisations/${orgId}/projects`],
+    queryKey: ['orgProjects', orgId],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/organisations/${orgId}/projects`);
       if (!res.ok) {
@@ -82,7 +84,7 @@ export default function OrganisationDashboardPage() {
     isLoading: heuristicsLoading,
     error: heuristicsError
   } = useQuery({
-    queryKey: [`/api/organisations/${orgId}/heuristics`],
+    queryKey: ['orgHeuristics', orgId],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/organisations/${orgId}/heuristics`);
       if (!res.ok) {
@@ -109,12 +111,12 @@ export default function OrganisationDashboardPage() {
       
       // Force refetch projects
       queryClient.invalidateQueries({
-        queryKey: [`/api/organisations/${orgId}/projects`]
+        queryKey: ['orgProjects', orgId]
       });
       
       // Immediately update the projects list in the cache
       queryClient.setQueryData(
-        [`/api/organisations/${orgId}/projects`],
+        ['orgProjects', orgId],
         (oldData: any) => {
           // If we have existing data, append the new project to it
           return oldData ? [...oldData, newProject] : [newProject];
@@ -203,6 +205,7 @@ export default function OrganisationDashboardPage() {
     }
   }, [heuristicsError, toast]);
 
+  // Initial loading state - don't include projFetching here to prevent UI flashes during refetches
   const isLoading = orgLoading || projLoading || heuristicsLoading;
 
   return (
@@ -254,6 +257,55 @@ export default function OrganisationDashboardPage() {
           {projLoading ? (
             <div className="flex justify-center items-center min-h-[200px]">
               <Loader2 className="h-8 w-8 animate-spin text-tcof-teal" />
+            </div>
+          ) : projFetching ? (
+            <div className="relative">
+              {/* Overlay spinner when refetching but keep showing existing content */}
+              <div className="absolute top-0 right-0 p-2">
+                <Loader2 className="h-6 w-6 animate-spin text-tcof-teal" />
+              </div>
+              {projects.length === 0 ? (
+                <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <Building className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-xl font-semibold mb-2 text-tcof-dark">No Projects Found</h3>
+                  <p className="text-gray-600 mb-6">This organisation doesn't have any projects yet. Create one to get started.</p>
+                  <Button onClick={() => setIsCreateDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Your First Project
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {projects.map((project: Project) => (
+                    <Card key={project.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader>
+                        <CardTitle 
+                          className="cursor-pointer hover:text-tcof-teal transition-colors"
+                          onClick={() => navigateToProject(project.id)}
+                        >
+                          {project.name}
+                        </CardTitle>
+                        {project.description && (
+                          <CardDescription>{project.description}</CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-gray-500">
+                          Created: {new Date(project.createdAt).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                      <CardFooter className="flex justify-end">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => navigateToProject(project.id)}
+                        >
+                          View Project
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           ) : projects.length === 0 ? (
             <div className="bg-gray-50 rounded-lg p-8 text-center">
