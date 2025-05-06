@@ -3,7 +3,8 @@ import { Project } from '@/hooks/useProjects';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Briefcase, Building2, Users, Activity, Clock } from 'lucide-react';
+import { Edit, Briefcase, Building2, Users, Activity, Clock, Target, Compass, Map } from 'lucide-react';
+import { useProgress } from '@/contexts/ProgressContext';
 
 interface ProjectProfileViewProps {
   project: Project | undefined;
@@ -12,6 +13,9 @@ interface ProjectProfileViewProps {
 }
 
 export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfileViewProps) {
+  // Get progress data from the context
+  const { progress } = useProgress();
+  
   // Handle case where project is undefined
   if (!project) {
     return (
@@ -141,6 +145,22 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
           {project.description && (
             <p className="text-gray-600 mt-2">{project.description}</p>
           )}
+        </div>
+        
+        {/* Tool Status Chips */}
+        <div className="flex flex-wrap gap-3 mb-6">
+          <Badge className={progress?.tools?.goalMapping?.completed ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+            <Target className="w-3 h-3 mr-1" />
+            Goal Mapping
+          </Badge>
+          <Badge className={progress?.tools?.cynefinOrientation?.completed ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+            <Compass className="w-3 h-3 mr-1" />
+            Cynefin Orientation
+          </Badge>
+          <Badge className={progress?.tools?.tcofJourney?.completed ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+            <Map className="w-3 h-3 mr-1" />
+            TCOF Journey
+          </Badge>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
