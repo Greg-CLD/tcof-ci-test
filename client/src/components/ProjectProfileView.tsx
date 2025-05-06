@@ -6,15 +6,38 @@ import { Badge } from '@/components/ui/badge';
 import { Edit, Briefcase, Building2, Users, Activity, Clock } from 'lucide-react';
 
 interface ProjectProfileViewProps {
-  project: Project;
+  project: Project | undefined;
   onEdit: () => void;
   isLoading: boolean;
 }
 
 export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfileViewProps) {
-  // Helper function to get formatted sector display
+  // Handle case where project is undefined
+  if (!project) {
+    return (
+      <Card className="shadow-md overflow-hidden">
+        <CardHeader className="bg-tcof-light/50 pb-6">
+          <CardTitle className="text-2xl text-tcof-dark">Project Not Found</CardTitle>
+          <CardDescription>
+            The requested project could not be loaded.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pb-6">
+          <Button
+            onClick={onEdit}
+            variant="default"
+            className="mt-4"
+          >
+            Create Project Profile
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Helper functions for displaying formatted data
   const getSectorDisplay = () => {
-    if (!project.sector) return 'Not specified';
+    if (!project?.sector) return 'Not specified';
     
     switch (project.sector) {
       case 'public': return 'Public Sector';
@@ -31,9 +54,8 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
     }
   };
   
-  // Helper function to get formatted org type display
   const getOrgTypeDisplay = () => {
-    if (!project.orgType) return 'Not specified';
+    if (!project?.orgType) return 'Not specified';
     
     switch (project.orgType) {
       case 'large_enterprise': return 'Large Enterprise (1000+ employees)';
@@ -49,9 +71,8 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
     }
   };
   
-  // Helper function to get formatted team size display
   const getTeamSizeDisplay = () => {
-    if (!project.teamSize) return 'Not specified';
+    if (!project?.teamSize) return 'Not specified';
     
     switch (project.teamSize) {
       case 'solo': return 'Solo (1 person)';
@@ -63,9 +84,8 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
     }
   };
   
-  // Helper function to get formatted current stage display
   const getCurrentStageDisplay = () => {
-    if (!project.currentStage) return 'Not specified';
+    if (!project?.currentStage) return 'Not specified';
     
     switch (project.currentStage) {
       case 'identify': return '1. Identification';
@@ -76,9 +96,8 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
     }
   };
   
-  // Helper function to get stage badge color
   const getStageBadgeColor = () => {
-    if (!project.currentStage) return "bg-gray-100 text-gray-800";
+    if (!project?.currentStage) return "bg-gray-100 text-gray-800";
     
     switch (project.currentStage) {
       case 'identify': return "bg-blue-100 text-blue-800";
