@@ -73,12 +73,17 @@ export default function OrganisationDashboardPage() {
   } = useQuery({
     queryKey: ['orgProjects', orgId],
     queryFn: async () => {
+      console.log("Fetching projects for org:", orgId);
       const res = await apiRequest("GET", `/api/organisations/${orgId}/projects`);
       if (!res.ok) {
         throw new Error("Failed to fetch organisation projects");
       }
-      return res.json();
-    }
+      const data = await res.json();
+      console.log("Projects fetched:", data);
+      return data;
+    },
+    // Make sure we always get fresh data when navigating back to this page
+    staleTime: 0
   });
 
   // Fetch organisation default heuristics
@@ -108,23 +113,37 @@ export default function OrganisationDashboardPage() {
       return await res.json();
     },
     onSuccess: (newProject) => {
+      console.log("Project created successfully:", newProject);
+      
       // Reset form and close dialog
       setFormState({ name: "", description: "" });
       setIsCreateDialogOpen(false);
       
       // Force refetch projects
+      console.log("Invalidating query cache for:", ['orgProjects', orgId]);
       queryClient.invalidateQueries({
         queryKey: ['orgProjects', orgId]
       });
+      
+      // Get current projects from cache
+      const currentProjects = queryClient.getQueryData(['orgProjects', orgId]);
+      console.log("Current projects in cache before update:", currentProjects);
       
       // Immediately update the projects list in the cache
       queryClient.setQueryData(
         ['orgProjects', orgId],
         (oldData: any) => {
+          console.log("Old data in cache setter:", oldData);
           // If we have existing data, append the new project to it
-          return oldData ? [...oldData, newProject] : [newProject];
+          const newData = oldData ? [...oldData, newProject] : [newProject];
+          console.log("New data to be set in cache:", newData);
+          return newData;
         }
       );
+      
+      // Check the cache after update
+      const updatedProjects = queryClient.getQueryData(['orgProjects', orgId]);
+      console.log("Projects in cache after update:", updatedProjects);
       
       toast({
         title: "Success",

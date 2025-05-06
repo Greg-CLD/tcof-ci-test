@@ -1,0 +1,40 @@
+To debug the issue where new projects disappear immediately after creation in the organisation module, let's delve into the details:
+
+Network Trace:
+POST /api/projects: This request is triggered when a new project is created.
+
+Check the payload sent with this request. It should contain the project details including name, description, and organisationId.
+Ensure the server responds with a 201 status and the correct project data in JSON format.
+GET /api/organisations/:orgId/projects: This request is triggered to refetch projects after the new project is created.
+
+Ensure this GET request is indeed triggered and check the response payload for the correct projects list, including the newly created project.
+Query Configuration in OrganisationDashboardPage.tsx:
+useMutation for createProjectMutation:
+Confirm that onSuccess correctly invalidates the cache with invalidateQueries on ['orgProjects', orgId].
+Log the response data here to verify what new data is fetched/returned.
+// Example logging in `onSuccess`
+onSuccess: (newProject) => {
+  console.log("Created project:", newProject);
+  // Existing logic...
+}
+useQuery for projects:
+Check the useQuery for projects to ensure refetchOnWindowFocus is set appropriately.
+Log the response data in onSuccess to verify the fetched array.
+// Example logging in query fetch
+const { data: projects = [], isLoading, error } = useQuery({
+  queryKey: ['orgProjects', orgId],
+  onSuccess: (fetchedProjects) => {
+    console.log("Fetched projects:", fetchedProjects);
+  },
+  // Existing logic...
+});
+React Query Global Defaults:
+Ensure there are no default options like staleTime or cacheTime settings globally overriding your expectations and causing stale or outdated project lists to display.
+Action Summary:
+To resolve:
+
+Add logging to onSuccess of both useMutation and useQuery calls to verify data at key points.
+Review network trace via DevTools to ensure both requests and responses are behaving as expected.
+Pay special attention to HTTP status codes and response payloads during these operations.
+Ensure the key in invalidateQueries matches exactly with what's used in the query for projects.
+By inspecting these areas, you should identify if the backend isn't returning the new project or if the frontend cache is not updating.

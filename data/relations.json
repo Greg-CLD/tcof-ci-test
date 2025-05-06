@@ -113,5 +113,28 @@
       "stage": "initial"
     },
     "timestamp": "2025-05-06T06:29:41.623Z"
+  },
+  {
+    "id": "b61109e6-b03f-496d-aa47-68d15a91954e",
+    "fromId": "3",
+    "toId": "19a667fd-e568-482e-aff8-e36f135593fa",
+    "relType": "BELONGS_TO_PROJECT",
+    "projectId": "19a667fd-e568-482e-aff8-e36f135593fa",
+    "meta": {
+      "origin": "createProject"
+    },
+    "timestamp": "2025-05-06T07:34:43.819Z"
+  },
+  {
+    "id": "67157122-8ca5-426c-9c91-33a3164b2282",
+    "fromId": "f42e3514-11f6-4e88-92a1-f972cb143498",
+    "toId": "19a667fd-e568-482e-aff8-e36f135593fa",
+    "relType": "PLAN_FOR_PROJECT",
+    "projectId": "19a667fd-e568-482e-aff8-e36f135593fa",
+    "meta": {
+      "origin": "createProject",
+      "stage": "initial"
+    },
+    "timestamp": "2025-05-06T07:34:43.821Z"
   }
 ]
