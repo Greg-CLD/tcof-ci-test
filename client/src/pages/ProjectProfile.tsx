@@ -148,54 +148,36 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
   // Redirect to home if no projects found
   useEffect(() => {
     if (!projectsLoading && projects.length === 0 && !createProject.isPending) {
-      setIsRedirecting(true);
-      navigate('/');
+      navigate('/get-your-bearings');
     }
-  }, [projectsLoading, projects, navigate]);
-
-  // On mount, check localStorage for projectId if one is not already set from the route
+  }, [projectsLoading, projects, createProject.isPending, navigate]);
+  
+  // Set selectedProjectId from URL parameters or localStorage
   useEffect(() => {
-    // If we already have a selectedProjectId from the route, skip this step
-    if (selectedProjectId) {
-      console.log('Using projectId from route:', selectedProjectId);
-      return;
-    }
-    
-    // Check URL query parameters (for edit mode)
-    const queryParams = new URLSearchParams(window.location.search);
-    const editProjectId = queryParams.get('edit');
-    
-    if (editProjectId) {
-      // If we have an edit parameter, set it as selected and enable edit mode
-      console.log('Loading project from query parameter:', editProjectId);
-      setSelectedProjectId(editProjectId);
-      setIsEditing(true);
-    } else {
-      // Otherwise, check localStorage for a selected project
-      const storedProjectId = localStorage.getItem('selectedProjectId');
-      if (storedProjectId) {
-        console.log('Loading project from localStorage:', storedProjectId);
-        setSelectedProjectId(storedProjectId);
-        // Start in view mode by default, unless editMode prop is true
-        setIsEditing(editMode);
-      } else {
-        // If no project ID is found, redirect to dashboard
-        console.log('No project ID found, redirecting to dashboard');
-        setIsRedirecting(true);
-        navigate('/');
+    // Get project ID from URL parameters if available
+    if (profileParams?.projectId) {
+      setSelectedProjectId(profileParams.projectId);
+      localStorage.setItem('selectedProjectId', profileParams.projectId);
+    } else if (setupParams?.projectId) {
+      setSelectedProjectId(setupParams.projectId);
+      localStorage.setItem('selectedProjectId', setupParams.projectId);
+    } 
+    // Otherwise try to get from localStorage
+    else if (!selectedProjectId) {
+      const storedId = localStorage.getItem('selectedProjectId');
+      if (storedId) {
+        setSelectedProjectId(storedId);
       }
     }
-  }, [selectedProjectId, editMode, navigate]);
-
-  // Fill form when project data is loaded from server
+  }, [profileParams, setupParams, selectedProjectId]);
+  
+  // Update form defaults when project data loads
   useEffect(() => {
-    if (project) {
-      console.log("Directly loaded project data from server:", project);
+    if (project && !hasLoadedProject) {
+      console.log('Setting form values from loaded project:', project);
       
-      // If sector is "other", show custom sector field
-      if (project.sector === 'other') {
-        setShowCustomSector(true);
-      }
+      // Check if sector is "other" to show custom sector field
+      setShowCustomSector(project.sector === 'other');
       
       // Set hasLoadedProject to true once we've loaded data
       setHasLoadedProject(true);
@@ -226,13 +208,15 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
       }
       
       // Create project data with proper typing
-      const projectData: CreateProjectData = {
+      const projectData: CreateProjectData & { isProfileComplete?: boolean } = {
         name: data.name,
         description: data.description,
         sector: data.sector,
         orgType: data.orgType,
         teamSize: data.teamSize,
         currentStage: data.currentStage,
+        // Set isProfileComplete to true if all required fields are provided
+        isProfileComplete: true
       };
       
       // Add customSector if sector is "other"
@@ -353,6 +337,9 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
     );
   }
   
+  // Determine if we should force show the edit form
+  const shouldForceEditForm = matchesProfile || matchesSetup || location.includes('/profile/edit');
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
@@ -380,15 +367,14 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           {editMode || matchesProfile || matchesSetup ? 'Back to Organisation' : 'Back to Get Your Bearings'}
         </Button>
         
-        {/* View mode - show static summary */}
-        {isExistingProject && !isEditing ? (
+        {/* Conditional Rendering: Either show View or Edit Form */}
+        {isExistingProject && !isEditing && !shouldForceEditForm ? (
           <ProjectProfileView 
             project={project} 
             onEdit={handleEditClick}
             isLoading={isSaved || projectLoading}
           />
         ) : (
-          /* Edit mode - show form */
           <Card className="shadow-md">
             <CardHeader className="bg-tcof-light/50">
               <div className="flex items-center gap-3 mb-2">
@@ -615,26 +601,27 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
                           type="button"
                           variant="outline"
                           onClick={handleCancelEdit}
-                          disabled={projectsLoading || projectLoading || isSaved}
+                          disabled={createProject.isPending || updateProject.isPending || isSaved}
                         >
                           Cancel
                         </Button>
                         <Button 
                           type="submit"
-                          disabled={!isFormValid || projectsLoading || projectLoading || isSaved}
+                          disabled={!isFormValid || createProject.isPending || updateProject.isPending || isSaved}
                         >
                           Save Changes
                         </Button>
                       </>
                     ) : (
-                      /* For new projects, just show Create button */
-                      <Button 
-                        type="submit" 
-                        className="ml-auto"
-                        disabled={!isFormValid || projectsLoading || projectLoading || isSaved}
-                      >
-                        Create Project
-                      </Button>
+                      /* For new projects, only show Create button */
+                      <div className="ml-auto">
+                        <Button 
+                          type="submit"
+                          disabled={!isFormValid || createProject.isPending || updateProject.isPending || isSaved}
+                        >
+                          Create Project
+                        </Button>
+                      </div>
                     )}
                   </CardFooter>
                 </form>

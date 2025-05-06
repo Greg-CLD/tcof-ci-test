@@ -43,16 +43,18 @@ export function useProject(projectId?: string) {
     queryKey: ['/api/projects', projectId],
     queryFn: async () => {
       if (!projectId) throw new Error('Project ID is required');
-      // Use the projects-detail endpoint which is specifically for single project retrieval
-      const response = await apiRequest("GET", `/api/projects-detail/${projectId}`);
+      // Use the correct endpoint for single project retrieval
+      const response = await apiRequest("GET", `/api/projects/${projectId}`);
       if (!response.ok) {
-        const errorData = await response.json();
+        console.error(`Failed to fetch project details: ${response.status}`);
+        const errorData = await response.json().catch(() => ({message: 'Unknown error'}));
         throw new Error(errorData.message || 'Failed to fetch project details');
       }
       return response.json();
     },
     enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes,
+    retry: 2, // Retry failed requests up to 2 times
   });
   
   return {
