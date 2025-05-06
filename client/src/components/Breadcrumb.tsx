@@ -40,8 +40,9 @@ export default function Breadcrumb() {
 
   return (
     <div className="flex items-center text-sm text-gray-500 mb-4 overflow-x-auto">
-      <Link href="/" className="flex items-center hover:text-tcof-teal">
+      <Link href="/" className="flex items-center hover:text-tcof-teal" aria-label="Home">
         <Home className="h-4 w-4" />
+        <span className="sr-only">Home</span>
       </Link>
       
       <ChevronRight className="h-4 w-4 mx-1" />
