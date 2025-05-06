@@ -1213,7 +1213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orgType, 
         teamSize, 
         currentStage,
-        organisationId 
+        organisationId,
+        isProfileComplete
       } = req.body;
       
       // Get the project to verify existence
@@ -1267,6 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamSize?: string;
         currentStage?: string;
         organisationId?: string;
+        isProfileComplete?: boolean;
       } = {};
       
       if (name !== undefined) updateData.name = name;
@@ -1277,6 +1279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (teamSize !== undefined) updateData.teamSize = teamSize;
       if (currentStage !== undefined) updateData.currentStage = currentStage;
       if (organisationId !== undefined) updateData.organisationId = organisationId;
+      if (isProfileComplete !== undefined) updateData.isProfileComplete = isProfileComplete;
       
       console.log(`Updating project ${projectId} with fields:`, JSON.stringify(updateData, null, 2));
       
