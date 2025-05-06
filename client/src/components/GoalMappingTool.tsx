@@ -94,7 +94,11 @@ function ToolNavigation({ currentTool }: { currentTool: 'goal-mapping' | 'cynefi
   );
 }
 
-export default function GoalMappingTool() {
+interface GoalMappingToolProps {
+  projectId?: string | null;
+}
+
+export default function GoalMappingTool({ projectId: propProjectId }: GoalMappingToolProps) {
   const [goalInput, setGoalInput] = useState("");
   const [goalLevel, setGoalLevel] = useState<SuccessMapLevel>("strategic");
   const [timeframeInput, setTimeframeInput] = useState("");
@@ -110,8 +114,13 @@ export default function GoalMappingTool() {
   const { currentProject } = useProjectContext();
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Get the project ID from the context
-  const projectId = currentProject?.id;
+  // Get the project ID from props or context
+  const projectId = propProjectId || currentProject?.id;
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log(`GoalMappingTool: Using projectId: ${projectId} (from props: ${propProjectId}, from context: ${currentProject?.id})`);
+  }, [projectId, propProjectId, currentProject?.id]);
   
   // Fetch goal map data from server for the current project
   const {

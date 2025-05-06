@@ -134,10 +134,19 @@ const phaseDescriptions: Record<ImplementationStage, {
   }
 };
 
-export default function TCOFJourneyTool() {
-  // Get the current project from context
+interface TCOFJourneyToolProps {
+  projectId?: string | null;
+}
+
+export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourneyToolProps) {
+  // Get the current project from context or props
   const { currentProject } = useProjectContext();
-  const projectId = currentProject?.id;
+  const projectId = propProjectId || currentProject?.id;
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log(`TCOFJourneyTool: Using projectId: ${projectId} (from props: ${propProjectId}, from context: ${currentProject?.id})`);
+  }, [projectId, propProjectId, currentProject?.id]);
   
   // State to track if we've loaded data from server
   const [hasLoadedData, setHasLoadedData] = useState(false);

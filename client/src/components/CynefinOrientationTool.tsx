@@ -123,10 +123,19 @@ const quadrantData: Record<CynefinQuadrant, {
   }
 };
 
-export default function CynefinOrientationTool() {
-  // Get the current project from context
+interface CynefinOrientationToolProps {
+  projectId?: string | null;
+}
+
+export default function CynefinOrientationTool({ projectId: propProjectId }: CynefinOrientationToolProps) {
+  // Get the current project from context or props
   const { currentProject } = useProjectContext();
-  const projectId = currentProject?.id;
+  const projectId = propProjectId || currentProject?.id;
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log(`CynefinOrientationTool: Using projectId: ${projectId} (from props: ${propProjectId}, from context: ${currentProject?.id})`);
+  }, [projectId, propProjectId, currentProject?.id]);
   
   // State to track if we've loaded data from server
   const [hasLoadedData, setHasLoadedData] = useState(false);

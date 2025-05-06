@@ -253,6 +253,46 @@ export default function ProjectPage() {
                             Outcomes & Delegation
                           </Button>
                         </div>
+                        
+                        <h3 className="font-semibold mt-6 mb-2">Specific Tools</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Button 
+                            variant="outline" 
+                            className="justify-start"
+                            onClick={() => {
+                              console.log(`Navigating to Goal Mapping tool with projectId: ${projectId}`);
+                              // Store projectId in localStorage to ensure it's available across pages
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate("/tools/goal-mapping");
+                            }}
+                          >
+                            Goal Mapping Tool
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="justify-start"
+                            onClick={() => {
+                              console.log(`Navigating to Cynefin Orientation tool with projectId: ${projectId}`);
+                              // Store projectId in localStorage to ensure it's available across pages
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate("/tools/cynefin-orientation");
+                            }}
+                          >
+                            Cynefin Orientation
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="justify-start"
+                            onClick={() => {
+                              console.log(`Navigating to TCOF Journey tool with projectId: ${projectId}`);
+                              // Store projectId in localStorage to ensure it's available across pages
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate("/tools/tcof-journey");
+                            }}
+                          >
+                            TCOF Journey
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
