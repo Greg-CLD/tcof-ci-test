@@ -225,7 +225,9 @@ export default function ProjectPage() {
                             className="justify-start"
                             onClick={() => {
                               console.log(`Navigating to Get Your Bearings with projectId: ${projectId}`);
-                              navigate(`/get-your-bearings/${projectId}`);
+                              // Store projectId in localStorage to ensure it's available across pages
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate(`/get-your-bearings`);
                             }}
                           >
                             Get Your Bearings
@@ -235,7 +237,9 @@ export default function ProjectPage() {
                             className="justify-start"
                             onClick={() => {
                               console.log(`Navigating to Make a Plan with projectId: ${projectId}`);
-                              navigate(`/make-a-plan/${projectId}`);
+                              // Store projectId in localStorage to ensure it's available across pages
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate(`/make-a-plan`);
                             }}
                           >
                             Make a Plan

@@ -50,6 +50,7 @@ import SiteFooter from "@/components/SiteFooter";
 // Tool components with consistent layout
 const GoalMappingPage = () => {
   const projectId = localStorage.getItem('currentProjectId');
+  const [_, navigate] = useLocation();
   console.log(`GoalMappingPage: Retrieved projectId from localStorage: ${projectId}`);
   
   return (
@@ -59,7 +60,7 @@ const GoalMappingPage = () => {
         {projectId && (
           <Button 
             variant="outline" 
-            onClick={() => window.location.href = `/projects/${projectId}`}
+            onClick={() => navigate(`/projects/${projectId}`)}
           >
             Back to Project
           </Button>
@@ -72,6 +73,7 @@ const GoalMappingPage = () => {
 
 const CynefinOrientationPage = () => {
   const projectId = localStorage.getItem('currentProjectId');
+  const [_, navigate] = useLocation();
   console.log(`CynefinOrientationPage: Retrieved projectId from localStorage: ${projectId}`);
   
   return (
@@ -81,7 +83,7 @@ const CynefinOrientationPage = () => {
         {projectId && (
           <Button 
             variant="outline" 
-            onClick={() => window.location.href = `/projects/${projectId}`}
+            onClick={() => navigate(`/projects/${projectId}`)}
           >
             Back to Project
           </Button>
