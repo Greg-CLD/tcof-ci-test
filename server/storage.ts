@@ -332,7 +332,8 @@ export const storage = {
       currentStage?: string,
       goalMapId?: number | null,
       cynefinSelectionId?: number | null,
-      tcofJourneyId?: number | null
+      tcofJourneyId?: number | null,
+      isProfileComplete?: boolean
     }
   ) {
     console.log("Updating project with data:", JSON.stringify(data, null, 2));

@@ -26,11 +26,12 @@ export interface CreateProjectData {
   orgType?: string;
   teamSize?: string;
   currentStage?: string;
+  isProfileComplete?: boolean;
 }
 
 export interface UpdateProjectParams {
   id: string;
-  data: Partial<CreateProjectData>;
+  data: Partial<CreateProjectData> & { isProfileComplete?: boolean };
 }
 
 /**
@@ -184,7 +185,12 @@ export function useProjects() {
    * @returns boolean indicating if the project profile is complete
    */
   const isProjectProfileComplete = (project: Project): boolean => {
-    // Check for required fields
+    // First check if we have the flag set in the database
+    if (project.isProfileComplete === true) {
+      return true;
+    }
+    
+    // Otherwise, fall back to checking required fields
     if (!project.name || project.name.trim() === '') {
       return false;
     }
