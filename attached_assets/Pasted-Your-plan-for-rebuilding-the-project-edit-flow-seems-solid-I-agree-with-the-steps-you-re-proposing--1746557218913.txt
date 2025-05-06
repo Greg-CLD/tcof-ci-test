@@ -1,0 +1,27 @@
+Your plan for rebuilding the project-edit flow seems solid. I agree with the steps you're proposing to the agent. Here's an overview of your plan and any additional recommendations to ensure successful implementation:
+
+Remove Existing Edit Functionality:
+
+Ensure all existing routes, components, and backend logic related to editing are completely removed. This should include any associated state management and context updates to avoid residual references.
+Add New "Edit Project" Button:
+
+Adding a simplified "Edit" button on the Organisations dashboard will streamline access. Ensure this button properly navigates to \projects/:projectId/edit-basic using correct routing both in client components and navigation logic.
+Create Minimal Edit Form:
+
+Implement the BasicProjectEditPage with fields for Sector, Organisation Size, and Project Type. Pre-populate these fields using existing project data to provide a seamless user experience.
+Use controlled components in React to handle the form states and changes.
+Hook Up Save Logic:
+
+Implement the API call to update the project. Ensure the use of PUT /api/projects/:id correctly matches server-side expectations.
+Properly invalidate the relevant query to refresh state on success and handle navigating back to the Organisations dashboard.
+Implement error handling to manage and inform users of any issues during save.
+Testing & Cleanup:
+
+Verification of old routes is crucial: ensure they don't render or appear in any navigation. Manual testing to step through each process is recommended.
+After all changes, review the console and logs for any unnoticed errors or warnings, especially concerning removed functionality.
+Additional Recommendations
+Logging: Add and review console logging throughout new and updated code to assist in tracking execution flow and easing future debugging efforts.
+
+UI Consistency: Align the UI updates and design of the new edit form with existing design language to keep user experience consistent.
+
+Documentation: Update any relevant documentation that may guide future developers who will work on this part of the codebase.

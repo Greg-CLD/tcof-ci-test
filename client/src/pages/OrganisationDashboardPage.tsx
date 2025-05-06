@@ -446,11 +446,11 @@ export default function OrganisationDashboardPage() {
                     <Button 
                       variant="default" 
                       onClick={() => {
-                        console.log('Complete setup clicked for project:', project.id);
-                        navigate(`/organisations/${orgId}/projects/${project.id}/profile/edit`);
+                        console.log('Edit project clicked for project:', project.id);
+                        navigate(`/organisations/${orgId}/projects/${project.id}/edit-basic`);
                       }}
                     >
-                      Complete Setup
+                      Edit Project
                     </Button>
                     <Button 
                       variant="outline" 

@@ -32,6 +32,7 @@ import OrganisationListPage from "@/pages/OrganisationListPage";
 import OrganisationDashboardPage from "@/pages/OrganisationDashboardPage";
 import OrganisationHeuristicsPage from "@/pages/OrganisationHeuristicsPage";
 import ProjectPage from "@/pages/ProjectPage";
+import BasicProjectEditPage from "@/pages/BasicProjectEditPage";
 import TestAuth from "@/pages/TestAuth";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -349,6 +350,29 @@ function Router() {
         {user ? (
           <ProtectedRouteGuard>
             {() => <ProjectProfile editMode={true} />}
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
+      
+      {/* NEW SIMPLIFIED EDIT ROUTES */}
+      {/* Basic Project Edit Page - direct route */}
+      <Route path="/projects/:projectId/edit-basic">
+        {user ? (
+          <ProtectedRouteGuard>
+            <BasicProjectEditPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
+      
+      {/* Basic Project Edit Page with Organization context */}
+      <Route path="/organisations/:orgId/projects/:projectId/edit-basic">
+        {user ? (
+          <ProtectedRouteGuard>
+            <BasicProjectEditPage />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired />
