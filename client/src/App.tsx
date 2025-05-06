@@ -1,5 +1,5 @@
 import { Switch, Route, Link, useLocation, useParams } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 
@@ -154,23 +154,32 @@ function Router() {
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
   const [location, navigate] = useLocation();
+  // Create the ref outside of useEffect
+  const lastRedirectLocationRef = useRef<string | null>(null);
   
   // Use useEffect for redirects to avoid React render-phase updates
   useEffect(() => {
-    // Extract org ID from location if present
-    const orgIdMatch = location.match(/\/organisations\/([^\/]+)/);
+    // Skip if we've already redirected to this location to avoid loops
+    if (lastRedirectLocationRef.current === location) {
+      // Reset after we've recognized the loop to allow future redirects
+      lastRedirectLocationRef.current = null;
+      return;
+    }
     
-    // If user is authenticated and at home route, redirect to organisations
+    // Home route redirect for authenticated users
     if (user && location === '/') {
+      lastRedirectLocationRef.current = "/organisations";
       navigate("/organisations");
+      return;
     }
     
-    // If user is not authenticated and tries to access restricted routes
+    // Security redirect for unauthenticated users
     if (!user && (location === '/organisations' || location.startsWith('/organisations/'))) {
+      lastRedirectLocationRef.current = "/";
       navigate("/");
+      return;
     }
     
-    // Note: We don't need to return early for authenticated routes as that's handled by the Route components
   }, [user, location, navigate]);
   
   return (

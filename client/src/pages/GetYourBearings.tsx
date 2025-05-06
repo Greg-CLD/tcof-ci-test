@@ -18,12 +18,16 @@ export default function GetYourBearings() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Redirect to organisations page if no projectId
+  // Only redirect if we're directly on the /get-your-bearings route with no projectId
   useEffect(() => {
-    if (!projectId && !projectsLoading) {
+    // Add a location check to avoid redirect loops
+    const isDirectGetYourBearingsRoute = location === "/get-your-bearings";
+    
+    // Only redirect if we're on the exact route, no projectId, and projects data is loaded
+    if (isDirectGetYourBearingsRoute && !projectId && !projectsLoading) {
       navigate("/organisations");
     }
-  }, [projectId, projectsLoading, navigate]);
+  }, [location, projectId, projectsLoading, navigate]);
   
   // Fetch project details if projectId is provided
   const { 

@@ -15,12 +15,16 @@ export default function MakeAPlan() {
   const { user } = useAuth();
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Redirect to organisations page if no projectId is provided
+  // Only redirect if we're directly on the /make-a-plan route with no projectId
   useEffect(() => {
-    if (!projectId) {
+    // Add a location check to avoid redirect loops
+    const isDirectMakeAPlanRoute = location === "/make-a-plan";
+    
+    // Only redirect if we're on the exact route and no projectId is provided
+    if (isDirectMakeAPlanRoute && !projectId) {
       navigate("/organisations");
     }
-  }, [projectId, navigate]);
+  }, [location, projectId, navigate]);
   
   // Fetch project details if projectId is provided
   const { 
