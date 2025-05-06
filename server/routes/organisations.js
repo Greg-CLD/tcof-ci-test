@@ -161,6 +161,53 @@ router.get('/:id/projects', isOrgMember, async (req, res) => {
 });
 
 /**
+ * POST /api/organisations/:id/projects
+ * Create a new project in an organization
+ */
+router.post('/:id/projects', isOrgMember, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const organisationId = req.params.id;
+    const { name, description } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ message: "Project name is required" });
+    }
+    
+    // Create the project with organization ID
+    const [newProject] = await db.insert(projects)
+      .values({
+        name,
+        description: description || '',
+        userId, // Include user ID as creator
+        organisationId, // Set organization ID from URL parameter
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    
+    console.log(`Created new project in organisation ${organisationId}:`, JSON.stringify(newProject));
+    
+    // Verify DB count for debugging
+    const count = await db.query.projects.count({
+      where: eq(projects.organisationId, organisationId)
+    });
+    console.log(`Project count for org ${organisationId}: ${count}`);
+    
+    // If the project was not successfully inserted, fail the request
+    if (count === 0) {
+      console.error(`Organization project insertion appears to have failed for org ${organisationId}`);
+      return res.status(500).json({ message: "Project creation failed - post-insertion verification failed" });
+    }
+    
+    return res.status(201).json(newProject);
+  } catch (error) {
+    console.error('Error creating project in organization:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/organisations/:id/heuristics
  * Get all heuristics for an organization
  */

@@ -119,8 +119,9 @@ export default function OrganisationDashboardPage() {
 
   // Create project mutation
   const createProjectMutation = useMutation({
-    mutationFn: async (projectData: { name: string; description: string | null; organisationId: string }) => {
-      const res = await apiRequest("POST", "/api/projects", projectData);
+    mutationFn: async (projectData: { name: string; description: string | null }) => {
+      // Use organization-specific endpoint instead of general projects endpoint
+      const res = await apiRequest("POST", `/api/organisations/${orgId}/projects`, projectData);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to create project");
@@ -210,8 +211,8 @@ export default function OrganisationDashboardPage() {
 
     createProjectMutation.mutate({
       name: formState.name.trim(),
-      description: formState.description.trim() || null,
-      organisationId: orgId
+      description: formState.description.trim() || null
+      // organizationId is now in the URL path, not needed in body
     });
   };
 
