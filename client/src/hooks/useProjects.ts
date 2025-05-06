@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from 'react-router-dom';
 
 export interface Project {
   id: string;
@@ -39,7 +40,7 @@ export interface UpdateProjectParams {
  */
 export function useProject(projectId?: string) {
   const enabled = !!projectId;
-  
+
   const { data: project, isLoading, error } = useQuery<Project>({
     queryKey: ['/api/projects', projectId],
     queryFn: async () => {
@@ -57,7 +58,7 @@ export function useProject(projectId?: string) {
     staleTime: 5 * 60 * 1000, // 5 minutes,
     retry: 2, // Retry failed requests up to 2 times
   });
-  
+
   return {
     project,
     isLoading,
@@ -67,23 +68,24 @@ export function useProject(projectId?: string) {
 
 export function useProjects() {
   const queryClient = useQueryClient();
-  
+  const navigate = useNavigate();
+
   // Fetch all projects for the current user
   const { data: projects = [], isLoading, error } = useQuery<Project[]>({
     queryKey: ['/api/projects'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
-  
+
   // Create a new project
   const createProject = useMutation({
     mutationFn: async (data: CreateProjectData): Promise<Project> => {
       const response = await apiRequest('POST', '/api/projects', data);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to create project');
       }
-      
+
       return response.json();
     },
     onSuccess: (newProject) => {
@@ -100,17 +102,17 @@ export function useProjects() {
       });
     },
   });
-  
+
   // Update an existing project
   const updateProject = useMutation({
     mutationFn: async ({ id, data }: UpdateProjectParams): Promise<Project> => {
       console.log(`Updating project with ID ${id} and data:`, data);
       // NOTE: The response is already checked in apiRequest, so we don't need to check again
       const response = await apiRequest('PUT', `/api/projects/${id}`, data);
-      
+
       // Log the response to help with debugging
       console.log(`Update project response:`, response);
-      
+
       // We don't check response.ok again because apiRequest already does that
       return response.json();
     },
@@ -120,16 +122,16 @@ export function useProjects() {
       if (!selectedProjectId || selectedProjectId === updatedProject.id) {
         localStorage.setItem('selectedProjectId', updatedProject.id);
       }
-      
+
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      
+
       // Also invalidate the specific project query to update ProjectContext
       queryClient.invalidateQueries({ queryKey: ['/api/projects', updatedProject.id] });
-      
+
       // Update the project in the cache directly to ensure immediate consistency
       queryClient.setQueryData(['/api/projects', updatedProject.id], updatedProject);
-      
+
       // Also update the project in the projects array in the cache
       const projects = queryClient.getQueryData<Project[]>(['/api/projects']);
       if (projects) {
@@ -138,7 +140,7 @@ export function useProjects() {
         );
         queryClient.setQueryData(['/api/projects'], updatedProjects);
       }
-      
+
       toast({
         title: 'Project Updated',
         description: 'The project has been successfully updated.',
@@ -152,7 +154,7 @@ export function useProjects() {
       });
     },
   });
-  
+
   // Delete a project
   const deleteProject = useMutation({
     mutationFn: async (id: string): Promise<void> => {
@@ -164,7 +166,7 @@ export function useProjects() {
     onSuccess: () => {
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      
+      navigate('/organisations');
       toast({
         title: 'Project Deleted',
         description: 'The project has been permanently deleted.',
@@ -178,7 +180,7 @@ export function useProjects() {
       });
     },
   });
-  
+
   /**
    * Checks if a project's profile is complete with all required fields
    * @param project The project to check
@@ -189,32 +191,32 @@ export function useProjects() {
     if (project.isProfileComplete === true) {
       return true;
     }
-    
+
     // Otherwise, fall back to checking required fields
     if (!project.name || project.name.trim() === '') {
       return false;
     }
-    
+
     if (!project.sector || project.sector.trim() === '') {
       return false;
     }
-    
+
     // For 'other' sector, customSector is required
     if (project.sector === 'other' && (!project.customSector || project.customSector.trim() === '')) {
       return false;
     }
-    
+
     if (!project.orgType || project.orgType.trim() === '') {
       return false;
     }
-    
+
     if (!project.currentStage || project.currentStage.trim() === '') {
       return false;
     }
-    
+
     return true;
   };
-  
+
   /**
    * Gets the missing profile fields for a project
    * @param project The project to check
@@ -222,30 +224,30 @@ export function useProjects() {
    */
   const getMissingProfileFields = (project: Project): string[] => {
     const missingFields = [];
-    
+
     if (!project.name || project.name.trim() === '') {
       missingFields.push('name');
     }
-    
+
     if (!project.sector || project.sector.trim() === '') {
       missingFields.push('sector');
     }
-    
+
     if (project.sector === 'other' && (!project.customSector || project.customSector.trim() === '')) {
       missingFields.push('custom sector');
     }
-    
+
     if (!project.orgType || project.orgType.trim() === '') {
       missingFields.push('organization type');
     }
-    
+
     if (!project.currentStage || project.currentStage.trim() === '') {
       missingFields.push('current stage');
     }
-    
+
     return missingFields;
   };
-  
+
   /**
    * Get the currently selected project from localStorage
    * @returns The selected project or undefined if none selected
@@ -253,10 +255,10 @@ export function useProjects() {
   const getSelectedProject = (): Project | undefined => {
     const selectedProjectId = localStorage.getItem('selectedProjectId');
     if (!selectedProjectId) return undefined;
-    
+
     return projects.find(p => p.id === selectedProjectId);
   };
-  
+
   /**
    * Checks if the selected project has a complete profile
    * @returns boolean indicating if the selected project's profile is complete
@@ -264,10 +266,10 @@ export function useProjects() {
   const isSelectedProjectProfileComplete = (): boolean => {
     const selectedProject = getSelectedProject();
     if (!selectedProject) return false;
-    
+
     return isProjectProfileComplete(selectedProject);
   };
-  
+
   /**
    * Sets the currently selected project ID in localStorage
    * @param id The project ID to set as selected
