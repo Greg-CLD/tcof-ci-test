@@ -25,6 +25,7 @@ import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
 import UserHistory from "@/pages/UserHistory";
 import ProfilePage from "@/pages/ProfilePage";
+import UserProfileSettings from "@/pages/UserProfileSettings";
 import ProjectProfile from "@/pages/ProjectProfile";
 import Dashboard from "@/pages/Dashboard";
 import OutcomeManagement from "@/pages/OutcomeManagement";
@@ -278,6 +279,15 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/settings">
+        {user ? (
+          <ProtectedRouteGuard>
+            <UserProfileSettings />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
       {/* Make sure we use the most specific routes first */}
       <Route path="/get-your-bearings/project-profile">
         <ProjectProfile />

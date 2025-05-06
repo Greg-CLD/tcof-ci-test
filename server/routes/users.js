@@ -2,7 +2,7 @@
  * User profile API routes
  */
 import express from 'express';
-import { db } from '../db.js';
+import { db } from '../../db/index.js';
 import { users } from '@shared/schema.ts';
 import { userUpdateSchema, passwordChangeSchema } from '@shared/schema.ts';
 import { eq } from 'drizzle-orm';
