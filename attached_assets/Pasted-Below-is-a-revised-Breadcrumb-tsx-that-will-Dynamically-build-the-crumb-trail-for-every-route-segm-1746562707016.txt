@@ -1,0 +1,131 @@
+Below is a revised Breadcrumb.tsx that will:
+
+Dynamically build the crumb trail for every route segment, not just the hard-coded ones.
+
+Avoid duplication by de-duplicating consecutive identical labels.
+
+Always show the full path from Home → Organisations → Org Name → Project Name → any sub-page.
+
+Paste this file over your existing Breadcrumb.tsx.
+
+tsx
+Copy
+Edit
+import React from "react";
+import { Link, useLocation, useParams } from "wouter";
+import { Home, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+
+interface Organisation { id: string; name: string; }
+interface Project      { id: string; name: string; }
+
+export function Breadcrumb() {
+  const [location] = useLocation();
+  const { orgId, projectId } = useParams<{ orgId?: string; projectId?: string }>();
+
+  // fetch organisation name if needed
+  const { data: org } = useQuery(
+    [“org”, orgId],
+    async () => {
+      const r = await apiRequest("GET", `/api/organisations/${orgId}`);
+      return r.ok ? (await r.json()) as Organisation : null;
+    },
+    { enabled: !!orgId }
+  );
+
+  // fetch project name if needed
+  const { data: proj } = useQuery(
+    [“project”, projectId],
+    async () => {
+      const r = await apiRequest("GET", `/api/projects/${projectId}`);
+      return r.ok ? (await r.json()) as Project : null;
+    },
+    { enabled: !!projectId }
+  );
+
+  // split the path into segments
+  const segments = location
+    .split("/")
+    .filter(Boolean); // remove empty
+
+  // build crumbs
+  const crumbs: { href: string; label: string }[] = [
+    { href: "/", label: "Home" },
+  ];
+
+  let pathAcc = "";
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    pathAcc += `/${seg}`;
+
+    let label = decodeURIComponent(seg);
+
+    // human-friendly overrides
+    if (seg === "organisations")            label = "Organisations";
+    else if (orgId && seg === orgId && org) label = org.name;
+    else if (seg === "projects")            label = "Projects";
+    else if (projectId && seg === projectId && proj) label = proj.name;
+    else if (seg === "profile")             label = "Profile";
+    else if (seg === "edit")                label = "Edit";
+    else if (seg === "setup")               label = "Setup";
+    else if (seg === "tools")               label = ""; // skip
+    else if (seg === "goal-mapping")        label = "Goal Mapping";
+    else if (seg === "cynefin-orientation") label = "Cynefin";
+    else if (seg === "tcof-journey")        label = "TCOF Journey";
+    else if (seg === "make-a-plan")         label = "Make a Plan";
+
+    // only add if non-empty
+    if (label) {
+      crumbs.push({ href: pathAcc, label });
+    }
+  }
+
+  // remove any consecutive duplicates (just in case)
+  const deduped: typeof crumbs = [];
+  crumbs.forEach(c => {
+    if (!deduped.length || deduped[deduped.length - 1].label !== c.label) {
+      deduped.push(c);
+    }
+  });
+
+  return (
+    <nav className="flex items-center text-sm text-gray-500 mb-4 overflow-x-auto px-4" aria-label="Breadcrumb">
+      {deduped.map((crumb, idx) => (
+        <span key={crumb.href + idx} className="flex items-center">
+          <Link
+            href={crumb.href}
+            className={`hover:text-tcof-teal ${
+              idx === deduped.length - 1 ? "font-medium text-tcof-dark" : ""
+            }`}
+            aria-current={idx === deduped.length - 1 ? "page" : undefined}
+          >
+            {idx === 0
+              ? (<Home className="inline h-4 w-4" aria-hidden="true" />)
+              : crumb.label
+            }
+            {idx === 0 && <span className="sr-only">Home</span>}
+          </Link>
+          {idx < deduped.length - 1 && (
+            <ChevronRight className="h-4 w-4 mx-1" aria-hidden="true" />
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
+What changed?
+
+Dynamic Segments
+We split location on / and iterate every segment, building a cumulative href.
+
+Friendly Labels
+We map raw segments (organisations, projects, numeric IDs) to readable labels, including fetched org/project names.
+
+Deduplication
+We remove any back-to-back duplicates to prevent “Organisations → Organisations” or similar.
+
+Full Coverage
+Any new page—tools, setup, profile, edit—automatically appears in the trail.
+
+Paste this into your code, restart the dev server, and you should now have a fully dynamic breadcrumb.
