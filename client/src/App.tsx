@@ -158,11 +158,24 @@ function Router() {
   // We won't use useEffect for redirects to avoid the infinite loop issues
   // Instead we'll use more granular control with direct conditional rendering
   
-  // For root path, if logged in, redirect to organizations list
-  if (user && location === '/') {
-    return (
-      <Redirect to="/organisations" />
-    );
+  // Log current location on each render for debugging
+  console.log("Current location in Router:", location);
+  
+  // Hard-code post-login route to always be /organisations
+  // This handles both the root path and any tool page
+  if (user) {
+    // If user is logged in and at the home page or at the auth page (post-login),
+    // redirect to organisations page
+    if (location === '/' || location === '/auth') {
+      console.log("User logged in, redirecting to /organisations");
+      return <Redirect to="/organisations" />;
+    }
+    
+    // Don't allow users to directly access tool pages without selecting a project
+    if ((location === '/get-your-bearings' || location === '/make-a-plan') && !localStorage.getItem('selectedProjectId')) {
+      console.log("Preventing direct tool access without project, redirecting to /organisations");
+      return <Redirect to="/organisations" />;
+    }
   }
   
   // For organization routes, if not logged in, redirect to home

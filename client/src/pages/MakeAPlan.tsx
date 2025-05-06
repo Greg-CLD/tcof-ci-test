@@ -35,12 +35,28 @@ export default function MakeAPlan() {
     enabled: !!projectId
   });
   
-  // Use declarative redirect instead of useEffect
-  const isDirectMakeAPlanRoute = location === "/make-a-plan";
+  useEffect(() => {
+    console.log("Tool mounted:", location);
+  }, [location]);
   
-  // If we're on the main route with no project ID, redirect to organizations
-  if (isDirectMakeAPlanRoute && !projectId) {
+  // If we're on the direct route with no project ID, redirect to organizations
+  if (location === "/make-a-plan" && !projectId) {
+    console.log("Missing projectId, redirecting to /organisations");
     return <Redirect to="/organisations" />;
+  }
+  
+  // Guard against invalid state - no project ID available
+  if (!projectId) {
+    console.log("No projectId available in MakeAPlan, rendering empty state");
+    return (
+      <div className="container mx-auto p-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Select a Project</h2>
+        <p className="mb-6">Please select a project from your organisations page first.</p>
+        <Button onClick={() => navigate("/organisations")}>
+          Go to Organisations
+        </Button>
+      </div>
+    );
   }
   
   // Authentication check component

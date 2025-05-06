@@ -61,28 +61,35 @@ export default function GetYourBearings() {
     </div>
   );
   
-  // Update selectedProjectId when projectId param changes
+  // Only set selected project ID from direct URL param, no localStorage side effects
   useEffect(() => {
+    console.log("Tool mounted:", location);
+    
     if (projectId) {
       console.log(`Setting selected project ID from URL param: ${projectId}`);
       setSelectedProjectId(projectId);
-      localStorage.setItem('selectedProjectId', projectId);
-    } else {
-      // Check for selectedProjectId in localStorage when no projectId in URL
-      const storedProjectId = localStorage.getItem('selectedProjectId');
-      if (storedProjectId) {
-        console.log(`Setting selected project ID from localStorage: ${storedProjectId}`);
-        setSelectedProjectId(storedProjectId);
-      }
+      // Do NOT write to localStorage here - it should only happen on explicit user action
     }
-  }, [projectId]);
+  }, [projectId, location]);
   
-  // Use declarative redirect instead of useEffect
-  const isDirectGetYourBearingsRoute = location === "/get-your-bearings";
-  
-  // If we're on the main route with no project ID, redirect to organizations
-  if (isDirectGetYourBearingsRoute && !projectId && !projectsLoading) {
+  // If we're on the direct route with no project ID, redirect to organizations
+  if (location === "/get-your-bearings" && !projectId) {
+    console.log("Missing projectId, redirecting to /organisations");
     return <Redirect to="/organisations" />;
+  }
+  
+  // Guard against invalid state - no project ID available
+  if (!projectId) {
+    console.log("No projectId available in GetYourBearings, rendering empty state");
+    return (
+      <div className="container mx-auto p-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Select a Project</h2>
+        <p className="mb-6">Please select a project from your organisations page first.</p>
+        <Button onClick={() => navigate("/organisations")}>
+          Go to Organisations
+        </Button>
+      </div>
+    );
   }
   
   return (
