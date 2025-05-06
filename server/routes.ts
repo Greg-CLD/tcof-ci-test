@@ -241,10 +241,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register projects routes
   try {
-    app.use('/api/projects-detail', projectsRouter);
-    console.log('Projects detail routes registered successfully');
+    app.use('/api/projects', projectsRouter);
+    console.log('Projects routes registered successfully');
   } catch (error) {
-    console.error('Error registering projects detail routes:', error);
+    console.error('Error registering projects routes:', error);
   }
 
   // Setup basic health check endpoint
