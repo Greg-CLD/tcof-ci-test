@@ -224,28 +224,61 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
     if (projectId) {
       setIsLoading(true);
       
-      // When we have a response from the server
-      if (!goalMapLoading) {
-        if (serverGoalMap && serverGoalMap.nodes && serverGoalMap.connections) {
-          console.log("Loading goal map data from server:", serverGoalMap);
+      const loadSavedData = async () => {
+        // First try to get data from server
+        if (!goalMapLoading) {
+          if (serverGoalMap && serverGoalMap.nodes && serverGoalMap.connections) {
+            console.log("Loading goal map data from server:", serverGoalMap);
+            
+            // Load canvas data
+            loadCanvasData({
+              nodes: serverGoalMap.nodes,
+              connections: serverGoalMap.connections
+            });
+            
+            // Also save to localStorage for offline access
+            saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, serverGoalMap);
+            
+            // Start in view mode for existing maps
+            setIsEditing(false);
+            setHasLoadedData(true);
+            setIsLoading(false);
+            return;
+          } 
           
-          // Load canvas data
-          loadCanvasData({
-            nodes: serverGoalMap.nodes,
-            connections: serverGoalMap.connections
-          });
+          // If no server data, try local storage
+          try {
+            const localData = await loadFromLocalStorage<GoalMapData>(STORAGE_KEYS.GOAL_MAP);
+            if (localData && localData.nodes && localData.connections) {
+              console.log("Loading goal map data from local storage:", localData);
+              
+              // Only use local data if it matches the current project
+              if (localData.projectId === projectId) {
+                loadCanvasData({
+                  nodes: localData.nodes,
+                  connections: localData.connections
+                });
+                
+                // Start in view mode for existing maps
+                setIsEditing(false);
+                setHasLoadedData(true);
+                setIsLoading(false);
+                return;
+              }
+            }
+          } catch (error) {
+            console.error("Error loading from local storage:", error);
+          }
           
-          // Start in view mode for existing maps
-          setIsEditing(false);
-        } else {
-          // If no map exists, start in edit mode with empty canvas
+          // If no data found at all, start with empty canvas in edit mode
           clearCanvas();
           setIsEditing(true);
+          setHasLoadedData(true);
+          setIsLoading(false);
         }
-        
-        setHasLoadedData(true);
-        setIsLoading(false);
-      }
+      };
+      
+      loadSavedData();
     }
   }, [projectId, serverGoalMap, goalMapLoading, loadCanvasData, clearCanvas]);
   
@@ -271,8 +304,25 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       y = Math.random() * (rect.height - 200) + 100;
     }
     
-    // Add the node at the position
-    addNode(goalInput, timeframeInput || '', x, y);
+    // Add the node at the position with the selected level
+    const newNodeId = addNode(goalInput, timeframeInput || '', x, y);
+    
+    // Update the node type based on selected goal level
+    if (newNodeId) {
+      const updatedNodes = nodes.map(node => {
+        if (node.id === newNodeId) {
+          return { ...node, type: goalLevel };
+        }
+        return node;
+      });
+      
+      // Update the nodes state with the modified nodes
+      loadCanvasData({
+        nodes: updatedNodes,
+        connections: connections
+      });
+    }
+    
     setGoalInput("");
     setTimeframeInput("");
   };
