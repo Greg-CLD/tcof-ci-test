@@ -80,10 +80,25 @@ export default function OrganisationDashboardPage() {
       }
       const data = await res.json();
       console.log("Projects fetched:", data);
-      return data;
+      
+      // Ensure each project has the organisationId explicitly set
+      return data.map((project: any) => ({
+        ...project,
+        organisationId: orgId
+      }));
     },
     // Make sure we always get fresh data when navigating back to this page
-    staleTime: 0
+    staleTime: 0,
+    // Don't refetch automatically in the background - let manual actions trigger refetches
+    refetchOnWindowFocus: false,
+    // Because we're doing manual cache management, ensure the data is structured consistently
+    select: (data) => {
+      if (!Array.isArray(data)) {
+        console.warn("Projects data is not an array:", data);
+        return [];
+      }
+      return data;
+    }
   });
 
   // Fetch organisation default heuristics
@@ -115,35 +130,49 @@ export default function OrganisationDashboardPage() {
     onSuccess: (newProject) => {
       console.log("Project created successfully:", newProject);
       
+      // Make sure organisationId is set in the newProject
+      const projectWithOrgId = {
+        ...newProject,
+        organisationId: orgId // Ensure this field is explicitly set
+      };
+      
+      console.log("Project with org ID confirmed:", projectWithOrgId);
+      
       // Reset form and close dialog
       setFormState({ name: "", description: "" });
       setIsCreateDialogOpen(false);
       
-      // Force refetch projects
-      console.log("Invalidating query cache for:", ['orgProjects', orgId]);
-      queryClient.invalidateQueries({
-        queryKey: ['orgProjects', orgId]
-      });
-      
-      // Get current projects from cache
-      const currentProjects = queryClient.getQueryData(['orgProjects', orgId]);
-      console.log("Current projects in cache before update:", currentProjects);
-      
-      // Immediately update the projects list in the cache
+      // Directly update the projects in cache first (optimistic update)
       queryClient.setQueryData(
         ['orgProjects', orgId],
         (oldData: any) => {
-          console.log("Old data in cache setter:", oldData);
+          console.log("Updating cache with current data:", oldData);
           // If we have existing data, append the new project to it
-          const newData = oldData ? [...oldData, newProject] : [newProject];
-          console.log("New data to be set in cache:", newData);
-          return newData;
+          // Make sure we don't overwrite with null or undefined
+          if (Array.isArray(oldData)) {
+            const newData = [...oldData, projectWithOrgId];
+            console.log("New projects array:", newData);
+            return newData;
+          } else {
+            // If we don't have existing data, create a new array with just this project
+            console.log("No existing data, setting new array with project");
+            return [projectWithOrgId];
+          }
         }
       );
       
-      // Check the cache after update
-      const updatedProjects = queryClient.getQueryData(['orgProjects', orgId]);
-      console.log("Projects in cache after update:", updatedProjects);
+      // Then force a background refetch to ensure consistency
+      queryClient.invalidateQueries({
+        queryKey: ['orgProjects', orgId],
+        // Don't refetch immediately to avoid UI flicker
+        refetchType: 'inactive'
+      });
+      
+      // Log the final state for debugging
+      setTimeout(() => {
+        const updatedProjects = queryClient.getQueryData(['orgProjects', orgId]);
+        console.log("Projects in cache after 500ms:", updatedProjects);
+      }, 500);
       
       toast({
         title: "Success",

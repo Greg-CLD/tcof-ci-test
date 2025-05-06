@@ -138,6 +138,7 @@ router.get('/:id/projects', isOrgMember, async (req, res) => {
     const organisationId = req.params.id;
     
     // Only select fields that we know exist in the projects table
+    console.log(`Fetching projects for organisation ${organisationId}`);
     const organisationProjects = await db.query.projects.findMany({
       where: eq(projects.organisationId, organisationId),
       orderBy: desc(projects.createdAt), // Use createdAt for ordering instead of updatedAt
@@ -145,9 +146,12 @@ router.get('/:id/projects', isOrgMember, async (req, res) => {
         id: true,
         name: true,
         description: true,
-        createdAt: true
+        createdAt: true,
+        organisationId: true // Make sure this field is included
       }
     });
+    
+    console.log(`Found ${organisationProjects.length} projects:`, JSON.stringify(organisationProjects));
     
     return res.status(200).json(organisationProjects);
   } catch (error) {
