@@ -1,7 +1,7 @@
 import React from "react";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
-import Breadcrumb from "@/components/Breadcrumb";
+import { Breadcrumb } from "@/components/Breadcrumb";
 import ProjectBanner from "@/components/ProjectBanner";
 import { Toaster } from "@/components/ui/toaster";
 

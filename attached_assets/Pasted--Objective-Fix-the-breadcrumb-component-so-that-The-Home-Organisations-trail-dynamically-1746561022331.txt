@@ -1,0 +1,102 @@
+🎯 Objective
+Fix the breadcrumb component so that:
+
+The “Home > Organisations > …” trail dynamically reflects the full path for every page (including organization, project, and any sub-pages).
+
+Duplicate breadcrumb segments never render (only one set should appear).
+
+🔍 Investigation Steps
+
+Locate Breadcrumb Logic
+
+File: client/src/components/Breadcrumb.tsx (or equivalent)
+
+Identify where useLocation / useParams drive the crumbs.
+
+Dynamic Trail Construction
+
+Ensure you always push “Home” and “Organisations” first.
+
+After that, append [orgId, projectId, subPage] segments in order, based on useParams() values.
+
+Prevent Duplicates
+
+Confirm that you render the breadcrumb exactly once.
+
+Remove any duplicate <Breadcrumb> invocation in parent layouts or pages.
+
+💡 Example Fix
+
+tsx
+Copy
+Edit
+// client/src/components/Breadcrumb.tsx
+
+import { Link, useLocation, useParams } from "wouter";
+import { Home, ChevronRight } from "lucide-react";
+
+export function Breadcrumb() {
+  const [location] = useLocation();
+  const { orgId, projectId } = useParams<{
+    orgId?: string;
+    projectId?: string;
+  }>();
+
+  // Build a single array of crumb segments
+  const crumbs: { href: string; label: string }[] = [
+    { href: "/", label: "Home" },
+    { href: "/organisations", label: "Organisations" },
+  ];
+
+  if (orgId) {
+    crumbs.push({
+      href: `/organisations/${orgId}`,
+      label: "Confluity Test Org", // or dynamically fetch org name
+    });
+  }
+
+  if (projectId) {
+    crumbs.push({
+      href: `/organisations/${orgId}/projects/${projectId}`,
+      label: `Project ${projectId}`, // or dynamic project name
+    });
+  }
+
+  // If you have deeper sub-pages (e.g. profile/edit), you can detect via location:
+  if (location.endsWith("/profile/edit")) {
+    crumbs.push({ href: "", label: "Edit" });
+  }
+
+  return (
+    <nav className="flex items-center text-sm text-gray-500 mb-4 overflow-x-auto">
+      {crumbs.map((crumb, idx) => (
+        <span key={crumb.href || idx} className="flex items-center">
+          <Link
+            href={crumb.href || location}
+            className={`hover:text-tcof-teal ${idx === crumbs.length - 1 ? "font-medium text-tcof-dark" : ""}`}
+          >
+            {idx === 0 ? <Home className="inline h-4 w-4" /> : crumb.label}
+          </Link>
+          {idx < crumbs.length - 1 && <ChevronRight className="h-4 w-4 mx-1" />}
+        </span>
+      ))}
+    </nav>
+  );
+}
+✅ Success Criteria
+
+Breadcrumb always shows Home > Organisations > {Org Name} > {Project Name} > {Page} in the correct order.
+
+No duplicate breadcrumb sets render anywhere.
+
+Clean up any extra imports or duplicate <Breadcrumb> calls in parent layouts.
+
+Please implement these changes in your Breadcrumb.tsx (and remove any extra breadcrumb render calls elsewhere), then verify on the following pages:
+
+/organisations
+
+/organisations/:orgId
+
+/organisations/:orgId/projects/:projectId
+
+/organisations/:orgId/projects/:projectId/profile/edit

@@ -1,22 +1,17 @@
-import { useParams, Link } from 'wouter';
-import { ChevronRight, Home } from 'lucide-react';
+import { Link, useLocation, useParams } from "wouter";
+import { Home, ChevronRight } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 
-export default function Breadcrumb() {
-  // Get the parameters from the current URL
-  const { orgId, projectId } = useParams<{ 
-    orgId?: string;
-    projectId?: string;
-  }>();
-
-  // Get the current path segments for highlighting the current page
-  const path = window.location.pathname;
-  const isProfileEdit = path.includes('/profile/edit');
+export function Breadcrumb() {
+  const [location] = useLocation();
+  const params = useParams();
+  const orgId = params?.orgId;
+  const projectId = params?.projectId;
 
   // Fetch organisation name if orgId is present
   const { data: organisation } = useQuery({
-    queryKey: ['organisation', orgId],
+    queryKey: ['/api/organisations', orgId],
     queryFn: async () => {
       if (!orgId) return null;
       const res = await apiRequest('GET', `/api/organisations/${orgId}`);
@@ -28,7 +23,7 @@ export default function Breadcrumb() {
 
   // Fetch project name if projectId is present
   const { data: project } = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: ['/api/projects', projectId],
     queryFn: async () => {
       if (!projectId) return null;
       const res = await apiRequest('GET', `/api/projects/${projectId}`);
@@ -38,59 +33,50 @@ export default function Breadcrumb() {
     enabled: !!projectId
   });
 
+  // Build a single array of crumb segments
+  const crumbs: { href: string; label: string }[] = [
+    { href: "/", label: "Home" },
+    { href: "/organisations", label: "Organisations" },
+  ];
+
+  if (orgId) {
+    crumbs.push({
+      href: `/organisations/${orgId}`,
+      // Use actual org name if available, fallback to static name
+      label: organisation?.name || "Confluity Test Org", 
+    });
+  }
+
+  if (projectId) {
+    crumbs.push({
+      href: `/organisations/${orgId}/projects/${projectId}`,
+      // Use actual project name if available, fallback to ID
+      label: project?.name || `Project ${projectId}`, 
+    });
+  }
+
+  // Check for additional sub-pages
+  if (location.endsWith("/profile/edit")) {
+    crumbs.push({ href: "", label: "Edit" });
+  } else if (location.endsWith("/edit-basic")) {
+    crumbs.push({ href: "", label: "Edit Details" });
+  }
+
   return (
-    <div className="flex items-center text-sm text-gray-500 mb-4 overflow-x-auto">
-      <Link href="/" className="flex items-center hover:text-tcof-teal" aria-label="Home">
-        <Home className="h-4 w-4" />
-        <span className="sr-only">Home</span>
-      </Link>
-      
-      <ChevronRight className="h-4 w-4 mx-1" />
-      
-      <Link 
-        href="/organisations" 
-        className="hover:text-tcof-teal"
-      >
-        Organisations
-      </Link>
-      
-      {orgId && organisation && (
-        <>
-          <ChevronRight className="h-4 w-4 mx-1" />
-          <Link 
-            href={`/organisations/${orgId}`}
-            className={`font-medium ${!projectId ? 'text-tcof-dark' : 'hover:text-tcof-teal'}`}
+    <nav className="flex items-center text-sm text-gray-500 mb-4 overflow-x-auto">
+      {crumbs.map((crumb, idx) => (
+        <span key={crumb.href || idx} className="flex items-center">
+          <Link
+            href={crumb.href || location}
+            className={`hover:text-tcof-teal ${
+              idx === crumbs.length - 1 ? "font-medium text-tcof-dark" : ""
+            }`}
           >
-            {organisation.name}
+            {idx === 0 ? <Home className="inline h-4 w-4" /> : crumb.label}
           </Link>
-        </>
-      )}
-      
-      {projectId && project && (
-        <>
-          <ChevronRight className="h-4 w-4 mx-1" />
-          <Link 
-            href={`/organisations/${orgId}/projects/${projectId}`}
-            className={`font-medium ${!isProfileEdit ? 'text-tcof-dark' : 'hover:text-tcof-teal'}`}
-          >
-            {project.name}
-          </Link>
-        </>
-      )}
-      
-      {isProfileEdit && (
-        <>
-          <ChevronRight className="h-4 w-4 mx-1" />
-          <Link 
-            href={`/organisations/${orgId}/projects/${projectId}/profile/edit`}
-            className="font-medium text-tcof-dark"
-          >
-            Profile
-          </Link>
-          <ChevronRight className="h-4 w-4 mx-1" />
-          <span className="font-medium text-tcof-dark">Edit</span>
-        </>
-      )}
-    </div>
+          {idx < crumbs.length - 1 && <ChevronRight className="h-4 w-4 mx-1" />}
+        </span>
+      ))}
+    </nav>
   );
 }
