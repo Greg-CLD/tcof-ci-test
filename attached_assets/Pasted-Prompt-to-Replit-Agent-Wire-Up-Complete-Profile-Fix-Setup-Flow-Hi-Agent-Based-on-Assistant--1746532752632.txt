@@ -1,0 +1,72 @@
+Prompt to Replit Agent — Wire Up “Complete Profile” & Fix Setup Flow
+
+Hi Agent,
+
+Based on Assistant’s findings, the Complete Profile button currently just navigates back to /projects/:id—that’s why nothing happens. We need to:
+
+1. Update Setup Page Handler
+In ProjectSetupPage.tsx:
+
+Replace current handleCompleteProfile (which does navigate('/projects/${projectId}')) with opening the profile edit flow:
+
+ts
+Copy
+Edit
+const handleCompleteProfile = () => {
+  console.log('Complete Profile clicked for project:', projectId);
+  navigate(`/projects/${projectId}/profile/edit`);
+};
+Ensure navigate is imported from wouter:
+
+ts
+Copy
+Edit
+import { useLocation } from 'wouter';
+const [, navigate] = useLocation();
+2. Add/Edit Profile Route
+In your router setup (App.tsx or equivalent), add or update the route:
+
+tsx
+Copy
+Edit
+// Route for editing a project profile
+<Route path="/projects/:projectId/profile/edit">
+  {user ? (
+    <ProtectedRouteGuard>
+      <ProjectProfilePage editMode={true} />
+    </ProtectedRouteGuard>
+  ) : (
+    <AuthRequired />
+  )}
+</Route>
+Ensure ProjectProfilePage accepts an editMode prop and renders the React Hook Form for editing (using form.reset() to prefill).
+
+3. Adjust Profile View Component
+In ProjectProfileView.tsx (or wherever the “Edit Profile” button lives):
+
+Change the onClick of the “Edit Profile” button to call the onEdit prop:
+
+tsx
+Copy
+Edit
+<Button onClick={onEdit}>Edit Profile</Button>
+Confirm that ProjectSetupPage passes onEdit={() => navigate(/projects/${projectId}/profile/edit)} into ProjectProfileView.
+
+4. Ensure Completeness Gate Bypasses Edit Route
+In your profile completeness guard (if any), add:
+
+ts
+Copy
+Edit
+const path = window.location.pathname;
+if (path.includes('/profile/edit')) {
+  return children;  // Bypass gate when editing
+}
+5. Smoke Test
+Org → Project → Complete setup → clicks button → lands on /projects/:id/profile/edit with prefilled form.
+
+Edit & save → redirects back to project page → “Profile Incomplete” alert is gone.
+
+Tools load without gate.
+
+Once done, confirm smoke tests and share updated file paths.

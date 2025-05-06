@@ -148,7 +148,7 @@ export default function ProjectBanner() {
                 size="sm" 
                 variant="ghost" 
                 className={`ml-2 ${!isProfileComplete ? "bg-yellow-50 text-amber-600" : "text-tcof-teal"}`}
-                onClick={() => navigate(`/projects/${selectedProject.id}`)}
+                onClick={() => navigate(`/projects/${selectedProject.id}/profile/edit`)}
               >
                 <Briefcase className="w-4 h-4 mr-1" />
                 {isProfileComplete ? "Edit Profile" : "Complete Profile"}

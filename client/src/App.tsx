@@ -319,6 +319,17 @@ function Router() {
         )}
       </Route>
       
+      {/* Project Profile Edit Page */}
+      <Route path="/projects/:projectId/profile/edit">
+        {user ? (
+          <ProtectedRouteGuard>
+            {() => <ProjectProfile editMode={true} />}
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
+      
       {/* Project Detail Page */}
       <Route path="/projects/:projectId">
         <ProtectedRouteGuard>
