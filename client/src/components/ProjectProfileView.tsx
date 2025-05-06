@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Briefcase, Building2, Users, Activity, Clock, Target, Compass, Map } from 'lucide-react';
 import { useProgress } from '@/contexts/ProgressContext';
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { useProjects } from "@/hooks/use-projects";
 
 interface ProjectProfileViewProps {
   project: Project | undefined;
@@ -17,8 +15,7 @@ interface ProjectProfileViewProps {
 export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfileViewProps) {
   // Get progress data from the context
   const { progress } = useProgress();
-  const { isSelectedProjectProfileComplete } = useProjects();
-
+  
   // Handle case where project is undefined
   if (!project) {
     return (
@@ -45,7 +42,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
   // Helper functions for displaying formatted data
   const getSectorDisplay = () => {
     if (!project?.sector) return 'Not specified';
-
+    
     switch (project.sector) {
       case 'public': return 'Public Sector';
       case 'private': return 'Private Sector';
@@ -60,10 +57,10 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
       default: return project.sector;
     }
   };
-
+  
   const getOrgTypeDisplay = () => {
     if (!project?.orgType) return 'Not specified';
-
+    
     switch (project.orgType) {
       case 'large_enterprise': return 'Large Enterprise (1000+ employees)';
       case 'medium_enterprise': return 'Medium Enterprise (250-999 employees)';
@@ -77,10 +74,10 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
       default: return project.orgType;
     }
   };
-
+  
   const getTeamSizeDisplay = () => {
     if (!project?.teamSize) return 'Not specified';
-
+    
     switch (project.teamSize) {
       case 'solo': return 'Solo (1 person)';
       case 'small': return 'Small Team (2-5 people)';
@@ -90,10 +87,10 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
       default: return project.teamSize;
     }
   };
-
+  
   const getCurrentStageDisplay = () => {
     if (!project?.currentStage) return 'Not specified';
-
+    
     switch (project.currentStage) {
       case 'identify': return '1. Identification';
       case 'define': return '2. Definition';
@@ -102,10 +99,10 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
       default: return project.currentStage;
     }
   };
-
+  
   const getStageBadgeColor = () => {
     if (!project?.currentStage) return "bg-gray-100 text-gray-800";
-
+    
     switch (project.currentStage) {
       case 'identify': return "bg-blue-100 text-blue-800";
       case 'define': return "bg-purple-100 text-purple-800";
@@ -114,7 +111,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
       default: return "bg-gray-100 text-gray-800";
     }
   };
-
+  
   return (
     <Card className="shadow-md overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between bg-tcof-light/50 pb-6">
@@ -141,7 +138,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
           Edit
         </Button>
       </CardHeader>
-
+      
       <CardContent className="pb-6">
         <div className="mb-6">
           <h3 className="text-2xl font-bold text-tcof-dark mb-1">{project.name}</h3>
@@ -149,17 +146,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
             <p className="text-gray-600 mt-2">{project.description}</p>
           )}
         </div>
-
-        {/* Prerequisite Completion */}
-        {!isSelectedProjectProfileComplete() && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertTitle>Prerequisites Incomplete</AlertTitle>
-            <AlertDescription>
-              You must complete all three “Get Your Bearings” tools (Goal Mapping, Cynefin Orientation, TCOF Journey) before proceeding.
-            </AlertDescription>
-          </Alert>
-        )}
-
+        
         {/* Tool Status Chips */}
         <div className="flex flex-wrap gap-3 mb-6">
           <Badge className={progress?.tools?.goalMapping?.completed ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
@@ -175,7 +162,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
             TCOF Journey
           </Badge>
         </div>
-
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex items-start gap-3">
             <div className="bg-gray-100 p-2 rounded-full">
@@ -186,7 +173,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
               <p className="text-tcof-dark font-medium">{getSectorDisplay()}</p>
             </div>
           </div>
-
+          
           <div className="flex items-start gap-3">
             <div className="bg-gray-100 p-2 rounded-full">
               <Building2 className="w-5 h-5 text-gray-600" />
@@ -196,7 +183,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
               <p className="text-tcof-dark font-medium">{getOrgTypeDisplay()}</p>
             </div>
           </div>
-
+          
           <div className="flex items-start gap-3">
             <div className="bg-gray-100 p-2 rounded-full">
               <Users className="w-5 h-5 text-gray-600" />
@@ -206,7 +193,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
               <p className="text-tcof-dark font-medium">{getTeamSizeDisplay()}</p>
             </div>
           </div>
-
+          
           <div className="flex items-start gap-3">
             <div className="bg-gray-100 p-2 rounded-full">
               <Activity className="w-5 h-5 text-gray-600" />
@@ -221,7 +208,7 @@ export function ProjectProfileView({ project, onEdit, isLoading }: ProjectProfil
             </div>
           </div>
         </div>
-
+        
         {/* Last updated info */}
         {project.updatedAt && (
           <div className="mt-8 text-xs text-gray-500 flex items-center">
