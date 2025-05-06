@@ -98,19 +98,20 @@ export default function MakeAPlan() {
     </div>
   );
   
-  return (
+  // Render content function that we'll wrap in the PlanProvider
+  // Prepare the final content
+  const renderContent = () => (
     <>
-      {projectId && (
-        <div className="container mx-auto px-4 py-4">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate(`/projects/${projectId}`)}
-            className="mb-2"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
-          </Button>
-        </div>
-      )}
+      {/* Back button */}
+      <div className="container mx-auto px-4 py-4">
+        <Button 
+          variant="outline" 
+          onClick={() => navigate(`/projects/${projectId}`)}
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
+        </Button>
+      </div>
       
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-white to-tcof-light py-12">
@@ -271,5 +272,12 @@ export default function MakeAPlan() {
         </section>
       )}
     </>
+  );
+  
+  // Return the content wrapped in PlanProvider
+  return (
+    <PlanProvider>
+      {renderContent()}
+    </PlanProvider>
   );
 }
