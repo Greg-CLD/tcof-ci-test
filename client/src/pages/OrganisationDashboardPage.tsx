@@ -186,7 +186,7 @@ export default function OrganisationDashboardPage() {
 
   // Handle navigation to project
   const navigateToProject = (projectId: string) => {
-    navigate(`/projects/${projectId}`);
+    navigate(`/organisations/${orgId}/projects/${projectId}`);
   };
 
   // Handle navigation back to organisations list
@@ -319,7 +319,7 @@ export default function OrganisationDashboardPage() {
                           variant="default" 
                           onClick={() => {
                             console.log('Complete setup clicked for project:', project.id);
-                            navigate(`/projects/${project.id}/profile/edit`);
+                            navigate(`/organisations/${orgId}/projects/${project.id}/profile/edit`);
                           }}
                         >
                           Complete Setup
@@ -371,7 +371,7 @@ export default function OrganisationDashboardPage() {
                       variant="default" 
                       onClick={() => {
                         console.log('Complete setup clicked for project:', project.id);
-                        navigate(`/projects/${project.id}/profile/edit`);
+                        navigate(`/organisations/${orgId}/projects/${project.id}/profile/edit`);
                       }}
                     >
                       Complete Setup

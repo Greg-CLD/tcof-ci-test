@@ -319,7 +319,7 @@ function Router() {
         )}
       </Route>
       
-      {/* Project Profile Edit Page */}
+      {/* Project Profile Edit Page - OLD PATH */}
       <Route path="/projects/:projectId/profile/edit">
         {user ? (
           <ProtectedRouteGuard>
@@ -330,8 +330,27 @@ function Router() {
         )}
       </Route>
       
-      {/* Project Detail Page */}
+      {/* Project Detail Page - OLD PATH */}
       <Route path="/projects/:projectId">
+        <ProtectedRouteGuard>
+          <ProjectPage />
+        </ProtectedRouteGuard>
+      </Route>
+      
+      {/* NEW ROUTES WITH ORGANIZATION CONTEXT */}
+      {/* Project Profile Edit Page with Organization */}
+      <Route path="/organisations/:orgId/projects/:projectId/profile/edit">
+        {user ? (
+          <ProtectedRouteGuard>
+            {() => <ProjectProfile editMode={true} />}
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
+      
+      {/* Project Detail Page with Organization */}
+      <Route path="/organisations/:orgId/projects/:projectId">
         <ProtectedRouteGuard>
           <ProjectPage />
         </ProtectedRouteGuard>
