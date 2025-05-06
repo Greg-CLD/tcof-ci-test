@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from 'react-router-dom';
 
 export interface Project {
   id: string;
@@ -68,7 +67,6 @@ export function useProject(projectId?: string) {
 
 export function useProjects() {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   // Fetch all projects for the current user
   const { data: projects = [], isLoading, error } = useQuery<Project[]>({
@@ -166,7 +164,7 @@ export function useProjects() {
     onSuccess: () => {
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      navigate('/organisations');
+      // Redirect will be handled by the component that calls this
       toast({
         title: 'Project Deleted',
         description: 'The project has been permanently deleted.',
@@ -276,7 +274,7 @@ export function useProjects() {
    */
   const setSelectedProjectId = (id: string) => {
     localStorage.setItem('selectedProjectId', id);
-    queryClient.invalidateQueries(['/api/projects']);
+    queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
   };
 
   return {

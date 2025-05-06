@@ -238,28 +238,33 @@ export function verifyFactorsIntegrity(): boolean {
     }
     
     // Check tasks for each factor
-    let hasIssues = false;
+    let hasCriticalIssues = false;
+    let hasWarnings = false;
     
     factors.forEach(factor => {
       const { valid, issues } = validateFactorTasks(factor);
       
       if (!valid) {
-        hasIssues = true;
         issues.forEach(issue => {
           if (issue.includes("has no tasks")) {
             console.warn(`\x1b[33mWARNING: ${issue}\x1b[0m`);
+            hasWarnings = true;
           } else {
             console.error(`\x1b[31mERROR: ${issue}\x1b[0m`);
-            hasIssues = true;
+            hasCriticalIssues = true;
           }
         });
       }
     });
     
-    if (!hasIssues && canonicalValid) {
-      console.log('\x1b[32mSuccess factors integrity check passed!\x1b[0m');
+    if (!hasCriticalIssues && canonicalValid) {
+      if (hasWarnings) {
+        console.log('\x1b[32mSuccess factors integrity check passed with warnings!\x1b[0m');
+      } else {
+        console.log('\x1b[32mSuccess factors integrity check passed!\x1b[0m');
+      }
       return true;
-    } else if (!hasIssues) {
+    } else if (!hasCriticalIssues) {
       console.log('\x1b[32mSuccess factors task structure is valid, but canonical factor issues detected\x1b[0m');
       return false;
     } else {
