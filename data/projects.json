@@ -10,5 +10,23 @@
     "orgType": "government",
     "teamSize": "solo",
     "currentStage": "define"
+  },
+  {
+    "id": "19bdd366-d994-4e81-ab24-877e9354f80a",
+    "userId": 3,
+    "name": "Test Org Project 1",
+    "description": "",
+    "organisationId": "5c1691a0-6412-4319-a547-6ea9347377b1",
+    "createdAt": "2025-05-06T05:45:32.088Z",
+    "updatedAt": "2025-05-06T05:45:32.088Z"
+  },
+  {
+    "id": "349b8ad7-a85b-41c0-a5ea-bae873b0b315",
+    "userId": 3,
+    "name": "Test Project 2",
+    "description": "Test Project 2",
+    "organisationId": "5c1691a0-6412-4319-a547-6ea9347377b1",
+    "createdAt": "2025-05-06T05:46:21.410Z",
+    "updatedAt": "2025-05-06T05:46:21.410Z"
   }
 ]

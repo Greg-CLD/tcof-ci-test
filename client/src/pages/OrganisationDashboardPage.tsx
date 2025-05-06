@@ -102,15 +102,24 @@ export default function OrganisationDashboardPage() {
       }
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newProject) => {
       // Reset form and close dialog
       setFormState({ name: "", description: "" });
       setIsCreateDialogOpen(false);
       
-      // Refetch projects and show success message
+      // Force refetch projects
       queryClient.invalidateQueries({
         queryKey: [`/api/organisations/${orgId}/projects`]
       });
+      
+      // Immediately update the projects list in the cache
+      queryClient.setQueryData(
+        [`/api/organisations/${orgId}/projects`],
+        (oldData: any) => {
+          // If we have existing data, append the new project to it
+          return oldData ? [...oldData, newProject] : [newProject];
+        }
+      );
       
       toast({
         title: "Success",

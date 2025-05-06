@@ -211,7 +211,7 @@ export function HeuristicsEditor({ defaults = [], onSave, onCancel }: Heuristics
             variant="outline" 
             className="w-full py-6 border-dashed"
             onClick={handleAddHeuristic}
-            disabled={availableFactors.length === 0}
+            disabled={false} // Remove the disabled condition to always enable the button
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Success Factor

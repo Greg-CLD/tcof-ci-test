@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -97,22 +97,26 @@ export default function OrganisationHeuristicsPage() {
     navigate(`/organisations/${orgId}`);
   };
 
-  // Display error toasts if needed
-  if (orgError) {
-    toast({
-      title: "Error",
-      description: "Failed to fetch organisation details. Please try again.",
-      variant: "destructive"
-    });
-  }
+  // Display error toasts using useEffect to prevent infinite re-renders
+  useEffect(() => {
+    if (orgError) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch organisation details. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }, [orgError, toast]);
 
-  if (heuristicsError) {
-    toast({
-      title: "Error",
-      description: "Failed to fetch organisation heuristics. Please try again.",
-      variant: "destructive"
-    });
-  }
+  useEffect(() => {
+    if (heuristicsError) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch organisation heuristics. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }, [heuristicsError, toast]);
 
   const isLoading = orgLoading || heuristicsLoading;
   const canEdit = organisation?.role === 'owner' || organisation?.role === 'admin';
