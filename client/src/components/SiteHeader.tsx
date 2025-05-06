@@ -288,7 +288,7 @@ export default function SiteHeader() {
               {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
                 <Link 
                   href="/make-a-plan/admin"
-                  onClick={() => handleNavigation("/make-a-plan/admin")}
+                  onClick={handleNavigation}
                   className={`flex items-center py-2 px-3 rounded-md ${location.includes('/make-a-plan/admin') ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
                 >
                   <Filter className="h-5 w-5 mr-2" /> Admin
@@ -302,21 +302,21 @@ export default function SiteHeader() {
                 </div>
                 <Link 
                   href="/tools/goal-mapping"
-                  onClick={() => handleNavigation("/tools/goal-mapping")}
+                  onClick={handleNavigation}
                   className={`block py-1 px-8 text-sm rounded-md ${location === '/tools/goal-mapping' ? 'bg-tcof-light/70 text-tcof-teal' : 'hover:bg-tcof-light/30'}`}
                 >
                   Goal-Mapping Tool
                 </Link>
                 <Link 
                   href="/tools/cynefin-orientation"
-                  onClick={() => handleNavigation("/tools/cynefin-orientation")}
+                  onClick={handleNavigation}
                   className={`block py-1 px-8 text-sm rounded-md ${location === '/tools/cynefin-orientation' ? 'bg-tcof-light/70 text-tcof-teal' : 'hover:bg-tcof-light/30'}`}
                 >
                   Cynefin Orientation Tool
                 </Link>
                 <Link 
                   href="/tools/tcof-journey"
-                  onClick={() => handleNavigation("/tools/tcof-journey")}
+                  onClick={handleNavigation}
                   className={`block py-1 px-8 text-sm rounded-md ${location === '/tools/tcof-journey' ? 'bg-tcof-light/70 text-tcof-teal' : 'hover:bg-tcof-light/30'}`}
                 >
                   TCOF Journey Decision Tree
@@ -328,7 +328,7 @@ export default function SiteHeader() {
                   <div className="border-t border-gray-100 pt-2 space-y-2">
                     <Link 
                       href="/dashboard"
-                      onClick={() => handleNavigation("/dashboard")}
+                      onClick={handleNavigation}
                       className={`flex items-center py-2 px-3 rounded-md ${location === '/dashboard' ? 'bg-tcof-light' : ''} text-tcof-teal`}
                     >
                       <BarChartIcon className="h-5 w-5 mr-2" /> Dashboard
@@ -336,7 +336,7 @@ export default function SiteHeader() {
                     
                     <Link 
                       href="/profile"
-                      onClick={() => handleNavigation("/profile")}
+                      onClick={handleNavigation}
                       className={`flex items-center py-2 px-3 rounded-md ${location === '/profile' ? 'bg-tcof-light' : ''} text-tcof-teal`}
                     >
                       <User className="h-5 w-5 mr-2" /> My Profile
@@ -344,7 +344,7 @@ export default function SiteHeader() {
                     
                     <Link 
                       href="/history"
-                      onClick={() => handleNavigation("/history")}
+                      onClick={handleNavigation}
                       className={`flex items-center py-2 px-3 rounded-md ${location === '/history' ? 'bg-tcof-light' : ''} text-tcof-teal`}
                     >
                       <History className="h-5 w-5 mr-2" /> View History
@@ -354,14 +354,14 @@ export default function SiteHeader() {
                       <>
                         <Link 
                           href="/make-a-plan/admin/factors"
-                          onClick={() => handleNavigation("/make-a-plan/admin/factors")}
+                          onClick={handleNavigation}
                           className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin/factors' ? 'bg-tcof-light' : ''} text-tcof-teal`}
                         >
                           <Filter className="h-5 w-5 mr-2" /> Admin - Factors
                         </Link>
                         <Link 
                           href="/make-a-plan/admin"
-                          onClick={() => handleNavigation("/make-a-plan/admin")}
+                          onClick={handleNavigation}
                           className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin' ? 'bg-tcof-light' : ''} text-tcof-teal`}
                         >
                           <Filter className="h-5 w-5 mr-2" /> Admin - Presets
@@ -381,19 +381,23 @@ export default function SiteHeader() {
               
               {!isLoggedIn && (
                 <div className="border-t border-gray-100 pt-2 flex flex-col gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="border-tcof-teal text-tcof-teal hover:bg-tcof-light w-full"
-                    onClick={() => handleNavigation("/auth")}
-                  >
-                    Sign In
-                  </Button>
-                  <Button 
-                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full mt-2"
-                    onClick={() => handleNavigation("/auth")}
-                  >
-                    Register
-                  </Button>
+                  <Link href="/auth">
+                    <Button 
+                      variant="outline" 
+                      className="border-tcof-teal text-tcof-teal hover:bg-tcof-light w-full"
+                      onClick={handleNavigation}
+                    >
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/auth">
+                    <Button 
+                      className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full mt-2"
+                      onClick={handleNavigation}
+                    >
+                      Register
+                    </Button>
+                  </Link>
                 </div>
               )}
             </nav>
