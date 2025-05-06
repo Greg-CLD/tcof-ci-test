@@ -1,4 +1,4 @@
-import { Switch, Route, Link, useLocation } from "wouter";
+import { Switch, Route, Link, useLocation, useParams } from "wouter";
 import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -49,9 +49,20 @@ import SiteFooter from "@/components/SiteFooter";
 
 // Tool components with consistent layout
 const GoalMappingPage = () => {
-  const projectId = localStorage.getItem('currentProjectId');
+  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
+  const storedProjectId = localStorage.getItem('currentProjectId');
+  const projectId = routeProjectId || storedProjectId;
   const [_, navigate] = useLocation();
-  console.log(`GoalMappingPage: Retrieved projectId from localStorage: ${projectId}`);
+  
+  console.log(`GoalMappingPage: Using projectId: ${projectId} (from route: ${routeProjectId}, from localStorage: ${storedProjectId})`);
+  
+  // Store the projectId in localStorage for consistency across pages
+  useEffect(() => {
+    if (projectId && !storedProjectId) {
+      console.log(`GoalMappingPage: Storing projectId in localStorage: ${projectId}`);
+      localStorage.setItem('currentProjectId', projectId);
+    }
+  }, [projectId, storedProjectId]);
   
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
@@ -72,9 +83,20 @@ const GoalMappingPage = () => {
 };
 
 const CynefinOrientationPage = () => {
-  const projectId = localStorage.getItem('currentProjectId');
+  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
+  const storedProjectId = localStorage.getItem('currentProjectId');
+  const projectId = routeProjectId || storedProjectId;
   const [_, navigate] = useLocation();
-  console.log(`CynefinOrientationPage: Retrieved projectId from localStorage: ${projectId}`);
+  
+  console.log(`CynefinOrientationPage: Using projectId: ${projectId} (from route: ${routeProjectId}, from localStorage: ${storedProjectId})`);
+  
+  // Store the projectId in localStorage for consistency across pages
+  useEffect(() => {
+    if (projectId && !storedProjectId) {
+      console.log(`CynefinOrientationPage: Storing projectId in localStorage: ${projectId}`);
+      localStorage.setItem('currentProjectId', projectId);
+    }
+  }, [projectId, storedProjectId]);
   
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
@@ -95,8 +117,20 @@ const CynefinOrientationPage = () => {
 };
 
 const TCOFJourneyPage = () => {
-  const projectId = localStorage.getItem('currentProjectId');
-  console.log(`TCOFJourneyPage: Retrieved projectId from localStorage: ${projectId}`);
+  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
+  const storedProjectId = localStorage.getItem('currentProjectId');
+  const projectId = routeProjectId || storedProjectId;
+  const [_, navigate] = useLocation();
+  
+  console.log(`TCOFJourneyPage: Using projectId: ${projectId} (from route: ${routeProjectId}, from localStorage: ${storedProjectId})`);
+  
+  // Store the projectId in localStorage for consistency across pages
+  useEffect(() => {
+    if (projectId && !storedProjectId) {
+      console.log(`TCOFJourneyPage: Storing projectId in localStorage: ${projectId}`);
+      localStorage.setItem('currentProjectId', projectId);
+    }
+  }, [projectId, storedProjectId]);
   
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
@@ -105,7 +139,7 @@ const TCOFJourneyPage = () => {
         {projectId && (
           <Button 
             variant="outline" 
-            onClick={() => window.location.href = `/projects/${projectId}`}
+            onClick={() => navigate(`/projects/${projectId}`)}
           >
             Back to Project
           </Button>
@@ -288,6 +322,20 @@ function Router() {
         )}
       </Route>
       
+      {/* Add route with explicit projectId parameter */}
+      <Route path="/tools/goal-mapping/:projectId">
+        {isAuthenticated('starter-access') || user ? (
+          <ProtectedRouteGuard>
+            <GoalMappingPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired 
+            message="You need to purchase a license or sign in to access this tool." 
+            showPasswordOption={true} 
+          />
+        )}
+      </Route>
+      
       <Route path="/tools/cynefin-orientation">
         {isAuthenticated('starter-access') || user ? (
           <ProtectedRouteGuard>
@@ -301,7 +349,35 @@ function Router() {
         )}
       </Route>
       
+      {/* Add route with explicit projectId parameter */}
+      <Route path="/tools/cynefin-orientation/:projectId">
+        {isAuthenticated('starter-access') || user ? (
+          <ProtectedRouteGuard>
+            <CynefinOrientationPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired 
+            message="You need to purchase a license or sign in to access this tool." 
+            showPasswordOption={true} 
+          />
+        )}
+      </Route>
+      
       <Route path="/tools/tcof-journey">
+        {isAuthenticated('starter-access') || user ? (
+          <ProtectedRouteGuard>
+            <TCOFJourneyPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired 
+            message="You need to purchase a license or sign in to access this tool." 
+            showPasswordOption={true} 
+          />
+        )}
+      </Route>
+      
+      {/* Add route with explicit projectId parameter */}
+      <Route path="/tools/tcof-journey/:projectId">
         {isAuthenticated('starter-access') || user ? (
           <ProtectedRouteGuard>
             <TCOFJourneyPage />
