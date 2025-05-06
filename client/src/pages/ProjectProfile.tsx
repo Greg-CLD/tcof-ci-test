@@ -59,11 +59,13 @@ interface ProjectProfileProps {
 export default function ProjectProfile({ editMode = false }: ProjectProfileProps) {
   const [location, navigate] = useLocation();
   
-  // Get projectId from URL if available
+  // Get projectId and orgId from URL if available
   const [matchesProfile] = useRoute('/projects/:projectId/profile/edit');
   const [matchesSetup] = useRoute('/projects/:projectId/setup');
+  const [matchesOrgProfile] = useRoute('/organisations/:orgId/projects/:projectId/profile/edit');
   const [, profileParams] = useRoute('/projects/:projectId/profile/edit');
   const [, setupParams] = useRoute('/projects/:projectId/setup');
+  const [, orgProfileParams] = useRoute('/organisations/:orgId/projects/:projectId/profile/edit');
   
   const { projects, isLoading: projectsLoading, createProject, updateProject } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -71,7 +73,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
   );
   
   // View/Edit state - determine if we should be in edit mode based on URL or props
-  const [isEditing, setIsEditing] = useState(editMode || matchesProfile || matchesSetup || 
+  const [isEditing, setIsEditing] = useState(editMode || matchesProfile || matchesOrgProfile || matchesSetup || 
                                            location.includes('/profile/edit') || location.includes('/setup'));
   
   const [isFormValid, setIsFormValid] = useState(false);
@@ -155,8 +157,16 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
   
   // Set selectedProjectId from URL parameters or localStorage
   useEffect(() => {
-    // Get project ID from URL parameters if available
-    if (profileParams?.projectId) {
+    // Get project ID from URL parameters if available (including organization routes)
+    if (orgProfileParams?.projectId) {
+      setSelectedProjectId(orgProfileParams.projectId);
+      localStorage.setItem('selectedProjectId', orgProfileParams.projectId);
+      
+      // Also store the organization ID from the URL
+      if (orgProfileParams.orgId) {
+        localStorage.setItem('selectedOrgId', orgProfileParams.orgId);
+      }
+    } else if (profileParams?.projectId) {
       setSelectedProjectId(profileParams.projectId);
       localStorage.setItem('selectedProjectId', profileParams.projectId);
     } else if (setupParams?.projectId) {
@@ -170,7 +180,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
         setSelectedProjectId(storedId);
       }
     }
-  }, [profileParams, setupParams, selectedProjectId]);
+  }, [orgProfileParams, profileParams, setupParams, selectedProjectId]);
   
   // Update form defaults when project data loads
   useEffect(() => {
@@ -265,10 +275,20 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           description: 'Your project details have been updated successfully.',
         });
         
-        if (editMode || matchesProfile || matchesSetup) {
+        if (editMode || matchesProfile || matchesOrgProfile || matchesSetup) {
           // When in setup/edit mode, navigate back to organisation dashboard after successful update
           setTimeout(() => {
-            const orgId = localStorage.getItem('selectedOrgId');
+            // If we have organization context from the URL, prioritize that
+            const orgIdFromUrl = orgProfileParams?.orgId;
+            
+            // Otherwise check project's organization or localStorage
+            const orgId = orgIdFromUrl || 
+                         project?.organisationId || 
+                         localStorage.getItem('selectedOrgId');
+                         
+            console.log('Navigating back to organization:', { orgIdFromUrl, projectOrgId: project?.organisationId, storedOrgId: localStorage.getItem('selectedOrgId') });
+            
+            // Navigate to the specific organization or organizations list
             navigate(orgId ? `/organisations/${orgId}` : '/organisations');
           }, 1000);
         } else {
@@ -299,9 +319,17 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
         
         // Wait a moment to show the saved state before navigating away
         setTimeout(() => {
-          if (editMode || matchesProfile || matchesSetup) {
+          if (editMode || matchesProfile || matchesOrgProfile || matchesSetup) {
             // When in setup/edit mode, navigate back to organisation dashboard after project creation
-            const orgId = localStorage.getItem('selectedOrgId');
+            // If we have organization context from the URL, prioritize that
+            const orgIdFromUrl = orgProfileParams?.orgId;
+            
+            // Otherwise use localStorage (for new projects we don't yet have project.organisationId)
+            const orgId = orgIdFromUrl || localStorage.getItem('selectedOrgId');
+            
+            console.log('Navigating back to organization after create:', { orgIdFromUrl, storedOrgId: localStorage.getItem('selectedOrgId') });
+            
+            // Navigate to the specific organization or organizations list
             navigate(orgId ? `/organisations/${orgId}` : '/organisations');
           } else {
             navigate('/get-your-bearings');
@@ -340,7 +368,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
   
   // Determine if we should force show the edit form
   // Force edit form if URL path contains 'profile/edit' or 'setup'
-  const shouldForceEditForm = matchesProfile || matchesSetup || 
+  const shouldForceEditForm = matchesProfile || matchesOrgProfile || matchesSetup || 
                              location.includes('/profile/edit') || location.includes('/setup');
   
   // Debug logging - Remove after fixing
@@ -363,11 +391,17 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           variant="ghost" 
           className="mb-4 flex items-center text-tcof-teal"
           onClick={() => {
-            if (editMode || matchesProfile || matchesSetup || 
+            if (editMode || matchesProfile || matchesOrgProfile || matchesSetup || 
                 location.includes('/profile/edit') || location.includes('/setup')) {
               // Back to organisation dashboard when in setup/edit mode
-              // First check if the project has an organisation ID
-              if (project?.organisationId) {
+              
+              // If we have organization context from the URL, prioritize that
+              const orgIdFromUrl = orgProfileParams?.orgId;
+              
+              // Then check if the project has an organisation ID
+              if (orgIdFromUrl) {
+                navigate(`/organisations/${orgIdFromUrl}`);
+              } else if (project?.organisationId) {
                 navigate(`/organisations/${project.organisationId}`);
               } else {
                 // Fallback to selectedOrgId in localStorage if no project org ID
@@ -381,7 +415,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
           }}
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          {editMode || matchesProfile || matchesSetup || 
+          {editMode || matchesProfile || matchesOrgProfile || matchesSetup || 
            location.includes('/profile/edit') || location.includes('/setup') ? 
            'Back to Organisation' : 'Back to Get Your Bearings'}
         </Button>
