@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Building, Plus, Loader2 } from "lucide-react";
+import { Building, Plus, Loader2, Trash2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Organisation {
   id: string;
@@ -25,6 +26,8 @@ export default function OrganisationListPage() {
   const { user } = useAuth();
   const [location, navigate] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState<Organisation | null>(null);
   const [formState, setFormState] = useState({
     name: "",
     description: ""
@@ -91,6 +94,50 @@ export default function OrganisationListPage() {
         variant: "destructive"
       });
     }
+  };
+
+  // Delete organisation mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (orgId: string) => {
+      const res = await apiRequest("DELETE", `/api/organisations/${orgId}`);
+      if (!res.ok) {
+        throw new Error("Failed to delete organisation");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      // Invalidate the organisations query to refetch data
+      queryClient.invalidateQueries({ queryKey: ["/api/organisations"] });
+      
+      toast({
+        title: "Success",
+        description: "Organisation deleted successfully",
+      });
+      
+      setOrgToDelete(null);
+      setDeleteDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error("Error deleting organisation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete organisation. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (orgToDelete) {
+      deleteMutation.mutate(orgToDelete.id);
+    }
+  };
+
+  // Prepare org for deletion and open confirm dialog
+  const handleDeleteClick = (org: Organisation) => {
+    setOrgToDelete(org);
+    setDeleteDialogOpen(true);
   };
 
   // Handle API error
@@ -187,11 +234,21 @@ export default function OrganisationListPage() {
               <CardContent>
                 {/* Additional content could go here, such as member count or stats */}
               </CardContent>
-              <CardFooter className="flex justify-end">
+              <CardFooter className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200"
+                  onClick={() => handleDeleteClick(org)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
                 <Button 
                   variant="outline" 
                   onClick={() => navigate(`/organisations/${org.id}`)}
                 >
+                  <ArrowRight className="h-4 w-4 ml-2" />
                   View
                 </Button>
               </CardFooter>
@@ -199,6 +256,39 @@ export default function OrganisationListPage() {
           ))}
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Organisation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete this organisation? This removes all its projects and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleteMutation.isPending}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -105,18 +105,6 @@ export default function SiteHeader() {
             >
               <Home className="h-4 w-4 mr-1" /> Home
             </Link>
-            <Link 
-              href="/get-your-bearings/project-profile" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location.includes('project-profile') ? 'nav-link active font-medium' : 'nav-link'}`}
-            >
-              <Briefcase className="h-4 w-4 mr-1" /> Project Profile
-            </Link>
-            <Link 
-              href="/checklist" 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/checklist' ? 'nav-link active font-medium' : 'nav-link'}`}
-            >
-              <CheckSquare className="h-4 w-4 mr-1" /> Checklist
-            </Link>
             {user && (
               <Link 
                 href="/organisations" 
@@ -243,22 +231,6 @@ export default function SiteHeader() {
                 className={`flex items-center py-2 px-3 rounded-md ${location === '/' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
               >
                 <Home className="h-5 w-5 mr-2" /> Home
-              </Link>
-              
-              <Link 
-                href="/get-your-bearings/project-profile"
-                onClick={handleNavigation}
-                className={`flex items-center py-2 px-3 rounded-md ${location.includes('project-profile') ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
-              >
-                <Briefcase className="h-5 w-5 mr-2" /> Project Profile
-              </Link>
-              
-              <Link 
-                href="/checklist"
-                onClick={handleNavigation}
-                className={`flex items-center py-2 px-3 rounded-md ${location === '/checklist' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
-              >
-                <CheckSquare className="h-5 w-5 mr-2" /> Checklist
               </Link>
               
               {/* Organizations link (mobile) - only shown when logged in */}

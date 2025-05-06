@@ -236,11 +236,8 @@ function Router() {
       {/* Make sure we use the most specific routes first */}
       <Route path="/get-your-bearings/project-profile" component={ProjectProfile} />
       <Route path="/get-your-bearings/:projectId">
-        <ProtectedRouteGuard>
-          <GetYourBearings />
-        </ProtectedRouteGuard>
+        <Redirect to="/organisations" />
       </Route>
-      <Route path="/get-your-bearings" component={GetYourBearings} />
       {/* Make a Plan routes - most specific first */}
       <Route path="/make-a-plan/admin/factors" component={AdminFactorEditor} />
       <Route path="/make-a-plan/admin/graph-explorer" component={GraphExplorer} />

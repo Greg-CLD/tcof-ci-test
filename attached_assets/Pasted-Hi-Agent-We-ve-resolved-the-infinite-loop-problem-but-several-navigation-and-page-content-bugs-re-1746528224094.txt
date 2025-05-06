@@ -1,0 +1,66 @@
+Hi Agent,
+
+We’ve resolved the infinite-loop problem, but several navigation and page-content bugs remain. Please implement the fixes below so we can return to smooth Organisation work.
+
+✅ Required Fixes
+Post-Login Landing Page
+
+Authenticated users must land on /organisations immediately after login (not root /, and not /get-your-bearings).
+
+In App.tsx:
+
+tsx
+Copy
+Edit
+if (user && location === '/') {
+  navigate('/organisations');
+  return null; // guard so it runs once
+}
+Clean Up Global Navigation (SiteHeader.tsx)
+
+Remove “Project Profile” and “Checklist” from the nav bar for all views.
+
+Keep only: Home (public landing), Organisations, and Pricing (visible when logged out).
+
+Remove Legacy /get-your-bearings Top-Level Page
+
+Delete its route from App.tsx.
+
+Tool links should stay under /tools/* or /projects/:id/*—not /get-your-bearings at root.
+
+Fix Organisations Page (blank screen)
+
+When visiting /organisations:
+
+Fetch and display a card list of the user’s organisations.
+
+Each card must have “View” and “Delete” (trash icon) buttons.
+
+Deleting should open a confirmation dialog: “Delete this organisation? This removes all its projects.”
+
+On confirm, call DELETE /api/organisations/:id, then invalidate ['/api/organisations'].
+
+Add a “New Organisation” button that opens the existing create dialog.
+
+If no organisations exist, show a friendly empty-state with a call-to-action to “Create Organisation”.
+
+Backend Endpoint for Delete
+
+Implement DELETE /api/organisations/:id in server/routes/organisations.js with an ownership/membership check and cascading delete.
+
+Smoke-Test Flow
+
+Log in → lands on /organisations.
+
+Create new organisation → appears in list.
+
+Delete organisation → confirmation dialog → disappears from list.
+
+Click an organisation → project dashboard still works.
+
+📣 Reminders
+If you add/alter DB columns or constraints, update schema, create migration, run migration, verify DB reflects changes.
+
+Keep page layouts single-sourced (no extra SiteHeader or nested routers in pages).
+
+Let me know once the fixes are live and the smoke test passes.
