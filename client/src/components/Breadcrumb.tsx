@@ -15,6 +15,7 @@ export function Breadcrumb() {
   const { orgId, projectId } = useParams<{ orgId?: string; projectId?: string }>();
   
   console.log(`[${COMPONENT_ID}] Rendering breadcrumb with:`, { location, orgId, projectId });
+  console.log(`[${COMPONENT_ID}] URL params:`, useParams());
   // 1) Fetch organisation name if orgId is provided
   const { data: org, isLoading: orgLoading, isError: orgError } = useQuery({
     queryKey: ["organisation", orgId],
@@ -93,6 +94,8 @@ export function Breadcrumb() {
     ...(location.includes("/heuristics") ? [{ href: "", label: "Success Factors" }] : []),
   ];
 
+  console.log(`[${COMPONENT_ID}] Final breadcrumbs:`, crumbs);
+  
   return (
     <nav
       aria-label="Breadcrumb"
