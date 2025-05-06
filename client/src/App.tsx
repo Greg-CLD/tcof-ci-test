@@ -31,6 +31,7 @@ import OutcomeManagement from "@/pages/OutcomeManagement";
 import OrganisationListPage from "@/pages/OrganisationListPage";
 import OrganisationDashboardPage from "@/pages/OrganisationDashboardPage";
 import OrganisationHeuristicsPage from "@/pages/OrganisationHeuristicsPage";
+import ProjectPage from "@/pages/ProjectPage";
 import TestAuth from "@/pages/TestAuth";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";

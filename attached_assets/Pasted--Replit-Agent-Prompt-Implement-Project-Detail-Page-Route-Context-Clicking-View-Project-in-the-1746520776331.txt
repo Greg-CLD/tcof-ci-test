@@ -1,0 +1,75 @@
+🛠️ Replit Agent Prompt – Implement Project Detail Page & Route
+Context
+Clicking View Project in the organisation dashboard navigates to /projects/:projectId but returns a 404 Page Not Found. We need a working Project Detail page, route, and backend endpoint.
+
+✅ Tasks
+1. Front-End Routing
+Add route in client/src/App.tsx (or router config):
+
+jsx
+Copy
+Edit
+<Route path="/projects/:projectId" component={ProjectPage} />
+Create client/src/pages/ProjectPage.tsx:
+
+Extract projectId with useParams.
+
+Fetch project with React Query:
+
+ts
+Copy
+Edit
+const { data: project, isLoading, error } = useQuery(
+  ['project', projectId],
+  () => apiRequest('GET', `/api/projects/${projectId}`).then(r => r.json())
+);
+Show loader, error message, and details (name, description, createdAt, heuristics list placeholder).
+
+2. Backend Endpoint
+In server/routes/projects.js (create if missing) add:
+
+js
+Copy
+Edit
+router.get('/:id', isOrgMember, async (req,res) => {
+  try {
+    const projectId = req.params.id;
+    const project = await db.query.projects.findFirst({
+      where: eq(projects.id, projectId)
+    });
+    if (!project) return res.status(404).json({ message:'Not Found' });
+    res.json(project);
+  } catch(e) {
+    console.error('GET /api/projects/:id', e);
+    res.status(500).json({ message:'Internal server error' });
+  }
+});
+Mount this router at /api/projects in server/index.js if not already.
+
+3. Navigation Fix
+Ensure the View button in OrganisationDashboardPage.tsx is:
+
+jsx
+Copy
+Edit
+onClick={() => navigate(`/projects/${project.id}`)}
+4. Smoke Tests
+Create a project “DetailTest” under an organisation.
+
+Click View → Project detail page loads, shows project name.
+
+Hard-refresh /projects/:projectId → still loads correctly (no 404).
+
+Unauthorized user hitting the endpoint should get 403/401.
+
+5. Data Integrity Reminder
+No DB schema change this time, but always run migrations if you add or alter columns in future updates.
+
+🚀 Definition of Done
+/projects/:id route registered.
+
+ProjectPage fetches and displays project info.
+
+Backend GET /api/projects/:id returns project JSON.
+
+“View Project” no longer produces a 404.
