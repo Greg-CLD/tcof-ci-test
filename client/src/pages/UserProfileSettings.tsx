@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { User } from '@shared/schema';
+import { User, UpdateUser, PasswordChange } from '@shared/schema';
 
 import {
   Card,
@@ -94,7 +94,9 @@ const UserProfileSettings = () => {
       avatarUrl: user?.avatarUrl || '',
       locale: user?.locale || 'en-US',
       timezone: user?.timezone || 'UTC',
-      notificationPrefs: user?.notificationPrefs || { emailUpdates: true, projectNotifications: true },
+      notificationPrefs: typeof user?.notificationPrefs === 'object' 
+        ? user?.notificationPrefs as Record<string, boolean>
+        : { emailUpdates: true, projectNotifications: true },
     },
   });
 
@@ -116,7 +118,9 @@ const UserProfileSettings = () => {
         avatarUrl: user.avatarUrl || '',
         locale: user.locale || 'en-US',
         timezone: user.timezone || 'UTC',
-        notificationPrefs: user.notificationPrefs || { emailUpdates: true, projectNotifications: true },
+        notificationPrefs: typeof user.notificationPrefs === 'object' 
+          ? user.notificationPrefs as Record<string, boolean>
+          : { emailUpdates: true, projectNotifications: true },
       });
     }
   }, [user, profileForm]);
@@ -124,7 +128,14 @@ const UserProfileSettings = () => {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
-      const res = await apiRequest('PUT', `/api/users/${user?.id}`, data);
+      const updateData: UpdateUser = {
+        email: data.email,
+        avatarUrl: data.avatarUrl,
+        locale: data.locale,
+        timezone: data.timezone,
+        notificationPrefs: data.notificationPrefs,
+      };
+      const res = await apiRequest('PUT', `/api/users/${user?.id}`, updateData);
       return await res.json();
     },
     onSuccess: (data: User) => {
@@ -146,7 +157,12 @@ const UserProfileSettings = () => {
   // Change password mutation
   const changePasswordMutation = useMutation({
     mutationFn: async (data: PasswordFormValues) => {
-      const res = await apiRequest('POST', `/api/users/${user?.id}/change-password`, data);
+      const passwordData: PasswordChange = {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
+      };
+      const res = await apiRequest('POST', `/api/users/${user?.id}/change-password`, passwordData);
       return await res.json();
     },
     onSuccess: () => {
