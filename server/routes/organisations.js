@@ -329,4 +329,66 @@ router.post('/:id/members', isOrgAdminOrOwner, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/organisations/:id
+ * Delete an organization and all associated data (projects, memberships, heuristics)
+ * Only organization owners can delete organizations
+ */
+router.delete('/:id', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  try {
+    const organisationId = req.params.id;
+    const userId = req.user.id;
+    
+    // Check if user is an owner of this organization
+    const membership = await db.query.organisationMemberships.findFirst({
+      where: and(
+        eq(organisationMemberships.userId, userId),
+        eq(organisationMemberships.organisationId, organisationId),
+        eq(organisationMemberships.role, 'owner')
+      )
+    });
+    
+    if (!membership) {
+      return res.status(403).json({ 
+        message: 'Only organization owners can delete organizations' 
+      });
+    }
+    
+    // Begin transaction to delete all related data
+    await db.transaction(async (tx) => {
+      // Delete all projects in the organization
+      console.log(`Deleting all projects for organisation ${organisationId}`);
+      await tx.delete(projects)
+        .where(eq(projects.organisationId, organisationId));
+      
+      // Delete all heuristics
+      console.log(`Deleting all heuristics for organisation ${organisationId}`);
+      await tx.delete(organisationHeuristics)
+        .where(eq(organisationHeuristics.organisationId, organisationId));
+      
+      // Delete all memberships
+      console.log(`Deleting all memberships for organisation ${organisationId}`);
+      await tx.delete(organisationMemberships)
+        .where(eq(organisationMemberships.organisationId, organisationId));
+      
+      // Finally delete the organization itself
+      console.log(`Deleting organisation ${organisationId}`);
+      await tx.delete(organisations)
+        .where(eq(organisations.id, organisationId));
+    });
+    
+    return res.status(200).json({ 
+      message: 'Organization deleted successfully',
+      id: organisationId
+    });
+  } catch (error) {
+    console.error('Error deleting organization:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;
