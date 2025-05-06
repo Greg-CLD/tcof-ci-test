@@ -4,98 +4,87 @@ import { Home, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
-// Component ID to identify this instance of Breadcrumb in logs
-const COMPONENT_ID = "Breadcrumb-" + Math.random().toString(36).substring(2, 9);
-
 interface Organisation { id: string; name: string; }
 interface Project      { id: string; name: string; }
 
 export function Breadcrumb() {
   const [location] = useLocation();
-  const { orgId, projectId } = useParams<{ orgId?: string; projectId?: string }>();
-  
-  console.log(`[${COMPONENT_ID}] Rendering breadcrumb with:`, { location, orgId, projectId });
-  console.log(`[${COMPONENT_ID}] URL params:`, useParams());
-  // 1) Fetch organisation name if orgId is provided
-  const { data: org, isLoading: orgLoading, isError: orgError } = useQuery({
+  // Wouter uses ":id" in your route, so we grab that and rename to orgId
+  const { id: orgId, projectId } = useParams<{
+    id?: string;
+    projectId?: string;
+  }>();
+
+  // Fetch org when we have an orgId
+  const {
+    data: org,
+    isLoading: orgLoading,
+    isError: orgError
+  } = useQuery<Organisation>({
     queryKey: ["organisation", orgId],
     queryFn: async () => {
-      console.log(`[${COMPONENT_ID}] Fetching organisation:`, orgId);
+      if (!orgId) throw new Error("No orgId");
       const res = await apiRequest("GET", `/api/organisations/${orgId}`);
-      if (!res.ok) {
-        console.error(`[${COMPONENT_ID}] Failed to load organisation:`, orgId, await res.text());
-        throw new Error("Failed to load organisation");
-      }
-      const data = await res.json();
-      console.log(`[${COMPONENT_ID}] Got organisation:`, data);
-      return data as Organisation;
+      if (!res.ok) throw new Error("Failed to load org");
+      return res.json();
     },
     enabled: Boolean(orgId),
-    staleTime: 60_000,
+    staleTime: 60_000
   });
 
-  // 2) Fetch project name if projectId is provided
-  const { data: proj, isLoading: projLoading, isError: projError } = useQuery({
+  // Fetch project when we have a projectId
+  const {
+    data: proj,
+    isLoading: projLoading,
+    isError: projError
+  } = useQuery<Project>({
     queryKey: ["project", projectId],
     queryFn: async () => {
-      console.log(`[${COMPONENT_ID}] Fetching project:`, projectId);
+      if (!projectId) throw new Error("No projectId");
       const res = await apiRequest("GET", `/api/projects/${projectId}`);
-      if (!res.ok) {
-        console.error(`[${COMPONENT_ID}] Failed to load project:`, projectId, await res.text());
-        throw new Error("Failed to load project");
-      }
-      const data = await res.json();
-      console.log(`[${COMPONENT_ID}] Got project:`, data);
-      return data as Project;
+      if (!res.ok) throw new Error("Failed to load project");
+      return res.json();
     },
     enabled: Boolean(projectId),
-    staleTime: 60_000,
+    staleTime: 60_000
   });
 
-  // 3) Build crumbs array
+  // Build crumbs
   const crumbs: { href: string; label: string }[] = [
     { href: "/", label: "Home" },
-    // Only add Organisations link if we're in that context
-    ...(location.includes('/organisations') ? [{ href: "/organisations", label: "Organisations" }] : []),
-    // only push the org crumb if orgId exists
-    ...(
-      orgId
-        ? [{
-            href: `/organisations/${orgId}`,
-            label: orgLoading
-              ? "Loading..."
-              : orgError || !org
-                ? "Unknown Org"
-                : org.name
-          }]
-        : []
-    ),
-    // only push the project crumb if projectId exists
-    ...(
-      projectId
-        ? [{
-            href: `/organisations/${orgId}/projects/${projectId}`,
-            label: projLoading
-              ? "Loading..."
-              : projError || !proj
-                ? "Unknown Project"
-                : proj.name
-          }]
-        : []
-    ),
-    
-    // Check for additional sub-pages and add relevant crumbs
-    ...(location.endsWith("/profile/edit") ? [{ href: "", label: "Edit Profile" }] : []),
-    ...(location.endsWith("/edit-basic") ? [{ href: "", label: "Edit Details" }] : []),
-    ...(location.includes("/tools/goal-mapping") ? [{ href: "", label: "Goal Mapping Tool" }] : []),
-    ...(location.includes("/tools/cynefin-orientation") ? [{ href: "", label: "Cynefin Tool" }] : []),
-    ...(location.includes("/tools/tcof-journey") ? [{ href: "", label: "TCOF Journey Tool" }] : []),
-    ...(location.includes("/make-a-plan") ? [{ href: "", label: "Make a Plan" }] : []),
-    ...(location.includes("/heuristics") ? [{ href: "", label: "Success Factors" }] : []),
+    { href: "/organisations", label: "Organisations" },
+    // only if we have an orgId in the URL
+    ...(orgId
+      ? [{
+          href: `/organisations/${orgId}`,
+          label: orgLoading
+            ? "Loading..."
+            : orgError || !org
+              ? "Unknown Org"
+              : org.name
+        }]
+      : []),
+    // only if we have a projectId in the URL
+    ...(projectId
+      ? [{
+          href: `/organisations/${orgId}/projects/${projectId}`,
+          label: projLoading
+            ? "Loading..."
+            : projError || !proj
+              ? "Unknown Project"
+              : proj.name
+        }]
+      : []),
+    // any deeper pages
+    ...(location.endsWith("/profile/edit")
+      ? [{ href: "", label: "Edit Profile" }]
+      : []),
+    ...(location.includes("/tools/goal-mapping")
+      ? [{ href: "", label: "Goal Mapping" }]
+      : []),
+    // add other tool crumbs here...
   ];
 
-  console.log(`[${COMPONENT_ID}] Final breadcrumbs:`, crumbs);
-  
   return (
     <nav
       aria-label="Breadcrumb"
@@ -104,20 +93,24 @@ export function Breadcrumb() {
       {crumbs.map((crumb, idx) => (
         <span key={crumb.href + idx} className="flex items-center">
           <Link
-            href={crumb.href}
+            href={crumb.href || location}
             className={`hover:text-tcof-teal ${
               idx === crumbs.length - 1 ? "font-medium text-tcof-dark" : ""
             }`}
             aria-current={idx === crumbs.length - 1 ? "page" : undefined}
           >
-            {idx === 0
-              ? <Home className="inline h-4 w-4" aria-hidden="true" />
-              : crumb.label
-            }
+            {idx === 0 ? (
+              <Home className="inline h-4 w-4" aria-hidden="true" />
+            ) : (
+              crumb.label
+            )}
             {idx === 0 && <span className="sr-only">Home</span>}
           </Link>
           {idx < crumbs.length - 1 && (
-            <ChevronRight className="h-4 w-4 mx-1" aria-hidden="true" />
+            <ChevronRight
+              className="h-4 w-4 mx-1"
+              aria-hidden="true"
+            />
           )}
         </span>
       ))}
