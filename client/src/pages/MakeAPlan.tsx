@@ -39,11 +39,18 @@ export default function MakeAPlan() {
     console.log("Tool mounted:", location);
   }, [location]);
   
-  // If we're on the direct route with no project ID, redirect to organizations
-  if (location === "/make-a-plan" && !projectId) {
-    console.log("Missing projectId, redirecting to /organisations");
-    return <Redirect to="/organisations" />;
-  }
+  // Instead of direct Redirect that can cause loops, we'll use conditional rendering
+  // and a one-time navigation effect with a ref to prevent infinite redirects
+  const redirectedRef = React.useRef(false);
+  
+  // One-time safe redirect if needed
+  useEffect(() => {
+    if (location === "/make-a-plan" && !projectId && !redirectedRef.current) {
+      console.log("Missing projectId, will redirect to /organisations (ONE-TIME)");
+      redirectedRef.current = true;
+      setTimeout(() => navigate("/organisations"), 0);
+    }
+  }, [location, projectId, navigate]);
   
   // Guard against invalid state - no project ID available
   if (!projectId) {

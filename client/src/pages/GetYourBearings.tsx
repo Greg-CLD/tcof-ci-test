@@ -70,13 +70,20 @@ export default function GetYourBearings() {
       setSelectedProjectId(projectId);
       // Do NOT write to localStorage here - it should only happen on explicit user action
     }
-  }, [projectId, location]);
+  }, [projectId]);
   
-  // If we're on the direct route with no project ID, redirect to organizations
-  if (location === "/get-your-bearings" && !projectId) {
-    console.log("Missing projectId, redirecting to /organisations");
-    return <Redirect to="/organisations" />;
-  }
+  // Instead of direct Redirect that can cause loops, we'll use conditional rendering
+  // and a one-time navigation effect with a ref to prevent infinite redirects
+  const redirectedRef = React.useRef(false);
+  
+  // One-time safe redirect if needed
+  useEffect(() => {
+    if (location === "/get-your-bearings" && !projectId && !redirectedRef.current) {
+      console.log("Missing projectId, will redirect to /organisations (ONE-TIME)");
+      redirectedRef.current = true;
+      setTimeout(() => navigate("/organisations"), 0);
+    }
+  }, [location, projectId, navigate]);
   
   // Guard against invalid state - no project ID available
   if (!projectId) {
