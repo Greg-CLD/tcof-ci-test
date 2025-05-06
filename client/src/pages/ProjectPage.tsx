@@ -109,7 +109,8 @@ export default function ProjectPage() {
     <div className="min-h-screen flex flex-col bg-white">
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <Breadcrumb />
+          {/* Breadcrumb is now in AppLayout - don't include it here */}
+          <div></div> {/* Empty div to maintain flex spacing */}
           <Button 
             variant="outline" 
             onClick={handleBack}
