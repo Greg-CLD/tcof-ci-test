@@ -1,4 +1,4 @@
-import { Switch, Route, Link, useLocation, useParams } from "wouter";
+import { Switch, Route, Link, useLocation, useParams, Redirect } from "wouter";
 import { useEffect, useRef } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -154,33 +154,23 @@ function Router() {
   const { isAuthenticated } = useAuthProtection();
   const { user } = useAuth();
   const [location, navigate] = useLocation();
-  // Create the ref outside of useEffect
-  const lastRedirectLocationRef = useRef<string | null>(null);
   
-  // Use useEffect for redirects to avoid React render-phase updates
-  useEffect(() => {
-    // Skip if we've already redirected to this location to avoid loops
-    if (lastRedirectLocationRef.current === location) {
-      // Reset after we've recognized the loop to allow future redirects
-      lastRedirectLocationRef.current = null;
-      return;
-    }
-    
-    // Home route redirect for authenticated users
-    if (user && location === '/') {
-      lastRedirectLocationRef.current = "/organisations";
-      navigate("/organisations");
-      return;
-    }
-    
-    // Security redirect for unauthenticated users
-    if (!user && (location === '/organisations' || location.startsWith('/organisations/'))) {
-      lastRedirectLocationRef.current = "/";
-      navigate("/");
-      return;
-    }
-    
-  }, [user, location, navigate]);
+  // We won't use useEffect for redirects to avoid the infinite loop issues
+  // Instead we'll use more granular control with direct conditional rendering
+  
+  // For root path, if logged in, redirect to organizations list
+  if (user && location === '/') {
+    return (
+      <Redirect to="/organisations" />
+    );
+  }
+  
+  // For organization routes, if not logged in, redirect to home
+  if (!user && (location === '/organisations' || location.startsWith('/organisations/'))) {
+    return (
+      <Redirect to="/" />
+    );
+  }
   
   return (
     <Switch>

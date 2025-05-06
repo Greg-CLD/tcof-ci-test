@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
@@ -15,16 +15,13 @@ export default function MakeAPlan() {
   const { user } = useAuth();
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Only redirect if we're directly on the /make-a-plan route with no projectId
-  useEffect(() => {
-    // Add a location check to avoid redirect loops
-    const isDirectMakeAPlanRoute = location === "/make-a-plan";
-    
-    // Only redirect if we're on the exact route and no projectId is provided
-    if (isDirectMakeAPlanRoute && !projectId) {
-      navigate("/organisations");
-    }
-  }, [location, projectId, navigate]);
+  // Use declarative redirect instead of useEffect
+  const isDirectMakeAPlanRoute = location === "/make-a-plan";
+  
+  // If we're on the main route with no project ID, redirect to organizations
+  if (isDirectMakeAPlanRoute && !projectId) {
+    return <Redirect to="/organisations" />;
+  }
   
   // Fetch project details if projectId is provided
   const { 

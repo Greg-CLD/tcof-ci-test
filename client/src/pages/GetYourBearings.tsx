@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
@@ -18,16 +18,13 @@ export default function GetYourBearings() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const isAuthorized = isAuthenticated('starter-access') || !!user;
   
-  // Only redirect if we're directly on the /get-your-bearings route with no projectId
-  useEffect(() => {
-    // Add a location check to avoid redirect loops
-    const isDirectGetYourBearingsRoute = location === "/get-your-bearings";
-    
-    // Only redirect if we're on the exact route, no projectId, and projects data is loaded
-    if (isDirectGetYourBearingsRoute && !projectId && !projectsLoading) {
-      navigate("/organisations");
-    }
-  }, [location, projectId, projectsLoading, navigate]);
+  // Use declarative redirect instead of useEffect
+  const isDirectGetYourBearingsRoute = location === "/get-your-bearings";
+  
+  // If we're on the main route with no project ID, redirect to organizations
+  if (isDirectGetYourBearingsRoute && !projectId && !projectsLoading) {
+    return <Redirect to="/organisations" />;
+  }
   
   // Fetch project details if projectId is provided
   const { 
