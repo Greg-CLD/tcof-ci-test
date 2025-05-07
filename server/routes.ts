@@ -334,42 +334,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectId = req.query.projectId as string;
       
       if (projectId) {
-        // First ensure user owns this project
-        const project = await projectsDb.getProject(projectId);
-        if (!project || project.userId !== userId) {
+        console.log(`Fetching goal maps for project ID: ${projectId} (type: ${typeof projectId})`);
+        
+        // Try to get the project by UUID or numeric ID
+        let project;
+        
+        try {
+          // First try direct lookup using the projectId parameter
+          project = await projectsDb.getProject(projectId);
+          console.log(`Found project directly: ${project?.id}`);
+        } catch (error) {
+          console.log(`Error finding project directly: ${error.message}`);
+          
+          // If direct lookup fails and we have a numeric ID, search all projects
+          if (!isNaN(Number(projectId))) {
+            console.log(`Looking up numeric project ID: ${projectId}`);
+            const allProjects = await projectsDb.getProjects();
+            
+            // Find project matching numeric ID
+            project = allProjects.find(p => 
+              p.id.toString() === projectId.toString() || 
+              (typeof p.id === 'number' && p.id === Number(projectId))
+            );
+            
+            if (project) {
+              console.log(`Found project by numeric ID: ${project.id}`);
+            }
+          }
+        }
+        
+        // If no project found, return 404
+        if (!project) {
+          console.log(`No project found with ID: ${projectId}`);
+          return res.status(404).json({ message: "Project not found" });
+        }
+        
+        // Ensure user owns this project
+        if (project.userId !== userId) {
+          console.log(`User ${userId} not authorized for project ${project.id}`);
           return res.status(403).json({ message: "Unauthorized access to project" });
         }
         
-        // Get the latest goal map for this project
+        // Get all user's goal maps
         const goalMaps = await storage.getGoalMaps(userId);
+        
+        // Filter maps for this project - checking both in relations and embedded projectId
         const projectGoalMaps = goalMaps.filter(map => {
+          // Check project ID in the map's embedded data
+          if (map.data && map.data.projectId) {
+            const mapProjectId = map.data.projectId.toString();
+            const compareId = project.id.toString();
+            
+            if (mapProjectId === compareId) {
+              console.log(`Found map with matching embedded projectId: ${mapProjectId}`);
+              return true;
+            }
+          }
+          
           // Check for relationship between map and project
           const relations = loadRelations().filter(rel => 
             rel.fromId === map.id.toString() && 
-            rel.toId === projectId && 
+            rel.toId === project.id.toString() && 
             rel.relType === 'GOAL_MAP_FOR_PROJECT'
           );
-          return relations.length > 0;
+          
+          if (relations.length > 0) {
+            console.log(`Found map with relation to project: ${map.id}`);
+            return true;
+          }
+          
+          return false;
         });
         
-        // Sort by lastUpdated to get the most recent
-        projectGoalMaps.sort((a, b) => 
-          new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
-        );
+        console.log(`Found ${projectGoalMaps.length} goal maps for project ${project.id}`);
         
         if (projectGoalMaps.length > 0) {
-          return res.json(projectGoalMaps[0]);
+          // Sort by lastUpdated to get the most recent
+          projectGoalMaps.sort((a, b) => {
+            const aTime = a.data?.lastUpdated || (a.lastModified ? a.lastModified.getTime() : 0);
+            const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
+            return bTime - aTime;
+          });
+          
+          // Format response with normalized data structure
+          const latestMap = projectGoalMaps[0];
+          return res.json({
+            id: latestMap.id,
+            name: latestMap.data?.name || latestMap.name,
+            nodes: latestMap.data?.nodes || [],
+            connections: latestMap.data?.connections || [],
+            lastUpdated: latestMap.data?.lastUpdated || (latestMap.lastModified ? latestMap.lastModified.getTime() : Date.now()),
+            projectId: project.id // Always use the actual project ID
+          });
         } else {
           return res.status(404).json({ message: "No goal maps found for this project" });
         }
       } else {
-        // Get all user's goal maps (original behavior)
+        // Get all user's goal maps
         const goalMaps = await storage.getGoalMaps(userId);
-        res.json(goalMaps);
+        
+        // Format the response
+        const formattedMaps = goalMaps.map(map => ({
+          id: map.id,
+          name: map.data?.name || map.name,
+          lastUpdated: map.data?.lastUpdated || (map.lastModified ? map.lastModified.getTime() : Date.now()),
+          projectId: map.data?.projectId || null
+        }));
+        
+        res.json(formattedMaps);
       }
     } catch (error: any) {
       console.error("Error fetching goal maps:", error);
-      res.status(500).json({ message: "Error fetching goal maps" });
+      res.status(500).json({ message: "Error fetching goal maps: " + error.message });
     }
   });
 
@@ -446,42 +522,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectId = req.query.projectId as string;
       
       if (projectId) {
-        // First ensure user owns this project
-        const project = await projectsDb.getProject(projectId);
-        if (!project || project.userId !== userId) {
+        console.log(`Fetching cynefin selections for project ID: ${projectId} (type: ${typeof projectId})`);
+        
+        // Try to get the project by UUID or numeric ID
+        let project;
+        
+        try {
+          // First try direct lookup using the projectId parameter
+          project = await projectsDb.getProject(projectId);
+          console.log(`Found project directly: ${project?.id}`);
+        } catch (error) {
+          console.log(`Error finding project directly: ${error.message}`);
+          
+          // If direct lookup fails and we have a numeric ID, search all projects
+          if (!isNaN(Number(projectId))) {
+            console.log(`Looking up numeric project ID: ${projectId}`);
+            const allProjects = await projectsDb.getProjects();
+            
+            // Find project matching numeric ID
+            project = allProjects.find(p => 
+              p.id.toString() === projectId.toString() || 
+              (typeof p.id === 'number' && p.id === Number(projectId))
+            );
+            
+            if (project) {
+              console.log(`Found project by numeric ID: ${project.id}`);
+            }
+          }
+        }
+        
+        // If no project found, return 404
+        if (!project) {
+          console.log(`No project found with ID: ${projectId}`);
+          return res.status(404).json({ message: "Project not found" });
+        }
+        
+        // Ensure user owns this project
+        if (project.userId !== userId) {
+          console.log(`User ${userId} not authorized for project ${project.id}`);
           return res.status(403).json({ message: "Unauthorized access to project" });
         }
         
-        // Get the latest cynefin selection for this project
+        // Get all user's cynefin selections
         const selections = await storage.getCynefinSelections(userId);
+        
+        // Filter selections for this project - checking relations
         const projectSelections = selections.filter(selection => {
+          // Check project ID in the selection's embedded data
+          if (selection.data && selection.data.projectId) {
+            const selectionProjectId = selection.data.projectId.toString();
+            const compareId = project.id.toString();
+            
+            if (selectionProjectId === compareId) {
+              console.log(`Found selection with matching embedded projectId: ${selectionProjectId}`);
+              return true;
+            }
+          }
+          
           // Check for relationship between selection and project
           const relations = loadRelations().filter(rel => 
             rel.fromId === selection.id.toString() && 
-            rel.toId === projectId && 
+            (rel.toId === project.id.toString() || rel.toId === projectId) && 
             rel.relType === 'CYNEFIN_SELECTION_FOR_PROJECT'
           );
-          return relations.length > 0;
+          
+          if (relations.length > 0) {
+            console.log(`Found selection with relation to project: ${selection.id}`);
+            return true;
+          }
+          
+          return false;
         });
         
-        // Sort by lastUpdated to get the most recent
-        projectSelections.sort((a, b) => 
-          new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
-        );
+        console.log(`Found ${projectSelections.length} cynefin selections for project ${project.id}`);
         
         if (projectSelections.length > 0) {
-          return res.json(projectSelections[0]);
+          // Sort by lastUpdated to get the most recent
+          projectSelections.sort((a, b) => {
+            const aTime = a.data?.lastUpdated || (a.lastModified ? a.lastModified.getTime() : 0);
+            const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
+            return bTime - aTime;
+          });
+          
+          // Format response with normalized data structure
+          const latestSelection = projectSelections[0];
+          return res.json({
+            id: latestSelection.id,
+            name: latestSelection.data?.name || latestSelection.name,
+            data: latestSelection.data,
+            lastUpdated: latestSelection.data?.lastUpdated || (latestSelection.lastModified ? latestSelection.lastModified.getTime() : Date.now()),
+            projectId: project.id // Always use the actual project ID
+          });
         } else {
           return res.status(404).json({ message: "No cynefin selections found for this project" });
         }
       } else {
-        // Get all user's cynefin selections (original behavior)
+        // Get all user's cynefin selections
         const selections = await storage.getCynefinSelections(userId);
-        res.json(selections);
+        
+        // Format the response
+        const formattedSelections = selections.map(selection => ({
+          id: selection.id,
+          name: selection.data?.name || selection.name,
+          lastUpdated: selection.data?.lastUpdated || (selection.lastModified ? selection.lastModified.getTime() : Date.now()),
+          projectId: selection.data?.projectId || null
+        }));
+        
+        res.json(formattedSelections);
       }
     } catch (error: any) {
       console.error("Error fetching cynefin selections:", error);
-      res.status(500).json({ message: "Error fetching cynefin selections" });
+      res.status(500).json({ message: "Error fetching cynefin selections: " + error.message });
     }
   });
 
@@ -558,42 +709,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectId = req.query.projectId as string;
       
       if (projectId) {
-        // First ensure user owns this project
-        const project = await projectsDb.getProject(projectId);
-        if (!project || project.userId !== userId) {
+        console.log(`Fetching TCOF journeys for project ID: ${projectId} (type: ${typeof projectId})`);
+        
+        // Try to get the project by UUID or numeric ID
+        let project;
+        
+        try {
+          // First try direct lookup using the projectId parameter
+          project = await projectsDb.getProject(projectId);
+          console.log(`Found project directly: ${project?.id}`);
+        } catch (error: any) {
+          console.log(`Error finding project directly: ${error.message}`);
+          
+          // If direct lookup fails and we have a numeric ID, search all projects
+          if (!isNaN(Number(projectId))) {
+            console.log(`Looking up numeric project ID: ${projectId}`);
+            const allProjects = await projectsDb.getProjects();
+            
+            // Find project matching numeric ID
+            project = allProjects.find(p => 
+              p.id.toString() === projectId.toString() || 
+              (typeof p.id === 'number' && p.id === Number(projectId))
+            );
+            
+            if (project) {
+              console.log(`Found project by numeric ID: ${project.id}`);
+            }
+          }
+        }
+        
+        // If no project found, return 404
+        if (!project) {
+          console.log(`No project found with ID: ${projectId}`);
+          return res.status(404).json({ message: "Project not found" });
+        }
+        
+        // Ensure user owns this project
+        if (project.userId !== userId) {
+          console.log(`User ${userId} not authorized for project ${project.id}`);
           return res.status(403).json({ message: "Unauthorized access to project" });
         }
         
-        // Get the latest TCOF journey for this project
+        // Get all user's TCOF journeys
         const journeys = await storage.getTCOFJourneys(userId);
+        
+        // Filter journeys for this project - checking relations and embedded projectId
         const projectJourneys = journeys.filter(journey => {
+          // Check project ID in the journey's embedded data
+          if (journey.data && journey.data.projectId) {
+            const journeyProjectId = journey.data.projectId.toString();
+            const compareId = project.id.toString();
+            
+            if (journeyProjectId === compareId) {
+              console.log(`Found journey with matching embedded projectId: ${journeyProjectId}`);
+              return true;
+            }
+          }
+          
           // Check for relationship between journey and project
           const relations = loadRelations().filter(rel => 
             rel.fromId === journey.id.toString() && 
-            rel.toId === projectId && 
+            (rel.toId === project.id.toString() || rel.toId === projectId) && 
             rel.relType === 'TCOF_JOURNEY_FOR_PROJECT'
           );
-          return relations.length > 0;
+          
+          if (relations.length > 0) {
+            console.log(`Found journey with relation to project: ${journey.id}`);
+            return true;
+          }
+          
+          return false;
         });
         
-        // Sort by lastUpdated to get the most recent
-        projectJourneys.sort((a, b) => 
-          new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
-        );
+        console.log(`Found ${projectJourneys.length} TCOF journeys for project ${project.id}`);
         
         if (projectJourneys.length > 0) {
-          return res.json(projectJourneys[0]);
+          // Sort by lastUpdated to get the most recent
+          projectJourneys.sort((a, b) => {
+            const aTime = a.data?.lastUpdated || (a.lastModified ? a.lastModified.getTime() : 0);
+            const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
+            return bTime - aTime;
+          });
+          
+          // Format response with normalized data structure
+          const latestJourney = projectJourneys[0];
+          return res.json({
+            id: latestJourney.id,
+            name: latestJourney.data?.name || latestJourney.name,
+            data: latestJourney.data,
+            lastUpdated: latestJourney.data?.lastUpdated || (latestJourney.lastModified ? latestJourney.lastModified.getTime() : Date.now()),
+            projectId: project.id // Always use the actual project ID
+          });
         } else {
           return res.status(404).json({ message: "No TCOF journeys found for this project" });
         }
       } else {
-        // Get all user's TCOF journeys (original behavior)
+        // Get all user's TCOF journeys
         const journeys = await storage.getTCOFJourneys(userId);
-        res.json(journeys);
+        
+        // Format the response
+        const formattedJourneys = journeys.map(journey => ({
+          id: journey.id,
+          name: journey.data?.name || journey.name,
+          lastUpdated: journey.data?.lastUpdated || (journey.lastModified ? journey.lastModified.getTime() : Date.now()),
+          projectId: journey.data?.projectId || null
+        }));
+        
+        res.json(formattedJourneys);
       }
     } catch (error: any) {
       console.error("Error fetching TCOF journeys:", error);
-      res.status(500).json({ message: "Error fetching TCOF journeys" });
+      res.status(500).json({ message: "Error fetching TCOF journeys: " + error.message });
     }
   });
 
