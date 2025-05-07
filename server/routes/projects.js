@@ -168,16 +168,28 @@ router.put("/:id", isAuthenticated, async (req, res) => {
     }
     
     // Extract the fields we want to update
-    const { sector, orgType, currentStage, customSector, isProfileComplete } = req.body;
+    const { 
+      name, 
+      description, 
+      sector, 
+      orgType, 
+      currentStage, 
+      customSector, 
+      teamSize,
+      isProfileComplete 
+    } = req.body;
     
     // Build update object with only provided fields
     const updateData = {};
     
     // Only include fields that are provided in the request
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
     if (sector !== undefined) updateData.sector = sector;
     if (orgType !== undefined) updateData.orgType = orgType;
     if (currentStage !== undefined) updateData.currentStage = currentStage;
     if (customSector !== undefined) updateData.customSector = customSector;
+    if (teamSize !== undefined) updateData.teamSize = teamSize;
     if (isProfileComplete !== undefined) updateData.isProfileComplete = isProfileComplete;
     
     // Add lastUpdated field
