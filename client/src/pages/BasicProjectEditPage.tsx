@@ -130,7 +130,7 @@ export default function BasicProjectEditPage() {
     },
   });
   
-  // Update form defaults when project data loads
+  // Update form defaults when project data loads or when we enter edit mode
   useEffect(() => {
     if (project) {
       console.log('Setting form values from loaded project:', project);
@@ -138,16 +138,24 @@ export default function BasicProjectEditPage() {
       // Check if sector is "other" to show custom sector field
       setShowCustomSector(project.sector === 'other');
       
-      // Reset form with server data
+      // Reset form with server data - ensure fields are properly populated
       form.reset({
         sector: project.sector || '',
         customSector: project.customSector || '',
         industry: project.industry || '',
         organisationSize: project.organisationSize || '',
         description: project.description || '',
+      }, {
+        // Preserve form values if already set by user
+        keepValues: false,
+        // These options ensure the form actually updates with the new values
+        keepDirty: false,
+        keepTouched: false,
+        keepIsSubmitted: false,
+        keepErrors: false,
       });
     }
-  }, [project, form]);
+  }, [project, form, isEditMode]); // Also reset when entering edit mode
   
   // Form submission handler
   const onSubmit = async (data: BasicProjectFormValues) => {
@@ -207,12 +215,12 @@ export default function BasicProjectEditPage() {
         console.log('Successfully updated project:', updatedProject);
         
         // Directly invalidate the queries to ensure fresh data is fetched
-        queryClient.invalidateQueries(['/api/projects', projectId]);
-        queryClient.invalidateQueries(['/api/projects']);
+        queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
         
         // Invalidate organisation-specific projects if we have an orgId
         if (orgId) {
-          queryClient.invalidateQueries([`/api/organisations/${orgId}/projects`]);
+          queryClient.invalidateQueries({ queryKey: [`/api/organisations/${orgId}/projects`] });
         }
         
         // Show success message via toast
