@@ -1,417 +1,740 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation, useParams } from "wouter";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, MoveRight } from "lucide-react";
-import { useProgress } from "@/contexts/ProgressContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { 
+  CheckCircle, 
+  ChevronRight, 
+  ArrowLeft, 
+  Save, 
+  FastForward, 
+  Info, 
+  ArrowRight, 
+  Plus,
+  Trash2
+} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useQuery } from "@tanstack/react-query";
+import { useProgress } from "@/contexts/ProgressContext";
+import { PlanProvider, usePlan } from "@/contexts/PlanContext";
+import ProjectBanner from "@/components/ProjectBanner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-interface SuccessFactor {
-  id: string;
-  title: string;
-  description: string;
-  rating?: number;
-}
-
-interface PersonalHeuristic {
-  id: string;
-  text: string;
-  rating: number;
-}
+// Define the success factor rating options
+const RATING_OPTIONS = [
+  { value: "high", label: "High Importance", description: "Critical to project success" },
+  { value: "medium", label: "Medium Importance", description: "Important but not critical" },
+  { value: "low", label: "Low Importance", description: "Useful but not essential" },
+  { value: "na", label: "Not Applicable", description: "Not relevant to this project" },
+];
 
 export default function Block1Discover() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
-  const { progress } = useProgress();
+  const { progress, refreshProgress } = useProgress();
+  const { plan, savePlan } = usePlan();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Active tab state
   const [activeTab, setActiveTab] = useState("overview");
   
-  // Verify that all prerequisite tools are completed
-  const allPrerequisitesCompleted = 
-    progress?.tools?.goalMapping?.completed &&
-    progress?.tools?.cynefinOrientation?.completed &&
-    progress?.tools?.tcofJourney?.completed;
+  // State for personal heuristics
+  const [newHeuristic, setNewHeuristic] = useState({ name: "", description: "" });
   
-  // Fetch project details
-  const { data: project } = useQuery({
-    queryKey: ["project", projectId],
+  // State for success criteria
+  const [successCriteria, setSuccessCriteria] = useState("");
+  
+  // Fetch project details if projectId is provided
+  const { 
+    data: project, 
+    isLoading: projectLoading 
+  } = useQuery({
+    queryKey: ['project', projectId],
     queryFn: async () => {
       if (!projectId) return null;
+      
+      console.log(`Fetching project details for: ${projectId}`);
       const res = await apiRequest("GET", `/api/projects-detail/${projectId}`);
-      if (!res.ok) return null;
+      if (!res.ok) {
+        console.error("Failed to fetch project details");
+        return null;
+      }
       return res.json();
     },
-    enabled: !!projectId,
+    enabled: !!projectId
   });
   
-  // Fetch the goal mapping data to display in this block
-  const { data: goalMap } = useQuery({
-    queryKey: ["goal-map", projectId],
+  // Fetch success factors data
+  const {
+    data: successFactors,
+    isLoading: factorsLoading
+  } = useQuery({
+    queryKey: ['success-factors'],
     queryFn: async () => {
-      if (!projectId) return null;
-      const res = await apiRequest("GET", `/api/goal-maps/${projectId}`);
-      if (!res.ok) return null;
+      const res = await apiRequest("GET", "/api/success-factors");
+      if (!res.ok) {
+        throw new Error("Failed to fetch success factors");
+      }
       return res.json();
-    },
-    enabled: !!projectId,
+    }
   });
   
-  // Just log that we mounted, no redirect
+  // Initialize local state from plan data
   useEffect(() => {
-    console.log("Routing OK: Block1Discover mounted");
-  }, []);
+    if (plan) {
+      if (plan.blocks?.block1?.successCriteria) {
+        setSuccessCriteria(plan.blocks.block1.successCriteria);
+      }
+      
+      // The rest of the data (success factor ratings and personal heuristics)
+      // will be directly accessed from the plan object when rendering
+    }
+  }, [plan]);
+  
+  // Save progress mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      // Prepare updated plan data
+      const updatedPlan = {
+        ...plan,
+        blocks: {
+          ...plan?.blocks,
+          block1: {
+            ...plan?.blocks?.block1,
+            successCriteria,
+            lastUpdated: new Date().toISOString(),
+          }
+        }
+      };
+      
+      // Save to backend
+      return savePlan(updatedPlan);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Progress saved",
+        description: "Your changes have been saved successfully.",
+      });
+      
+      // Refresh plan data
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to save progress",
+        description: "There was an error saving your changes. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Save error:", error);
+    }
+  });
+  
+  // Guard against invalid state - no project ID available
+  if (!projectId) {
+    return (
+      <div className="container mx-auto p-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Select a Project</h2>
+        <p className="mb-6">Please select a project from your organisations page first.</p>
+        <Button onClick={() => navigate("/organisations")}>
+          Go to Organisations
+        </Button>
+      </div>
+    );
+  }
+  
+  // Handle success factor rating change
+  const handleRatingChange = (factorId: string, rating: string) => {
+    const updatedPlan = {
+      ...plan,
+      blocks: {
+        ...plan?.blocks,
+        block1: {
+          ...plan?.blocks?.block1,
+          successFactorRatings: {
+            ...plan?.blocks?.block1?.successFactorRatings,
+            [factorId]: rating
+          },
+          lastUpdated: new Date().toISOString(),
+        }
+      }
+    };
+    
+    updatePlan(updatedPlan);
+  };
+  
+  // Handle adding a new personal heuristic
+  const handleAddHeuristic = () => {
+    if (!newHeuristic.name.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please provide a name for the heuristic.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const updatedHeuristics = [
+      ...(plan?.blocks?.block1?.personalHeuristics || []),
+      { ...newHeuristic, id: Date.now().toString() }
+    ];
+    
+    const updatedPlan = {
+      ...plan,
+      blocks: {
+        ...plan?.blocks,
+        block1: {
+          ...plan?.blocks?.block1,
+          personalHeuristics: updatedHeuristics,
+          lastUpdated: new Date().toISOString(),
+        }
+      }
+    };
+    
+    updatePlan(updatedPlan);
+    setNewHeuristic({ name: "", description: "" });
+    
+    toast({
+      title: "Heuristic added",
+      description: "Your personal heuristic has been added successfully.",
+    });
+  };
+  
+  // Handle removing a personal heuristic
+  const handleRemoveHeuristic = (id: string) => {
+    const updatedHeuristics = (plan?.blocks?.block1?.personalHeuristics || [])
+      .filter(h => h.id !== id);
+    
+    const updatedPlan = {
+      ...plan,
+      blocks: {
+        ...plan?.blocks,
+        block1: {
+          ...plan?.blocks?.block1,
+          personalHeuristics: updatedHeuristics,
+          lastUpdated: new Date().toISOString(),
+        }
+      }
+    };
+    
+    updatePlan(updatedPlan);
+    
+    toast({
+      title: "Heuristic removed",
+      description: "The personal heuristic has been removed successfully.",
+    });
+  };
+  
+  // Handle saving the success criteria
+  const handleSuccessCriteriaChange = (value: string) => {
+    setSuccessCriteria(value);
+  };
+  
+  // Mark block as complete and go to next block
+  const handleCompleteBlock = async () => {
+    try {
+      // Save current progress first
+      await saveMutation.mutateAsync();
+      
+      // Mark block as complete in tool progress
+      const res = await apiRequest("POST", `/api/tool-progress/${projectId}/block1`, {
+        completed: true
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to mark block as complete");
+      }
+      
+      // Refresh progress data
+      await refreshProgress();
+      
+      // Navigate to next block
+      navigate(`/make-a-plan/${projectId}/block-2`);
+      
+      toast({
+        title: "Block 1 completed",
+        description: "You're now ready to move to Block 2: Design.",
+      });
+    } catch (error) {
+      console.error("Error completing block:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete this block. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Calculate completion percentage
+  const calculateCompletionPercentage = () => {
+    let completedItems = 0;
+    let totalItems = 0;
+    
+    // Check success factor ratings
+    if (successFactors?.length > 0) {
+      totalItems += successFactors.length;
+      const ratingsCount = Object.keys(plan?.blocks?.block1?.successFactorRatings || {}).length;
+      completedItems += ratingsCount;
+    }
+    
+    // Check personal heuristics
+    totalItems += 1; // At least one personal heuristic is recommended
+    if ((plan?.blocks?.block1?.personalHeuristics || []).length > 0) {
+      completedItems += 1;
+    }
+    
+    // Check success criteria
+    totalItems += 1;
+    if (successCriteria?.trim()) {
+      completedItems += 1;
+    }
+    
+    return Math.round((completedItems / totalItems) * 100);
+  };
+  
+  const completionPercentage = calculateCompletionPercentage();
   
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Navigation header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
-        <div>
+    <PlanProvider>
+      <div className="min-h-screen bg-gray-50">
+        {/* Project Banner */}
+        <ProjectBanner />
+        
+        {/* Main content */}
+        <div className="container mx-auto px-4 py-8">
+          {/* Back button */}
           <Button 
             variant="outline" 
             onClick={() => navigate(`/make-a-plan/${projectId}`)}
-            className="mb-2"
+            className="mb-6"
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Make a Plan
           </Button>
-          <h1 className="text-3xl font-bold text-tcof-dark">Block 1: Discover</h1>
-          <p className="text-gray-600 mt-1">Define project scope and success criteria</p>
-        </div>
-        
-        <div className="mt-4 sm:mt-0 bg-tcof-light rounded-lg px-4 py-2 flex items-center">
-          <span className="text-sm font-medium text-tcof-dark mr-2">Project:</span>
-          <span className="text-sm text-tcof-teal">{project?.name || "Loading..."}</span>
-        </div>
-      </div>
-      
-      {/* Tabs Navigation */}
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="mb-8">
-        <TabsList className="grid grid-cols-4 w-full max-w-4xl mx-auto">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="step1">Step 1: Success Factors</TabsTrigger>
-          <TabsTrigger value="step2">Step 2: Personal Heuristics</TabsTrigger>
-          <TabsTrigger value="summary">Summary & Next Steps</TabsTrigger>
-        </TabsList>
-        
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="pt-6">
-          <div className="max-w-4xl mx-auto bg-gradient-to-r from-tcof-light to-white p-8 rounded-xl shadow-md">
-            <div className="flex items-center mb-6">
-              <div className="bg-tcof-teal rounded-full p-2 mr-4">
-                <CheckCircle2 className="h-8 w-8 text-white" />
-              </div>
+          
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-semibold text-tcof-dark">Block 1: Discover Your Context</h2>
-                <p className="text-gray-600">Define what success looks like for your project</p>
+                <h1 className="text-3xl font-bold text-tcof-dark">Block 1: Discover</h1>
+                <p className="text-gray-600 mt-1">Define project scope and success criteria</p>
+              </div>
+              
+              {/* Completion status */}
+              <div className="mt-4 sm:mt-0 bg-tcof-light rounded-lg px-4 py-2 flex items-center">
+                <div className="w-32 bg-gray-200 rounded-full h-4 mr-3">
+                  <div 
+                    className="bg-tcof-teal h-4 rounded-full"
+                    style={{ width: `${completionPercentage}%` }}
+                  ></div>
+                </div>
+                <span className="text-sm font-medium text-tcof-dark">
+                  {completionPercentage}% Complete
+                </span>
               </div>
             </div>
             
-            <p className="text-gray-700 mb-6">
-              In this first block, you'll review the success factors identified in the Goal Mapping Tool 
-              and integrate them with your personal knowledge and experience. This will set the foundation
-              for your detailed action plan.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-tcof-dark">Step 1: Success Factors</CardTitle>
-                  <CardDescription>Review your Goal Mapping results</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">
-                    We'll show you the success factors that matter most for your project based on
-                    the Goal Mapping Tool results. Confirm these priorities before proceeding.
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => setActiveTab("step1")}
-                  >
-                    Start Step 1
-                  </Button>
-                </CardFooter>
-              </Card>
+            {/* Tabs navigation */}
+            <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid grid-cols-4 w-full max-w-4xl mx-auto">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="successFactors">Success Factors</TabsTrigger>
+                <TabsTrigger value="personalHeuristics">Personal Heuristics</TabsTrigger>
+                <TabsTrigger value="summary">Summary & Next Steps</TabsTrigger>
+              </TabsList>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-tcof-dark">Step 2: Personal Heuristics</CardTitle>
-                  <CardDescription>Add your own success criteria</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">
-                    Apply your personal expertise and domain knowledge to identify additional
-                    success factors unique to your project context.
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => setActiveTab("step2")}
-                  >
-                    Go to Step 2
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
+              <TabsContent value="overview" className="pt-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold mb-4">Welcome to Block 1: Discover</h2>
+                    <p className="mb-4">
+                      In this first block, you'll define what success looks like for your project by:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-3 mb-6">
+                      <li className="pl-2">
+                        <span className="font-medium">Rating TCOF Success Factors</span>
+                        <p className="text-sm text-gray-600 mt-1 ml-7">
+                          Assess which of the 12 standard success factors are most important 
+                          for your specific project context.
+                        </p>
+                      </li>
+                      <li className="pl-2">
+                        <span className="font-medium">Adding Personal Heuristics</span>
+                        <p className="text-sm text-gray-600 mt-1 ml-7">
+                          Define any additional success criteria or "rules of thumb" that are 
+                          important for your specific organizational context.
+                        </p>
+                      </li>
+                      <li className="pl-2">
+                        <span className="font-medium">Defining Success Criteria</span>
+                        <p className="text-sm text-gray-600 mt-1 ml-7">
+                          Articulate how you'll measure success at the end of your project.
+                        </p>
+                      </li>
+                    </ol>
+                    
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 my-6">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <Info className="h-5 w-5 text-blue-400" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-blue-700">
+                            Your progress is automatically saved as you work through each section.
+                            You can always come back later to finish or make changes.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end mt-6">
+                      <Button
+                        onClick={() => setActiveTab("successFactors")}
+                        className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                      >
+                        Begin with Success Factors <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="successFactors" className="pt-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold mb-2">Rate TCOF Success Factors</h2>
+                    <p className="text-gray-600 mb-6">
+                      For each success factor, indicate how important it is for your specific project. 
+                      This will help prioritize tasks in your plan.
+                    </p>
+                    
+                    {factorsLoading ? (
+                      <div className="flex justify-center py-8">
+                        <div className="w-8 h-8 border-4 border-tcof-teal border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    ) : (
+                      <div className="overflow-auto">
+                        <Table>
+                          <TableCaption>TCOF success factors prioritization</TableCaption>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[300px]">Factor</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="w-[200px]">Importance Rating</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {successFactors?.map((factor) => (
+                              <TableRow key={factor.id}>
+                                <TableCell className="font-medium">
+                                  {factor.name}
+                                </TableCell>
+                                <TableCell>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="cursor-help">{factor.description.substring(0, 100)}...</div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-md">
+                                        <p>{factor.description}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={plan?.blocks?.block1?.successFactorRatings?.[factor.id] || ""}
+                                    onValueChange={(value) => handleRatingChange(factor.id, value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select importance" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {RATING_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between mt-8">
+                      <Button
+                        variant="outline"
+                        onClick={() => setActiveTab("overview")}
+                      >
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                      </Button>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => saveMutation.mutate()}
+                          disabled={saveMutation.isPending}
+                        >
+                          <Save className="mr-2 h-4 w-4" /> Save Progress
+                        </Button>
+                        <Button
+                          onClick={() => setActiveTab("personalHeuristics")}
+                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        >
+                          Next: Personal Heuristics <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="personalHeuristics" className="pt-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold mb-2">Add Personal Heuristics</h2>
+                    <p className="text-gray-600 mb-6">
+                      Personal heuristics are your organization's "rules of thumb" for project success. 
+                      Add any specific success criteria that aren't covered by the standard TCOF factors.
+                    </p>
+                    
+                    {/* Existing personal heuristics */}
+                    {(plan?.blocks?.block1?.personalHeuristics?.length || 0) > 0 ? (
+                      <div className="mb-8">
+                        <h3 className="text-lg font-medium mb-3">Your Personal Heuristics</h3>
+                        <div className="space-y-3">
+                          {plan?.blocks?.block1?.personalHeuristics?.map((heuristic) => (
+                            <div 
+                              key={heuristic.id} 
+                              className="bg-white border rounded-md p-4 flex justify-between items-start"
+                            >
+                              <div>
+                                <h4 className="font-medium text-tcof-dark">{heuristic.name}</h4>
+                                <p className="text-sm text-gray-600 mt-1">{heuristic.description}</p>
+                              </div>
+                              <Button
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleRemoveHeuristic(heuristic.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-md p-6 text-center mb-8">
+                        <p className="text-gray-500">
+                          No personal heuristics added yet. Use the form below to add your first one.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Add new personal heuristic form */}
+                    <div className="bg-gray-50 rounded-md p-4 mb-6">
+                      <h3 className="text-lg font-medium mb-3">Add New Heuristic</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="heuristicName">Name</Label>
+                          <Input
+                            id="heuristicName"
+                            placeholder="e.g., Regular stakeholder check-ins"
+                            value={newHeuristic.name}
+                            onChange={(e) => setNewHeuristic({...newHeuristic, name: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="heuristicDescription">Description</Label>
+                          <Textarea
+                            id="heuristicDescription"
+                            placeholder="Describe this heuristic and why it's important..."
+                            value={newHeuristic.description}
+                            onChange={(e) => setNewHeuristic({...newHeuristic, description: e.target.value})}
+                            rows={3}
+                          />
+                        </div>
+                        <Button
+                          onClick={handleAddHeuristic}
+                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        >
+                          <Plus className="mr-2 h-4 w-4" /> Add Heuristic
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between mt-8">
+                      <Button
+                        variant="outline"
+                        onClick={() => setActiveTab("successFactors")}
+                      >
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                      </Button>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => saveMutation.mutate()}
+                          disabled={saveMutation.isPending}
+                        >
+                          <Save className="mr-2 h-4 w-4" /> Save Progress
+                        </Button>
+                        <Button
+                          onClick={() => setActiveTab("summary")}
+                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        >
+                          Next: Summary & Success Criteria <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="summary" className="pt-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold mb-2">Summary & Success Criteria</h2>
+                    <p className="text-gray-600 mb-6">
+                      Review your work so far and define the overall success criteria for your project.
+                    </p>
+                    
+                    {/* Success Criteria */}
+                    <div className="mb-8">
+                      <h3 className="text-lg font-medium mb-3">Define Success Criteria</h3>
+                      <p className="text-gray-600 mb-4">
+                        How will you know if this project is successful? Define clear, measurable success criteria.
+                      </p>
+                      <Textarea
+                        placeholder="Describe what success looks like for this project..."
+                        value={successCriteria}
+                        onChange={(e) => handleSuccessCriteriaChange(e.target.value)}
+                        rows={6}
+                        className="w-full mb-2"
+                      />
+                      <p className="text-sm text-gray-500">
+                        Think about both objective metrics and subjective indicators of success.
+                      </p>
+                    </div>
+                    
+                    {/* Summary */}
+                    <div className="bg-gray-50 rounded-md p-6 mb-6">
+                      <h3 className="text-lg font-medium mb-3">Block 1 Summary</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium">Success Factors Rated:</h4>
+                          <p className="text-sm text-gray-600">
+                            {Object.keys(plan?.blocks?.block1?.successFactorRatings || {}).length} of {successFactors?.length || 0} factors
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Personal Heuristics Added:</h4>
+                          <p className="text-sm text-gray-600">
+                            {plan?.blocks?.block1?.personalHeuristics?.length || 0} heuristics
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Success Criteria:</h4>
+                          <p className="text-sm text-gray-600">
+                            {successCriteria ? 'Defined' : 'Not yet defined'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <Info className="h-5 w-5 text-blue-400" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-blue-700">
+                            In Block 2, you'll build on this foundation to create tasks and map stakeholders.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between mt-8">
+                      <Button
+                        variant="outline"
+                        onClick={() => setActiveTab("personalHeuristics")}
+                      >
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                      </Button>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => saveMutation.mutate()}
+                          disabled={saveMutation.isPending}
+                        >
+                          <Save className="mr-2 h-4 w-4" /> Save Progress
+                        </Button>
+                        <Button
+                          onClick={handleCompleteBlock}
+                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                          disabled={completionPercentage < 60}
+                        >
+                          {completionPercentage < 60 ? (
+                            "Complete more sections before proceeding"
+                          ) : (
+                            <>Complete and Continue to Block 2 <ChevronRight className="ml-2 h-4 w-4" /></>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
             
-            <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8">
-              <p className="text-amber-800">
-                <strong>Tip:</strong> Take your time to review and refine the success factors. 
-                These will be the foundation for your action plan in later blocks.
-              </p>
-            </div>
-            
-            <div className="flex justify-end">
-              <Button 
-                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                onClick={() => setActiveTab("step1")}
+            {/* Action buttons */}
+            <div className="flex justify-between mt-8">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/make-a-plan/${projectId}/full`)}
               >
-                Begin Block 1 <MoveRight className="ml-2 h-4 w-4" />
+                <ArrowLeft className="mr-2 h-4 w-4" /> View Full Journey
               </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/make-a-plan/${projectId}/block-2`)}
+                >
+                  Skip to Block 2 <FastForward className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </TabsContent>
-        
-        {/* Step 1: Success Factors Tab */}
-        <TabsContent value="step1" className="pt-6">
-          <Card className="max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle className="text-tcof-dark">Step 1: Review Success Factors</CardTitle>
-              <CardDescription>
-                Based on your Goal Mapping results, these are the key success factors for your project
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-6 text-gray-700">
-                These success factors were identified as most relevant to your project based on your 
-                responses in the Goal Mapping Tool. Confirm these are correct before proceeding.
-              </p>
-              
-              {goalMap ? (
-                <div className="grid gap-4">
-                  {(goalMap.successFactorRatings || []).map((factor: SuccessFactor, index: number) => (
-                    <div 
-                      key={factor.id} 
-                      className="p-4 border rounded-lg hover:border-tcof-teal transition-colors"
-                    >
-                      <div className="flex items-start">
-                        <div className="bg-tcof-light rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-1">
-                          <span className="font-medium text-tcof-teal">{index + 1}</span>
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-medium text-tcof-dark mb-1">{factor.title}</h3>
-                          <p className="text-gray-600 text-sm">{factor.description}</p>
-                          <div className="mt-2 flex items-center">
-                            <span className="text-sm text-gray-500 mr-2">Priority:</span>
-                            <span className="font-medium text-tcof-teal">
-                              {factor.rating === 5 ? "Very High" : 
-                               factor.rating === 4 ? "High" : 
-                               factor.rating === 3 ? "Medium" : 
-                               factor.rating === 2 ? "Low" : "Very Low"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">
-                    No Goal Mapping data available. Please complete the Goal Mapping Tool first.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button 
-                variant="outline" 
-                onClick={() => setActiveTab("overview")}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Overview
-              </Button>
-              <Button 
-                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                onClick={() => setActiveTab("step2")}
-              >
-                Continue to Step 2 <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        {/* Step 2: Personal Heuristics Tab */}
-        <TabsContent value="step2" className="pt-6">
-          <Card className="max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle className="text-tcof-dark">Step 2: Personal Heuristics</CardTitle>
-              <CardDescription>
-                Add your personal expertise and domain knowledge
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-6 text-gray-700">
-                In addition to the research-based success factors, your personal experience and
-                domain knowledge can greatly enrich your delivery plan. Review any personal heuristics
-                you previously identified.
-              </p>
-              
-              {goalMap?.personalHeuristics?.length > 0 ? (
-                <div className="grid gap-4">
-                  {(goalMap.personalHeuristics || []).map((heuristic: PersonalHeuristic, index: number) => (
-                    <div 
-                      key={heuristic.id} 
-                      className="p-4 border rounded-lg hover:border-tcof-teal transition-colors"
-                    >
-                      <div className="flex items-start">
-                        <div className="bg-tcof-light rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-1">
-                          <span className="font-medium text-tcof-teal">{index + 1}</span>
-                        </div>
-                        <div>
-                          <p className="text-gray-700">{heuristic.text}</p>
-                          <div className="mt-2 flex items-center">
-                            <span className="text-sm text-gray-500 mr-2">Priority:</span>
-                            <span className="font-medium text-tcof-teal">
-                              {heuristic.rating === 5 ? "Very High" : 
-                               heuristic.rating === 4 ? "High" : 
-                               heuristic.rating === 3 ? "Medium" : 
-                               heuristic.rating === 2 ? "Low" : "Very Low"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-gray-50 p-6 rounded-lg text-center">
-                  <p className="text-gray-500 mb-4">
-                    You haven't added any personal heuristics yet. You can add these in the Goal Mapping Tool.
-                  </p>
-                  <Button 
-                    variant="outline"
-                    onClick={() => navigate(`/tools/goal-mapping/${projectId}`)}
-                    className="mx-auto"
-                  >
-                    Edit in Goal Mapping Tool
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button 
-                variant="outline" 
-                onClick={() => setActiveTab("step1")}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 1
-              </Button>
-              <Button 
-                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                onClick={() => setActiveTab("summary")}
-              >
-                Continue to Summary <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        {/* Summary Tab */}
-        <TabsContent value="summary" className="pt-6">
-          <Card className="max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle className="text-tcof-dark">Block 1 Summary</CardTitle>
-              <CardDescription>
-                Review your progress and prepare for Block 2
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-green-50 rounded-lg p-6 mb-6 flex items-center">
-                <Check className="h-10 w-10 text-green-500 mr-4" />
-                <div>
-                  <h3 className="text-lg font-medium text-green-800 mb-1">Block 1 Completed</h3>
-                  <p className="text-green-700">
-                    You've successfully identified the key success factors for your project.
-                  </p>
-                </div>
-              </div>
-              
-              <h3 className="text-lg font-medium text-tcof-dark mb-4">Summary of Key Factors</h3>
-              
-              <div className="mb-6">
-                <h4 className="font-medium text-tcof-dark mb-2">Research-Based Success Factors:</h4>
-                {goalMap?.successFactorRatings?.length > 0 ? (
-                  <ul className="list-disc pl-6 space-y-1">
-                    {goalMap.successFactorRatings.map((factor: SuccessFactor) => (
-                      <li key={factor.id} className="text-gray-700">
-                        {factor.title} <span className="text-tcof-teal text-sm">
-                          (Priority: {factor.rating === 5 ? "Very High" : 
-                                     factor.rating === 4 ? "High" : 
-                                     factor.rating === 3 ? "Medium" : 
-                                     factor.rating === 2 ? "Low" : "Very Low"})
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No success factors identified</p>
-                )}
-              </div>
-              
-              <div className="mb-6">
-                <h4 className="font-medium text-tcof-dark mb-2">Your Personal Heuristics:</h4>
-                {goalMap?.personalHeuristics?.length > 0 ? (
-                  <ul className="list-disc pl-6 space-y-1">
-                    {goalMap.personalHeuristics.map((heuristic: PersonalHeuristic) => (
-                      <li key={heuristic.id} className="text-gray-700">
-                        {heuristic.text} <span className="text-tcof-teal text-sm">
-                          (Priority: {heuristic.rating === 5 ? "Very High" : 
-                                     heuristic.rating === 4 ? "High" : 
-                                     heuristic.rating === 3 ? "Medium" : 
-                                     heuristic.rating === 2 ? "Low" : "Very Low"})
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No personal heuristics added</p>
-                )}
-              </div>
-              
-              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
-                <p className="text-amber-800">
-                  <strong>What's Next:</strong> In Block 2, you'll convert these success factors into 
-                  specific actions and tasks tailored to your project's needs.
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button 
-                variant="outline" 
-                onClick={() => setActiveTab("step2")}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 2
-              </Button>
-              <Button 
-                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                onClick={() => navigate(`/make-a-plan/${projectId}/block-2`)}
-              >
-                Proceed to Block 2 <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+        </div>
+      </div>
+    </PlanProvider>
   );
 }

@@ -336,7 +336,7 @@ function Router() {
           <MakeAPlanFull />
         </ProtectedRouteGuard>
       </Route>
-      <Route path="/make-a-plan/landing">
+      <Route path="/make-a-plan/:projectId/landing">
         <ProtectedRouteGuard>
           <MakeAPlanLanding />
         </ProtectedRouteGuard>
