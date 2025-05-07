@@ -420,7 +420,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Format response with normalized data structure
           const latestMap = projectGoalMaps[0];
-          const responseData = {
+          
+          // First, extract all relevant data from the stored map
+          let responseData: any = {
             id: latestMap.id,
             name: latestMap.data?.name || latestMap.name,
             nodes: latestMap.data?.nodes || [],
@@ -429,7 +431,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             projectId: project.id // Always use the actual project ID
           };
           
-          console.log('Fetched goal map data:', JSON.stringify(responseData, null, 2));
+          // Include goals if they exist in the data
+          if (latestMap.data?.goals && latestMap.data.goals.length > 0) {
+            console.log(`Including ${latestMap.data.goals.length} goals from stored data`);
+            responseData.goals = latestMap.data.goals;
+          } else if (responseData.nodes && responseData.nodes.length > 0 && !responseData.goals) {
+            // Generate goals from nodes if nodes exist but goals don't
+            console.log('Converting nodes to goals format for backward compatibility');
+            responseData.goals = responseData.nodes.map((node: any) => ({
+              id: node.id,
+              text: node.text,
+              level: node.level || Math.floor(Math.random() * 5) + 1, // Fallback if no level
+              timeframe: node.timeframe || ""
+            }));
+          } else {
+            // Ensure there's always a goals array
+            responseData.goals = [];
+          }
+          
+          console.log('Fetched goal map data:', JSON.stringify({
+            id: responseData.id,
+            name: responseData.name,
+            nodeCount: responseData.nodes.length,
+            goalCount: responseData.goals.length,
+            lastUpdated: responseData.lastUpdated,
+            projectId: responseData.projectId
+          }, null, 2));
+          
           return res.json(responseData);
         } else {
           // Return an empty goal map template instead of 404 to avoid client errors
@@ -533,9 +561,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Check if we need to convert goals to nodes/connections format for compatibility
+      let processedData = { ...data };
+      
+      // Log the structure of the data
+      console.log("Data structure before processing:", JSON.stringify({
+        dataType: typeof data,
+        hasGoals: !!data.goals,
+        goalCount: data.goals ? data.goals.length : 0,
+        hasNodes: !!data.nodes,
+        nodeCount: data.nodes ? data.nodes.length : 0
+      }, null, 2));
+      
+      // If we have goals but no nodes, convert goals to nodes
+      if (data.goals && (!data.nodes || data.nodes.length === 0)) {
+        console.log("Converting goals to nodes for server compatibility");
+        
+        // Convert goals to nodes format
+        processedData.nodes = data.goals.map(goal => ({
+          id: goal.id,
+          text: goal.text,
+          type: "goal",
+          level: goal.level,
+          timeframe: goal.timeframe || ""
+        }));
+        
+        // Store the original goals too for backward compatibility
+        processedData.goals = data.goals;
+        
+        console.log(`Converted ${processedData.nodes.length} goals to nodes`);
+        console.log("First node example:", processedData.nodes.length > 0 ? JSON.stringify(processedData.nodes[0]) : "No nodes");
+      }
+      
       // Save the goal map with the appropriate data
       console.log(`Saving goal map for user ${userId} with name "${name}"`);
-      const goalMap = await storage.saveGoalMap(userId, name, data);
+      const goalMap = await storage.saveGoalMap(userId, name, processedData);
       
       try {
         // Create relationship between goal map and project
@@ -625,8 +685,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Update the goal map
-      const updatedMap = await storage.updateGoalMap(goalMapId, data, name);
+      // Check if we need to convert goals to nodes/connections format for compatibility
+      let processedData = { ...data };
+      
+      // Log the structure of the data
+      console.log("Data structure before processing:", JSON.stringify({
+        dataType: typeof data,
+        hasGoals: !!data.goals,
+        goalCount: data.goals ? data.goals.length : 0,
+        hasNodes: !!data.nodes,
+        nodeCount: data.nodes ? data.nodes.length : 0
+      }, null, 2));
+      
+      // If we have goals but no nodes, convert goals to nodes
+      if (data.goals && (!data.nodes || data.nodes.length === 0)) {
+        console.log("Converting goals to nodes for server compatibility");
+        
+        // Convert goals to nodes format 
+        processedData.nodes = data.goals.map(goal => ({
+          id: goal.id,
+          text: goal.text,
+          type: "goal",
+          level: goal.level,
+          timeframe: goal.timeframe || ""
+        }));
+        
+        // Store the original goals too for backward compatibility
+        processedData.goals = data.goals;
+        
+        console.log(`Converted ${processedData.nodes.length} goals to nodes`);
+        console.log("First node example:", processedData.nodes.length > 0 ? JSON.stringify(processedData.nodes[0]) : "No nodes");
+      }
+      
+      // Update the goal map with processed data
+      const updatedMap = await storage.updateGoalMap(goalMapId, processedData, name);
       
       try {
         // Check if there's already a relation for this goal map
