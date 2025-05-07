@@ -9,6 +9,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useCanvas } from "@/hooks/use-canvas";
 import { useProjectContext } from "@/contexts/ProjectContext";
+import { useProgress } from "@/contexts/ProgressContext";
 import { GoalMappingView } from "@/components/GoalMappingView";
 import {
   STORAGE_KEYS,
@@ -255,6 +256,102 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       });
     },
   });
+  
+  // Use progress context to trigger a refetch after completion
+  const { refetch: refetchProgress } = useProgress();
+  
+  // Mutation for marking the goal mapping as complete
+  const submitPlanMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await apiRequest("POST", "/api/project-progress/goal-mapping/complete", {
+        projectId
+      });
+      if (!response.ok) {
+        throw new Error("Failed to submit plan");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      // Invalidate the project-progress query to update tool completion status
+      if (projectUuid) {
+        queryClient.invalidateQueries({ queryKey: ['project-progress', projectUuid] });
+        // Force a refetch of the progress data
+        refetchProgress();
+      }
+      
+      toast({
+        title: "Plan submitted",
+        description: "Your goal mapping has been marked as complete.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error submitting plan",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle submitting the plan
+  const handleSubmitPlan = () => {
+    if (nodes.length === 0) {
+      toast({
+        title: "Map is empty",
+        description: "Please add at least one goal before submitting your plan.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // First save the current map if needed
+    if (nodes.length > 0 && user && projectUuid) {
+      // If we have existing data on server, update it first
+      if (serverGoalMap?.id) {
+        // Create updated map data
+        const mapData: GoalMapData = {
+          name: mapName,
+          nodes: nodes,
+          connections: connections,
+          lastUpdated: Date.now(),
+          projectId: projectUuid
+        };
+        
+        // Update the server-side map
+        updateMapMutation.mutate({
+          id: serverGoalMap.id,
+          name: mapName,
+          data: mapData
+        });
+      } else {
+        // Otherwise create a new one
+        const mapData: GoalMapData = {
+          name: mapName,
+          nodes: nodes,
+          connections: connections,
+          lastUpdated: Date.now(),
+          projectId: projectUuid
+        };
+        
+        saveMapMutation.mutate({
+          name: mapName,
+          data: mapData,
+          projectId: projectUuid
+        });
+      }
+    }
+    
+    // Then mark the tool as complete
+    if (projectUuid) {
+      submitPlanMutation.mutate(projectUuid);
+    } else {
+      toast({
+        title: "Error submitting plan",
+        description: "No project ID available. Please save your map first.",
+        variant: "destructive"
+      });
+    }
+  };
   
   // Use the canvas hook with proper initialization
   const {
@@ -800,23 +897,43 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
               </Button>
             </div>
             
-            <Button 
-              className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-              onClick={handleSaveMap}
-              disabled={isLoading || nodes.length === 0}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Map
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                onClick={handleSaveMap}
+                disabled={isLoading || nodes.length === 0}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Map
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleSubmitPlan}
+                disabled={isLoading || nodes.length === 0 || submitPlanMutation.isPending}
+              >
+                {submitPlanMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Submit Plan
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </>
       )}

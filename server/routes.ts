@@ -622,20 +622,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/project-progress/goal-mapping/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
-      const userId = req.user?.id;
+      const userId = (req.user as any).id;
       
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
       }
       
       // Validate project exists and user has access to it
-      const project = await projectsDb.getProjectById(projectId);
+      const project = await projectsDb.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
       
       // Find any goal maps for this project to check if there's data
-      const goalMaps = await goalsDb.getGoalMapsForProject(projectId);
+      const allGoalMaps = await storage.getGoalMaps(userId);
+      
+      // Filter for this project - using both embedded projectId and relations
+      const goalMaps = allGoalMaps.filter(map => {
+        // Check embedded projectId in data
+        if (map.data && map.data.projectId === projectId) {
+          return true;
+        }
+        
+        // Check for relations
+        const relations = loadRelations().filter(rel => 
+          rel.fromId === map.id.toString() && 
+          rel.toId === projectId && 
+          rel.relType === 'GOAL_MAP_FOR_PROJECT'
+        );
+        
+        return relations.length > 0;
+      });
       
       // We'll consider the tool complete regardless of whether there are goal maps,
       // since this is a manual submission by the user
