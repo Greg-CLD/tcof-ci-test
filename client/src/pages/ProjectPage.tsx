@@ -59,14 +59,14 @@ export default function ProjectPage() {
         title: "Project deleted",
         description: "The project has been successfully deleted.",
       });
-      
+
       // Navigate back to organisation page or organisations list
       if (project?.organisationId) {
         navigate(`/organisations/${project.organisationId}`);
       } else {
         navigate("/organisations");
       }
-      
+
       // Invalidate projects query to refresh lists
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     },
@@ -94,7 +94,7 @@ export default function ProjectPage() {
       navigate("/organisations");
     }
   };
-  
+
   // Handle edit project
   const handleEditProject = () => {
     // Navigate to simplified edit project page with current project ID
@@ -119,7 +119,7 @@ export default function ProjectPage() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
         </div>
-        
+
         {isLoading ? (
           <div className="flex items-center justify-center min-h-[300px]">
             <Loader2 className="h-10 w-10 animate-spin text-tcof-teal" />
@@ -180,7 +180,7 @@ export default function ProjectPage() {
                 )}
               </div>
             </div>
-            
+
             {/* Delete Project Confirmation Dialog */}
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <AlertDialogContent>
@@ -207,7 +207,7 @@ export default function ProjectPage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            
+
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="mb-6">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -215,7 +215,7 @@ export default function ProjectPage() {
                 <TabsTrigger value="factors">Success Factors</TabsTrigger>
                 <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="overview" className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -232,7 +232,6 @@ export default function ProjectPage() {
                             className="justify-start"
                             onClick={() => {
                               console.log(`Navigating to Goal Mapping tool with projectId: ${projectId}`);
-                              // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
                               navigate(`/tools/goal-mapping/${projectId}`);
                             }}
@@ -244,7 +243,6 @@ export default function ProjectPage() {
                             className="justify-start"
                             onClick={() => {
                               console.log(`Navigating to Make a Plan with projectId: ${projectId}`);
-                              // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
                               navigate(`/make-a-plan/${projectId}`);
                             }}
@@ -256,7 +254,6 @@ export default function ProjectPage() {
                             className="justify-start"
                             onClick={() => {
                               console.log(`Navigating to Delegate Tasks with projectId: ${projectId}`);
-                              // Store projectId in localStorage to ensure it's available across pages
                               localStorage.setItem('currentProjectId', projectId);
                               navigate(`/projects/${projectId}/outcomes`);
                             }}
@@ -264,52 +261,13 @@ export default function ProjectPage() {
                             Outcomes & Delegation
                           </Button>
                         </div>
-                        
-                        <h3 className="font-semibold mt-6 mb-2">Specific Tools</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <Button 
-                            variant="outline" 
-                            className="justify-start"
-                            onClick={() => {
-                              console.log(`Navigating to Goal Mapping tool with projectId: ${projectId}`);
-                              // Store projectId in localStorage to ensure it's available across pages
-                              localStorage.setItem('currentProjectId', projectId);
-                              navigate(`/tools/goal-mapping/${projectId}`);
-                            }}
-                          >
-                            Goal Mapping Tool
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            className="justify-start"
-                            onClick={() => {
-                              console.log(`Navigating to Cynefin Orientation tool with projectId: ${projectId}`);
-                              // Store projectId in localStorage to ensure it's available across pages
-                              localStorage.setItem('currentProjectId', projectId);
-                              navigate(`/tools/cynefin-orientation/${projectId}`);
-                            }}
-                          >
-                            Cynefin Orientation
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            className="justify-start"
-                            onClick={() => {
-                              console.log(`Navigating to TCOF Journey tool with projectId: ${projectId}`);
-                              // Store projectId in localStorage to ensure it's available across pages
-                              localStorage.setItem('currentProjectId', projectId);
-                              navigate(`/tools/tcof-journey/${projectId}`);
-                            }}
-                          >
-                            TCOF Journey
-                          </Button>
-                        </div>
+
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="plans" className="space-y-6">
                 <Card>
                   <CardHeader>
