@@ -78,7 +78,8 @@ const basicProjectFormSchema = z.object({
       message: 'Please describe your sector'
     }),
   orgType: z.string().min(1, 'Please select an organization type'),
-  currentStage: z.string().min(1, 'Please select your current stage'),
+  organisationSize: z.string().min(1, 'Please select an organization size'),
+  description: z.string().optional(),
 });
 
 type BasicProjectFormValues = z.infer<typeof basicProjectFormSchema>;
@@ -111,7 +112,8 @@ export default function BasicProjectEditPage() {
       sector: '',
       customSector: '',
       orgType: '',
-      currentStage: '',
+      organisationSize: '',
+      description: '',
     },
   });
   
