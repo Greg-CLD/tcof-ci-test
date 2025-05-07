@@ -793,6 +793,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing project ID" });
       }
       
+      console.log(`Marking goal mapping as complete for project ${projectId} and user ${userId}`);
+      
       // Validate project exists and user has access to it
       const project = await projectsDb.getProject(projectId);
       if (!project) {
@@ -819,8 +821,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return relations.length > 0;
       });
       
-      // We'll consider the tool complete regardless of whether there are goal maps,
-      // since this is a manual submission by the user
+      // Sort goal maps by last updated to get the most recent one
+      const sortedMaps = goalMaps.sort((a, b) => {
+        const aTime = a.data?.lastUpdated || (a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0);
+        const bTime = b.data?.lastUpdated || (b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0);
+        return bTime - aTime;
+      });
+      
+      let goalsData = [];
+      
+      // Extract the goals data from the most recent goal map if available
+      if (sortedMaps.length > 0) {
+        const latestMap = sortedMaps[0];
+        
+        // Check if the map has goals data
+        if (latestMap.data && latestMap.data.goals) {
+          goalsData = latestMap.data.goals;
+        } else if (latestMap.data && latestMap.data.data && latestMap.data.data.goals) {
+          // Sometimes goals are nested in data.data
+          goalsData = latestMap.data.data.goals;
+        } else if (latestMap.data && latestMap.data.nodes) {
+          // Try to convert nodes to goals if available
+          goalsData = latestMap.data.nodes.map((node: any) => ({
+            id: node.id,
+            text: node.text,
+            level: node.level || Math.floor(Math.random() * 5) + 1,
+            timeframe: node.timeframe || ""
+          }));
+        }
+        
+        console.log(`Found ${goalsData.length} goals in the latest goal map for project ${projectId}`);
+      }
       
       // Store completion status in a dedicated data structure for tool progress
       try {
@@ -828,7 +859,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.storeToolProgress(userId, projectId, "goalMapping", {
           completed: true,
           lastUpdated: new Date().toISOString(),
-          hasData: goalMaps && goalMaps.length > 0
+          hasData: goalMaps && goalMaps.length > 0,
+          goals: goalsData, // Store the actual goals data in the progress
+          numberOfGoals: goalsData.length
         });
       } catch (err) {
         console.error("Error storing tool progress:", err);
@@ -841,7 +874,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId,
         toolName: "goalMapping",
         lastUpdated: new Date().toISOString(),
-        hasData: goalMaps && goalMaps.length > 0
+        hasData: goalMaps && goalMaps.length > 0,
+        numberOfGoals: goalsData.length
       });
     } catch (error) {
       console.error("Error marking goal mapping as complete:", error);
