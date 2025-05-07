@@ -9,11 +9,17 @@ interface Crumb {
   label: string;
 }
 
+// Component build timestamp for HMR verification
+const BUILD_TIMESTAMP = new Date().toISOString(); 
+console.log(`💡 Breadcrumb module evaluated at ${BUILD_TIMESTAMP} - HMR TEST #2`);
+
 /**
  * Breadcrumb component that shows the current navigation path
  * Computes breadcrumbs directly during render based on current URL
  */
 export function Breadcrumb() {
+  // Log on each component render to verify reactivity
+  console.log(`🧭 Breadcrumb rendered at ${new Date().toISOString()} (built: ${BUILD_TIMESTAMP})`);
   const [location] = useLocation();
   
   // Extract IDs from path
