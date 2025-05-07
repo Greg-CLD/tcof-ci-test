@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { Briefcase, ChevronLeft, Loader2, CheckCircle2, Pencil } from 'lucide-react';
 
@@ -130,7 +131,8 @@ export default function BasicProjectEditPage() {
         sector: project.sector || '',
         customSector: project.customSector || '',
         orgType: project.orgType || '',
-        currentStage: project.currentStage || '',
+        organisationSize: project.organisationSize || '',
+        description: project.description || '',
       });
     }
   }, [project, form]);
@@ -160,11 +162,11 @@ export default function BasicProjectEditPage() {
       const projectData: any = {
         // Keep existing values
         name: project.name,
-        description: project.description,
         // Update with form data
         sector: data.sector,
         orgType: data.orgType,
-        currentStage: data.currentStage,
+        organisationSize: data.organisationSize,
+        description: data.description,
         // Set isProfileComplete to true 
         isProfileComplete: true
       };
@@ -419,29 +421,44 @@ export default function BasicProjectEditPage() {
                     
                     <FormField
                       control={form.control}
-                      name="currentStage"
+                      name="organisationSize"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Which stage are you currently in?*</FormLabel>
+                          <FormLabel>Organisation Size*</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
                             defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select current stage" />
+                                <SelectValue placeholder="Select organisation size" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="identify">1. Identify</SelectItem>
-                              <SelectItem value="define">2. Definition</SelectItem>
-                              <SelectItem value="deliver">3. Delivery</SelectItem>
-                              <SelectItem value="closure">4. Closure</SelectItem>
+                              <SelectItem value="micro">Micro (1-9 employees)</SelectItem>
+                              <SelectItem value="small">Small (10-49 employees)</SelectItem>
+                              <SelectItem value="medium">Medium (50-249 employees)</SelectItem>
+                              <SelectItem value="large">Large (250+ employees)</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription>
-                            The stage you select will help us recommend the most relevant tools
-                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Project Description</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Provide a brief description of your project"
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -514,12 +531,15 @@ export default function BasicProjectEditPage() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-lg font-medium text-tcof-dark">Project Stage</h3>
+                      <h3 className="text-lg font-medium text-tcof-dark">Organisation Size</h3>
                       <p className="text-slate-700 rounded-md py-2 bg-slate-50 px-3 border border-slate-100">
-                        {getStageDisplayText(project.currentStage || '')}
+                        {project.organisationSize || 'Not specified'}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        The stage you select will help us recommend the most relevant tools
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium text-tcof-dark">Project Description</h3>
+                      <p className="text-slate-700 rounded-md py-2 bg-slate-50 px-3 border border-slate-100 whitespace-pre-wrap">
+                        {project.description || 'No description provided'}
                       </p>
                     </div>
                   </div>
