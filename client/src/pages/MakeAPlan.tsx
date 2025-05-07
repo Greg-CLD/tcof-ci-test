@@ -150,9 +150,8 @@ export default function MakeAPlan() {
                       className={`px-3 py-1 rounded-full flex items-center gap-2 
                         ${tool.completed 
                           ? 'bg-green-100 text-green-800 border border-green-300' 
-                          : 'bg-red-100 text-red-800 border border-red-300 cursor-pointer hover:bg-red-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-300'
                         }`}
-                      onClick={() => !tool.completed && navigate(tool.path)}
                     >
                       {tool.completed ? (
                         <CheckCircle2 className="h-4 w-4" />

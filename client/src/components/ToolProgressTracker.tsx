@@ -192,33 +192,26 @@ export function ToolProgressTracker({ projectId, organisationId, className = '' 
           </div>
         </div>
         
-        {allToolsComplete && (
-          <div className="mt-4 pt-3 border-t">
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => navigateToTool('makeAPlan')}
-            >
-              Make a Plan Now
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        )}
-        
-        {!allToolsComplete && (
-          <div className="mt-4 pt-3 border-t">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full text-tcof-teal border-tcof-teal hover:bg-tcof-teal/10"
-              disabled={!allToolsComplete}
-              onClick={() => navigateToTool('makeAPlan')}
-            >
-              Complete All Tools to Unlock
-            </Button>
-          </div>
-        )}
+        <div className="mt-4 pt-3 border-t">
+          <Button 
+            variant={allToolsComplete ? "default" : "outline"}
+            size="sm" 
+            className={allToolsComplete 
+              ? "w-full bg-green-600 hover:bg-green-700 text-white"
+              : "w-full text-tcof-teal border-tcof-teal hover:bg-tcof-teal/10"
+            }
+            onClick={() => navigateToTool('makeAPlan')}
+          >
+            {allToolsComplete ? (
+              <>
+                Make a Plan Now
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            ) : (
+              "Make a Plan"
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
