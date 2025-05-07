@@ -125,34 +125,45 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         throw new Error("Project ID is required");
       }
       
-      // Log full payload before sending
-      console.log("Saving goal map with payload:", {
-        projectId: data.projectId,
-        name: data.name, 
-        data: data.goals,
-        id: data.id || 'new map'
-      });
+      // Ensure projectId is properly formatted as a string
+      const projectIdStr = String(data.projectId);
       
-      // Ensure we have all required fields
+      // Ensure we have all required fields with proper structure for the server API
       const payload = {
-        projectId: data.projectId,
+        projectId: projectIdStr,
         name: data.name || "Goal Map",
-        data: data.goals
+        data: {
+          // Include projectId in the data object for consistent handling
+          projectId: projectIdStr,
+          goals: data.goals || [],
+          // Additional metadata to ensure complete data object
+          timestamp: new Date().toISOString(),
+          version: "1.0"
+        }
       };
+      
+      // Log full payload before sending
+      console.log("SAVE DRAFT - Sending goal map payload:", JSON.stringify(payload, null, 2));
       
       // Check if we're updating or creating a new map
       if (data.id) {
+        console.log(`SAVE DRAFT - Updating existing goal map ${data.id} for project ${projectIdStr}`);
         // Update existing map
         const response = await apiRequest("PUT", `/api/goal-maps/${data.id}`, payload);
         if (!response.ok) {
-          throw new Error("Failed to update goal map");
+          const errorText = await response.text();
+          console.error(`SAVE DRAFT - Update failed with status ${response.status}: ${errorText}`);
+          throw new Error(`Failed to update goal map: ${errorText}`);
         }
         return await response.json();
       } else {
+        console.log(`SAVE DRAFT - Creating new goal map for project ${projectIdStr}`);
         // Create new map
         const response = await apiRequest("POST", "/api/goal-maps", payload);
         if (!response.ok) {
-          throw new Error("Failed to save goal map");
+          const errorText = await response.text();
+          console.error(`SAVE DRAFT - Creation failed with status ${response.status}: ${errorText}`);
+          throw new Error(`Failed to save goal map: ${errorText}`);
         }
         return await response.json();
       }
@@ -161,9 +172,15 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       // Update the map ID after saving a new map
       setGoalMap(prev => ({ ...prev, id: data.id }));
       
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/goal-maps', projectId] });
-      console.log("Goal map saved successfully:", data);
+      console.log("SAVE DRAFT - Goal map saved successfully. Response:", data);
+      
+      // Ensure projectId is a string for consistent cache invalidation
+      const projectIdStr = String(projectId);
+      
+      // Invalidate all relevant queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/goal-maps'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/goal-maps', projectIdStr] });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', projectIdStr] });
       
       toast({
         title: "Goal map saved",
@@ -188,21 +205,30 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     mutationFn: async () => {
       if (!projectId) throw new Error("No project selected");
       
-      // Log the full request payload
-      const payload = { projectId };
-      console.log("Submitting Goal Mapping plan completion with payload:", payload);
+      // Ensure projectId is properly formatted as a string
+      const projectIdStr = String(projectId);
       
+      // Prepare payload with consistently formatted ID
+      const payload = { projectId: projectIdStr };
+      console.log("SUBMIT PLAN - Sending payload:", JSON.stringify(payload, null, 2));
+      
+      // Mark the goal mapping as complete
       const response = await apiRequest("POST", "/api/project-progress/goal-mapping/complete", payload);
       
       if (!response.ok) {
-        throw new Error("Failed to mark goal mapping as complete");
+        const errorText = await response.text();
+        console.error(`SUBMIT PLAN - Failed with status ${response.status}: ${errorText}`);
+        throw new Error(`Failed to mark goal mapping as complete: ${errorText}`);
       }
       
       return await response.json();
     },
     onSuccess: (data) => {
       // Log the response data
-      console.log("Successfully marked Goal Mapping as complete. Response:", data);
+      console.log("SUBMIT PLAN - Successfully marked Goal Mapping as complete. Response:", data);
+      
+      // Ensure projectId is a string for consistent cache invalidation
+      const projectIdStr = String(projectId);
       
       toast({
         title: "Plan submitted successfully",
@@ -211,16 +237,18 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       
       // Refresh progress to update UI
       if (refreshProgress) {
-        console.log("Refreshing project progress after Goal Mapping completion");
+        console.log("SUBMIT PLAN - Refreshing project progress after Goal Mapping completion");
         refreshProgress();
       }
       
       // Invalidate all relevant queries to ensure UI is up to date
-      queryClient.invalidateQueries({ queryKey: ["project-progress", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-progress", projectIdStr] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectIdStr] });
       
       // Also invalidate the general project queries as progress might be shown there
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectIdStr] });
     },
     onError: (error: Error) => {
       console.error("Error submitting Goal Mapping plan:", error);
