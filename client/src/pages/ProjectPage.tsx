@@ -4,6 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useProgress } from "@/contexts/ProgressContext";
+import Checklist from "@/pages/Checklist";
 import { 
   ArrowLeft, 
   Loader2, 
@@ -228,6 +229,7 @@ export default function ProjectPage() {
               <TabsList className="mb-6">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="getYourBearings">Get Your Bearings</TabsTrigger>
+                <TabsTrigger value="checklist">Checklist</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
@@ -400,6 +402,19 @@ export default function ProjectPage() {
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="checklist" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Project Checklist</CardTitle>
+                    <CardDescription>Track and manage tasks for this project</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Pass projectId as a prop to the Checklist component */}
+                    <Checklist />
                   </CardContent>
                 </Card>
               </TabsContent>
