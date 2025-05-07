@@ -657,6 +657,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // We'll consider the tool complete regardless of whether there are goal maps,
       // since this is a manual submission by the user
       
+      // Store completion status in a dedicated data structure for tool progress
+      try {
+        console.log("Storing Goal Mapping completion in progress data");
+        await storage.storeToolProgress(userId, projectId, "goalMapping", {
+          completed: true,
+          lastUpdated: new Date().toISOString(),
+          hasData: goalMaps && goalMaps.length > 0
+        });
+      } catch (err) {
+        console.error("Error storing tool progress:", err);
+        // Continue even if there's an error storing the progress
+      }
+      
       // Return success with a completion status
       return res.status(200).json({
         completed: true,
@@ -668,6 +681,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking goal mapping as complete:", error);
       return res.status(500).json({ message: "Error marking goal mapping as complete" });
+    }
+  });
+  
+  // Get Goal Mapping completion status for a project
+  app.get("/api/project-progress/goal-mapping/status", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const projectId = req.query.projectId as string;
+      
+      if (!projectId || !userId) {
+        return res.status(400).json({ message: "Missing project ID" });
+      }
+      
+      console.log(`Getting Goal Mapping status for project ${projectId} and user ${userId}`);
+      
+      // Validate project exists and user has access to it
+      const project = await projectsDb.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Get the stored tool progress
+      const progress = await storage.getToolProgress(userId, projectId, "goalMapping");
+      
+      if (progress) {
+        console.log(`Found Goal Mapping progress for project ${projectId}:`, progress);
+        return res.status(200).json(progress);
+      }
+      
+      // If no progress found, check if there are any goal maps that would indicate completion
+      const allGoalMaps = await storage.getGoalMaps(userId);
+      
+      // Filter for this project
+      const goalMaps = allGoalMaps.filter(map => {
+        // Check embedded projectId in data
+        if (map.data && map.data.projectId === projectId) {
+          return true;
+        }
+        
+        // Check for relations
+        const relations = loadRelations().filter(rel => 
+          rel.fromId === map.id.toString() && 
+          rel.toId === projectId && 
+          rel.relType === 'GOAL_MAP_FOR_PROJECT'
+        );
+        
+        return relations.length > 0;
+      });
+      
+      // We only consider it complete if it was explicitly submitted
+      // Having goal maps alone doesn't make it complete
+      return res.status(200).json({
+        completed: false,
+        projectId,
+        toolName: "goalMapping",
+        hasData: goalMaps && goalMaps.length > 0
+      });
+    } catch (error) {
+      console.error("Error getting Goal Mapping status:", error);
+      return res.status(500).json({ message: "Error getting Goal Mapping status" });
     }
   });
   
@@ -715,6 +788,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // We'll consider the tool complete regardless of whether there are selections,
       // since this is a manual submission by the user
       
+      // Store completion status in a dedicated data structure for tool progress
+      try {
+        console.log("Storing Cynefin orientation completion in progress data");
+        await storage.storeToolProgress(userId, projectId, "cynefinOrientation", {
+          completed: true,
+          lastUpdated: new Date().toISOString(),
+          hasData: projectSelections && projectSelections.length > 0
+        });
+      } catch (err) {
+        console.error("Error storing tool progress:", err);
+        // Continue even if there's an error storing the progress
+      }
+      
       // Return success with a completion status
       return res.status(200).json({
         completed: true,
@@ -726,6 +812,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking Cynefin Orientation as complete:", error);
       return res.status(500).json({ message: "Error marking Cynefin Orientation as complete" });
+    }
+  });
+  
+  // Get Cynefin Orientation completion status for a project
+  app.get("/api/project-progress/cynefin-orientation/status", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const projectId = req.query.projectId as string;
+      
+      if (!projectId || !userId) {
+        return res.status(400).json({ message: "Missing project ID" });
+      }
+      
+      console.log(`Getting Cynefin orientation status for project ${projectId} and user ${userId}`);
+      
+      // Validate project exists and user has access to it
+      const project = await projectsDb.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Get the stored tool progress
+      const progress = await storage.getToolProgress(userId, projectId, "cynefinOrientation");
+      
+      if (progress) {
+        console.log(`Found Cynefin orientation progress for project ${projectId}:`, progress);
+        return res.status(200).json(progress);
+      }
+      
+      // If no progress found, check if there are any selections that would indicate completion
+      const allSelections = await storage.getCynefinSelections(userId);
+      
+      // Filter for this project
+      const projectSelections = allSelections.filter(selection => {
+        // Check embedded projectId in data
+        if (selection.data && selection.data.projectId) {
+          const selectionProjectId = selection.data.projectId.toString();
+          const compareId = project.id.toString();
+          
+          if (selectionProjectId === compareId) {
+            return true;
+          }
+        }
+        
+        // Check for relations
+        const relations = loadRelations().filter(rel => 
+          rel.fromId === selection.id.toString() && 
+          (rel.toId === project.id.toString() || rel.toId === projectId) && 
+          rel.relType === 'CYNEFIN_SELECTION_FOR_PROJECT'
+        );
+        
+        return relations.length > 0;
+      });
+      
+      // We only consider it complete if it was explicitly submitted
+      // Having selections alone doesn't make it complete
+      return res.status(200).json({
+        completed: false,
+        projectId,
+        toolName: "cynefinOrientation",
+        hasData: projectSelections && projectSelections.length > 0
+      });
+    } catch (error) {
+      console.error("Error getting Cynefin Orientation status:", error);
+      return res.status(500).json({ message: "Error getting Cynefin Orientation status" });
     }
   });
   
@@ -773,6 +924,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // We'll consider the tool complete regardless of whether there are journeys,
       // since this is a manual submission by the user
       
+      // Store completion status in a dedicated data structure for tool progress
+      try {
+        console.log("Storing TCOF Journey completion in progress data");
+        await storage.storeToolProgress(userId, projectId, "tcofJourney", {
+          completed: true,
+          lastUpdated: new Date().toISOString(),
+          hasData: projectJourneys && projectJourneys.length > 0
+        });
+      } catch (err) {
+        console.error("Error storing tool progress:", err);
+        // Continue even if there's an error storing the progress
+      }
+      
       // Return success with a completion status
       return res.status(200).json({
         completed: true,
@@ -784,6 +948,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking TCOF Journey as complete:", error);
       return res.status(500).json({ message: "Error marking TCOF Journey as complete" });
+    }
+  });
+  
+  // Get TCOF Journey completion status for a project
+  app.get("/api/project-progress/tcof-journey/status", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const projectId = req.query.projectId as string;
+      
+      if (!projectId || !userId) {
+        return res.status(400).json({ message: "Missing project ID" });
+      }
+      
+      console.log(`Getting TCOF Journey status for project ${projectId} and user ${userId}`);
+      
+      // Validate project exists and user has access to it
+      const project = await projectsDb.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Get the stored tool progress
+      const progress = await storage.getToolProgress(userId, projectId, "tcofJourney");
+      
+      if (progress) {
+        console.log(`Found TCOF Journey progress for project ${projectId}:`, progress);
+        return res.status(200).json(progress);
+      }
+      
+      // If no progress found, check if there are any journeys that would indicate completion
+      const allJourneys = await storage.getTCOFJourneys(userId);
+      
+      // Filter for this project
+      const projectJourneys = allJourneys.filter(journey => {
+        // Check embedded projectId in data
+        if (journey.data && journey.data.projectId) {
+          const journeyProjectId = journey.data.projectId.toString();
+          const compareId = project.id.toString();
+          
+          if (journeyProjectId === compareId) {
+            return true;
+          }
+        }
+        
+        // Check for relations
+        const relations = loadRelations().filter(rel => 
+          rel.fromId === journey.id.toString() && 
+          (rel.toId === project.id.toString() || rel.toId === projectId) && 
+          rel.relType === 'TCOF_JOURNEY_FOR_PROJECT'
+        );
+        
+        return relations.length > 0;
+      });
+      
+      // We only consider it complete if it was explicitly submitted
+      // Having journeys alone doesn't make it complete
+      return res.status(200).json({
+        completed: false,
+        projectId,
+        toolName: "tcofJourney",
+        hasData: projectJourneys && projectJourneys.length > 0
+      });
+    } catch (error) {
+      console.error("Error getting TCOF Journey status:", error);
+      return res.status(500).json({ message: "Error getting TCOF Journey status" });
     }
   });
 

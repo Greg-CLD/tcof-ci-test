@@ -235,6 +235,7 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
     mutationFn: async () => {
       if (!projectId) throw new Error("No project selected");
       
+      console.log("Submitting Cynefin plan completion for project:", projectId);
       const response = await apiRequest("POST", "/api/project-progress/cynefin-orientation/complete", {
         projectId: projectId
       });
@@ -246,6 +247,7 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
       return await response.json();
     },
     onSuccess: () => {
+      console.log("Successfully marked Cynefin orientation as complete");
       toast({
         title: "Plan submitted successfully",
         description: "Your Cynefin assessment has been marked as complete.",
@@ -253,13 +255,16 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
       
       // Refresh progress to update UI
       if (refreshProgress) {
+        console.log("Refreshing project progress after Cynefin completion");
         refreshProgress();
       }
       
       // Also invalidate project progress queries
-      queryClient.invalidateQueries({ queryKey: ['project-progress', projectId] });
+      console.log("Invalidating project-progress queries for projectId:", projectId);
+      queryClient.invalidateQueries({ queryKey: ["project-progress", projectId] });
     },
     onError: (error: Error) => {
+      console.error("Error submitting Cynefin plan:", error);
       toast({
         title: "Error submitting plan",
         description: error.message,

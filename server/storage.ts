@@ -349,5 +349,114 @@ export const storage = {
       .returning();
     
     return updatedProject;
+  },
+  
+  // Tool progress tracking methods
+  async storeToolProgress(userId: number, projectId: string, toolName: string, progressData: any) {
+    try {
+      // Store in a local file for now - in production this would go in a database table
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Make sure the data directory exists
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      
+      // Create the progress tracking file path
+      const progressFile = path.join(dataDir, 'tool-progress.json');
+      
+      // Read existing progress data if available
+      let progress = {};
+      if (fs.existsSync(progressFile)) {
+        try {
+          const data = fs.readFileSync(progressFile, 'utf8');
+          progress = JSON.parse(data);
+        } catch (err) {
+          console.error('Error reading tool progress file:', err);
+        }
+      }
+      
+      // Initialize user and project objects if they don't exist
+      progress[userId] = progress[userId] || {};
+      progress[userId][projectId] = progress[userId][projectId] || {};
+      
+      // Update the tool progress with new data
+      progress[userId][projectId][toolName] = {
+        ...progressData,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // Save the updated progress data
+      fs.writeFileSync(progressFile, JSON.stringify(progress, null, 2));
+      
+      console.log(`Stored progress for user ${userId}, project ${projectId}, tool ${toolName}`);
+      return true;
+    } catch (error) {
+      console.error('Error storing tool progress:', error);
+      return false;
+    }
+  },
+  
+  async getToolProgress(userId: number, projectId: string, toolName: string) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Get the progress tracking file path
+      const progressFile = path.join(process.cwd(), 'data', 'tool-progress.json');
+      
+      // Check if the file exists
+      if (!fs.existsSync(progressFile)) {
+        console.log('No tool progress file found');
+        return null;
+      }
+      
+      // Read and parse the progress data
+      const data = fs.readFileSync(progressFile, 'utf8');
+      const progress = JSON.parse(data);
+      
+      // Check if progress exists for this user, project, and tool
+      if (
+        progress[userId] && 
+        progress[userId][projectId] && 
+        progress[userId][projectId][toolName]
+      ) {
+        console.log(`Found progress for user ${userId}, project ${projectId}, tool ${toolName}`);
+        return progress[userId][projectId][toolName];
+      }
+      
+      console.log(`No progress found for user ${userId}, project ${projectId}, tool ${toolName}`);
+      return null;
+    } catch (error) {
+      console.error('Error getting tool progress:', error);
+      return null;
+    }
+  },
+  
+  async markCynefinOrientationComplete(userId: number, projectId: string) {
+    return this.storeToolProgress(userId, projectId, "cynefinOrientation", {
+      completed: true,
+      lastUpdated: new Date().toISOString()
+    });
+  },
+  
+  async getCynefinOrientationStatus(userId: number, projectId: string) {
+    return this.getToolProgress(userId, projectId, "cynefinOrientation");
+  },
+  
+  async markGoalMappingComplete(userId: number, projectId: string) {
+    return this.storeToolProgress(userId, projectId, "goalMapping", {
+      completed: true,
+      lastUpdated: new Date().toISOString()
+    });
+  },
+  
+  async markTCOFJourneyComplete(userId: number, projectId: string) {
+    return this.storeToolProgress(userId, projectId, "tcofJourney", {
+      completed: true,
+      lastUpdated: new Date().toISOString()
+    });
   }
 };

@@ -53,57 +53,104 @@ export const ProgressProvider: React.FC<{children: ReactNode}> = ({children}) =>
         let cynefinCompleted = false;
         let tcofJourneyCompleted = false;
         
-        // Try to fetch goal mapping data
+        // First, check for direct completion status from project-progress endpoints
         try {
-          const goalMappingRes = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
-          if (goalMappingRes.ok) {
-            const goalMapData = await goalMappingRes.json();
-            // Check if there are actual nodes in the goal map
-            goalMappingCompleted = goalMapData && 
-                                   goalMapData.nodes && 
-                                   Array.isArray(goalMapData.nodes) && 
-                                   goalMapData.nodes.length > 0;
-            console.log(`Goal mapping data:`, goalMapData);
+          // For Goal Mapping
+          const goalMappingProgressRes = await apiRequest("GET", `/api/project-progress/goal-mapping/status?projectId=${projectId}`);
+          if (goalMappingProgressRes.ok) {
+            const goalMappingProgressData = await goalMappingProgressRes.json();
+            if (goalMappingProgressData && goalMappingProgressData.completed) {
+              console.log("Goal mapping is marked as completed in project progress", goalMappingProgressData);
+              goalMappingCompleted = true;
+            }
+          }
+
+          // For Cynefin Orientation
+          const cynefinProgressRes = await apiRequest("GET", `/api/project-progress/cynefin-orientation/status?projectId=${projectId}`);
+          if (cynefinProgressRes.ok) {
+            const cynefinProgressData = await cynefinProgressRes.json();
+            if (cynefinProgressData && cynefinProgressData.completed) {
+              console.log("Cynefin orientation is marked as completed in project progress", cynefinProgressData);
+              cynefinCompleted = true;
+            }
+          }
+          
+          // For TCOF Journey
+          const tcofJourneyProgressRes = await apiRequest("GET", `/api/project-progress/tcof-journey/status?projectId=${projectId}`);
+          if (tcofJourneyProgressRes.ok) {
+            const tcofJourneyProgressData = await tcofJourneyProgressRes.json();
+            if (tcofJourneyProgressData && tcofJourneyProgressData.completed) {
+              console.log("TCOF Journey is marked as completed in project progress", tcofJourneyProgressData);
+              tcofJourneyCompleted = true;
+            }
           }
         } catch (err) {
-          console.error("Error fetching goal mapping data:", err);
+          console.error("Error fetching direct progress status:", err);
+        }
+        
+        // Only check these fallbacks if the direct progress status checks didn't indicate completion
+        
+        // Try to fetch goal mapping data
+        if (!goalMappingCompleted) {
+          try {
+            const goalMappingRes = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
+            if (goalMappingRes.ok) {
+              const goalMapData = await goalMappingRes.json();
+              // Check if there are actual nodes in the goal map
+              goalMappingCompleted = goalMapData && 
+                                    goalMapData.nodes && 
+                                    Array.isArray(goalMapData.nodes) && 
+                                    goalMapData.nodes.length > 0;
+              console.log(`Goal mapping data:`, goalMapData);
+            }
+          } catch (err) {
+            console.error("Error fetching goal mapping data:", err);
+          }
         }
         
         // Try to fetch cynefin orientation data
-        try {
-          const cynefinRes = await apiRequest("GET", `/api/cynefin-selections?projectId=${projectId}`);
-          if (cynefinRes.ok) {
-            const cynefinData = await cynefinRes.json();
-            // Check if there are actual selections in the cynefin data
-            cynefinCompleted = cynefinData && 
-                              cynefinData.data && 
-                              cynefinData.data.selections && 
-                              Array.isArray(cynefinData.data.selections) && 
-                              cynefinData.data.selections.length > 0;
-            console.log(`Cynefin data:`, cynefinData);
+        if (!cynefinCompleted) {
+          try {
+            const cynefinRes = await apiRequest("GET", `/api/cynefin-selections?projectId=${projectId}`);
+            if (cynefinRes.ok) {
+              const cynefinData = await cynefinRes.json();
+              // Check if there are actual selections in the cynefin data
+              const hasSelections = cynefinData && 
+                                cynefinData.data && 
+                                cynefinData.data.quadrant;
+              
+              if (hasSelections) {
+                console.log(`Found valid Cynefin selection:`, cynefinData.data.quadrant);
+                
+                // We don't automatically mark it as complete just because it has data
+                // It's only complete if the submit button was clicked (checked above)
+              }
+            }
+          } catch (err) {
+            console.error("Error fetching cynefin data:", err);
           }
-        } catch (err) {
-          console.error("Error fetching cynefin data:", err);
         }
         
         // Try to fetch TCOF journey data
-        try {
-          const tcofJourneyRes = await apiRequest("GET", `/api/tcof-journeys?projectId=${projectId}`);
-          if (tcofJourneyRes.ok) {
-            const journeyData = await tcofJourneyRes.json();
-            // Check if there are actual decisions in the journey data
-            tcofJourneyCompleted = journeyData && 
-                                  journeyData.data && 
-                                  journeyData.data.decisions && 
-                                  Object.keys(journeyData.data.decisions).length > 0;
-            console.log(`TCOF Journey data:`, journeyData);
+        if (!tcofJourneyCompleted) {
+          try {
+            const tcofJourneyRes = await apiRequest("GET", `/api/tcof-journeys?projectId=${projectId}`);
+            if (tcofJourneyRes.ok) {
+              const journeyData = await tcofJourneyRes.json();
+              // Check if there are actual decisions in the journey data
+              tcofJourneyCompleted = journeyData && 
+                                    journeyData.data && 
+                                    journeyData.data.decisions && 
+                                    Object.keys(journeyData.data.decisions).length > 0;
+              console.log(`TCOF Journey data:`, journeyData);
+            }
+          } catch (err) {
+            console.error("Error fetching TCOF journey data:", err);
           }
-        } catch (err) {
-          console.error("Error fetching TCOF journey data:", err);
         }
         
         // Log the progress checks
-        console.log("Project progress checks:", {
+        console.log("Project progress status:", {
           projectId,
           goalMapping: goalMappingCompleted,
           cynefin: cynefinCompleted,
