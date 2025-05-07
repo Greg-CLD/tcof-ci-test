@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from "wouter";
 import { Home, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Crumb {
   href: string;
@@ -33,6 +34,7 @@ const SEGMENT_LABELS: Record<string, string> = {
  */
 export function Breadcrumb() {
   const [location] = useLocation();
+  const { user } = useAuth();
   
   // Extract path segments for route building
   const pathSegments = location.split('/').filter(Boolean);
@@ -78,9 +80,12 @@ export function Breadcrumb() {
 
   // Generate dynamic breadcrumbs based on current URL
   const crumbs = useMemo(() => {
-    const result: Crumb[] = [
-      { href: "/", label: "Home" }
-    ];
+    const result: Crumb[] = [];
+    
+    // Only add Home crumb for unauthenticated users or on the home page
+    if (!user || location === '/') {
+      result.push({ href: "/", label: "Home" });
+    }
     
     let currentPath = "";
     

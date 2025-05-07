@@ -22,9 +22,9 @@ const GlobalNav = () => {
 
   // Navigation items with their paths and condition to show
   const navItems = [
-    { path: '/', label: 'Home', show: true },
-    { path: '/get-your-bearings/project-profile', label: 'Project Profile', show: true },
-    { path: '/checklist', label: 'Checklist', show: true },
+    { path: '/organisations', label: 'Organisations', show: !!user },
+    { path: '/all-projects', label: 'All Projects', show: !!user },
+    { path: '/settings', label: 'Account', show: !!user },
     { path: '/make-a-plan/admin', label: 'Admin', show: admin }
   ];
 

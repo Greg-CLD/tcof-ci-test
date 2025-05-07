@@ -99,19 +99,22 @@ export default function SiteHeader() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <Link 
-              href={user ? '/organisations' : '/'} 
-              className={`text-tcof-dark hover:text-tcof-teal transition-colors ${location === '/' || location === '/organisations' ? 'nav-link active font-medium' : 'nav-link'}`}
-            >
-              <Home className="h-4 w-4 mr-1" /> Home
-            </Link>
             {user && (
-              <Link 
-                href="/organisations" 
-                className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/organisations' ? 'nav-link active font-medium' : 'nav-link'}`}
-              >
-                <Briefcase className="h-4 w-4 mr-1" /> Organisations
-              </Link>
+              <>
+                <Link 
+                  href="/organisations" 
+                  className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/organisations' ? 'nav-link active font-medium' : 'nav-link'}`}
+                >
+                  <Briefcase className="h-4 w-4 mr-1" /> Organisations
+                </Link>
+                
+                <Link 
+                  href="/all-projects" 
+                  className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location === '/all-projects' ? 'nav-link active font-medium' : 'nav-link'}`}
+                >
+                  <ClipboardList className="h-4 w-4 mr-1" /> All Projects
+                </Link>
+              </>
             )}
             {!isLoggedIn && (
               <Link 
@@ -225,23 +228,25 @@ export default function SiteHeader() {
         {mobileMenuOpen && (
           <div className="md:hidden pt-4 pb-2 border-t border-gray-200 mt-4">
             <nav className="flex flex-col space-y-3">
-              <Link 
-                href={user ? '/organisations' : '/'}
-                onClick={handleNavigation}
-                className={`flex items-center py-2 px-3 rounded-md ${location === '/' || location === '/organisations' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
-              >
-                <Home className="h-5 w-5 mr-2" /> Home
-              </Link>
-              
-              {/* Organizations link (mobile) - only shown when logged in */}
+              {/* Only show these links when logged in */}
               {user && (
-                <Link 
-                  href="/organisations"
-                  onClick={handleNavigation}
-                  className={`flex items-center py-2 px-3 rounded-md ${location === '/organisations' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
-                >
-                  <Briefcase className="h-5 w-5 mr-2" /> Organisations
-                </Link>
+                <>
+                  <Link 
+                    href="/organisations"
+                    onClick={handleNavigation}
+                    className={`flex items-center py-2 px-3 rounded-md ${location === '/organisations' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+                  >
+                    <Briefcase className="h-5 w-5 mr-2" /> Organisations
+                  </Link>
+                  
+                  <Link 
+                    href="/all-projects"
+                    onClick={handleNavigation}
+                    className={`flex items-center py-2 px-3 rounded-md ${location === '/all-projects' ? 'bg-tcof-light text-tcof-teal font-medium' : 'text-tcof-dark'}`}
+                  >
+                    <ClipboardList className="h-5 w-5 mr-2" /> All Projects
+                  </Link>
+                </>
               )}
               
               {/* Pricing link (mobile) - only shown when not logged in */}
