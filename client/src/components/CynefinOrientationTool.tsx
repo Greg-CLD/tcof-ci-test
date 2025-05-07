@@ -206,7 +206,14 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
       return await response.json();
     },
     onSuccess: () => {
+      // Invalidate the cynefin selections query
       queryClient.invalidateQueries({ queryKey: ["/api/cynefin-selections", projectId] });
+      
+      // Invalidate the project-progress query to update tool completion status
+      queryClient.invalidateQueries({ queryKey: ['project-progress', projectId] });
+      
+      console.log(`Invalidated cynefin selections and progress for project: ${projectId}`);
+      
       toast({
         title: "Assessment saved",
         description: "Your Cynefin assessment has been saved to your account.",

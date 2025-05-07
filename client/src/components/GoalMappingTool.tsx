@@ -183,6 +183,9 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       // Also invalidate the general goal maps list
       queryClient.invalidateQueries({ queryKey: ['/api/goal-maps'] });
       
+      // Invalidate the project-progress query to update tool completion status
+      queryClient.invalidateQueries({ queryKey: ['project-progress', savedMapProjectId] });
+      
       toast({
         title: "Map saved",
         description: "Your success map has been saved to your account.",
@@ -226,8 +229,11 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       // Also invalidate the general goal maps list
       queryClient.invalidateQueries({ queryKey: ['/api/goal-maps'] });
       
+      // Invalidate the project-progress query to update tool completion status
+      queryClient.invalidateQueries({ queryKey: ['project-progress', updatedMapProjectId] });
+      
       // Add debug logs
-      console.log(`Invalidated goal maps for project: ${updatedMapProjectId}`);
+      console.log(`Invalidated goal maps and progress for project: ${updatedMapProjectId}`);
       
       // Refresh the data immediately to ensure view is updated
       if (projectUuid) {

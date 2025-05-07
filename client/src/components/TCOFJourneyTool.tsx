@@ -201,7 +201,14 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
       return await response.json();
     },
     onSuccess: () => {
+      // Invalidate the TCOF journeys query
       queryClient.invalidateQueries({ queryKey: ["/api/tcof-journeys", projectId] });
+      
+      // Invalidate the project-progress query to update tool completion status
+      queryClient.invalidateQueries({ queryKey: ['project-progress', projectId] });
+      
+      console.log(`Invalidated TCOF journeys and progress for project: ${projectId}`);
+      
       toast({
         title: "Journey saved",
         description: "Your TCOF journey has been saved to your account.",

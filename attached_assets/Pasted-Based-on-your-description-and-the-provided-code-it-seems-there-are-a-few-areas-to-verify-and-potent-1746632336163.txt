@@ -1,0 +1,32 @@
+Based on your description and the provided code, it seems there are a few areas to verify and potentially adjust for the disappearing goals issue. Let's address your points one by one:
+
+Check if /api/goal-maps endpoint is returning goals scoped to the correct projectId:
+
+Ensure the backend is appropriately filtering goals based on the projectId. In the code snippet you provided, verify if your getProject method is being accurately called with the correct projectId.
+
+Look at the backend request handling in your /api/goal-maps route to ensure it's doing this filtering correctly.
+
+Backend correctly filtering and returning only goals for that project:
+
+In your server/routes.ts, particularly in the goal map fetching endpoints, you should confirm the logic fetching the goals is correctly utilizing the projectId to filter goal maps.
+
+This might involve checking queries made to the database or wherever the goals are stored to ensure projects are being fetched by their IDs correctly.
+
+Consistent use of projectId in frontend queries and fetch functions:
+
+In your GoalMappingTool.tsx or wherever you're making requests to fetch goals, ensure that you're consistently passing the correct projectId whenever you use the query key or within the useQuery function.
+
+It appears from the snippet given that projectId is derived from props or context, so confirm that variable is being set and used correctly.
+
+Here's a checklist of what you can look into specifically in the code:
+
+Verify Request Parameters and Endpoints:
+
+Check the request from the frontend hits the right endpoint and attaches projectId in the parameters correctly.
+Verify Querying Logic on Server Side:
+
+Ensure that when querying the database (or data storage), the filter uses projectId to precisely match the goal maps belonging to that project, especially within the endpoints fetching from /api/goal-maps.
+Frontend Query Logic:
+
+Make sure the useQuery dependency array includes projectId if it is relevant to when the query should be made or refreshed.
+If changes are needed in the code, I'll guide you through edits or adjustments needed to address these points further. Meanwhile, manually tracing the data flow (from fetch to usage in components) with proper logging can be illuminating to track any discrepancies around projectId usage. If you're still having difficulty, please let me know, and we can delve deeper into any specific segment of the code you suspect might need adjustment.
