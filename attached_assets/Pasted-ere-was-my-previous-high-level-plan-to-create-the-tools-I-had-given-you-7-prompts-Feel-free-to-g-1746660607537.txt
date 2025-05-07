@@ -1,0 +1,42 @@
+ere was my previous high level plan to create the tools, I had given you 7 prompts, 
+
+Feel free to give this a go.
+
+"
+
+1. Restructure the existing home page
+“Replace the current Starter Kit Access page with two large buttons:
+• Get Your Bearings – links to the page that already lists the three tools
+• Make a Plan – links to a new landing page you will create next.
+Add the same header bar on every page with links to Home, Get Your Bearings, Make a Plan, and Checklist (hidden until a plan is finished).”
+
+2. Make-a-Plan landing page
+“Under /make-a-plan build a landing page that explains the process and shows four clear options:
+• Full Configuration
+• Quick Start
+• Continue Saved Plan
+• Admin Preset Editor
+Each option is a large card with a short description and a button that routes to the right URL.”
+
+3. Block 1 page – Discover and Reflect
+“Create /make-a-plan/full/block-1 with Step-by-step guidance, editable tables for rating the 12 TCOF success factors, a form to add personal heuristics, Back and Next buttons, Save Progress, and a Skip link to the checklist.”
+
+4. Block 2 page – Connect and Build
+“Create /make-a-plan/full/block-2.
+• Step 3: optional mapping of heuristics to TCOF (include Skip).
+• Step 4: table for up to three tasks per heuristic and stage.
+• Step 5: form for adding organisation policy tasks.
+Navigation and Save exactly as Block 1.”
+
+5. Block 3 page – Complete and Confirm
+“Create /make-a-plan/full/block-3.
+• Step 6: two-question Praxis delivery approach selector, returning a zone and suggested techniques.
+• Step 7: list good-practice tasks the user can tick to add (Skip allowed).
+• Step 8: ‘Review & Generate’ button that builds the checklist then routes to /make-a-plan/checklist.
+Include Back, Next, Save.”
+
+6. Checklist page
+“Create /make-a-plan/checklist.
+Display four collapsible panels (Identification, Definition, Delivery, Closure).
+Inside each, show three sub-lists: Your Heuristics, TCOF Factors, Good Practice Tasks, with check boxes.
+Add Export to PDF and CSV.”
