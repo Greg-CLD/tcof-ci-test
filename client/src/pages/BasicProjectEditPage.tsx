@@ -122,11 +122,11 @@ export default function BasicProjectEditPage() {
   const form = useForm<BasicProjectFormValues>({
     resolver: zodResolver(basicProjectFormSchema),
     defaultValues: {
-      sector: '',
-      customSector: '',
-      industry: '',
-      organisationSize: '',
-      description: '',
+      sector: project?.sector || '',
+      customSector: project?.customSector || '',
+      industry: project?.industry || '',
+      organisationSize: project?.organisationSize || '',
+      description: project?.description || '',
     },
   });
   
@@ -206,23 +206,13 @@ export default function BasicProjectEditPage() {
         
         console.log('Successfully updated project:', updatedProject);
         
-        // Update the cache
-        queryClient.setQueryData(['/api/projects', projectId], updatedProject);
-        
-        // Also update the project in the projects array cache
-        const projects = queryClient.getQueryData<any[]>(['/api/projects']);
-        if (projects) {
-          const updatedProjects = projects.map(p => 
-            p.id === projectId ? updatedProject : p
-          );
-          queryClient.setQueryData(['/api/projects'], updatedProjects);
-        }
+        // Directly invalidate the queries to ensure fresh data is fetched
+        queryClient.invalidateQueries(['/api/projects', projectId]);
+        queryClient.invalidateQueries(['/api/projects']);
         
         // Invalidate organisation-specific projects if we have an orgId
         if (orgId) {
-          queryClient.invalidateQueries({
-            queryKey: [`/api/organisations/${orgId}/projects`]
-          });
+          queryClient.invalidateQueries([`/api/organisations/${orgId}/projects`]);
         }
         
         // Show success message via toast
