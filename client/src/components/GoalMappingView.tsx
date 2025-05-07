@@ -39,6 +39,7 @@ export function GoalMappingView({ projectId, onEdit }: GoalMappingViewProps) {
       const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
       if (!res.ok) {
         if (res.status === 404) {
+          console.log('Fallback to empty goals template due to 404 response for project:', projectId);
           return {
             name: "Project Goals",
             goals: [],
@@ -48,7 +49,9 @@ export function GoalMappingView({ projectId, onEdit }: GoalMappingViewProps) {
         }
         throw new Error("Failed to fetch goal map");
       }
-      return await res.json();
+      const jsonResponse = await res.json();
+      console.log(`GET request for /api/goal-maps?projectId=${projectId}, Response:`, JSON.stringify(jsonResponse, null, 2));
+      return jsonResponse;
     },
     enabled: !!projectId,
   });

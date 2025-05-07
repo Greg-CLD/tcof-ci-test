@@ -249,7 +249,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     },
     onSuccess: (data) => {
       // Log the response data
-      console.log("SUBMIT PLAN - Successfully marked Goal Mapping as complete. Response:", data);
+      console.log("SUBMIT PLAN - Successfully marked Goal Mapping as complete. Raw Response:", JSON.stringify(data, null, 2));
       
       // Ensure projectId is a string for consistent cache invalidation
       const projectIdStr = String(projectId);
