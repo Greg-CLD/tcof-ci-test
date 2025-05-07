@@ -153,7 +153,7 @@ export function Breadcrumb() {
     }
     
     return result;
-  }, [pathSegments, orgId, projectId, org, proj]);
+  }, [pathSegments, orgId, projectId, org, proj, user, location]);
   
   // Debug logging for development
   console.log("🧭 Breadcrumb segments:", pathSegments);
