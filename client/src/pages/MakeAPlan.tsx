@@ -282,8 +282,11 @@ export default function MakeAPlan() {
                 </Button>
                 
                 {!allThreeCompleted && (
-                  <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4 mb-4">
-                    You haven't finished all tools yet, but you can proceed to Block 1.
+                  <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4 text-left">
+                    <p className="text-amber-800">
+                      <strong>Note:</strong> For best results, we recommend completing all "Get Your Bearings" tools 
+                      before proceeding, but you can continue if you wish.
+                    </p>
                   </div>
                 )}
                 

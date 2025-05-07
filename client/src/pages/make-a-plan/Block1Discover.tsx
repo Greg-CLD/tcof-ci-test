@@ -64,19 +64,10 @@ export default function Block1Discover() {
     enabled: !!projectId,
   });
   
-  // One-time check to redirect if prerequisites are not met
+  // Just log that we mounted, no redirect
   useEffect(() => {
     console.log("Routing OK: Block1Discover mounted");
-    if (projectId && progress && !allPrerequisitesCompleted) {
-      console.log("Prerequisites not completed, redirecting to Make A Plan");
-      navigate(`/make-a-plan/${projectId}`);
-    }
-  }, [projectId, progress, allPrerequisitesCompleted, navigate]);
-  
-  // If user directly navigates to this page without completing prerequisites, redirect
-  if (progress && !allPrerequisitesCompleted) {
-    return <div className="p-8 text-center">Checking prerequisites...</div>;
-  }
+  }, []);
   
   return (
     <div className="container mx-auto px-4 py-8">
