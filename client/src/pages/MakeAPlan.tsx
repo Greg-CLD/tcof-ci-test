@@ -207,7 +207,7 @@ export default function MakeAPlan() {
               
               <h3 className="text-xl font-medium mb-5 text-tcof-dark">Ready to start planning?</h3>
               
-              <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-8">
+              <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 items-center justify-center gap-6 mb-8">
                 <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-tcof-teal max-w-xs w-full">
                   <h4 className="font-bold text-lg mb-2">Block 1: Discover</h4>
                   <p className="text-gray-600 text-sm mb-4">Define success criteria and outline key success factors for your project</p>
@@ -215,11 +215,33 @@ export default function MakeAPlan() {
                     className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full"
                     onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}
                   >
-                    Start with Block 1 <ChevronRight className="h-5 w-5 ml-2" />
+                    Start Block 1 <ChevronRight className="h-5 w-5 ml-2" />
                   </Button>
                 </div>
                 
-                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-300 max-w-xs w-full opacity-75">
+                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-tcof-teal max-w-xs w-full">
+                  <h4 className="font-bold text-lg mb-2">Block 2: Design</h4>
+                  <p className="text-gray-600 text-sm mb-4">Create tasks and map stakeholders based on your success factors</p>
+                  <Button 
+                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full"
+                    onClick={() => navigate(`/make-a-plan/${projectId}/block-2`)}
+                  >
+                    Start Block 2 <ChevronRight className="h-5 w-5 ml-2" />
+                  </Button>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-tcof-teal max-w-xs w-full">
+                  <h4 className="font-bold text-lg mb-2">Block 3: Deliver</h4>
+                  <p className="text-gray-600 text-sm mb-4">Finalize your delivery approach and timeline for implementation</p>
+                  <Button 
+                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full"
+                    onClick={() => navigate(`/make-a-plan/${projectId}/block-3`)}
+                  >
+                    Start Block 3 <ChevronRight className="h-5 w-5 ml-2" />
+                  </Button>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-300 max-w-xs w-full opacity-85">
                   <h4 className="font-bold text-lg mb-2">Full Journey</h4>
                   <p className="text-gray-600 text-sm mb-4">See an overview of all three planning blocks and your progress so far</p>
                   <Button 
