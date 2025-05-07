@@ -64,7 +64,7 @@ export function loadRelations(): Relation[] {
 /**
  * Save relations to the data file
  */
-function saveRelations(relations: Relation[]): boolean {
+export function saveRelations(relations: Relation[]): boolean {
   try {
     fs.writeFileSync(RELATIONS_FILE, JSON.stringify(relations, null, 2), 'utf8');
     return true;

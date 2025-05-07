@@ -11,7 +11,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
-import { relationsDb, createRelation, loadRelations } from './relationsDb';
+import { relationsDb, createRelation, loadRelations, saveRelations } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index';
@@ -473,13 +473,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
-      const { name, data } = req.body;
+      const { name, data, projectId } = req.body;
       
       if (!name || !data) {
         return res.status(400).json({ message: "Name and data are required" });
       }
       
+      console.log(`Creating goal map with projectId: ${projectId || 'none'}`);
+      
+      // Save the goal map
       const goalMap = await storage.saveGoalMap(userId, name, data);
+      
+      // If a projectId was provided, create a relation between the goal map and project
+      if (projectId) {
+        try {
+          // Validate the project exists and user has access
+          let project;
+          
+          // Support both numeric and UUID format project IDs
+          if (!isNaN(Number(projectId))) {
+            console.log(`Looking up numeric project ID: ${projectId}`);
+            const allProjects = await projectsDb.getProjects();
+            project = allProjects.find(p => 
+              p.id.toString() === projectId.toString() || 
+              (typeof p.id === 'number' && p.id === Number(projectId))
+            );
+          } else {
+            project = await projectsDb.getProject(projectId);
+          }
+          
+          if (project) {
+            // Create relationship between goal map and project
+            const relation = await createRelation(
+              goalMap.id.toString(),
+              project.id.toString(),
+              'GOAL_MAP_FOR_PROJECT',
+              project.id.toString()
+            );
+            
+            console.log(`Created relation between goal map ${goalMap.id} and project ${project.id}`);
+            
+            // Include the projectId in the response
+            return res.status(201).json({
+              ...goalMap,
+              projectId: project.id
+            });
+          }
+        } catch (relationError) {
+          console.error("Error creating relation:", relationError);
+          // Continue even if relation creation fails
+        }
+      }
+      
       res.status(201).json(goalMap);
     } catch (error: any) {
       console.error("Error saving goal map:", error);
@@ -507,8 +552,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
+      // Get projectId from the data
+      const projectId = data.projectId;
+      
+      // Update the goal map
       const updatedMap = await storage.updateGoalMap(goalMapId, data, name);
-      res.json(updatedMap);
+      
+      // Check if we need to update or create a project relation
+      if (projectId) {
+        try {
+          // Check if there's already a relation for this goal map
+          const relations = loadRelations().filter(rel => 
+            rel.fromId === goalMapId.toString() && 
+            rel.relType === 'GOAL_MAP_FOR_PROJECT'
+          );
+          
+          // If relation exists with a different project, update it
+          if (relations.length > 0) {
+            // If the projectId changed, update the relation
+            if (relations[0].toId !== projectId.toString()) {
+              // Get all relations
+              const allRelations = loadRelations();
+              
+              // Update the existing relation
+              const index = allRelations.findIndex(rel => 
+                rel.fromId === goalMapId.toString() && 
+                rel.relType === 'GOAL_MAP_FOR_PROJECT'
+              );
+              
+              if (index !== -1) {
+                allRelations[index].toId = projectId.toString();
+                allRelations[index].projectId = projectId.toString();
+                allRelations[index].timestamp = new Date().toISOString();
+                
+                // Save updated relations
+                saveRelations(allRelations);
+                console.log(`Updated relation for goal map ${goalMapId} to project ${projectId}`);
+              }
+            }
+          } else {
+            // Create a new relation
+            await createRelation(
+              goalMapId.toString(),
+              projectId.toString(),
+              'GOAL_MAP_FOR_PROJECT',
+              projectId.toString()
+            );
+            
+            console.log(`Created relation between goal map ${goalMapId} and project ${projectId}`);
+          }
+        } catch (relationError) {
+          console.error("Error updating goal map relation:", relationError);
+          // Continue even if relation update fails
+        }
+      }
+      
+      // Include projectId in the response for consistent client-side handling
+      res.json({
+        ...updatedMap,
+        projectId: projectId || null
+      });
     } catch (error: any) {
       console.error("Error updating goal map:", error);
       res.status(500).json({ message: "Error updating goal map" });
