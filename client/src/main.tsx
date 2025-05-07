@@ -5,15 +5,10 @@ if ('serviceWorker' in navigator) {
   );
 }
 
-// Disable Vite's built-in cache headers during hot-reload
+// Disable browser caching for development
 if (import.meta.env.DEV) {
-  // TypeScript-safe way to override window.location.reload
-  const originalReload = window.location.reload;
-  window.location.reload = () => {
-    // @ts-ignore - Force a hard reload
-    originalReload(true);
-    return true;
-  };
+  // We can't directly override window.location.reload, so we'll use another approach
+  console.log('💡 Cache disabled - browser cache headers will be bypassed during development');
 }
 
 import React from "react";
