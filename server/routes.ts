@@ -475,57 +475,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any).id;
       const { name, data, projectId } = req.body;
       
-      if (!name || !data) {
-        return res.status(400).json({ message: "Name and data are required" });
+      // Validate required fields
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
       }
       
-      console.log(`Creating goal map with projectId: ${projectId || 'none'}`);
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      if (!data) {
+        return res.status(400).json({ message: "Data is required" });
+      }
+      
+      console.log(`Creating goal map with projectId: ${projectId}`);
+      
+      // Validate project exists and user has access
+      let project;
+      
+      // Support both numeric and UUID format project IDs
+      if (!isNaN(Number(projectId))) {
+        console.log(`Looking up numeric project ID: ${projectId}`);
+        const allProjects = await projectsDb.getProjects();
+        project = allProjects.find(p => 
+          p.id.toString() === projectId.toString() || 
+          (typeof p.id === 'number' && p.id === Number(projectId))
+        );
+      } else {
+        project = await projectsDb.getProject(projectId);
+      }
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
       
       // Save the goal map
       const goalMap = await storage.saveGoalMap(userId, name, data);
       
-      // If a projectId was provided, create a relation between the goal map and project
-      if (projectId) {
-        try {
-          // Validate the project exists and user has access
-          let project;
-          
-          // Support both numeric and UUID format project IDs
-          if (!isNaN(Number(projectId))) {
-            console.log(`Looking up numeric project ID: ${projectId}`);
-            const allProjects = await projectsDb.getProjects();
-            project = allProjects.find(p => 
-              p.id.toString() === projectId.toString() || 
-              (typeof p.id === 'number' && p.id === Number(projectId))
-            );
-          } else {
-            project = await projectsDb.getProject(projectId);
-          }
-          
-          if (project) {
-            // Create relationship between goal map and project
-            const relation = await createRelation(
-              goalMap.id.toString(),
-              project.id.toString(),
-              'GOAL_MAP_FOR_PROJECT',
-              project.id.toString()
-            );
-            
-            console.log(`Created relation between goal map ${goalMap.id} and project ${project.id}`);
-            
-            // Include the projectId in the response
-            return res.status(201).json({
-              ...goalMap,
-              projectId: project.id
-            });
-          }
-        } catch (relationError) {
-          console.error("Error creating relation:", relationError);
-          // Continue even if relation creation fails
-        }
+      try {
+        // Create relationship between goal map and project
+        const relation = await createRelation(
+          goalMap.id.toString(),
+          project.id.toString(),
+          'GOAL_MAP_FOR_PROJECT',
+          project.id.toString()
+        );
+        
+        console.log(`Created relation between goal map ${goalMap.id} and project ${project.id}`);
+      } catch (relationError) {
+        console.error("Error creating relation:", relationError);
+        // We'll continue even if the relation creation fails
       }
       
-      res.status(201).json(goalMap);
+      // Include the projectId in the response
+      return res.status(201).json({
+        ...goalMap,
+        projectId: project.id
+      });
     } catch (error: any) {
       console.error("Error saving goal map:", error);
       res.status(500).json({ message: "Error saving goal map" });
