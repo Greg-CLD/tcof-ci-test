@@ -217,12 +217,12 @@
   {
     "id": "8952ee82-1bbe-45e3-9214-263b956abe65",
     "fromId": "13",
-    "toId": "349b8ad7-a85b-41c0-a5ea-bae873b0b315",
+    "toId": "3",
     "relType": "GOAL_MAP_FOR_PROJECT",
-    "projectId": "349b8ad7-a85b-41c0-a5ea-bae873b0b315",
+    "projectId": "3",
     "meta": {
       "createdAt": "2025-05-07T18:40:30.031Z"
     },
-    "timestamp": "2025-05-07T18:40:30.032Z"
+    "timestamp": "2025-05-07T18:47:49.405Z"
   }
 ]

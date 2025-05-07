@@ -490,6 +490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      console.log('Saving goal map at', new Date().toISOString());
+      
       const userId = (req.user as any).id;
       const { name, data, projectId } = req.body;
       
@@ -554,10 +556,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Goal map created successfully with ID: ${goalMap.id}`);
       
       // Include the projectId in the response
-      return res.status(201).json({
+      const responseData = {
         ...goalMap,
         projectId: project.id
-      });
+      };
+      
+      console.log('Goal map created response:', JSON.stringify(responseData, null, 2));
+      return res.status(201).json(responseData);
     } catch (error: any) {
       console.error("Error saving goal map:", error);
       res.status(500).json({ 
@@ -569,8 +574,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/goal-maps/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      console.log('Updating goal map at', new Date().toISOString());
+      
       const goalMapId = parseInt(req.params.id);
       const { name, data, projectId } = req.body;
+      
+      // Log the full update request body for debugging
+      console.log("PUT /api/goal-maps/:id - Request body:", JSON.stringify({
+        goalMapId,
+        name,
+        projectId,
+        data: typeof data === 'object' ? `[Object with keys: ${Object.keys(data).join(', ')}]` : data
+      }, null, 2));
       
       // Validate all required fields
       if (!data) {
@@ -661,11 +676,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Return success with the updated map and project ID
-      return res.status(200).json({
+      const responseData = {
         ...updatedMap,
         projectId: projectId,
         success: true
-      });
+      };
+      
+      console.log('Goal map updated response:', JSON.stringify(responseData, null, 2));
+      return res.status(200).json(responseData);
     } catch (error: any) {
       console.error("Error updating goal map:", error);
       res.status(500).json({ message: "Error updating goal map" });

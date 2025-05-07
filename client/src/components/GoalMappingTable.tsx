@@ -160,7 +160,10 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
           console.error(`SAVE DRAFT - Update failed with status ${response.status}: ${errorText}`);
           throw new Error(`Failed to update goal map: ${errorText}`);
         }
-        return await response.json();
+        
+        const resultData = await response.json();
+        console.log(`SAVE DRAFT - Update succeeded. Response data:`, JSON.stringify(resultData, null, 2));
+        return resultData;
       } else {
         console.log(`SAVE DRAFT - Creating new goal map for project ${projectIdStr}`);
         // Create new map
@@ -170,7 +173,10 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
           console.error(`SAVE DRAFT - Creation failed with status ${response.status}: ${errorText}`);
           throw new Error(`Failed to save goal map: ${errorText}`);
         }
-        return await response.json();
+        
+        const resultData = await response.json();
+        console.log(`SAVE DRAFT - Creation succeeded. Response data:`, JSON.stringify(resultData, null, 2));
+        return resultData;
       }
     },
     onSuccess: (data) => {
