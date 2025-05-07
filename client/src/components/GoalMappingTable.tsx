@@ -97,7 +97,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   
   // Load data from server when available
   useEffect(() => {
-    if (existingGoalMap && existingGoalMap.goals) {
+    if (existingGoalMap) {
       console.log("Loading goal map data from server:", existingGoalMap);
       
       // Initialize the goal map structure if needed
@@ -110,7 +110,8 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         const convertedGoals = nodes.map((node: any, index: number) => ({
           id: node.id,
           text: node.text,
-          timeframe: node.timeframe,
+          // Ensure timeframe is always a string, even if empty
+          timeframe: node.timeframe !== undefined && node.timeframe !== null ? node.timeframe : "",
           level: Math.min(Math.floor(index / 3) + 1, 5) // Assign levels based on index
         }));
         
@@ -121,8 +122,16 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       } else if (!goalMapData.goals) {
         // Initialize empty array if neither format exists
         goalMapData.goals = [];
+      } else {
+        // Normalize timeframe values for existing goals
+        goalMapData.goals = goalMapData.goals.map(goal => ({
+          ...goal,
+          // Ensure timeframe is always a string, even if empty
+          timeframe: goal.timeframe !== undefined && goal.timeframe !== null ? goal.timeframe : ""
+        }));
       }
       
+      console.log("Normalized goal map data:", goalMapData);
       setGoalMap(goalMapData);
     }
   }, [existingGoalMap]);
@@ -393,10 +402,13 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   
   // Update a goal's timeframe
   const handleUpdateGoalTimeframe = (id: string, timeframe: string) => {
+    // Ensure timeframe is always a string, never null/undefined
+    const normalizedTimeframe = timeframe !== undefined && timeframe !== null ? timeframe : "";
+    
     setGoalMap(prev => ({
       ...prev,
       goals: prev.goals.map(goal => 
-        goal.id === id ? { ...goal, timeframe } : goal
+        goal.id === id ? { ...goal, timeframe: normalizedTimeframe } : goal
       )
     }));
   };
