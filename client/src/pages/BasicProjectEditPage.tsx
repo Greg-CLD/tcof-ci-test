@@ -60,15 +60,15 @@ const getOrgTypeDisplayText = (value: string): string => {
   return orgTypeMap[value] || value;
 };
 
-// Helper function to get display text for project stage
-const getStageDisplayText = (value: string): string => {
-  const stageMap: Record<string, string> = {
-    'identify': '1. Identify',
-    'define': '2. Definition',
-    'deliver': '3. Delivery',
-    'closure': '4. Closure'
+// Helper function to get display text for organisation size
+const getOrgSizeDisplayText = (value: string): string => {
+  const sizeMap: Record<string, string> = {
+    'micro': 'Micro (1-9 employees)',
+    'small': 'Small (10-49 employees)',
+    'medium': 'Medium (50-249 employees)',
+    'large': 'Large (250+ employees)'
   };
-  return stageMap[value] || value;
+  return sizeMap[value] || value;
 };
 
 // Basic edit form schema with only the essential fields
@@ -275,7 +275,7 @@ export default function BasicProjectEditPage() {
   }
 
   // Determine if we have completed project details
-  const hasProjectDetails = project.sector && project.orgType && project.currentStage;
+  const hasProjectDetails = project.sector && project.orgType && project.organisationSize;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -533,7 +533,7 @@ export default function BasicProjectEditPage() {
                     <div className="space-y-2">
                       <h3 className="text-lg font-medium text-tcof-dark">Organisation Size</h3>
                       <p className="text-slate-700 rounded-md py-2 bg-slate-50 px-3 border border-slate-100">
-                        {project.organisationSize || 'Not specified'}
+                        {getOrgSizeDisplayText(project.organisationSize || '')}
                       </p>
                     </div>
                     <div className="space-y-2">
