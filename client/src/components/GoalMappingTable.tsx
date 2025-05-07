@@ -262,12 +262,6 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       // Ensure projectId is a string for consistent cache invalidation
       const projectIdStr = String(projectId);
       
-      // Refresh progress to update UI
-      if (refreshProgress) {
-        console.log("SUBMIT PLAN - Refreshing project progress after Goal Mapping completion");
-        refreshProgress();
-      }
-      
       // Invalidate all relevant queries to ensure UI is up to date
       queryClient.invalidateQueries({ queryKey: ["project-progress", projectIdStr] });
       queryClient.invalidateQueries({ queryKey: ["/api/goal-maps"] });
@@ -276,6 +270,12 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       // Also invalidate the general project queries as progress might be shown there
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectIdStr] });
+      
+      // Refresh progress to update UI right after cache invalidation
+      if (refreshProgress) {
+        console.log("SUBMIT PLAN - Refreshing project progress after Goal Mapping completion");
+        refreshProgress();
+      }
     },
     onError: (error: Error) => {
       console.error("Error submitting Goal Mapping plan:", error);
