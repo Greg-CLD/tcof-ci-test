@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
-import { ClipboardList, Clock, Award, ChevronRight, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ClipboardList, Clock, Award, ChevronRight, ArrowLeft, CheckCircle2, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProgress } from "@/contexts/ProgressContext";
@@ -312,12 +312,22 @@ export default function MakeAPlan() {
                   </div>
                 )}
                 
-                <Button 
-                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                  onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}
-                >
-                  Go to Block 1 <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
+                  <Button 
+                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                    onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}
+                  >
+                    Go to Block 1 <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
+                    onClick={() => navigate(`/make-a-plan/${projectId}/full`)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" /> View Full Journey
+                  </Button>
+                </div>
               </div>
             </>
           )}
