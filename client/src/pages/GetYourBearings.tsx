@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/use-auth";
 import { useProjects } from "@/hooks/useProjects";
+import { useProgress } from "@/contexts/ProgressContext";
 import { Compass, Map, GitBranch, PlusCircle, Briefcase, ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -17,6 +18,15 @@ export default function GetYourBearings() {
   const { projects, isLoading: projectsLoading } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const isAuthorized = isAuthenticated('starter-access') || !!user;
+  const { refreshProgress } = useProgress();
+  
+  // Force refresh progress when the component mounts
+  useEffect(() => {
+    if (projectId) {
+      console.log('GetYourBearings: Force refreshing progress for project:', projectId);
+      refreshProgress();
+    }
+  }, [projectId, refreshProgress]);
   
   // Fetch project details if projectId is provided
   const { 

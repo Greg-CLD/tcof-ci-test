@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useProjectContext } from "@/contexts/ProjectContext";
+import { useProgress } from "@/contexts/ProgressContext";
 import {
   STORAGE_KEYS,
   TCOFJourneyData,
@@ -162,6 +163,7 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const { refreshProgress } = useProgress();
   
   // Fetch TCOF journey data from server for the current project
   const {
@@ -206,6 +208,9 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
       
       // Invalidate the project-progress query to update tool completion status
       queryClient.invalidateQueries({ queryKey: ['project-progress', projectId] });
+      
+      // Refresh progress to update UI immediately
+      refreshProgress();
       
       console.log(`Invalidated TCOF journeys and progress for project: ${projectId}`);
       

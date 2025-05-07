@@ -214,6 +214,9 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
       // Invalidate the project-progress query to update tool completion status
       queryClient.invalidateQueries({ queryKey: ['project-progress', projectId] });
       
+      // Refresh progress to update UI immediately
+      refreshProgress();
+      
       console.log(`Invalidated cynefin selections and progress for project: ${projectId}`);
       
       toast({
