@@ -83,6 +83,63 @@ export function saveRelations(relations: Relation[]): boolean {
  * @param meta Optional metadata about the relationship
  * @returns The created relation record or null if creation failed
  */
+/**
+ * Save a single relation to the database
+ * @param relation The relation to save
+ * @returns true if successful, false otherwise
+ */
+export function saveRelation(relation: Partial<Relation> & { fromId: string; toId: string; relType: RelationType }): boolean {
+  try {
+    // Validate essential properties
+    if (!relation.fromId || !relation.toId || !relation.relType) {
+      console.error('Missing required properties in relation:', relation);
+      return false;
+    }
+    
+    // Fill in any missing required properties
+    const completeRelation: Relation = {
+      id: relation.id || uuidv4(),
+      fromId: relation.fromId,
+      toId: relation.toId,
+      relType: relation.relType,
+      projectId: relation.projectId || relation.toId, // Default to toId if projectId is missing
+      meta: relation.meta || {},
+      timestamp: relation.timestamp || new Date().toISOString()
+    };
+    
+    // Load existing relations
+    const relations = loadRelations();
+    
+    // Check for existing relation to update
+    const existingIndex = relations.findIndex(r => 
+      (r.id === completeRelation.id) || 
+      (r.fromId === completeRelation.fromId && 
+       r.toId === completeRelation.toId && 
+       r.relType === completeRelation.relType)
+    );
+    
+    if (existingIndex >= 0) {
+      // Update existing
+      relations[existingIndex] = {
+        ...relations[existingIndex],
+        ...completeRelation,
+        timestamp: new Date().toISOString() // Always update timestamp
+      };
+      console.log(`Updated existing relation: ${relations[existingIndex].id}`);
+    } else {
+      // Add new
+      relations.push(completeRelation);
+      console.log(`Added new relation: ${completeRelation.id}`);
+    }
+    
+    // Save all relations
+    return saveRelations(relations);
+  } catch (error) {
+    console.error('Error saving relation:', error);
+    return false;
+  }
+}
+
 export async function createRelation(
   fromId: string,
   toId: string,

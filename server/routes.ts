@@ -11,7 +11,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
-import { relationsDb, createRelation, loadRelations, saveRelations } from './relationsDb';
+import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation, RelationType } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index';
@@ -892,8 +892,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const relation = {
             fromId: newGoalMap.id.toString(),
             toId: projectId,
-            relType: 'GOAL_MAP_FOR_PROJECT',
-            createdAt: new Date().toISOString()
+            relType: 'GOAL_MAP_FOR_PROJECT' as RelationType,
+            projectId: projectId,
+            timestamp: new Date().toISOString()
           };
           
           saveRelation(relation);
