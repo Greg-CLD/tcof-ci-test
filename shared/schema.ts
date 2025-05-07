@@ -274,7 +274,12 @@ export const outcomeProgressSelectSchema = createSelectSchema(outcomeProgress);
 export const userInsertSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, "Username must be at least 3 characters"),
   email: (schema) => schema.email("Must provide a valid email"),
-  password: (schema) => schema.min(8, "Password must be at least 8 characters"),
+  password: (schema) => schema
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   avatarUrl: (schema) => schema.url().optional().nullable(),
 });
 
@@ -285,17 +290,32 @@ export const userUpdateSchema = z.object({
   notificationPrefs: z.record(z.boolean()).optional(),
   locale: z.string().optional(),
   timezone: z.string().optional(),
-  password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character")
+    .optional(),
 });
 
 // Schema for password change
 export const passwordChangeSchema = z.object({
-  currentPassword: z.string(),
-  newPassword: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string(),
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine(data => data.newPassword !== data.currentPassword, {
+  message: "New password must be different from current password",
+  path: ["newPassword"],
 });
 
 export const userSelectSchema = createSelectSchema(users);

@@ -109,6 +109,53 @@ const UserProfileSettings = () => {
     },
   });
 
+  // Function to check password strength and return feedback
+  const checkPasswordStrength = (password: string): { strength: 'weak' | 'medium' | 'strong'; message: string; color: string } => {
+    if (!password) {
+      return { 
+        strength: 'weak',
+        message: 'Password is required',
+        color: 'text-red-500'
+      };
+    }
+    
+    let score = 0;
+    const checks = [
+      { regex: /.{8,}/, points: 1 }, // Length >= 8
+      { regex: /[A-Z]/, points: 1 }, // Has uppercase
+      { regex: /[a-z]/, points: 1 }, // Has lowercase
+      { regex: /[0-9]/, points: 1 }, // Has number
+      { regex: /[^A-Za-z0-9]/, points: 1 }, // Has special char
+      { regex: /.{12,}/, points: 1 }, // Length >= 12 (bonus)
+    ];
+    
+    checks.forEach(check => {
+      if (check.regex.test(password)) {
+        score += check.points;
+      }
+    });
+    
+    if (score <= 2) {
+      return {
+        strength: 'weak',
+        message: 'Weak password',
+        color: 'text-red-500'
+      };
+    } else if (score <= 4) {
+      return {
+        strength: 'medium',
+        message: 'Medium-strength password',
+        color: 'text-amber-500'
+      };
+    } else {
+      return {
+        strength: 'strong',
+        message: 'Strong password',
+        color: 'text-green-500'
+      };
+    }
+  };
+
   // Password form
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
@@ -117,6 +164,7 @@ const UserProfileSettings = () => {
       newPassword: '',
       confirmPassword: '',
     },
+    mode: 'onChange', // Enable real-time validation
   });
 
   // Update forms when user data is loaded
@@ -468,18 +516,58 @@ const UserProfileSettings = () => {
                     <FormField
                       control={passwordForm.control}
                       name="newPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>New Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Must be at least 8 characters long
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        // Get real-time password strength feedback
+                        const strength = field.value ? checkPasswordStrength(field.value) : { 
+                          strength: 'weak', 
+                          message: 'Enter a password', 
+                          color: 'text-gray-400'
+                        };
+                        
+                        return (
+                          <FormItem>
+                            <FormLabel>New Password</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="password" 
+                                {...field} 
+                                aria-describedby="password-strength"
+                              />
+                            </FormControl>
+                            
+                            {/* Password strength indicator */}
+                            <div className="mt-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm ${strength.color}`} id="password-strength">
+                                  {strength.message}
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full ${
+                                    strength.strength === 'weak' ? 'bg-red-500 w-1/3' : 
+                                    strength.strength === 'medium' ? 'bg-amber-500 w-2/3' : 
+                                    'bg-green-500 w-full'
+                                  }`}
+                                  role="progressbar" 
+                                  aria-valuenow={
+                                    strength.strength === 'weak' ? 33 : 
+                                    strength.strength === 'medium' ? 66 : 
+                                    100
+                                  }
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                />
+                              </div>
+                            </div>
+                            
+                            <FormDescription>
+                              Password must include uppercase, lowercase, numbers, and special characters
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
 
                     <FormField
