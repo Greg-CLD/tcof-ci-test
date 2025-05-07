@@ -119,6 +119,20 @@ export default function MakeAPlan() {
           <h1 className="text-3xl md:text-4xl font-bold mb-4 text-tcof-dark">
             {project ? `${project.name}: Make a Plan` : "Make a Plan"}
           </h1>
+          
+          {/* Missing prerequisites list */}
+          {!allThreeCompleted && progress && (
+            <div className="mt-4 mb-4 text-sm text-red-600 font-medium">
+              Please complete: {
+                [
+                  !progress.tools?.goalMapping?.completed && "Goal Mapping",
+                  !progress.tools?.cynefinOrientation?.completed && "Cynefin Orientation",
+                  !progress.tools?.tcofJourney?.completed && "TCOF Journey",
+                ].filter(Boolean).join(", ")
+              }
+            </div>
+          )}
+          
           <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-6">
             Create a structured action plan for your transformation or delivery initiative using the
             Connected Outcomes Framework
