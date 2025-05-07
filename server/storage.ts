@@ -597,10 +597,17 @@ export const storage = {
   },
   
   async markGoalMappingComplete(userId: number, projectId: string) {
+    // ONLY write {completed: true} to tool-progress
+    // No goal map modifications or relations are touched
     return this.storeToolProgress(userId, projectId, "goalMapping", {
       completed: true,
       lastUpdated: new Date().toISOString()
     });
+  },
+  
+  async getGoalMappingStatus(userId: number, projectId: string) {
+    // Get the tool progress which should contain just {completed: true}
+    return this.getToolProgress(userId, projectId, "goalMapping");
   },
   
   async markTCOFJourneyComplete(userId: number, projectId: string) {
