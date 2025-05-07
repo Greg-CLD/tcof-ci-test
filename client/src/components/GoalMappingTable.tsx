@@ -121,17 +121,36 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   // Save goal map mutation
   const saveGoalMapMutation = useMutation({
     mutationFn: async (data: GoalMapData) => {
+      if (!data.projectId) {
+        throw new Error("Project ID is required");
+      }
+      
+      // Log full payload before sending
+      console.log("Saving goal map with payload:", {
+        projectId: data.projectId,
+        name: data.name, 
+        data: data.goals,
+        id: data.id || 'new map'
+      });
+      
+      // Ensure we have all required fields
+      const payload = {
+        projectId: data.projectId,
+        name: data.name || "Goal Map",
+        data: data.goals
+      };
+      
       // Check if we're updating or creating a new map
       if (data.id) {
         // Update existing map
-        const response = await apiRequest("PUT", `/api/goal-maps/${data.id}`, data);
+        const response = await apiRequest("PUT", `/api/goal-maps/${data.id}`, payload);
         if (!response.ok) {
           throw new Error("Failed to update goal map");
         }
         return await response.json();
       } else {
         // Create new map
-        const response = await apiRequest("POST", "/api/goal-maps", data);
+        const response = await apiRequest("POST", "/api/goal-maps", payload);
         if (!response.ok) {
           throw new Error("Failed to save goal map");
         }
@@ -144,6 +163,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/goal-maps', projectId] });
+      console.log("Goal map saved successfully:", data);
       
       toast({
         title: "Goal map saved",
@@ -151,6 +171,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       });
     },
     onError: (error: Error) => {
+      console.error("Error saving goal map:", error);
       toast({
         title: "Error saving",
         description: error.message,
@@ -167,10 +188,11 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     mutationFn: async () => {
       if (!projectId) throw new Error("No project selected");
       
-      console.log("Submitting Goal Mapping plan completion for project:", projectId);
-      const response = await apiRequest("POST", "/api/project-progress/goal-mapping/complete", {
-        projectId: projectId
-      });
+      // Log the full request payload
+      const payload = { projectId };
+      console.log("Submitting Goal Mapping plan completion with payload:", payload);
+      
+      const response = await apiRequest("POST", "/api/project-progress/goal-mapping/complete", payload);
       
       if (!response.ok) {
         throw new Error("Failed to mark goal mapping as complete");
@@ -178,8 +200,10 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       
       return await response.json();
     },
-    onSuccess: () => {
-      console.log("Successfully marked Goal Mapping as complete");
+    onSuccess: (data) => {
+      // Log the response data
+      console.log("Successfully marked Goal Mapping as complete. Response:", data);
+      
       toast({
         title: "Plan submitted successfully",
         description: "Your Goal Mapping has been marked as complete.",
@@ -191,8 +215,12 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         refreshProgress();
       }
       
-      // Also invalidate project progress queries
+      // Invalidate all relevant queries to ensure UI is up to date
       queryClient.invalidateQueries({ queryKey: ["project-progress", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectId] });
+      
+      // Also invalidate the general project queries as progress might be shown there
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
     },
     onError: (error: Error) => {
       console.error("Error submitting Goal Mapping plan:", error);
