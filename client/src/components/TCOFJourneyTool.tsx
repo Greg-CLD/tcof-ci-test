@@ -19,7 +19,7 @@ import {
   saveToLocalStorage
 } from "@/lib/storage";
 import { elementToPDF } from "@/lib/pdf-utils";
-import { FileDown, Save, Loader2 } from "lucide-react";
+import { FileDown, Save, Loader2, CheckCircle } from "lucide-react";
 
 // API response type for TCOF journey data
 interface TCOFJourneyResponse {
@@ -152,6 +152,7 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
   // State to track if we've loaded data from server
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Decision tree states with default empty values
   const [currentQuestion, setCurrentQuestion] = useState<string>("q1");
@@ -192,6 +193,81 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
     data: TCOFJourneyData;
     projectId: string;
   }
+  
+  // Database save mutation
+  // Submit Plan mutation
+  const submitPlanMutation = useMutation({
+    mutationFn: async () => {
+      if (!projectId) throw new Error("No project selected");
+      
+      console.log("Submitting TCOF journey completion for project:", projectId);
+      const response = await apiRequest("POST", "/api/project-progress/tcof-journey/complete", {
+        projectId: projectId
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to mark TCOF journey as complete");
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      console.log("Successfully marked TCOF journey as complete");
+      toast({
+        title: "Plan submitted successfully",
+        description: "Your TCOF Journey has been marked as complete.",
+      });
+      
+      // Refresh progress to update UI
+      if (refreshProgress) {
+        console.log("Refreshing project progress after TCOF Journey completion");
+        refreshProgress();
+      }
+      
+      // Also invalidate project progress queries
+      console.log("Invalidating project-progress queries for projectId:", projectId);
+      queryClient.invalidateQueries({ queryKey: ["project-progress", projectId] });
+    },
+    onError: (error: Error) => {
+      console.error("Error submitting TCOF journey plan:", error);
+      toast({
+        title: "Error submitting plan",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsSubmitting(false);
+    }
+  });
+  
+  // Handle Submit Plan
+  const handleSubmitPlan = () => {
+    if (!stage) {
+      toast({
+        title: "No phase determined",
+        description: "Please complete the decision tree to determine your phase before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!projectId) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // First, save the current selection to ensure we have the latest data
+    handleSave();
+    
+    // Then mark the tool as complete
+    setIsSubmitting(true);
+    submitPlanMutation.mutate();
+  };
   
   // Database save mutation
   const saveJourneyMutation = useMutation({
@@ -610,6 +686,22 @@ export default function TCOFJourneyTool({ projectId: propProjectId }: TCOFJourne
                     ) : (
                       <>
                         <Save className="h-4 w-4 mr-1" /> Save Results
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    onClick={handleSubmitPlan}
+                    disabled={isLoading || !determined}
+                    className="flex items-center gap-1 bg-tcof-primary text-white"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" /> Mark Complete
                       </>
                     )}
                   </Button>
