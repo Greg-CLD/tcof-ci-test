@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import AllProjects from "@/pages/AllProjects";
 import ProTools from "@/pages/ProTools";
 import StarterAccess from "@/pages/StarterAccess";
 import GetYourBearings from "@/pages/GetYourBearings";
@@ -202,9 +203,9 @@ function Router() {
   
   // Hard-Stop Redirect Rule: Run once per mount, with a ref to prevent multiple redirects
   if (user && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
-    console.log("NAVIGATE FROM", location, "TO /organisations (ONE-TIME REDIRECT)");
+    console.log("NAVIGATE FROM", location, "TO /all-projects (ONE-TIME REDIRECT)");
     hasRedirectedRef.current = true;
-    navigate('/organisations');
+    navigate('/all-projects');
     return null; // Critical: DO NOT render anything during redirect
   }
   
@@ -237,6 +238,17 @@ function Router() {
     <Switch>
       <Route path="/">
         <Home />
+      </Route>
+
+      {/* All Projects route - authenticated users only */}
+      <Route path="/all-projects">
+        {user ? (
+          <ProtectedRouteGuard>
+            <AllProjects />
+          </ProtectedRouteGuard>
+        ) : (
+          <Redirect to="/" />
+        )}
       </Route>
       
       {/* Organizations management - authenticated users only */}
