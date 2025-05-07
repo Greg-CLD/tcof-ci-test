@@ -541,11 +541,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/goal-maps/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const goalMapId = parseInt(req.params.id);
-      const { name, data } = req.body;
+      const { name, data, projectId } = req.body;
       
+      // Validate all required fields
       if (!data) {
         return res.status(400).json({ message: "Data is required" });
       }
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+      
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      // Log the update request
+      console.log(`Updating goal map ${goalMapId} for project ${projectId}`);
       
       // Get the goal map to verify ownership
       const existingMap = await storage.getGoalMap(goalMapId);
@@ -558,65 +570,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
-      // Get projectId from the data
-      const projectId = data.projectId;
+      // Validate project exists
+      let project;
+      
+      // Support both numeric and UUID format project IDs
+      if (!isNaN(Number(projectId))) {
+        console.log(`Looking up numeric project ID: ${projectId}`);
+        const allProjects = await projectsDb.getProjects();
+        project = allProjects.find(p => 
+          p.id.toString() === projectId.toString() || 
+          (typeof p.id === 'number' && p.id === Number(projectId))
+        );
+      } else {
+        project = await projectsDb.getProject(projectId);
+      }
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
       
       // Update the goal map
       const updatedMap = await storage.updateGoalMap(goalMapId, data, name);
       
-      // Check if we need to update or create a project relation
-      if (projectId) {
-        try {
-          // Check if there's already a relation for this goal map
-          const relations = loadRelations().filter(rel => 
-            rel.fromId === goalMapId.toString() && 
-            rel.relType === 'GOAL_MAP_FOR_PROJECT'
-          );
-          
-          // If relation exists with a different project, update it
-          if (relations.length > 0) {
-            // If the projectId changed, update the relation
-            if (relations[0].toId !== projectId.toString()) {
-              // Get all relations
-              const allRelations = loadRelations();
-              
-              // Update the existing relation
-              const index = allRelations.findIndex(rel => 
-                rel.fromId === goalMapId.toString() && 
-                rel.relType === 'GOAL_MAP_FOR_PROJECT'
-              );
-              
-              if (index !== -1) {
-                allRelations[index].toId = projectId.toString();
-                allRelations[index].projectId = projectId.toString();
-                allRelations[index].timestamp = new Date().toISOString();
-                
-                // Save updated relations
-                saveRelations(allRelations);
-                console.log(`Updated relation for goal map ${goalMapId} to project ${projectId}`);
-              }
-            }
-          } else {
-            // Create a new relation
-            await createRelation(
-              goalMapId.toString(),
-              projectId.toString(),
-              'GOAL_MAP_FOR_PROJECT',
-              projectId.toString()
+      try {
+        // Check if there's already a relation for this goal map
+        const relations = loadRelations().filter(rel => 
+          rel.fromId === goalMapId.toString() && 
+          rel.relType === 'GOAL_MAP_FOR_PROJECT'
+        );
+        
+        // If relation exists with a different project, update it
+        if (relations.length > 0) {
+          // If the projectId changed, update the relation
+          if (relations[0].toId !== projectId.toString()) {
+            // Get all relations
+            const allRelations = loadRelations();
+            
+            // Update the existing relation
+            const index = allRelations.findIndex(rel => 
+              rel.fromId === goalMapId.toString() && 
+              rel.relType === 'GOAL_MAP_FOR_PROJECT'
             );
             
-            console.log(`Created relation between goal map ${goalMapId} and project ${projectId}`);
+            if (index !== -1) {
+              allRelations[index].toId = projectId.toString();
+              allRelations[index].projectId = projectId.toString();
+              allRelations[index].timestamp = new Date().toISOString();
+              
+              // Save updated relations
+              saveRelations(allRelations);
+              console.log(`Updated relation for goal map ${goalMapId} to project ${projectId}`);
+            }
           }
-        } catch (relationError) {
-          console.error("Error updating goal map relation:", relationError);
-          // Continue even if relation update fails
+        } else {
+          // Create a new relation
+          await createRelation(
+            goalMapId.toString(),
+            projectId.toString(),
+            'GOAL_MAP_FOR_PROJECT',
+            projectId.toString()
+          );
+          
+          console.log(`Created relation between goal map ${goalMapId} and project ${projectId}`);
         }
+      } catch (relationError) {
+        console.error("Error updating goal map relation:", relationError);
+        // We'll continue even if the relation update fails
       }
       
-      // Include projectId in the response for consistent client-side handling
-      res.json({
+      // Return success with the updated map and project ID
+      return res.status(200).json({
         ...updatedMap,
-        projectId: projectId || null
+        projectId: projectId,
+        success: true
       });
     } catch (error: any) {
       console.error("Error updating goal map:", error);
