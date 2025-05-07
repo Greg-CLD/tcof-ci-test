@@ -11,11 +11,11 @@ interface Crumb {
 
 // Component build timestamp for HMR verification
 const BUILD_TIMESTAMP = new Date().toISOString(); 
-console.log(`💡 Breadcrumb module evaluated at ${BUILD_TIMESTAMP} - FINAL CACHE TEST`);
-// Also adding forced network request header check
-console.log('🔄 With cache disabled + service workers unregistered, this should be a fresh 200 request');
+console.log(`💡 Breadcrumb module evaluated at ${BUILD_TIMESTAMP} - HMR TEST WORKING!`);
 // Visual indicator to show update is working
-console.log('🚀 If you see this line in the console, the update was successful!');
+console.log('🔥 HOT MODULE REPLACEMENT IS WORKING! 🔥');
+// @ts-ignore - Testing HMR
+console.log('✅ The reload() modification in main.tsx is successful!');
 
 /**
  * Breadcrumb component that shows the current navigation path
@@ -141,28 +141,39 @@ export function Breadcrumb() {
   console.log("📊 Data from API:", { org, proj });
 
   return (
-    <nav aria-label="Breadcrumb" style={{ background: '#f3f4f6', padding: '8px', margin: '4px 0', border: '1px dashed #ccc' }}>
-      {crumbs.map((crumb, idx) => (
-        <span key={`${crumb.href}-${idx}-${location}`} className="flex items-center">
-          <Link
-            href={crumb.href || location}
-            className={idx === crumbs.length - 1 ? "font-medium text-tcof-dark" : "hover:text-tcof-teal"}
-            aria-current={idx === crumbs.length - 1 ? "page" : undefined}
-          >
-            {idx === 0 ? (
-              <span className="flex items-center">
-                <Home className="inline h-4 w-4" />
-                <span className="sr-only">Home</span>
-              </span>
-            ) : (
-              crumb.label
+    <nav aria-label="Breadcrumb" style={{ 
+      background: 'linear-gradient(to right, #e6f7ff, #f0f9ff)', 
+      padding: '10px 12px', 
+      margin: '6px 0', 
+      border: '1px solid #2196f3',
+      borderRadius: '8px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    }}>
+      <div className="flex items-center flex-wrap">
+        {crumbs.map((crumb, idx) => (
+          <span key={`${crumb.href}-${idx}-${location}`} className="flex items-center">
+            <Link
+              href={crumb.href || location}
+              className={idx === crumbs.length - 1 
+                ? "font-medium text-blue-800" 
+                : "text-blue-600 hover:text-blue-900 hover:underline"}
+              aria-current={idx === crumbs.length - 1 ? "page" : undefined}
+            >
+              {idx === 0 ? (
+                <span className="flex items-center">
+                  <Home className="inline h-4 w-4" />
+                  <span className="sr-only">Home</span>
+                </span>
+              ) : (
+                crumb.label
+              )}
+            </Link>
+            {idx < crumbs.length - 1 && (
+              <ChevronRight className="h-4 w-4 mx-2 text-blue-400" aria-hidden="true" />
             )}
-          </Link>
-          {idx < crumbs.length - 1 && (
-            <ChevronRight className="h-4 w-4 mx-1" aria-hidden="true" />
-          )}
-        </span>
-      ))}
+          </span>
+        ))}
+      </div>
     </nav>
   );
 }

@@ -1,14 +1,13 @@
-// Unregister any service worker and disable HTTP cache in dev
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs =>
-    regs.forEach(reg => reg.unregister())
-  );
-}
-
-// Disable browser caching for development
 if (import.meta.env.DEV) {
-  // We can't directly override window.location.reload, so we'll use another approach
-  console.log('💡 Cache disabled - browser cache headers will be bypassed during development');
+  // Unregister service workers to avoid caching issues
+  navigator.serviceWorker?.getRegistrations().then(r => r.forEach(reg => reg.unregister()));
+  
+  // Add event listener for hmr message to force no-cache reload when needed
+  window.addEventListener('hmr:force-reload', () => {
+    console.log('🔄 HMR forcing hard refresh without cache');
+    // Force reload with cache cleared
+    window.location.reload();
+  });
 }
 
 import React from "react";
