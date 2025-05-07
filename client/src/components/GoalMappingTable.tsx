@@ -108,15 +108,18 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     enabled: !!projectId
   });
   
-  // Load data from server when available
+  // Track if we've initialized from server data to avoid data loss
+  const [serverDataProcessed, setServerDataProcessed] = useState(false);
+  
+  // Load data from server when available - but only once when it first loads
   useEffect(() => {
-    console.log("📢 existingGoalMap CHANGED:", JSON.stringify(existingGoalMap, null, 2));
-    
-    if (existingGoalMap) {
+    // Only process server data if we haven't already or if we have a fresh non-null response
+    if (existingGoalMap && (!serverDataProcessed || existingGoalMap.id)) {
+      console.log("📢 existingGoalMap CHANGED:", JSON.stringify(existingGoalMap, null, 2));
       console.log("🔃 BEFORE PROCESSING - Current goalMap state:", JSON.stringify(goalMap, null, 2));
       console.log("📥 LOADING NEW DATA - existingGoalMap from server:", JSON.stringify(existingGoalMap, null, 2));
       
-      // Check if we're about to replace valid goals with empty ones
+      // Special case: If we have goals locally but server returns empty, preserve our goals
       if (
         goalMap.goals?.length > 0 && 
         (!existingGoalMap.goals || existingGoalMap.goals.length === 0)
@@ -124,7 +127,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         console.log("⚠️ CRITICAL DATA LOSS PREVENTED - Server returned empty goals but we have valid goals in state");
         console.log("🔒 Will preserve current goals:", JSON.stringify(goalMap.goals, null, 2));
         
-        // Merge existingGoalMap but keep our current goals
+        // Only merge the metadata from server, keep our goals
         const preservedGoalMapData = {
           ...existingGoalMap,
           goals: [...goalMap.goals] // Create a deep copy to ensure reactivity
@@ -132,10 +135,13 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         
         console.log("✅ AFTER PRESERVATION - Final goal map to use:", JSON.stringify(preservedGoalMapData, null, 2));
         setGoalMap(preservedGoalMapData);
+        
+        // Mark as processed so we don't replace data again
+        setServerDataProcessed(true);
         return; // Skip the rest of the processing
       }
       
-      // Normal processing path (no risk of goal loss detected)
+      // Normal processing path (server data is valid or local state is empty)
       // Initialize the goal map structure if needed
       let goalMapData = { ...existingGoalMap };
       
@@ -172,8 +178,11 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       
       console.log("✅ AFTER PROCESSING - Final goal map to use:", JSON.stringify(goalMapData, null, 2));
       setGoalMap(goalMapData);
+      
+      // Mark as processed so we don't replace data again unless we get a new server response with ID
+      setServerDataProcessed(true);
     }
-  }, [existingGoalMap, goalMap]);
+  }, [existingGoalMap, serverDataProcessed]);
   
   // Save goal map mutation
   const saveGoalMapMutation = useMutation({
@@ -280,18 +289,21 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
 
   // Submit plan mutation
   const submitPlanMutation = useMutation({
-    mutationFn: async () => {
-      if (!projectId) throw new Error("No project selected");
+    mutationFn: async (payload: { projectId: string; currentGoals: GoalTableRow[] }) => {
+      if (!payload.projectId) throw new Error("No project selected");
       
       // Ensure projectId is properly formatted as a string
-      const projectIdStr = String(projectId);
+      const projectIdStr = String(payload.projectId);
       
-      // Prepare payload with consistently formatted ID
-      const payload = { projectId: projectIdStr };
-      console.log("SUBMIT PLAN - Sending payload:", JSON.stringify(payload, null, 2));
+      // Add projectId to the payload for consistency
+      const fullPayload = { 
+        projectId: projectIdStr,
+        currentGoals: payload.currentGoals 
+      };
+      console.log("SUBMIT PLAN - Sending payload:", JSON.stringify(fullPayload, null, 2));
       
-      // Mark the goal mapping as complete
-      const response = await apiRequest("POST", "/api/project-progress/goal-mapping/complete", payload);
+      // Mark the goal mapping as complete with the current goals
+      const response = await apiRequest("POST", "/api/project-progress/goal-mapping/complete", fullPayload);
       
       if (!response.ok) {
         const errorText = await response.text();
