@@ -45,7 +45,7 @@ export default function MakeAPlan() {
   });
   
   useEffect(() => {
-    console.log("Tool mounted:", location);
+    console.log("MakeAPlan restored:", location);
   }, [location]);
   
   // Instead of direct Redirect that can cause loops, we'll use conditional rendering
