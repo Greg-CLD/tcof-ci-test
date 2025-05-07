@@ -240,20 +240,22 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 gap-3">
-                          <div className="flex flex-col">
-                            <span className="text-sm text-muted-foreground">Sector</span>
-                            <span className="font-medium">{project?.sector || 'N/A'}</span>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm text-muted-foreground">Organisation Type</span>
-                            <span className="font-medium">{project?.orgType || 'N/A'}</span>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm text-muted-foreground">Description</span>
-                            <span className="font-medium">{project?.description || 'N/A'}</span>
-                          </div>
+                      <div className="space-y-4 grid grid-cols-1 gap-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">Sector</span>
+                          <span className="font-medium">{project?.sector || 'N/A'}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">Industry (SIC code)</span>
+                          <span className="font-medium">{project?.industry || 'N/A'}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">Organisation Size</span>
+                          <span className="font-medium">{project?.organisationSize || 'N/A'}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">Description</span>
+                          <span className="font-medium">{project?.description || 'N/A'}</span>
                         </div>
                       </div>
                       
