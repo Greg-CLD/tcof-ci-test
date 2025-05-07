@@ -222,23 +222,34 @@ router.put("/:id", isAuthenticated, async (req, res) => {
  */
 router.delete("/:id", isAuthenticated, async (req, res) => {
   try {
-    const projectId = parseInt(req.params.id);
+    const rawProjectId = req.params.id;
     
-    if (isNaN(projectId)) {
-      console.log(`Invalid project ID format for deletion: ${req.params.id}`);
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
+    // Try to parse as integer first
+    const projectId = parseInt(rawProjectId);
+    const isValidNumericId = !isNaN(projectId);
     
-    console.log(`Attempting to delete project: ${projectId}`);
+    console.log(`Attempting to delete project with ID: ${rawProjectId} (${isValidNumericId ? 'numeric' : 'string'} format)`);
     
     // Find the project first to verify it exists and user has permission
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, projectId)
-    });
+    let project;
+    
+    if (isValidNumericId) {
+      project = await db.query.projects.findFirst({
+        where: eq(projects.id, projectId)
+      });
+    } else {
+      // If not a valid numeric ID, try using it as a string ID (UUID)
+      project = await db.query.projects.findFirst({
+        where: eq(projects.id, rawProjectId)
+      });
+    }
     
     if (!project) {
-      console.log(`Project not found for deletion: ${projectId}`);
-      return res.status(404).json({ message: "Project not found" });
+      console.log(`Project not found for deletion: ${rawProjectId}`);
+      return res.status(404).json({ 
+        message: "Project not found", 
+        details: `No project found with ID: ${rawProjectId}`
+      });
     }
     
     // Check if user is authorized to delete this project
@@ -277,12 +288,28 @@ router.delete("/:id", isAuthenticated, async (req, res) => {
       return res.status(403).json({ message: "You don't have permission to delete this project" });
     }
     
-    // Perform the deletion
-    const result = await db.delete(projects).where(eq(projects.id, projectId));
+    // Perform the deletion using the correct ID format
+    let result;
+    
+    if (isValidNumericId) {
+      result = await db.delete(projects).where(eq(projects.id, projectId));
+    } else {
+      result = await db.delete(projects).where(eq(projects.id, rawProjectId));
+    }
     
     console.log(`Project deletion result:`, result);
     
-    return res.status(204).end();
+    if (!result || result.length === 0) {
+      return res.status(500).json({ 
+        message: "Failed to delete project", 
+        details: "Database operation succeeded but no rows were affected" 
+      });
+    }
+    
+    return res.status(200).json({ 
+      message: "Project deleted successfully", 
+      id: rawProjectId 
+    });
   } catch (error) {
     console.error("Error deleting project:", error);
     return res.status(500).json({ message: "Internal server error" });

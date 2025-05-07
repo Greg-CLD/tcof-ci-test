@@ -155,15 +155,45 @@ export function useProjects() {
 
   // Delete a project
   const deleteProject = useMutation({
-    mutationFn: async (id: string): Promise<void> => {
+    mutationFn: async (id: string): Promise<string> => {
       console.log(`Deleting project with ID ${id}`);
-      // apiRequest will throw an error if the response is not ok
-      await apiRequest('DELETE', `/api/projects/${id}`);
-      console.log(`Project deleted successfully`);
+      
+      try {
+        // Make the delete request
+        const response = await apiRequest('DELETE', `/api/projects/${id}`);
+        
+        // For a successful delete, we should get a 200 response with JSON or 204 with no content
+        if (response.status === 204) {
+          console.log(`Project ${id} deleted successfully (status 204)`);
+          return id;
+        }
+        
+        // Parse the JSON response if present
+        const data = await response.json().catch(() => ({ message: "Success" }));
+        console.log(`Project deleted successfully:`, data);
+        return id;
+      } catch (error) {
+        console.error(`Error deleting project ${id}:`, error);
+        // Get more detailed error information if available
+        if (error instanceof Error) {
+          const message = error.message || "Unknown error";
+          throw new Error(`Failed to delete project: ${message}`);
+        }
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (deletedId) => {
+      // Clear all related cache entries
+      
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
+      // Also invalidate any specific project queries
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', deletedId] });
+      
+      // Also invalidate organisation projects if relevant
+      queryClient.invalidateQueries({ queryKey: ['/api/organisations'] });
+      
       // Redirect will be handled by the component that calls this
       toast({
         title: 'Project Deleted',
@@ -171,9 +201,10 @@ export function useProjects() {
       });
     },
     onError: (error: Error) => {
+      console.error("Project deletion error:", error);
       toast({
         title: 'Error',
-        description: `Failed to delete project: ${error.message}`,
+        description: error.message || 'Failed to delete project. Please try again.',
         variant: 'destructive',
       });
     },

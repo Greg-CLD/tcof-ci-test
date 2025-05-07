@@ -184,7 +184,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
   
   // Update form defaults when project data loads
   useEffect(() => {
-    if (project && !hasLoadedProject) {
+    if (project) {
       console.log('Setting form values from loaded project:', project);
       
       // Check if sector is "other" to show custom sector field
@@ -204,7 +204,7 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
         currentStage: project.currentStage || '',
       });
     }
-  }, [project, form]);
+  }, [project, form, isEditing]);
 
   // Form submission handler
   const onSubmit = async (data: ProjectFormValues) => {
