@@ -502,7 +502,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
             <TableRow>
               <TableHead className="w-[120px]">Level</TableHead>
               <TableHead>Goal</TableHead>
-              <TableHead className="w-[200px]">Timeframe</TableHead>
+              <TableHead className="w-[200px]">Timeframe (optional)</TableHead>
               <TableHead className="w-[80px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -572,7 +572,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
           <li>Maximum 3 goals per level</li>
           <li>Level 1-2: Organization/value goals</li>
           <li>Level 3-5: Project-specific objectives</li>
-          <li>Include timeframes where possible</li>
+          <li>Timeframes are optional - add when known</li>
         </ul>
       </div>
     </div>
