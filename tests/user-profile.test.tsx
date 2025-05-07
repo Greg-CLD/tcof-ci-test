@@ -482,35 +482,26 @@ describe('UserProfileSettings Component', () => {
   describe('Password Strength Checker', () => {
     it('should calculate correct strength for weak password', () => {
       const weakPassword = 'password';
-      const result = passwordChangeSchema.safeParse({
-        currentPassword: 'current123',
-        newPassword: weakPassword,
-        confirmPassword: weakPassword
-      });
-      
-      expect(result.success).toBe(false);
+      const result = checkPasswordStrength(weakPassword);
+      expect(result.strength).toBe('weak');
     });
     
     it('should calculate correct strength for medium password', () => {
       const mediumPassword = 'Password1';
-      const result = passwordChangeSchema.safeParse({
-        currentPassword: 'current123',
-        newPassword: mediumPassword,
-        confirmPassword: mediumPassword
-      });
-      
-      expect(result.success).toBe(false); // Still fails because no special char
+      const result = checkPasswordStrength(mediumPassword);
+      expect(result.strength).toBe('medium');
     });
     
     it('should calculate correct strength for strong password', () => {
       const strongPassword = 'Password123!';
-      const result = passwordChangeSchema.safeParse({
-        currentPassword: 'current123',
-        newPassword: strongPassword,
-        confirmPassword: strongPassword
-      });
-      
-      expect(result.success).toBe(true);
+      const result = checkPasswordStrength(strongPassword);
+      expect(result.strength).toBe('strong');
+    });
+    
+    it('should handle empty passwords', () => {
+      const result = checkPasswordStrength('');
+      expect(result.strength).toBe('weak');
+      expect(result.message).toBe('Password is required');
     });
   });
 });

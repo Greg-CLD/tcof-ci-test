@@ -5,9 +5,22 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Building, Plus, Loader2, ArrowLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +37,7 @@ interface Organisation {
   id: string;
   name: string;
   description: string | null;
-  role: 'owner' | 'admin' | 'member';
+  role: "owner" | "admin" | "member";
 }
 
 interface Heuristic {
@@ -44,47 +57,50 @@ export default function OrganisationDashboardPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [formState, setFormState] = useState({
     name: "",
-    description: ""
+    description: "",
   });
 
   // Fetch organisation details
-  const { 
-    data: organisation, 
-    isLoading: orgLoading, 
-    error: orgError 
+  const {
+    data: organisation,
+    isLoading: orgLoading,
+    error: orgError,
   } = useQuery({
-    queryKey: ['organisation', orgId],
+    queryKey: ["organisation", orgId],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/organisations/${orgId}`);
       if (!res.ok) {
         throw new Error("Failed to fetch organisation details");
       }
       return res.json();
-    }
+    },
   });
 
   // Fetch projects for the organisation
-  const { 
-    data: projects = [], 
+  const {
+    data: projects = [],
     isLoading: projLoading,
     isFetching: projFetching,
     error: projError,
-    refetch: refetchProjects
+    refetch: refetchProjects,
   } = useQuery({
-    queryKey: ['orgProjects', orgId],
+    queryKey: ["orgProjects", orgId],
     queryFn: async () => {
       console.log("Fetching projects for org:", orgId);
-      const res = await apiRequest("GET", `/api/organisations/${orgId}/projects`);
+      const res = await apiRequest(
+        "GET",
+        `/api/organisations/${orgId}/projects`,
+      );
       if (!res.ok) {
         throw new Error("Failed to fetch organisation projects");
       }
       const data = await res.json();
       console.log("Projects fetched:", data);
-      
+
       // Ensure each project has the organisationId explicitly set
       return data.map((project: any) => ({
         ...project,
-        organisationId: orgId
+        organisationId: orgId,
       }));
     },
     // Make sure we always get fresh data when navigating back to this page
@@ -98,30 +114,40 @@ export default function OrganisationDashboardPage() {
         return [];
       }
       return data;
-    }
+    },
   });
 
   // Fetch organisation default heuristics
   const {
     data: heuristics = [],
     isLoading: heuristicsLoading,
-    error: heuristicsError
+    error: heuristicsError,
   } = useQuery({
-    queryKey: ['orgHeuristics', orgId],
+    queryKey: ["orgHeuristics", orgId],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/organisations/${orgId}/heuristics`);
+      const res = await apiRequest(
+        "GET",
+        `/api/organisations/${orgId}/heuristics`,
+      );
       if (!res.ok) {
         throw new Error("Failed to fetch organisation heuristics");
       }
       return res.json();
-    }
+    },
   });
 
   // Create project mutation
   const createProjectMutation = useMutation({
-    mutationFn: async (projectData: { name: string; description: string | null }) => {
+    mutationFn: async (projectData: {
+      name: string;
+      description: string | null;
+    }) => {
       // Use organization-specific endpoint instead of general projects endpoint
-      const res = await apiRequest("POST", `/api/organisations/${orgId}/projects`, projectData);
+      const res = await apiRequest(
+        "POST",
+        `/api/organisations/${orgId}/projects`,
+        projectData,
+      );
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to create project");
@@ -130,19 +156,19 @@ export default function OrganisationDashboardPage() {
     },
     onSuccess: (newProject) => {
       console.log("Project created successfully:", newProject);
-      
+
       // Reset form and close dialog
       setFormState({ name: "", description: "" });
       setIsCreateDialogOpen(false);
-      
+
       // Simply invalidate the query to refetch fresh data from server
       queryClient.invalidateQueries({
-        queryKey: ['orgProjects', orgId]
+        queryKey: ["orgProjects", orgId],
       });
-      
+
       // Log success for debugging
       console.log("Invalidated projects query to refetch latest data");
-      
+
       toast({
         title: "Success",
         description: "Project created successfully",
@@ -158,11 +184,13 @@ export default function OrganisationDashboardPage() {
   });
 
   // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -172,14 +200,14 @@ export default function OrganisationDashboardPage() {
       toast({
         title: "Validation Error",
         description: "Project name is required",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     createProjectMutation.mutate({
       name: formState.name.trim(),
-      description: formState.description.trim() || null
+      description: formState.description.trim() || null,
       // organizationId is now in the URL path, not needed in body
     });
   };
@@ -193,27 +221,33 @@ export default function OrganisationDashboardPage() {
   const navigateToOrganisations = () => {
     navigate("/organisations");
   };
-  
+
   // Delete project mutation
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: number | string) => {
       console.log("Deleting project with ID:", projectId);
-      
+
       // Try to determine if this is a database ID (number) or a JSON-file ID (UUID)
-      const isNumericId = !isNaN(Number(projectId)) && String(Number(projectId)) === String(projectId);
-      console.log(`Project ID ${projectId} is a ${isNumericId ? 'numeric' : 'UUID'} ID`);
-      
+      const isNumericId =
+        !isNaN(Number(projectId)) &&
+        String(Number(projectId)) === String(projectId);
+      console.log(
+        `Project ID ${projectId} is a ${isNumericId ? "numeric" : "UUID"} ID`,
+      );
+
       try {
         // First attempt with the ID as-is
         const res = await apiRequest("DELETE", `/api/projects/${projectId}`);
         if (res.ok) return projectId;
-        
+
         // If we get an error with a numeric ID, log it but don't throw yet
         console.log(`First deletion attempt failed: ${res.status}`);
-        
+
         // If this was already a failed UUID attempt, we should stop here
         if (!isNumericId) {
-          const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+          const errorData = await res
+            .json()
+            .catch(() => ({ message: "Unknown error" }));
           throw new Error(errorData.message || `Error: ${res.status}`);
         }
       } catch (error) {
@@ -221,7 +255,7 @@ export default function OrganisationDashboardPage() {
         // If the first attempt failed and it was numeric, continue to the fallback
         if (!isNumericId) throw error;
       }
-      
+
       // We only get here if the first attempt with a numeric ID failed.
       // There's no need for a second attempt with the same API endpoint.
       // Just throw the error to avoid an infinite loop.
@@ -230,12 +264,12 @@ export default function OrganisationDashboardPage() {
     onSuccess: (deletedProjectId) => {
       // Invalidate the query to refetch projects
       queryClient.invalidateQueries({
-        queryKey: ['orgProjects', orgId]
+        queryKey: ["orgProjects", orgId],
       });
-      
+
       toast({
         title: "Project deleted",
-        description: "The project has been successfully deleted."
+        description: "The project has been successfully deleted.",
       });
     },
     onError: (error: Error) => {
@@ -243,13 +277,16 @@ export default function OrganisationDashboardPage() {
       toast({
         title: "Error deleting project",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
-  
+
   // Handle project deletion
-  const handleDeleteProject = async (projectId: string, e?: React.MouseEvent) => {
+  const handleDeleteProject = async (
+    projectId: string,
+    e?: React.MouseEvent,
+  ) => {
     e?.stopPropagation();
     console.log("Deleting project:", projectId);
     try {
@@ -265,7 +302,7 @@ export default function OrganisationDashboardPage() {
       toast({
         title: "Error",
         description: "Failed to fetch organisation details. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   }, [orgError, toast]);
@@ -275,7 +312,7 @@ export default function OrganisationDashboardPage() {
       toast({
         title: "Error",
         description: "Failed to fetch projects. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   }, [projError, toast]);
@@ -284,8 +321,9 @@ export default function OrganisationDashboardPage() {
     if (heuristicsError) {
       toast({
         title: "Error",
-        description: "Failed to fetch organisation heuristics. This may affect new projects.",
-        variant: "destructive"
+        description:
+          "Failed to fetch organisation heuristics. This may affect new projects.",
+        variant: "destructive",
       });
     }
   }, [heuristicsError, toast]);
@@ -300,33 +338,42 @@ export default function OrganisationDashboardPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
             {/* Breadcrumb is now in AppLayout - don't include it here */}
             <div></div> {/* Empty div to maintain flex spacing */}
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={navigateToOrganisations}
               className="mt-2 md:mt-0"
             >
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Organisations
             </Button>
           </div>
-          
+
           {isLoading ? (
             <div className="flex items-center space-x-2">
               <Loader2 className="h-5 w-5 animate-spin text-tcof-teal" />
-              <h1 className="text-3xl font-bold text-tcof-dark">Loading organisation...</h1>
+              <h1 className="text-3xl font-bold text-tcof-dark">
+                Loading organisation...
+              </h1>
             </div>
           ) : (
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-tcof-dark">{organisation?.name}</h1>
+                <h1 className="text-3xl font-bold text-tcof-dark">
+                  {organisation?.name}
+                </h1>
                 {organisation?.description && (
-                  <p className="text-gray-600 mt-2">{organisation.description}</p>
+                  <p className="text-gray-600 mt-2">
+                    {organisation.description}
+                  </p>
                 )}
               </div>
               <div className="flex gap-2">
-                {(organisation?.role === 'owner' || organisation?.role === 'admin') && (
-                  <Button 
+                {(organisation?.role === "owner" ||
+                  organisation?.role === "admin") && (
+                  <Button
                     variant="outline"
-                    onClick={() => navigate(`/organisations/${orgId}/heuristics`)}
+                    onClick={() =>
+                      navigate(`/organisations/${orgId}/heuristics`)
+                    }
                   >
                     Manage Success Factors
                   </Button>
@@ -341,8 +388,10 @@ export default function OrganisationDashboardPage() {
         </div>
 
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-tcof-dark">Projects</h2>
-          
+          <h2 className="text-2xl font-semibold mb-4 text-tcof-dark">
+            Projects
+          </h2>
+
           {projLoading ? (
             <div className="flex justify-center items-center min-h-[200px]">
               <Loader2 className="h-8 w-8 animate-spin text-tcof-teal" />
@@ -356,8 +405,13 @@ export default function OrganisationDashboardPage() {
               {projects.length === 0 ? (
                 <div className="bg-gray-50 rounded-lg p-8 text-center">
                   <Building className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-xl font-semibold mb-2 text-tcof-dark">No Projects Found</h3>
-                  <p className="text-gray-600 mb-6">This organisation doesn't have any projects yet. Create one to get started.</p>
+                  <h3 className="text-xl font-semibold mb-2 text-tcof-dark">
+                    No Projects Found
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    This organisation doesn't have any projects yet. Create one
+                    to get started.
+                  </p>
                   <Button onClick={() => setIsCreateDialogOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Create Your First Project
@@ -366,45 +420,56 @@ export default function OrganisationDashboardPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {projects.map((project: Project) => (
-                    <Card key={project.id} className="relative group hover:shadow-md transition-shadow">
+                    <Card
+                      key={project.id}
+                      className="relative group hover:shadow-md transition-shadow"
+                    >
                       <CardHeader>
-                        <CardTitle 
+                        <CardTitle
                           className="cursor-pointer hover:text-tcof-teal transition-colors"
                           onClick={() => navigateToProject(project.id)}
                         >
                           {project.name}
                         </CardTitle>
                         {project.description && (
-                          <CardDescription>{project.description}</CardDescription>
+                          <CardDescription>
+                            {project.description}
+                          </CardDescription>
                         )}
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-gray-500">
-                          Created: {new Date(project.createdAt).toLocaleDateString()}
+                          Created:{" "}
+                          {new Date(project.createdAt).toLocaleDateString()}
                         </p>
                       </CardContent>
                       <CardFooter className="flex justify-end gap-2">
-                        <Button 
-                          variant="default" 
+                        <Button
+                          variant="default"
                           onClick={() => {
-                            console.log('Complete setup clicked for project:', project.id);
-                            navigate(`/organisations/${orgId}/projects/${project.id}/profile/edit`);
+                            console.log(
+                              "Complete setup clicked for project:",
+                              project.id,
+                            );
+                            navigate(
+                              `/organisations/${orgId}/projects/${project.id}/profile/edit`,
+                            );
                           }}
                         >
                           Complete Setup
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => navigateToProject(project.id)}
                         >
                           View Project
                         </Button>
                       </CardFooter>
                       <div className="absolute top-2 right-2 invisible group-hover:visible">
-                        <X 
-                          className="h-5 w-5 text-red-500 cursor-pointer" 
-                          aria-label="Delete project" 
-                          onClick={(e) => handleDeleteProject(project.id, e)} 
+                        <X
+                          className="h-5 w-5 text-red-500 cursor-pointer"
+                          aria-label="Delete project"
+                          onClick={(e) => handleDeleteProject(project.id, e)}
                         />
                       </div>
                     </Card>
@@ -415,8 +480,13 @@ export default function OrganisationDashboardPage() {
           ) : projects.length === 0 ? (
             <div className="bg-gray-50 rounded-lg p-8 text-center">
               <Building className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-xl font-semibold mb-2 text-tcof-dark">No Projects Found</h3>
-              <p className="text-gray-600 mb-6">This organisation doesn't have any projects yet. Create one to get started.</p>
+              <h3 className="text-xl font-semibold mb-2 text-tcof-dark">
+                No Projects Found
+              </h3>
+              <p className="text-gray-600 mb-6">
+                This organisation doesn't have any projects yet. Create one to
+                get started.
+              </p>
               <Button onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Your First Project
@@ -425,9 +495,12 @@ export default function OrganisationDashboardPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {projects.map((project: Project) => (
-                <Card key={project.id} className="relative group hover:shadow-md transition-shadow">
+                <Card
+                  key={project.id}
+                  className="relative group hover:shadow-md transition-shadow"
+                >
                   <CardHeader>
-                    <CardTitle 
+                    <CardTitle
                       className="cursor-pointer hover:text-tcof-teal transition-colors"
                       onClick={() => navigateToProject(project.id)}
                     >
@@ -439,31 +512,37 @@ export default function OrganisationDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-gray-500">
-                      Created: {new Date(project.createdAt).toLocaleDateString()}
+                      Created:{" "}
+                      {new Date(project.createdAt).toLocaleDateString()}
                     </p>
                   </CardContent>
                   <CardFooter className="flex justify-end gap-2">
-                    <Button 
-                      variant="default" 
+                    <Button
+                      variant="default"
                       onClick={() => {
-                        console.log('Edit project clicked for project:', project.id);
-                        navigate(`/organisations/${orgId}/projects/${project.id}/edit-basic`);
+                        console.log(
+                          "Edit project clicked for project:",
+                          project.id,
+                        );
+                        navigate(
+                          `/organisations/${orgId}/projects/${project.id}/edit-basic`,
+                        );
                       }}
                     >
                       Edit Project
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => navigateToProject(project.id)}
                     >
                       View Project
                     </Button>
                   </CardFooter>
                   <div className="absolute top-2 right-2 invisible group-hover:visible">
-                    <X 
-                      className="h-5 w-5 text-red-500 cursor-pointer" 
-                      aria-label="Delete project" 
-                      onClick={(e) => handleDeleteProject(project.id, e)} 
+                    <X
+                      className="h-5 w-5 text-red-500 cursor-pointer"
+                      aria-label="Delete project"
+                      onClick={(e) => handleDeleteProject(project.id, e)}
                     />
                   </div>
                 </Card>
@@ -480,44 +559,49 @@ export default function OrganisationDashboardPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Project Name <span className="text-red-500">*</span></Label>
-                <Input 
-                  id="name" 
-                  name="name" 
-                  value={formState.name} 
-                  onChange={handleInputChange} 
-                  placeholder="Enter project name" 
+                <Label htmlFor="name">
+                  Project Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formState.name}
+                  onChange={handleInputChange}
+                  placeholder="Enter project name"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description (optional)</Label>
-                <Textarea 
-                  id="description" 
-                  name="description" 
-                  value={formState.description} 
-                  onChange={handleInputChange} 
-                  placeholder="Enter project description" 
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formState.description}
+                  onChange={handleInputChange}
+                  placeholder="Enter project description"
                   rows={3}
                 />
               </div>
               {heuristics.length > 0 && (
                 <div className="p-3 bg-blue-50 rounded-md">
                   <p className="text-sm text-blue-700">
-                    This project will use {heuristics.length} default success factors from this organisation.
+                    This project will use {heuristics.length} default success
+                    factors from this organisation.
                   </p>
                 </div>
               )}
             </div>
             <DialogFooter>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setIsCreateDialogOpen(false)}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleCreateProject}
-                disabled={createProjectMutation.isPending || !formState.name.trim()}
+                disabled={
+                  createProjectMutation.isPending || !formState.name.trim()
+                }
               >
                 {createProjectMutation.isPending ? (
                   <>
@@ -532,7 +616,6 @@ export default function OrganisationDashboardPage() {
           </DialogContent>
         </Dialog>
       </main>
-      
     </div>
   );
 }
