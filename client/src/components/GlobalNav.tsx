@@ -48,27 +48,15 @@ const GlobalNav = () => {
                 href={item.path}
                 className={cn(
                   "text-white hover:text-tcof-teal transition-colors",
+                  item.label === "Account" && "flex items-center gap-1",
                   location === item.path && "text-tcof-teal font-semibold"
                 )}
                 onClick={closeMenu}
               >
+                {item.label === "Account" && <Settings size={16} />}
                 {item.label}
               </Link>
             ))}
-            
-            {user && (
-              <Link 
-                href="/settings"
-                className={cn(
-                  "text-white hover:text-tcof-teal transition-colors flex items-center gap-1",
-                  location === "/settings" && "text-tcof-teal font-semibold"
-                )}
-                onClick={closeMenu}
-              >
-                <Settings size={16} />
-                <span>Settings</span>
-              </Link>
-            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -94,27 +82,15 @@ const GlobalNav = () => {
                 href={item.path}
                 className={cn(
                   "block py-2 px-4 text-white hover:text-tcof-teal transition-colors",
+                  item.label === "Account" && "flex items-center gap-2",
                   location === item.path && "text-tcof-teal font-semibold"
                 )}
                 onClick={closeMenu}
               >
+                {item.label === "Account" && <Settings size={16} />}
                 {item.label}
               </Link>
             ))}
-            
-            {user && (
-              <Link 
-                href="/settings"
-                className={cn(
-                  "flex items-center gap-2 py-2 px-4 text-white hover:text-tcof-teal transition-colors",
-                  location === "/settings" && "text-tcof-teal font-semibold"
-                )}
-                onClick={closeMenu}
-              >
-                <Settings size={16} />
-                <span>Settings</span>
-              </Link>
-            )}
           </div>
         )}
       </div>

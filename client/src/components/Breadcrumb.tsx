@@ -14,6 +14,7 @@ interface Crumb {
 // URL segment to display name mapping
 const SEGMENT_LABELS: Record<string, string> = {
   'organisations': 'Organisations',
+  'all-projects': 'All Projects',
   'projects': 'Projects',
   'goal-mapping': 'Goal Mapping',
   'cynefin-orientation': 'Cynefin Orientation',

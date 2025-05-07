@@ -434,16 +434,12 @@ export default function AllProjects() {
       {/* Delete Project Dialog */}
       <ConfirmationModal
         isOpen={deleteDialogOpen}
-        setIsOpen={setDeleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteProject}
         title="Delete Project"
         description="Are you sure you want to delete this project? This action cannot be undone."
-        actionText="Delete"
-        actionVariant="destructive"
-        onAction={handleDeleteProject}
-        onCancel={() => {
-          setDeleteDialogOpen(false);
-          setProjectToDelete(null);
-        }}
+        confirmText="Delete"
+        variant="destructive"
       />
     </div>
   );
