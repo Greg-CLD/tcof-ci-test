@@ -1,44 +1,102 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, DownloadIcon, Clock, Target } from 'lucide-react';
+import { Edit, DownloadIcon, Clock, Target, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { elementToPDF } from '@/lib/pdf-utils';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
-interface GoalNode {
+// Updated table-based goal structure
+interface GoalTableRow {
   id: string;
   text: string;
   timeframe: string;
-  x: number;
-  y: number;
-  type?: string;
-}
-
-interface Connection {
-  id: string;
-  sourceId: string;
-  targetId: string;
+  level: number;
 }
 
 interface GoalMapData {
   name: string;
-  nodes: GoalNode[];
-  connections: Connection[];
-  projectId?: string;
+  goals: GoalTableRow[];
   lastUpdated: number;
   id?: string;
+  projectId?: string;
 }
 
 interface GoalMappingViewProps {
-  map: GoalMapData;
-  onEdit: () => void;
-  isLoading: boolean;
-  svgRef?: React.RefObject<SVGSVGElement>;
+  projectId: string;
+  onEdit?: () => void;
 }
 
-export function GoalMappingView({ map, onEdit, isLoading }: GoalMappingViewProps) {
+export function GoalMappingView({ projectId, onEdit }: GoalMappingViewProps) {
   const { toast } = useToast();
   const containerRef = React.useRef<HTMLDivElement>(null);
+  
+  // Fetch goal map data
+  const { data: goalMap, isLoading } = useQuery<GoalMapData>({
+    queryKey: ['/api/goal-maps', projectId],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          return {
+            name: "Project Goals",
+            goals: [],
+            lastUpdated: Date.now(),
+            projectId
+          };
+        }
+        throw new Error("Failed to fetch goal map");
+      }
+      return await res.json();
+    },
+    enabled: !!projectId,
+  });
+  
+  // State to hold processed data for display
+  const [processedMap, setProcessedMap] = useState<GoalMapData>({
+    name: "Project Goals",
+    goals: [],
+    lastUpdated: Date.now()
+  });
+  
+  // Process data when it arrives from the server
+  useEffect(() => {
+    if (goalMap) {
+      // Check if we have the new format or need to convert from old
+      let processedData: GoalMapData;
+      
+      if (goalMap.goals) {
+        // Already in new format
+        processedData = goalMap;
+      } else if ((goalMap as any).nodes) {
+        // Convert from old format
+        const nodes = (goalMap as any).nodes || [];
+        const convertedGoals = nodes.map((node: any, index: number) => ({
+          id: node.id,
+          text: node.text,
+          timeframe: node.timeframe,
+          level: Math.min(Math.floor(index / 3) + 1, 5) // Assign levels based on index
+        }));
+        
+        processedData = {
+          ...goalMap,
+          name: goalMap.name || "Project Goals",
+          goals: convertedGoals
+        };
+      } else {
+        // Empty data
+        processedData = {
+          name: "Project Goals",
+          goals: [],
+          lastUpdated: Date.now(),
+          projectId
+        };
+      }
+      
+      setProcessedMap(processedData);
+    }
+  }, [goalMap, projectId]);
   
   // Convert the timestamp to a readable date
   const formatDate = (timestamp: number) => {
@@ -54,7 +112,7 @@ export function GoalMappingView({ map, onEdit, isLoading }: GoalMappingViewProps
   // Handle PDF export
   const handleExportPDF = () => {
     if (containerRef.current) {
-      elementToPDF(containerRef.current, `${map.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      elementToPDF(containerRef.current, `goal-map-${projectId}.pdf`);
       toast({
         title: "PDF generated",
         description: "Your success map has been exported as PDF."
@@ -62,37 +120,48 @@ export function GoalMappingView({ map, onEdit, isLoading }: GoalMappingViewProps
     }
   };
   
-  // Group nodes by type (if available) or create default grouping
-  const goalsByLevel = map.nodes.reduce((acc: Record<string, GoalNode[]>, node: GoalNode) => {
-    // Default to 'strategic' if no type is available
-    const level = node.type || 'strategic';
-    if (!acc[level]) {
-      acc[level] = [];
-    }
-    acc[level].push(node);
-    return acc;
-  }, {});
+  // Group goals by level for display
+  const goalsByLevel = processedMap.goals.reduce<Record<number, GoalTableRow[]>>(
+    (acc, goal) => {
+      if (!acc[goal.level]) {
+        acc[goal.level] = [];
+      }
+      acc[goal.level].push(goal);
+      return acc;
+    },
+    {}
+  );
   
   // Get a user-friendly level name
-  const getLevelName = (level: string) => {
+  const getLevelName = (level: number) => {
     switch(level) {
-      case 'strategic': return 'Strategic Goals';
-      case 'business': return 'Business Goals';
-      case 'product': return 'Product Goals';
-      case 'custom': return 'Custom Goals';
-      default: return `${level.charAt(0).toUpperCase() + level.slice(1)} Goals`;
+      case 1: return 'Level 1 - Organization Strategic Goals';
+      case 2: return 'Level 2 - Organization Value Goals';
+      case 3: return 'Level 3 - Project Strategic Goals';
+      case 4: return 'Level 4 - Project Tactical Goals';
+      case 5: return 'Level 5 - Project Operational Goals';
+      default: return `Level ${level} Goals`;
     }
   };
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading goal map...</span>
+      </div>
+    );
+  }
   
   return (
     <Card className="shadow-md overflow-hidden" ref={containerRef}>
       <CardHeader className="flex flex-row items-center justify-between bg-blue-50/70 pb-6">
         <div>
           <CardTitle className="text-2xl text-tcof-dark">
-            {map.name}
+            {processedMap.name}
           </CardTitle>
           <CardDescription>
-            Last updated: {formatDate(map.lastUpdated)}
+            Last updated: {formatDate(processedMap.lastUpdated)}
           </CardDescription>
         </div>
         <div className="flex gap-2">
@@ -101,20 +170,20 @@ export function GoalMappingView({ map, onEdit, isLoading }: GoalMappingViewProps
             size="sm"
             className="text-blue-600 border-blue-200 hover:bg-blue-50"
             onClick={handleExportPDF}
-            disabled={isLoading}
           >
             <DownloadIcon className="w-4 h-4 mr-1" />
             Export PDF
           </Button>
-          <Button 
-            variant="outline" 
-            className="text-tcof-teal border-tcof-teal hover:bg-tcof-teal/10"
-            onClick={onEdit}
-            disabled={isLoading}
-          >
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
+          {onEdit && (
+            <Button 
+              variant="outline" 
+              className="text-tcof-teal border-tcof-teal hover:bg-tcof-teal/10"
+              onClick={onEdit}
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+          )}
         </div>
       </CardHeader>
       
@@ -122,46 +191,37 @@ export function GoalMappingView({ map, onEdit, isLoading }: GoalMappingViewProps
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-blue-50 rounded-md p-4">
             <div className="text-xs text-blue-600 uppercase font-semibold mb-1">Total Goals</div>
-            <div className="text-2xl font-bold">{map.nodes.length}</div>
+            <div className="text-2xl font-bold">{processedMap.goals.length}</div>
           </div>
           <div className="bg-blue-50 rounded-md p-4">
             <div className="text-xs text-blue-600 uppercase font-semibold mb-1">Goal Levels</div>
             <div className="text-2xl font-bold">{Object.keys(goalsByLevel).length}</div>
           </div>
           <div className="bg-blue-50 rounded-md p-4">
-            <div className="text-xs text-blue-600 uppercase font-semibold mb-1">Relationships</div>
-            <div className="text-2xl font-bold">{map.connections.length}</div>
+            <div className="text-xs text-blue-600 uppercase font-semibold mb-1">Max Goals Per Level</div>
+            <div className="text-2xl font-bold">3</div>
           </div>
         </div>
         
         {/* Goals Table Display */}
-        {map.nodes.length > 0 ? (
+        {processedMap.goals.length > 0 ? (
           <div className="space-y-6">
-            {Object.entries(goalsByLevel).map(([level, goals]) => (
-              <div key={level} className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-50 p-3 border-b font-medium text-gray-700">
-                  {getLevelName(level)} ({goals.length})
-                </div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="py-2 px-4 text-left font-medium text-gray-600">Goal</th>
-                      <th className="py-2 px-4 text-left font-medium text-gray-600 w-1/4">Timeframe</th>
-                      <th className="py-2 px-4 text-left font-medium text-gray-600 w-1/5">Related Goals</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {goals.map((goal) => {
-                      // Find related goals based on connections
-                      const relatedGoals = map.connections
-                        .filter(conn => conn.sourceId === goal.id || conn.targetId === goal.id)
-                        .map(conn => {
-                          const relatedId = conn.sourceId === goal.id ? conn.targetId : conn.sourceId;
-                          const related = map.nodes.find(n => n.id === relatedId);
-                          return related?.text || '';
-                        });
-                      
-                      return (
+            {Object.entries(goalsByLevel)
+              .sort(([levelA], [levelB]) => parseInt(levelA) - parseInt(levelB))
+              .map(([level, goals]) => (
+                <div key={level} className="border rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 p-3 border-b font-medium text-gray-700">
+                    {getLevelName(parseInt(level))} ({goals.length})
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="py-2 px-4 text-left font-medium text-gray-600">Goal</th>
+                        <th className="py-2 px-4 text-left font-medium text-gray-600 w-1/4">Timeframe</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {goals.map((goal) => (
                         <tr key={goal.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <div className="flex items-start">
@@ -179,39 +239,27 @@ export function GoalMappingView({ map, onEdit, isLoading }: GoalMappingViewProps
                               <span className="text-gray-400 italic">No timeframe</span>
                             )}
                           </td>
-                          <td className="py-3 px-4">
-                            {relatedGoals.length > 0 ? (
-                              <div className="text-xs space-y-1">
-                                {relatedGoals.map((text, i) => (
-                                  <div key={i} className="bg-gray-100 rounded px-2 py-1 inline-block mr-1 mb-1 truncate max-w-[150px]" title={text}>
-                                    {text.length > 20 ? `${text.substring(0, 20)}...` : text}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 italic">None</span>
-                            )}
-                          </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
           </div>
         ) : (
           <div className="text-center p-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
             <Target className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-500 mb-1">No Goals Yet</h3>
             <p className="text-gray-400 mb-4">Click the Edit button to start adding goals to your map.</p>
-            <Button
-              onClick={onEdit}
-              className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Create Goals
-            </Button>
+            {onEdit && (
+              <Button
+                onClick={onEdit}
+                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Create Goals
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

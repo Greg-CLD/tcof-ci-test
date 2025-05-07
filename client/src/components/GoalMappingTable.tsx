@@ -95,7 +95,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       let goalMapData = { ...existingGoalMap };
       
       // Convert nodes from old structure if needed
-      if (!goalMapData.goals && goalMapData.nodes) {
+      if (!goalMapData.goals && (goalMapData as any).nodes) {
         // Handle legacy format with nodes
         const nodes = (goalMapData as any).nodes || [];
         const convertedGoals = nodes.map((node: any, index: number) => ({
