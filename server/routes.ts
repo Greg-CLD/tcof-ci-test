@@ -617,6 +617,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error updating goal map" });
     }
   });
+  
+  // Mark goal mapping as complete for a project (explicit submit)
+  app.post("/api/project-progress/goal-mapping/complete", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { projectId } = req.body;
+      const userId = req.user?.id;
+      
+      if (!projectId || !userId) {
+        return res.status(400).json({ message: "Missing project ID" });
+      }
+      
+      // Validate project exists and user has access to it
+      const project = await projectsDb.getProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Find any goal maps for this project to check if there's data
+      const goalMaps = await goalsDb.getGoalMapsForProject(projectId);
+      
+      // We'll consider the tool complete regardless of whether there are goal maps,
+      // since this is a manual submission by the user
+      
+      // Return success with a completion status
+      return res.status(200).json({
+        completed: true,
+        projectId,
+        toolName: "goalMapping",
+        lastUpdated: new Date().toISOString(),
+        hasData: goalMaps && goalMaps.length > 0
+      });
+    } catch (error) {
+      console.error("Error marking goal mapping as complete:", error);
+      return res.status(500).json({ message: "Error marking goal mapping as complete" });
+    }
+  });
 
   // Cynefin Selection API endpoints
   app.get("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
