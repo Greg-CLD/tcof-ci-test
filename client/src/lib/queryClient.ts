@@ -125,9 +125,9 @@ export const queryClient = new QueryClient({
   // Enable dev tools in development mode for better debugging
   ...(isDev ? { 
     logger: {
-      log: (...args) => console.log('[React Query]', ...args),
-      warn: (...args) => console.warn('[React Query]', ...args),
-      error: (...args) => console.error('[React Query]', ...args),
+      log: (...args: unknown[]) => console.log('[React Query]', ...args),
+      warn: (...args: unknown[]) => console.warn('[React Query]', ...args),
+      error: (...args: unknown[]) => console.error('[React Query]', ...args),
     }
   } : {})
 });
