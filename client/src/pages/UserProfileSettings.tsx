@@ -65,11 +65,20 @@ const profileFormSchema = z.object({
 
 const passwordFormSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  newPassword: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
+}).refine(data => data.newPassword !== data.currentPassword, {
+  message: "New password must be different from current password",
+  path: ['newPassword'],
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -163,6 +172,20 @@ const UserProfileSettings = () => {
         confirmPassword: data.confirmPassword,
       };
       const res = await apiRequest('POST', `/api/users/${user?.id}/change-password`, passwordData);
+      
+      // Handle API error responses
+      if (!res.ok) {
+        const errorData = await res.json();
+        if (errorData.message === 'Current password is incorrect') {
+          // Handle incorrect current password specifically
+          passwordForm.setError('currentPassword', {
+            type: 'manual',
+            message: 'Current password is incorrect'
+          });
+        }
+        throw new Error(errorData.message || 'Failed to change password');
+      }
+      
       return await res.json();
     },
     onSuccess: () => {
@@ -177,11 +200,14 @@ const UserProfileSettings = () => {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to change password: ${error.message}`,
-        variant: 'destructive',
-      });
+      // Global error toast - only show if not already handled as field error
+      if (error.message !== 'Current password is incorrect') {
+        toast({
+          title: 'Error',
+          description: `Failed to change password: ${error.message}`,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -189,6 +215,10 @@ const UserProfileSettings = () => {
   const deleteAccountMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('DELETE', `/api/users/${user?.id}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to delete account');
+      }
       return await res.json();
     },
     onSuccess: () => {
@@ -196,9 +226,15 @@ const UserProfileSettings = () => {
         title: 'Account deleted',
         description: 'Your account has been deleted. You will be redirected to the login page.',
       });
-      // Redirect to login page after a short delay
+      
+      // Clear any auth-related data from localStorage
+      localStorage.removeItem('selectedProjectId');
+      queryClient.clear(); // Clear all React Query cache
+      
+      // Log out and redirect to home/login page
       setTimeout(() => {
-        window.location.href = '/auth';
+        // Redirect to a public page that doesn't require auth
+        window.location.href = '/';  
       }, 2000);
     },
     onError: (error: Error) => {
