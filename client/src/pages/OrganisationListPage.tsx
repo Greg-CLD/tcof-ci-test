@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -144,14 +144,16 @@ export default function OrganisationListPage() {
     setDeleteDialogOpen(true);
   };
 
-  // Handle API error
-  if (error) {
-    toast({
-      title: "Error",
-      description: "Failed to fetch organisations. Please try again.",
-      variant: "destructive"
-    });
-  }
+  // Handle API error with useEffect to avoid infinite re-renders
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch organisations. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }, [error, toast]);
 
   return (
     <div className="container mx-auto py-8 px-4">

@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import UserProfileSettings from '../client/src/pages/UserProfileSettings';
 import { passwordChangeSchema, userUpdateSchema } from '../shared/schema';
+import React from 'react';
 
 // Mock dependencies
 vi.mock('@tanstack/react-query', () => ({

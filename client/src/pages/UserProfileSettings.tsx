@@ -214,33 +214,75 @@ const UserProfileSettings = () => {
   // Change password mutation
   const changePasswordMutation = useMutation({
     mutationFn: async (data: PasswordFormValues) => {
-      const passwordData: PasswordChange = {
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
-        confirmPassword: data.confirmPassword,
-      };
-      const res = await apiRequest('POST', `/api/users/${user?.id}/change-password`, passwordData);
-      
-      // Handle API error responses
-      if (!res.ok) {
-        const errorData = await res.json();
-        if (errorData.message === 'Current password is incorrect') {
-          // Handle incorrect current password specifically
-          passwordForm.setError('currentPassword', {
+      // Client-side validation 
+      try {
+        // Double-check the passwords match
+        if (data.newPassword !== data.confirmPassword) {
+          passwordForm.setError('confirmPassword', {
             type: 'manual',
-            message: 'Current password is incorrect'
+            message: "Passwords don't match"
           });
+          throw new Error("Passwords don't match");
         }
-        throw new Error(errorData.message || 'Failed to change password');
+        
+        // Double-check new password isn't the same as current
+        if (data.newPassword === data.currentPassword) {
+          passwordForm.setError('newPassword', {
+            type: 'manual',
+            message: "New password must be different from current password"
+          });
+          throw new Error("New password must be different from current password");
+        }
+        
+        const passwordData: PasswordChange = {
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+          confirmPassword: data.confirmPassword,
+        };
+        
+        // Make the API request
+        const res = await apiRequest('POST', `/api/users/${user?.id}/change-password`, passwordData);
+        
+        // Handle API error responses
+        if (!res.ok) {
+          const errorData = await res.json();
+          
+          // Handle specific error cases
+          if (errorData.message === 'Current password is incorrect') {
+            // Handle incorrect current password specifically
+            passwordForm.setError('currentPassword', {
+              type: 'manual',
+              message: 'Current password is incorrect'
+            });
+          } else if (errorData.errors && Array.isArray(errorData.errors)) {
+            // Handle validation errors from the server
+            errorData.errors.forEach((err: any) => {
+              const field = err.path[0] as keyof PasswordFormValues;
+              passwordForm.setError(field, {
+                type: 'manual',
+                message: err.message
+              });
+            });
+          }
+          
+          throw new Error(errorData.message || 'Failed to change password');
+        }
+        
+        return await res.json();
+      } catch (error: any) {
+        console.error('Password change error:', error);
+        throw error;
       }
-      
-      return await res.json();
     },
     onSuccess: () => {
       toast({
         title: 'Password changed',
         description: 'Your password has been changed successfully.',
+        variant: 'default',
+        duration: 5000,
       });
+      
+      // Reset the form
       passwordForm.reset({
         currentPassword: '',
         newPassword: '',
@@ -248,8 +290,14 @@ const UserProfileSettings = () => {
       });
     },
     onError: (error: Error) => {
-      // Global error toast - only show if not already handled as field error
-      if (error.message !== 'Current password is incorrect') {
+      // Only show global error toast for errors not already handled as field errors
+      const specificErrors = [
+        'Current password is incorrect',
+        "Passwords don't match",
+        "New password must be different from current password"
+      ];
+      
+      if (!specificErrors.includes(error.message)) {
         toast({
           title: 'Error',
           description: `Failed to change password: ${error.message}`,
@@ -262,26 +310,39 @@ const UserProfileSettings = () => {
   // Delete account mutation
   const deleteAccountMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('DELETE', `/api/users/${user?.id}`);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to delete account');
+      try {
+        // First try to delete the account
+        const res = await apiRequest('DELETE', `/api/users/${user?.id}`);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'Failed to delete account');
+        }
+        
+        // Then explicitly log out for clean session termination
+        await apiRequest('POST', '/api/logout');
+        
+        return await res.json();
+      } catch (error) {
+        console.error('Error during account deletion:', error);
+        throw error;
       }
-      return await res.json();
     },
     onSuccess: () => {
       toast({
         title: 'Account deleted',
         description: 'Your account has been deleted. You will be redirected to the login page.',
+        duration: 3000,
       });
       
-      // Clear any auth-related data from localStorage
-      localStorage.removeItem('selectedProjectId');
-      queryClient.clear(); // Clear all React Query cache
+      // Clean up all user data from localStorage
+      localStorage.clear(); // Remove ALL localStorage items
       
-      // Log out and redirect to home/login page
+      // Clear React Query cache to remove any cached user data
+      queryClient.clear();
+      
+      // Let toast display before redirecting
       setTimeout(() => {
-        // Redirect to a public page that doesn't require auth
+        // Redirect to home/login page
         window.location.href = '/';  
       }, 2000);
     },
@@ -504,9 +565,15 @@ const UserProfileSettings = () => {
                       name="currentPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Current Password</FormLabel>
+                          <FormLabel htmlFor="currentPassword">Current Password</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input 
+                              id="currentPassword"
+                              type="password" 
+                              {...field} 
+                              data-testid="current-password-input"
+                              autoComplete="current-password"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -526,12 +593,15 @@ const UserProfileSettings = () => {
                         
                         return (
                           <FormItem>
-                            <FormLabel>New Password</FormLabel>
+                            <FormLabel htmlFor="newPassword">New Password</FormLabel>
                             <FormControl>
                               <Input 
+                                id="newPassword"
                                 type="password" 
                                 {...field} 
-                                aria-describedby="password-strength"
+                                data-testid="new-password-input"
+                                aria-describedby="password-strength password-requirements"
+                                autoComplete="new-password"
                               />
                             </FormControl>
                             
@@ -575,10 +645,19 @@ const UserProfileSettings = () => {
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Confirm New Password</FormLabel>
+                          <FormLabel htmlFor="confirmPassword">Confirm New Password</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input 
+                              id="confirmPassword" 
+                              type="password" 
+                              {...field} 
+                              data-testid="confirm-password-input"
+                              autoComplete="new-password"
+                            />
                           </FormControl>
+                          <FormDescription id="password-match-desc">
+                            Must match the password entered above
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -624,21 +703,30 @@ const UserProfileSettings = () => {
               <CardFooter>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive">Delete Account</Button>
+                    <Button variant="destructive" data-testid="trigger-delete-account">Delete Account</Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+                      <AlertDialogDescription className="space-y-2">
+                        <p className="font-medium text-destructive">
+                          This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+                        </p>
+                        <ul className="list-disc pl-5 text-sm space-y-1">
+                          <li>All your projects will be deleted</li>
+                          <li>Your organization memberships will be removed</li>
+                          <li>All personal data will be erased</li>
+                          <li>You will be immediately logged out of the system</li>
+                        </ul>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
+                    <AlertDialogFooter className="gap-2">
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         className="bg-red-600 hover:bg-red-700"
                         onClick={() => deleteAccountMutation.mutate()}
                         disabled={deleteAccountMutation.isPending}
+                        data-testid="confirm-delete-account"
                       >
                         {deleteAccountMutation.isPending ? (
                           <>
@@ -646,7 +734,7 @@ const UserProfileSettings = () => {
                             Deleting...
                           </>
                         ) : (
-                          'Delete Account'
+                          'Yes, Delete My Account'
                         )}
                       </AlertDialogAction>
                     </AlertDialogFooter>
