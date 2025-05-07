@@ -22,7 +22,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 import { Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
@@ -256,8 +255,7 @@ export default function AuthPage() {
           </div>
         </div>
       </main>
-
-      <SiteFooter />
+      
     </div>
   );
 }

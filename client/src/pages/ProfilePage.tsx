@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 import { Loader2, Save, Clock, ArrowLeft, User, FileDown, Edit, Trash2, MapPin } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/pdf-utils";
@@ -98,7 +97,7 @@ export default function ProfilePage() {
             </Link>
           </div>
         </main>
-        <SiteFooter />
+        
       </div>
     );
   }
@@ -440,8 +439,7 @@ export default function ProfilePage() {
           </Card>
         </div>
       </main>
-
-      <SiteFooter />
+      
     </div>
   );
 }

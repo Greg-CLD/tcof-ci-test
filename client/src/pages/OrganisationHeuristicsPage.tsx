@@ -7,7 +7,6 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HeuristicsEditor } from "@/components/HeuristicsEditor";
-import SiteFooter from "@/components/SiteFooter";
 
 interface Heuristic {
   id: string;
@@ -63,8 +62,6 @@ export default function OrganisationHeuristicsPage() {
       return res.json();
     }
   });
-
-
 
   // Handle navigation back to organisation dashboard
   const navigateToOrganisation = () => {
@@ -180,7 +177,7 @@ export default function OrganisationHeuristicsPage() {
           </CardContent>
         </Card>
       </main>
-      <SiteFooter />
+      
     </div>
   );
 }

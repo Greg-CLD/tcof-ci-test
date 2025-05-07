@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -215,7 +214,7 @@ export default function Dashboard() {
             </Link>
           </div>
         </main>
-        <SiteFooter />
+        
       </div>
     );
   }
@@ -905,8 +904,7 @@ export default function Dashboard() {
           </Tabs>
         </div>
       </main>
-
-      <SiteFooter />
+      
     </div>
   );
 }

@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Clipboard, ClipboardCheck, FileDown, PlusCircle, Calendar, 
@@ -386,7 +385,6 @@ export default function Home() {
             </div>
           </section>
           
-          <SiteFooter />
         </>
       ) : (
         // UNAUTHENTICATED VIEW - Marketing Landing Page
@@ -597,7 +595,6 @@ export default function Home() {
             </div>
           </section>
           
-          <SiteFooter />
         </>
       )}
 

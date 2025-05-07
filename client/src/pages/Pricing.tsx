@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 
 export default function Pricing() {
   const [, setLocation] = useLocation();
@@ -161,7 +160,6 @@ export default function Pricing() {
         </div>
       </main>
       
-      <SiteFooter />
     </div>
   );
 }

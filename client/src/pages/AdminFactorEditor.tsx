@@ -25,7 +25,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import SiteHeader from '@/components/SiteHeader';
-import SiteFooter from '@/components/SiteFooter';
 import { Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import TaskList from '@/components/admin/TaskList';
 import { apiRequest } from '@/lib/queryClient';
@@ -107,7 +106,7 @@ export default function AdminFactorEditor() {
             </Link>
           </div>
         </main>
-        <SiteFooter />
+        
       </div>
     );
   }
@@ -454,7 +453,6 @@ export default function AdminFactorEditor() {
         )}
       </main>
       
-      <SiteFooter />
     </div>
   );
 }

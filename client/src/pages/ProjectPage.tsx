@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SiteFooter from "@/components/SiteFooter";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { 
   AlertDialog,
@@ -319,7 +318,7 @@ export default function ProjectPage() {
           </Card>
         )}
       </main>
-      <SiteFooter />
+      
     </div>
   );
 }

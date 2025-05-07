@@ -7,7 +7,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import PasswordProtection from "@/components/PasswordProtection";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 import { useToast } from "@/hooks/use-toast";
 import { FileDown } from "lucide-react";
 import { 
@@ -123,7 +122,6 @@ export default function StarterAccess() {
           </Card>
         </main>
         
-        <SiteFooter />
       </div>
     );
   }
@@ -211,7 +209,6 @@ export default function StarterAccess() {
         </div>
       </main>
       
-      <SiteFooter />
     </div>
   );
 }

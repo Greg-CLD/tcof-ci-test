@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
 import { Loader2, MapPin, Calendar, Clock, ArrowLeft, User, FileDown, Edit, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/pdf-utils";
@@ -88,7 +87,7 @@ export default function UserHistory() {
             </Link>
           </div>
         </main>
-        <SiteFooter />
+        
       </div>
     );
   }
@@ -354,8 +353,7 @@ export default function UserHistory() {
           </Card>
         </div>
       </main>
-
-      <SiteFooter />
+      
     </div>
   );
 }

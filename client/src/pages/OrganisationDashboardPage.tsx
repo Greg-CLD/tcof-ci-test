@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import SiteFooter from "@/components/SiteFooter";
 import { Breadcrumb } from "@/components/Breadcrumb";
 
 interface Project {
@@ -533,7 +532,7 @@ export default function OrganisationDashboardPage() {
           </DialogContent>
         </Dialog>
       </main>
-      <SiteFooter />
+      
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import PasswordProtection from "@/components/PasswordProtection";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
+
 
 export default function ProTools() {
   const { isAuthenticated } = useAuthProtection();
@@ -93,8 +93,6 @@ export default function ProTools() {
           </div>
         </div>
       </main>
-      
-      <SiteFooter />
     </div>
   );
 }
