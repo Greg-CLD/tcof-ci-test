@@ -180,71 +180,160 @@ export const storage = {
   async createGoalMap(userId: number, payload: any) {
     console.log(`STORAGE: Creating goal map for user ${userId} at ${new Date().toISOString()}`);
     
-    // Extract data from payload
-    const name = payload.name || "Goal Map";
-    const data = payload.data || {};
-    
-    // Log the structure and content
-    console.log(`STORAGE: Goal map name: ${name}`);
-    console.log(`STORAGE: Data structure:`, typeof data === 'object' ? 
-      `Object with keys: ${Object.keys(data).join(', ')}` : 
-      `Type: ${typeof data}`);
-    
-    if (data && data.goals) {
-      console.log(`STORAGE: Number of goals in data: ${data.goals.length}`);
-      console.log(`STORAGE: Goals:`, JSON.stringify(data.goals.map((g: any) => ({ 
-        id: g.id, 
-        level: g.level, 
-        text: g.text?.substring(0, 20) + (g.text?.length > 20 ? '...' : '') 
-      })), null, 2));
+    try {
+      // Extract data from payload and ensure proper structure
+      const name = payload.name || "Goal Map";
+      
+      // Ensure data is properly structured
+      let data: any = {};
+      
+      // If payload.data is present, use it
+      if (payload.data) {
+        data = payload.data;
+      } 
+      // Otherwise try to extract directly from payload
+      else if (payload.goals) {
+        data = {
+          goals: payload.goals,
+          projectId: payload.projectId,
+          lastUpdated: payload.lastUpdated || Date.now()
+        };
+      }
+      
+      // Ensure the data has a projectId (critical for relations)
+      if (!data.projectId && payload.projectId) {
+        data.projectId = payload.projectId;
+      }
+      
+      // Ensure goals array exists
+      if (!data.goals && payload.goals) {
+        data.goals = payload.goals;
+      } else if (!data.goals) {
+        data.goals = [];
+      }
+      
+      // Add timestamp if missing
+      if (!data.lastUpdated) {
+        data.lastUpdated = Date.now();
+      }
+      
+      // Log the structure and content
+      console.log(`STORAGE: Goal map name: ${name}`);
+      console.log(`STORAGE: Goal map projectId: ${data.projectId}`);
+      console.log(`STORAGE: Data structure:`, typeof data === 'object' ? 
+        `Object with keys: ${Object.keys(data).join(', ')}` : 
+        `Type: ${typeof data}`);
+      
+      if (data && data.goals) {
+        console.log(`STORAGE: Number of goals in data: ${data.goals.length}`);
+        console.log(`STORAGE: Goals:`, JSON.stringify(data.goals.map((g: any) => ({ 
+          id: g.id, 
+          level: g.level, 
+          text: g.text?.substring(0, 20) + (g.text?.length > 20 ? '...' : '') 
+        })), null, 2));
+      }
+      
+      // Create the goal map in the database
+      const [goalMap] = await db.insert(goalMaps)
+        .values({
+          userId,
+          name,
+          data,
+          lastUpdated: new Date()
+        })
+        .returning();
+      
+      console.log(`STORAGE: Goal map created with ID: ${goalMap.id}`);
+      
+      // Return the complete goal map data
+      return {
+        ...goalMap,
+        // Also include a flattened goals array for easier access
+        goals: data.goals || []
+      };
+    } catch (error) {
+      console.error('Error creating goal map:', error);
+      throw new Error(`Failed to create goal map: ${error.message}`);
     }
-    
-    // Create the goal map
-    const [goalMap] = await db.insert(goalMaps)
-      .values({
-        userId,
-        name,
-        data,
-        lastUpdated: new Date()
-      })
-      .returning();
-    
-    console.log(`STORAGE: Goal map created with ID: ${goalMap.id}`);
-    return goalMap;
   },
 
   async updateGoalMap(id: number, data: any, name?: string) {
     console.log(`STORAGE: Updating goal map ${id} at ${new Date().toISOString()}`);
-    console.log(`STORAGE: Goal map data structure:`, typeof data === 'object' ? 
-      `Object with keys: ${Object.keys(data).join(', ')}` : 
-      `Type: ${typeof data}`);
     
-    if (data && data.goals) {
-      console.log(`STORAGE: Number of goals in data: ${data.goals.length}`);
-      console.log(`STORAGE: Goals:`, JSON.stringify(data.goals.map((g: any) => ({ 
-        id: g.id, 
-        level: g.level, 
-        text: g.text?.substring(0, 20) + (g.text?.length > 20 ? '...' : '') 
-      })), null, 2));
+    try {
+      // Ensure data is properly structured
+      if (!data) {
+        console.error('STORAGE: Cannot update goal map with undefined data');
+        throw new Error('Goal map data is required for update');
+      }
+      
+      console.log(`STORAGE: Goal map data structure:`, typeof data === 'object' ? 
+        `Object with keys: ${Object.keys(data).join(', ')}` : 
+        `Type: ${typeof data}`);
+      
+      // Normalize data structure if needed
+      if (data.goals) {
+        // Direct goals array provided - ensure it's valid
+        console.log(`STORAGE: Number of goals in data: ${data.goals.length}`);
+        console.log(`STORAGE: Goals:`, JSON.stringify(data.goals.map((g: any) => ({ 
+          id: g.id, 
+          level: g.level, 
+          text: g.text?.substring(0, 20) + (g.text?.length > 20 ? '...' : '') 
+        })), null, 2));
+        
+        // If goals is directly on data but not in data.data, we need to restructure
+        if (!data.data || !data.data.goals) {
+          data = {
+            ...data,
+            data: {
+              ...(data.data || {}),
+              goals: data.goals,
+              projectId: data.projectId,
+              lastUpdated: data.lastUpdated || Date.now()
+            }
+          };
+          console.log('STORAGE: Restructured data to ensure goals in data.data');
+        }
+      }
+      
+      // Prepare update values
+      const updateValues: any = {
+        lastUpdated: new Date()
+      };
+      
+      // Update data or merge with existing
+      if (data.data) {
+        updateValues.data = data.data;
+      } else {
+        updateValues.data = data;
+      }
+      
+      // Update name if provided
+      if (name) {
+        updateValues.name = name;
+      } else if (data.name) {
+        updateValues.name = data.name;
+      }
+      
+      // Update the map in the database
+      const [updatedMap] = await db
+        .update(goalMaps)
+        .set(updateValues)
+        .where(eq(goalMaps.id, id))
+        .returning();
+      
+      console.log(`STORAGE: Goal map updated successfully. ID: ${updatedMap.id}`);
+      
+      // Return formatted response with data in expected format
+      return {
+        ...updatedMap,
+        // Always include flattened goals for easier access
+        goals: updatedMap.data?.goals || [],
+      };
+    } catch (error) {
+      console.error('STORAGE: Error updating goal map:', error);
+      throw new Error(`Failed to update goal map: ${error.message}`);
     }
-    
-    const updateValues: any = {
-      data,
-      lastUpdated: new Date()
-    };
-
-    if (name) {
-      updateValues.name = name;
-    }
-
-    const [updatedMap] = await db
-      .update(goalMaps)
-      .set(updateValues)
-      .where(eq(goalMaps.id, id))
-      .returning();
-    
-    console.log(`STORAGE: Goal map updated successfully. ID: ${updatedMap.id}`);
-    return updatedMap;
   },
 
   // Cynefin Selection methods
