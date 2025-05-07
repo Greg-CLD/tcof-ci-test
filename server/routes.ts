@@ -427,7 +427,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             projectId: project.id // Always use the actual project ID
           });
         } else {
-          return res.status(404).json({ message: "No goal maps found for this project" });
+          // Return an empty goal map template instead of 404 to avoid client errors
+          console.log(`No goal maps found for project ${project.id}, returning empty template`);
+          return res.json({
+            id: null,
+            name: "New Goal Map",
+            nodes: [],
+            connections: [],
+            lastUpdated: Date.now(),
+            projectId: project.id // Always use the actual project ID
+          });
         }
       } else {
         // Get all user's goal maps
