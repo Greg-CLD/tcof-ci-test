@@ -92,7 +92,7 @@ export const projects = pgTable("projects", {
   // Profile-related fields
   sector: varchar("sector", { length: 100 }),
   customSector: varchar("custom_sector", { length: 100 }),
-  orgType: varchar("org_type", { length: 100 }),
+  industry: varchar("industry", { length: 100 }),
   organisationSize: varchar("organisation_size", { length: 100 }),
   teamSize: varchar("team_size", { length: 100 }),
   currentStage: varchar("current_stage", { length: 100 }),

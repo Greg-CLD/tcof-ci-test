@@ -44,20 +44,32 @@ const getSectorDisplayText = (value: string): string => {
   return sectorMap[value] || value;
 };
 
-// Helper function to get display text for organization type
-const getOrgTypeDisplayText = (value: string): string => {
-  const orgTypeMap: Record<string, string> = {
-    'large_enterprise': 'Large Enterprise (1000+ employees)',
-    'medium_enterprise': 'Medium Enterprise (250-999 employees)',
-    'small_business': 'Small Business (10-249 employees)',
-    'micro_business': 'Micro Business (1-9 employees)',
-    'government': 'Government',
-    'education': 'Educational Institution',
-    'nonprofit': 'Non-profit',
-    'startup': 'Startup',
-    'other': 'Other'
+// Helper function to get display text for industry (SIC codes)
+const getIndustryDisplayText = (value: string): string => {
+  const industryMap: Record<string, string> = {
+    'A': 'A – Agriculture, Forestry and Fishing',
+    'B': 'B – Mining and Quarrying',
+    'C': 'C – Manufacturing',
+    'D': 'D – Electricity, Gas, Steam and Air Conditioning Supply',
+    'E': 'E – Water Supply; Sewerage; Waste Management and Remediation Activities',
+    'F': 'F – Construction',
+    'G': 'G – Wholesale and Retail Trade; Repair of Motor Vehicles and Motorcycles',
+    'H': 'H – Transport and Storage',
+    'I': 'I – Accommodation and Food Service Activities',
+    'J': 'J – Information and Communication',
+    'K': 'K – Financial and Insurance Activities',
+    'L': 'L – Real Estate Activities',
+    'M': 'M – Professional, Scientific and Technical Activities',
+    'N': 'N – Administrative and Support Service Activities',
+    'O': 'O – Public Administration and Defence; Compulsory Social Security',
+    'P': 'P – Education',
+    'Q': 'Q – Human Health and Social Work Activities',
+    'R': 'R – Arts, Entertainment and Recreation',
+    'S': 'S – Other Service Activities',
+    'T': 'T – Activities of Households as Employers',
+    'U': 'U – Activities of Extraterritorial Organisations and Bodies'
   };
-  return orgTypeMap[value] || value;
+  return industryMap[value] || value;
 };
 
 // Helper function to get display text for organisation size
@@ -78,7 +90,7 @@ const basicProjectFormSchema = z.object({
     .refine(val => true, {
       message: 'Please describe your sector'
     }),
-  orgType: z.string().min(1, 'Please select an organization type'),
+  industry: z.string().min(1, 'Please select an industry'),
   organisationSize: z.string().min(1, 'Please select an organization size'),
   description: z.string().optional(),
 });
@@ -112,7 +124,7 @@ export default function BasicProjectEditPage() {
     defaultValues: {
       sector: '',
       customSector: '',
-      orgType: '',
+      industry: '',
       organisationSize: '',
       description: '',
     },
@@ -130,7 +142,7 @@ export default function BasicProjectEditPage() {
       form.reset({
         sector: project.sector || '',
         customSector: project.customSector || '',
-        orgType: project.orgType || '',
+        industry: project.industry || '',
         organisationSize: project.organisationSize || '',
         description: project.description || '',
       });
@@ -164,7 +176,7 @@ export default function BasicProjectEditPage() {
         name: project.name,
         // Update with form data
         sector: data.sector,
-        orgType: data.orgType,
+        industry: data.industry,
         organisationSize: data.organisationSize,
         description: data.description,
         // Set isProfileComplete to true 
@@ -275,7 +287,7 @@ export default function BasicProjectEditPage() {
   }
 
   // Determine if we have completed project details
-  const hasProjectDetails = project.sector && project.orgType && project.organisationSize;
+  const hasProjectDetails = project.sector && project.industry && project.organisationSize;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -389,29 +401,41 @@ export default function BasicProjectEditPage() {
                     
                     <FormField
                       control={form.control}
-                      name="orgType"
+                      name="industry"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Organization Type*</FormLabel>
+                          <FormLabel>Industry (SIC code)*</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
                             defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select organization type" />
+                                <SelectValue placeholder="Select industry" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="large_enterprise">Large Enterprise (1000+ employees)</SelectItem>
-                              <SelectItem value="medium_enterprise">Medium Enterprise (250-999 employees)</SelectItem>
-                              <SelectItem value="small_business">Small Business (10-249 employees)</SelectItem>
-                              <SelectItem value="micro_business">Micro Business (1-9 employees)</SelectItem>
-                              <SelectItem value="government">Government</SelectItem>
-                              <SelectItem value="education">Educational Institution</SelectItem>
-                              <SelectItem value="nonprofit">Non-profit</SelectItem>
-                              <SelectItem value="startup">Startup</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="A">A – Agriculture, Forestry and Fishing</SelectItem>
+                              <SelectItem value="B">B – Mining and Quarrying</SelectItem>
+                              <SelectItem value="C">C – Manufacturing</SelectItem>
+                              <SelectItem value="D">D – Electricity, Gas, Steam and Air Conditioning Supply</SelectItem>
+                              <SelectItem value="E">E – Water Supply; Sewerage; Waste Management</SelectItem>
+                              <SelectItem value="F">F – Construction</SelectItem>
+                              <SelectItem value="G">G – Wholesale and Retail Trade</SelectItem>
+                              <SelectItem value="H">H – Transport and Storage</SelectItem>
+                              <SelectItem value="I">I – Accommodation and Food Service Activities</SelectItem>
+                              <SelectItem value="J">J – Information and Communication</SelectItem>
+                              <SelectItem value="K">K – Financial and Insurance Activities</SelectItem>
+                              <SelectItem value="L">L – Real Estate Activities</SelectItem>
+                              <SelectItem value="M">M – Professional, Scientific and Technical Activities</SelectItem>
+                              <SelectItem value="N">N – Administrative and Support Service Activities</SelectItem>
+                              <SelectItem value="O">O – Public Administration and Defence</SelectItem>
+                              <SelectItem value="P">P – Education</SelectItem>
+                              <SelectItem value="Q">Q – Human Health and Social Work Activities</SelectItem>
+                              <SelectItem value="R">R – Arts, Entertainment and Recreation</SelectItem>
+                              <SelectItem value="S">S – Other Service Activities</SelectItem>
+                              <SelectItem value="T">T – Activities of Households as Employers</SelectItem>
+                              <SelectItem value="U">U – Activities of Extraterritorial Organisations</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -525,9 +549,9 @@ export default function BasicProjectEditPage() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-lg font-medium text-tcof-dark">Organization Type</h3>
+                      <h3 className="text-lg font-medium text-tcof-dark">Industry (SIC code)</h3>
                       <p className="text-slate-700 rounded-md py-2 bg-slate-50 px-3 border border-slate-100">
-                        {getOrgTypeDisplayText(project.orgType || '')}
+                        {getIndustryDisplayText(project.industry || '')}
                       </p>
                     </div>
                     <div className="space-y-2">
