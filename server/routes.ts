@@ -532,6 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           goalMap.id.toString(),
           project.id.toString(),
           'GOAL_MAP_FOR_PROJECT',
+          project.id.toString(),
           { createdAt: new Date().toISOString() }
         );
         
@@ -639,7 +640,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             goalMapId.toString(),
             projectId.toString(),
             'GOAL_MAP_FOR_PROJECT',
-            projectId.toString()
+            projectId.toString(),
+            { createdAt: new Date().toISOString() }
           );
           
           console.log(`Created relation between goal map ${goalMapId} and project ${projectId}`);

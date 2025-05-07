@@ -205,5 +205,13 @@
       "stage": "initial"
     },
     "timestamp": "2025-05-06T08:00:18.378Z"
+  },
+  {
+    "id": "e5e7d1fd-2407-4084-baf3-61bab7fd41d5",
+    "fromId": "12",
+    "toId": "3",
+    "relType": "GOAL_MAP_FOR_PROJECT",
+    "projectId": "3",
+    "timestamp": "2025-05-07T18:30:40.169Z"
   }
 ]
