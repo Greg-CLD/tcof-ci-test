@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import UserProfileSettings, { checkPasswordStrength } from '../client/src/pages/UserProfileSettings';
+import { checkPasswordStrength } from '../client/src/utils/password-strength';
 import { passwordChangeSchema, userUpdateSchema } from '../shared/schema';
 import React from 'react';
 
@@ -16,13 +16,6 @@ const userEvent = {
     fireEvent.change(element, { target: { value: '' } });
   }
 };
-
-// Mock dependencies
-const apiRequestMock = vi.fn();
-const toastMock = vi.fn();
-const queryClientClearMock = vi.fn();
-const setQueryDataMock = vi.fn();
-const mutateMock = vi.fn();
 
 // Mock localStorage
 const localStorageMock = {
@@ -42,6 +35,14 @@ Object.defineProperty(window, 'location', {
   writable: true
 });
 
+// Mock dependencies
+const mutateMock = vi.fn();
+const setQueryDataMock = vi.fn();
+const queryClientClearMock = vi.fn();
+const apiRequestMock = vi.fn();
+const toastMock = vi.fn();
+
+// Setup mocks
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(() => ({
     data: {
@@ -56,26 +57,26 @@ vi.mock('@tanstack/react-query', () => ({
     isLoading: false
   })),
   useMutation: vi.fn(() => ({
-    mutate: mutateMock,
+    mutate: vi.fn(),
     isPending: false
   })),
   useQueryClient: vi.fn(() => ({
-    setQueryData: setQueryDataMock,
-    clear: queryClientClearMock
+    setQueryData: vi.fn(),
+    clear: vi.fn()
   }))
 }));
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: vi.fn(() => ({
-    toast: toastMock
+    toast: vi.fn()
   }))
 }));
 
 vi.mock('@/lib/queryClient', () => ({
-  apiRequest: apiRequestMock,
+  apiRequest: vi.fn(),
   queryClient: {
-    clear: queryClientClearMock,
-    setQueryData: setQueryDataMock
+    clear: vi.fn(),
+    setQueryData: vi.fn()
   }
 }));
 
@@ -84,6 +85,9 @@ vi.mock('wouter', () => ({
   useLocation: vi.fn(() => ['/profile']),
   Link: ({ children, ...props }) => <a {...props}>{children}</a>
 }));
+
+// Import UserProfileSettings after all mocks are defined
+import UserProfileSettings from '../client/src/pages/UserProfileSettings';
 
 describe('Password Change Schema Validation', () => {
   it('should reject weak passwords', () => {
