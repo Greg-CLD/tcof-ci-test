@@ -67,12 +67,50 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   // State to capture server logs for debugging
   const [logs, setLogs] = useState<any>(null);
   
-  // Fetch existing goal map for this project
+  // Check if we have saved goals in localStorage as a backup
+  const LOCAL_STORAGE_KEY = `goal-map-${projectId}`;
+  
+  const getLocalStorageGoals = () => {
+    try {
+      const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        console.log("📁 FOUND LOCAL STORAGE BACKUP:", parsed.goals?.length || 0, "goals");
+        return parsed;
+      }
+    } catch (error) {
+      console.error("Error reading from localStorage:", error);
+    }
+    return null;
+  };
+  
+  const saveLocalStorageGoals = (data: GoalMapData) => {
+    try {
+      if (data.goals && data.goals.length > 0) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+          goals: data.goals,
+          lastUpdated: Date.now(),
+          projectId,
+          name: data.name || "Project Goals"
+        }));
+        console.log("💾 SAVED LOCAL BACKUP:", data.goals.length, "goals");
+      }
+    } catch (error) {
+      console.error("Error saving to localStorage:", error);
+    }
+  };
+  
+  // Fetch existing goal map for this project with robust recovery options
   const { data: existingGoalMap, isLoading } = useQuery<GoalMapData>({
     queryKey: ['/api/goal-maps', projectId],
     queryFn: async () => {
       console.log("🔄 FETCH GOAL MAP REQUEST:", `/api/goal-maps?projectId=${projectId}`);
-      const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
+      
+      // Add parameter to signal if we have a local draft
+      const localData = getLocalStorageGoals();
+      const hasDraft = localData && localData.goals && localData.goals.length > 0;
+      
+      const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}${hasDraft ? '&hasDraft=true' : ''}`);
       
       // Log the raw response before any processing
       const responseText = await res.clone().text();
@@ -80,7 +118,15 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       
       if (!res.ok) {
         if (res.status === 404) {
-          console.log("❌ No goal map found (404) – using empty template");
+          console.log("❌ No goal map found (404) – checking local backup");
+          
+          // Check if we have a local backup
+          if (localData) {
+            console.log("✅ USING LOCAL BACKUP:", localData.goals.length, "goals");
+            return localData;
+          }
+          
+          // If no backup, return empty template
           return {
             name: "Project Goals",
             goals: [],
@@ -94,15 +140,38 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       const json = await res.json();
       console.log("📋 FETCH GOAL MAP PARSED RESPONSE:", JSON.stringify(json, null, 2));
       
-      // CRITICAL: Only use the empty template fallback for actual 404 responses
-      // If the server returns a 200 with empty goals, preserve our current goals
-      if (json.goals?.length === 0) {
-        console.log("⚠️ Fetched JSON.goals is empty but status was 200 – preserving previous state");
-        if (existingGoalMap && existingGoalMap.goals && existingGoalMap.goals.length > 0) {
-          console.log('🔒 Using existing goals from cache:', JSON.stringify(existingGoalMap.goals, null, 2));
-          json.goals = [...existingGoalMap.goals]; // Create a new array to ensure reactivity
+      // Multi-level recovery strategy:
+      
+      // 1. If server has goals, use them
+      if (json.goals && json.goals.length > 0) {
+        console.log("✅ SERVER HAS GOALS:", json.goals.length, "goals");
+        
+        // Save a local backup just in case
+        saveLocalStorageGoals(json);
+        return json;
+      }
+      
+      // 2. If server has empty goals but we have cached goals, use cached goals
+      if (json.goals?.length === 0 && existingGoalMap?.goals?.length > 0) {
+        console.log("⚠️ SERVER RETURNED EMPTY GOALS - USING CACHED GOALS:", existingGoalMap.goals.length, "goals");
+        json.goals = [...existingGoalMap.goals];
+        
+        // Save this to localStorage as a backup
+        saveLocalStorageGoals({...json, goals: existingGoalMap.goals});
+        return json;
+      }
+      
+      // 3. If server has empty goals and no cache, check local storage
+      if (json.goals?.length === 0 && (!existingGoalMap?.goals || existingGoalMap.goals.length === 0)) {
+        const localData = getLocalStorageGoals();
+        if (localData && localData.goals && localData.goals.length > 0) {
+          console.log("⚠️ USING LOCAL STORAGE BACKUP:", localData.goals.length, "goals");
+          json.goals = [...localData.goals];
+          return json;
         }
       }
+      
+      // 4. No goals found anywhere, return empty
       return json;
     },
     enabled: !!projectId

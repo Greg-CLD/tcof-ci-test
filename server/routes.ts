@@ -463,6 +463,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Return an empty goal map template instead of 404 to avoid client errors
           console.log(`No goal maps found for project ${project.id}, returning empty template`);
           
+          // Get any saved draft from client-side storage if it exists (check query param)
+          const hasDraft = req.query.hasDraft === 'true';
+          
           const emptyTemplate = {
             id: null,
             name: "New Goal Map",
