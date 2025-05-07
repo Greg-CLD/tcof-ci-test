@@ -468,6 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: "New Goal Map",
             nodes: [],
             connections: [],
+            goals: [], // Add empty goals array for compatibility
             lastUpdated: Date.now(),
             projectId: project.id // Always use the actual project ID
           };
