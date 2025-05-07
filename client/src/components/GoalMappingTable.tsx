@@ -68,10 +68,11 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   const { data: existingGoalMap, isLoading } = useQuery<GoalMapData>({
     queryKey: ['/api/goal-maps', projectId],
     queryFn: async () => {
+      console.log("FETCH GOAL MAP REQUEST:", `/api/goal-maps?projectId=${projectId}`);
       const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
       if (!res.ok) {
         if (res.status === 404) {
-          console.log('No goal map found (404), returning empty template');
+          console.log("No goal map found (404) – using empty template");
           return {
             name: "Project Goals",
             goals: [],
@@ -81,18 +82,20 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         }
         throw new Error("Failed to fetch goal map");
       }
-      const data = await res.json();
+      const json = await res.json();
+      console.log("FETCH GOAL MAP RESPONSE:", json);
+      
       // Preserve previously loaded goals if the new payload has none
-      if (Array.isArray(data.goals) && data.goals.length === 0
-          && existingGoalMap && existingGoalMap.goals.length > 0) {
-        console.log('Empty response—preserving existing goals from cache');
-        data.goals = existingGoalMap.goals;
+      if (json.goals?.length === 0) {
+        console.log("Fetched JSON.goals is empty – preserving previous state");
+        if (existingGoalMap && existingGoalMap.goals && existingGoalMap.goals.length > 0) {
+          console.log('Using existing goals from cache:', existingGoalMap.goals.length);
+          json.goals = existingGoalMap.goals;
+        }
       }
-      console.log('Refetched goals:', data);
-      return data;
+      return json;
     },
-    enabled: !!projectId,
-    onSuccess: data => console.log('useQuery onSuccess - Refetched goals:', data),
+    enabled: !!projectId
   });
   
   // Load data from server when available
@@ -124,7 +127,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         goalMapData.goals = [];
       } else {
         // Normalize timeframe values for existing goals
-        goalMapData.goals = goalMapData.goals.map(goal => ({
+        goalMapData.goals = goalMapData.goals.map((goal: any) => ({
           ...goal,
           // Ensure timeframe is always a string, even if empty
           timeframe: goal.timeframe !== undefined && goal.timeframe !== null ? goal.timeframe : ""
@@ -247,34 +250,17 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       
       return await response.json();
     },
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       // Log the raw JSON response
       console.log("SUBMIT PLAN RESPONSE RAW:", data);
       
-      // Your existing toast or UI updates…
       toast({
         title: "Plan submitted successfully",
         description: "Your Goal Mapping has been marked as complete.",
       });
       
-      // Then your existing invalidateQueries / refreshProgress calls…
+      // Ensure projectId is a string for consistent cache invalidation
       const projectIdStr = String(projectId);
-      if (refreshProgress) {
-        console.log("SUBMIT PLAN - Refreshing project progress after Goal Mapping completion");
-        refreshProgress();
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["project-progress", projectIdStr] });
-      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectIdStr] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectIdStr] });
-    }
-      
-      toast({
-        title: "Plan submitted successfully",
-        description: "Your Goal Mapping has been marked as complete.",
-      });
       
       // Refresh progress to update UI
       if (refreshProgress) {
