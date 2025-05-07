@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useProgress } from "@/contexts/ProgressContext";
 import { 
   ArrowLeft, 
   Loader2, 
@@ -14,7 +15,10 @@ import {
   PlusCircle, 
   MapPin, 
   Compass, 
-  Route 
+  Route,
+  CheckCircle,
+  XCircle,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -37,6 +41,7 @@ export default function ProjectPage() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId: string }>();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { progress } = useProgress();
 
   // Fetch project details
   const { 
@@ -232,45 +237,61 @@ export default function ProjectPage() {
                     <CardDescription>Key information about this project</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-semibold mb-2">Project Tools</h3>
+                    <div className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="flex flex-col">
+                            <span className="text-sm text-muted-foreground">Sector</span>
+                            <span className="font-medium">{project?.sector || 'N/A'}</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-muted-foreground">Organisation Type</span>
+                            <span className="font-medium">{project?.orgType || 'N/A'}</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-muted-foreground">Description</span>
+                            <span className="font-medium">{project?.description || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4 border-t">
+                        <h3 className="font-semibold mb-4">Project Tools</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <Button 
                             variant="outline" 
                             className="justify-start"
                             onClick={() => {
-                              console.log(`Navigating to Goal Mapping tool with projectId: ${projectId}`);
                               localStorage.setItem('currentProjectId', projectId);
                               navigate(`/tools/goal-mapping/${projectId}`);
                             }}
                           >
+                            <MapPin className="mr-2 h-4 w-4" />
                             Get Your Bearings
                           </Button>
                           <Button 
                             variant="outline" 
                             className="justify-start"
                             onClick={() => {
-                              console.log(`Navigating to Make a Plan with projectId: ${projectId}`);
                               localStorage.setItem('currentProjectId', projectId);
                               navigate(`/make-a-plan/${projectId}`);
                             }}
                           >
+                            <Clock className="mr-2 h-4 w-4" />
                             Make a Plan
                           </Button>
                           <Button 
                             variant="outline" 
                             className="justify-start"
                             onClick={() => {
-                              console.log(`Navigating to Delegate Tasks with projectId: ${projectId}`);
                               localStorage.setItem('currentProjectId', projectId);
                               navigate(`/projects/${projectId}/outcomes`);
                             }}
                           >
+                            <CheckCircle className="mr-2 h-4 w-4" />
                             Outcomes & Delegation
                           </Button>
                         </div>
-
                       </div>
                     </div>
                   </CardContent>
@@ -285,7 +306,62 @@ export default function ProjectPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
-                      <div>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-4">
+                          <h3 className="font-semibold">Tool Status</h3>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
+                              <div className="flex items-center">
+                                <MapPin className="h-5 w-5 text-slate-700 mr-2" />
+                                <span className="font-medium">Goal Mapping</span>
+                              </div>
+                              <Badge 
+                                className={progress?.tools?.goalMapping?.completed 
+                                  ? "bg-green-100 text-green-800 hover:bg-green-100" 
+                                  : "bg-amber-100 text-amber-800 hover:bg-amber-100"}
+                              >
+                                {progress?.tools?.goalMapping?.completed 
+                                  ? <><CheckCircle className="h-3 w-3 mr-1" /> Completed</>
+                                  : <><Clock className="h-3 w-3 mr-1" /> Not Started</>}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
+                              <div className="flex items-center">
+                                <Compass className="h-5 w-5 text-slate-700 mr-2" />
+                                <span className="font-medium">Cynefin Orientation</span>
+                              </div>
+                              <Badge 
+                                className={progress?.tools?.cynefinOrientation?.completed 
+                                  ? "bg-green-100 text-green-800 hover:bg-green-100" 
+                                  : "bg-amber-100 text-amber-800 hover:bg-amber-100"}
+                              >
+                                {progress?.tools?.cynefinOrientation?.completed 
+                                  ? <><CheckCircle className="h-3 w-3 mr-1" /> Completed</>
+                                  : <><Clock className="h-3 w-3 mr-1" /> Not Started</>}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
+                              <div className="flex items-center">
+                                <Route className="h-5 w-5 text-slate-700 mr-2" />
+                                <span className="font-medium">TCOF Journey</span>
+                              </div>
+                              <Badge 
+                                className={progress?.tools?.tcofJourney?.completed 
+                                  ? "bg-green-100 text-green-800 hover:bg-green-100" 
+                                  : "bg-amber-100 text-amber-800 hover:bg-amber-100"}
+                              >
+                                {progress?.tools?.tcofJourney?.completed 
+                                  ? <><CheckCircle className="h-3 w-3 mr-1" /> Completed</>
+                                  : <><Clock className="h-3 w-3 mr-1" /> Not Started</>}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t pt-6">
                         <h3 className="font-semibold mb-4">Available Tools</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <Button 
