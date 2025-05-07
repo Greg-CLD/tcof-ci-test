@@ -24,6 +24,7 @@ interface ProgressContextType {
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
+  refreshProgress: () => void;
 }
 
 // Create context with default values
@@ -31,7 +32,8 @@ const ProgressContext = createContext<ProgressContextType>({
   progress: null,
   isLoading: false,
   error: null,
-  refetch: () => {}
+  refetch: () => {},
+  refreshProgress: () => {}
 });
 
 // Provider component to wrap the app with progress tracking
@@ -136,8 +138,14 @@ export const ProgressProvider: React.FC<{children: ReactNode}> = ({children}) =>
     refetchOnWindowFocus: true
   });
   
+  // Function to refresh progress data
+  const refreshProgress = () => {
+    console.log("Refreshing project progress data...");
+    refetch();
+  };
+
   return (
-    <ProgressContext.Provider value={{ progress, isLoading, error, refetch }}>
+    <ProgressContext.Provider value={{ progress, isLoading, error, refetch, refreshProgress }}>
       {children}
     </ProgressContext.Provider>
   );

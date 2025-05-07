@@ -229,6 +229,44 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
       });
     },
   });
+  
+  // Submit Plan mutation
+  const submitPlanMutation = useMutation({
+    mutationFn: async () => {
+      if (!projectId) throw new Error("No project selected");
+      
+      const response = await apiRequest("POST", "/api/project-progress/cynefin-orientation/complete", {
+        projectId: projectId
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to mark cynefin orientation as complete");
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Plan submitted successfully",
+        description: "Your Cynefin assessment has been marked as complete.",
+      });
+      
+      // Refresh progress to update UI
+      if (refreshProgress) {
+        refreshProgress();
+      }
+      
+      // Also invalidate project progress queries
+      queryClient.invalidateQueries({ queryKey: ['project-progress', projectId] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error submitting plan",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Load data from server when available
   useEffect(() => {
@@ -257,6 +295,33 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
   // Reset selection
   const handleReset = () => {
     setSelectedQuadrant(null);
+  };
+  
+  // Handle Submit Plan 
+  const handleSubmitPlan = () => {
+    if (!selectedQuadrant) {
+      toast({
+        title: "Selection required",
+        description: "Please select a domain type before submitting your plan.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!projectId) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // First, save the current selection to ensure we have the latest data
+    handleSave();
+    
+    // Then mark the tool as complete
+    submitPlanMutation.mutate();
   };
 
   // Save selection
@@ -459,13 +524,31 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
                 )}
               </Button>
               {selectedQuadrant && (
-                <Button 
-                  onClick={handleExportPDF} 
-                  variant="outline" 
-                  className="flex items-center gap-1 bg-tcof-light text-tcof-dark border-tcof-teal"
-                >
-                  <FileDown className="h-4 w-4" /> Download as PDF
-                </Button>
+                <>
+                  <Button
+                    onClick={handleSubmitPlan}
+                    variant="default"
+                    className="flex items-center gap-1 bg-tcof-teal hover:bg-tcof-dark text-white"
+                    disabled={submitPlanMutation.isPending}
+                  >
+                    {submitPlanMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" /> Submit Plan
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    onClick={handleExportPDF} 
+                    variant="outline" 
+                    className="flex items-center gap-1 bg-tcof-light text-tcof-dark border-tcof-teal"
+                  >
+                    <FileDown className="h-4 w-4" /> Download as PDF
+                  </Button>
+                </>
               )}
             </div>
           </div>
