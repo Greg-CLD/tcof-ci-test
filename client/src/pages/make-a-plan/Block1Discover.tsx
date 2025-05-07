@@ -58,7 +58,7 @@ export default function Block1Discover() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { progress, refreshProgress } = useProgress();
-  const { plan, savePlan } = usePlan();
+  const { plan, savePlan, saveBlock } = usePlan();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -121,21 +121,11 @@ export default function Block1Discover() {
   // Save progress mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Prepare updated plan data
-      const updatedPlan = {
-        ...plan,
-        blocks: {
-          ...plan?.blocks,
-          block1: {
-            ...plan?.blocks?.block1,
-            successCriteria,
-            lastUpdated: new Date().toISOString(),
-          }
-        }
-      };
-      
-      // Save to backend
-      return savePlan(updatedPlan);
+      // Save just the block1 data
+      return saveBlock('block1', {
+        successCriteria,
+        lastUpdated: new Date().toISOString(),
+      });
     },
     onSuccess: () => {
       toast({
@@ -171,22 +161,14 @@ export default function Block1Discover() {
   
   // Handle success factor rating change
   const handleRatingChange = (factorId: string, rating: string) => {
-    const updatedPlan = {
-      ...plan,
-      blocks: {
-        ...plan?.blocks,
-        block1: {
-          ...plan?.blocks?.block1,
-          successFactorRatings: {
-            ...plan?.blocks?.block1?.successFactorRatings,
-            [factorId]: rating
-          },
-          lastUpdated: new Date().toISOString(),
-        }
-      }
-    };
-    
-    updatePlan(updatedPlan);
+    // Save directly to the block
+    saveBlock('block1', {
+      successFactorRatings: {
+        ...plan?.blocks?.block1?.successFactorRatings,
+        [factorId]: rating
+      },
+      lastUpdated: new Date().toISOString(),
+    });
   };
   
   // Handle adding a new personal heuristic
@@ -205,19 +187,12 @@ export default function Block1Discover() {
       { ...newHeuristic, id: Date.now().toString() }
     ];
     
-    const updatedPlan = {
-      ...plan,
-      blocks: {
-        ...plan?.blocks,
-        block1: {
-          ...plan?.blocks?.block1,
-          personalHeuristics: updatedHeuristics,
-          lastUpdated: new Date().toISOString(),
-        }
-      }
-    };
+    // Save directly to block1
+    saveBlock('block1', {
+      personalHeuristics: updatedHeuristics,
+      lastUpdated: new Date().toISOString(),
+    });
     
-    updatePlan(updatedPlan);
     setNewHeuristic({ name: "", description: "" });
     
     toast({
@@ -229,21 +204,13 @@ export default function Block1Discover() {
   // Handle removing a personal heuristic
   const handleRemoveHeuristic = (id: string) => {
     const updatedHeuristics = (plan?.blocks?.block1?.personalHeuristics || [])
-      .filter(h => h.id !== id);
+      .filter((h: { id: string }) => h.id !== id);
     
-    const updatedPlan = {
-      ...plan,
-      blocks: {
-        ...plan?.blocks,
-        block1: {
-          ...plan?.blocks?.block1,
-          personalHeuristics: updatedHeuristics,
-          lastUpdated: new Date().toISOString(),
-        }
-      }
-    };
-    
-    updatePlan(updatedPlan);
+    // Save directly to block1
+    saveBlock('block1', {
+      personalHeuristics: updatedHeuristics,
+      lastUpdated: new Date().toISOString(),
+    });
     
     toast({
       title: "Heuristic removed",
@@ -448,7 +415,7 @@ export default function Block1Discover() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {successFactors?.map((factor) => (
+                            {successFactors?.map((factor: { id: string; name: string; description: string }) => (
                               <TableRow key={factor.id}>
                                 <TableCell className="font-medium">
                                   {factor.name}
@@ -530,7 +497,7 @@ export default function Block1Discover() {
                       <div className="mb-8">
                         <h3 className="text-lg font-medium mb-3">Your Personal Heuristics</h3>
                         <div className="space-y-3">
-                          {plan?.blocks?.block1?.personalHeuristics?.map((heuristic) => (
+                          {plan?.blocks?.block1?.personalHeuristics?.map((heuristic: { id: string; name: string; description: string }) => (
                             <div 
                               key={heuristic.id} 
                               className="bg-white border rounded-md p-4 flex justify-between items-start"
