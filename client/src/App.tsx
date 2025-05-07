@@ -356,6 +356,11 @@ function Router() {
           <Block3Deliver />
         </ProtectedRouteGuard>
       </Route>
+      <Route path="/make-a-plan/:projectId/full">
+        <ProtectedRouteGuard>
+          <MakeAPlanFull />
+        </ProtectedRouteGuard>
+      </Route>
       <Route path="/make-a-plan/:projectId">
         <ProtectedRouteGuard>
           <MakeAPlan />
