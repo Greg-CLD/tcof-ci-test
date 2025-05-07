@@ -93,7 +93,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   
   // Load data from server when available
   useEffect(() => {
-    if (existingGoalMap) {
+    if (existingGoalMap && existingGoalMap.goals) {
       console.log("Loading goal map data from server:", existingGoalMap);
       
       // Initialize the goal map structure if needed
