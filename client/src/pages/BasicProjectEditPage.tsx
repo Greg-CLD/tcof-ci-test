@@ -130,15 +130,22 @@ export default function BasicProjectEditPage() {
     },
   });
   
-  // Update form defaults when project data loads or when we enter edit mode
+  // Update form values when project data is loaded
   useEffect(() => {
     if (project) {
       console.log('Setting form values from loaded project:', project);
+      console.log('Current project data:', JSON.stringify({
+        sector: project.sector,
+        customSector: project.customSector,
+        industry: project.industry,
+        organisationSize: project.organisationSize,
+        description: project.description
+      }, null, 2));
       
       // Check if sector is "other" to show custom sector field
       setShowCustomSector(project.sector === 'other');
       
-      // Reset form with server data - ensure fields are properly populated
+      // Reset form with server data
       form.reset({
         sector: project.sector || '',
         customSector: project.customSector || '',
@@ -146,16 +153,31 @@ export default function BasicProjectEditPage() {
         organisationSize: project.organisationSize || '',
         description: project.description || '',
       }, {
-        // Preserve form values if already set by user
+        // These options ensure form actually updates with the new values
         keepValues: false,
-        // These options ensure the form actually updates with the new values
         keepDirty: false,
         keepTouched: false,
         keepIsSubmitted: false,
         keepErrors: false,
       });
     }
-  }, [project, form, isEditMode]); // Also reset when entering edit mode
+  }, [project, form]);
+  
+  // Additional effect to reset form when entering edit mode
+  useEffect(() => {
+    if (isEditMode && project) {
+      console.log('Entering edit mode, resetting form with current values');
+      
+      // Ensure form is reset with current project values when entering edit mode
+      form.reset({
+        sector: project.sector || '',
+        customSector: project.customSector || '',
+        industry: project.industry || '',
+        organisationSize: project.organisationSize || '',
+        description: project.description || '',
+      });
+    }
+  }, [isEditMode, project, form]);
   
   // Form submission handler
   const onSubmit = async (data: BasicProjectFormValues) => {
@@ -214,7 +236,11 @@ export default function BasicProjectEditPage() {
         
         console.log('Successfully updated project:', updatedProject);
         
-        // Directly invalidate the queries to ensure fresh data is fetched
+        // Log the API response to debug
+        console.log('Server response after update:', updatedProject);
+        
+        // Invalidate query cache to ensure fresh data
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] }); 
         queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId] });
         queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
         

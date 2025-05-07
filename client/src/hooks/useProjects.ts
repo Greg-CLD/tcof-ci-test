@@ -13,6 +13,8 @@ export interface Project {
   teamSize?: string;
   currentStage?: string;
   organisationId?: string;
+  industry?: string;
+  organisationSize?: string;
   isProfileComplete?: boolean;
   createdAt: string;
   updatedAt: string;

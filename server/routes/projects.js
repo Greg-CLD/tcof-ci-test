@@ -176,7 +176,9 @@ router.put("/:id", isAuthenticated, async (req, res) => {
       currentStage, 
       customSector, 
       teamSize,
-      isProfileComplete 
+      isProfileComplete,
+      industry,
+      organisationSize
     } = req.body;
     
     // Build update object with only provided fields
@@ -191,6 +193,8 @@ router.put("/:id", isAuthenticated, async (req, res) => {
     if (customSector !== undefined) updateData.customSector = customSector;
     if (teamSize !== undefined) updateData.teamSize = teamSize;
     if (isProfileComplete !== undefined) updateData.isProfileComplete = isProfileComplete;
+    if (industry !== undefined) updateData.industry = industry;
+    if (organisationSize !== undefined) updateData.organisationSize = organisationSize;
     
     // Add lastUpdated field
     updateData.lastUpdated = new Date();
