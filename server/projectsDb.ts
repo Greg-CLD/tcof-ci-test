@@ -127,6 +127,38 @@ export const projectsDb = {
   },
 
   /**
+   * Get all projects, optionally filtered by ID
+   * @param projectId Optional project ID to filter for
+   * @returns Array of all projects or a single project if ID is provided
+   */
+  getProjects: async (projectId?: string | number): Promise<Project[]> => {
+    try {
+      // Load all projects
+      const projects = loadProjects();
+      
+      console.log(`Getting projects, total count: ${projects.length}`);
+      
+      // If projectId is provided, filter for that specific project
+      if (projectId) {
+        // Convert numeric IDs to strings for comparison if needed
+        const searchId = typeof projectId === 'number' ? String(projectId) : projectId;
+        
+        const filteredProjects = projects.filter(p => 
+          p.id === searchId || p.id === projectId
+        );
+        
+        console.log(`Filtered for project ID ${projectId}, found: ${filteredProjects.length}`);
+        return filteredProjects;
+      }
+      
+      return projects;
+    } catch (error) {
+      console.error('Error getting projects:', error);
+      return [];
+    }
+  },
+
+  /**
    * List all projects for a user, optionally filtered by organization
    * @param userId User ID
    * @param organisationId Optional organization ID filter

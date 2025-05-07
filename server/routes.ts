@@ -475,41 +475,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any).id;
       const { name, data, projectId } = req.body;
       
+      // Log the full request body for debugging
+      console.log("POST /api/goal-maps - Request body:", JSON.stringify({
+        userId,
+        name,
+        projectId,
+        data: typeof data === 'object' ? `[Object with keys: ${Object.keys(data).join(', ')}]` : data
+      }, null, 2));
+      
       // Validate required fields
       if (!projectId) {
+        console.error("Error: Missing required field 'projectId'");
         return res.status(400).json({ message: "Project ID is required" });
       }
       
       if (!name) {
+        console.error("Error: Missing required field 'name'");
         return res.status(400).json({ message: "Name is required" });
       }
       
       if (!data) {
+        console.error("Error: Missing required field 'data'");
         return res.status(400).json({ message: "Data is required" });
       }
       
-      console.log(`Creating goal map with projectId: ${projectId}`);
+      console.log(`Creating goal map with projectId: ${projectId} (type: ${typeof projectId})`);
       
       // Validate project exists and user has access
       let project;
       
-      // Support both numeric and UUID format project IDs
-      if (!isNaN(Number(projectId))) {
-        console.log(`Looking up numeric project ID: ${projectId}`);
-        const allProjects = await projectsDb.getProjects();
-        project = allProjects.find(p => 
-          p.id.toString() === projectId.toString() || 
-          (typeof p.id === 'number' && p.id === Number(projectId))
-        );
-      } else {
-        project = await projectsDb.getProject(projectId);
-      }
+      // Directly use getProject instead of getProjects
+      project = await projectsDb.getProject(projectId);
+      console.log(`Project lookup result:`, project ? `Found project ${project.id}` : 'No project found');
       
       if (!project) {
+        console.error(`Project with ID ${projectId} not found`);
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Save the goal map
+      // Save the goal map with the appropriate data
+      console.log(`Saving goal map for user ${userId} with name "${name}"`);
       const goalMap = await storage.saveGoalMap(userId, name, data);
       
       try {
@@ -518,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           goalMap.id.toString(),
           project.id.toString(),
           'GOAL_MAP_FOR_PROJECT',
-          project.id.toString()
+          { createdAt: new Date().toISOString() }
         );
         
         console.log(`Created relation between goal map ${goalMap.id} and project ${project.id}`);
@@ -527,6 +532,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // We'll continue even if the relation creation fails
       }
       
+      console.log(`Goal map created successfully with ID: ${goalMap.id}`);
+      
       // Include the projectId in the response
       return res.status(201).json({
         ...goalMap,
@@ -534,7 +541,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error saving goal map:", error);
-      res.status(500).json({ message: "Error saving goal map" });
+      res.status(500).json({ 
+        message: "Error saving goal map",
+        error: error.message
+      });
     }
   });
 
@@ -573,17 +583,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate project exists
       let project;
       
-      // Support both numeric and UUID format project IDs
-      if (!isNaN(Number(projectId))) {
-        console.log(`Looking up numeric project ID: ${projectId}`);
-        const allProjects = await projectsDb.getProjects();
-        project = allProjects.find(p => 
-          p.id.toString() === projectId.toString() || 
-          (typeof p.id === 'number' && p.id === Number(projectId))
-        );
-      } else {
-        project = await projectsDb.getProject(projectId);
-      }
+      // Direct lookup using getProject
+      project = await projectsDb.getProject(projectId);
+      console.log(`Project lookup result:`, project ? `Found project ${project.id}` : 'No project found');
       
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
