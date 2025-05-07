@@ -71,11 +71,16 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   const { data: existingGoalMap, isLoading } = useQuery<GoalMapData>({
     queryKey: ['/api/goal-maps', projectId],
     queryFn: async () => {
-      console.log("FETCH GOAL MAP REQUEST:", `/api/goal-maps?projectId=${projectId}`);
+      console.log("🔄 FETCH GOAL MAP REQUEST:", `/api/goal-maps?projectId=${projectId}`);
       const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
+      
+      // Log the raw response before any processing
+      const responseText = await res.clone().text();
+      console.log("📥 FETCH GOAL MAP RAW RESPONSE:", responseText);
+      
       if (!res.ok) {
         if (res.status === 404) {
-          console.log("No goal map found (404) – using empty template");
+          console.log("❌ No goal map found (404) – using empty template");
           return {
             name: "Project Goals",
             goals: [],
@@ -85,15 +90,17 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         }
         throw new Error("Failed to fetch goal map");
       }
-      const json = await res.json();
-      console.log("FETCH GOAL MAP RESPONSE:", json);
       
-      // Preserve previously loaded goals if the new payload has none
+      const json = await res.json();
+      console.log("📋 FETCH GOAL MAP PARSED RESPONSE:", JSON.stringify(json, null, 2));
+      
+      // CRITICAL: Only use the empty template fallback for actual 404 responses
+      // If the server returns a 200 with empty goals, preserve our current goals
       if (json.goals?.length === 0) {
-        console.log("Fetched JSON.goals is empty – preserving previous state");
+        console.log("⚠️ Fetched JSON.goals is empty but status was 200 – preserving previous state");
         if (existingGoalMap && existingGoalMap.goals && existingGoalMap.goals.length > 0) {
-          console.log('Using existing goals from cache:', existingGoalMap.goals.length);
-          json.goals = existingGoalMap.goals;
+          console.log('🔒 Using existing goals from cache:', JSON.stringify(existingGoalMap.goals, null, 2));
+          json.goals = [...existingGoalMap.goals]; // Create a new array to ensure reactivity
         }
       }
       return json;
@@ -103,9 +110,32 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   
   // Load data from server when available
   useEffect(() => {
+    console.log("📢 existingGoalMap CHANGED:", JSON.stringify(existingGoalMap, null, 2));
+    
     if (existingGoalMap) {
-      console.log("Loading goal map data from server:", existingGoalMap);
+      console.log("🔃 BEFORE PROCESSING - Current goalMap state:", JSON.stringify(goalMap, null, 2));
+      console.log("📥 LOADING NEW DATA - existingGoalMap from server:", JSON.stringify(existingGoalMap, null, 2));
       
+      // Check if we're about to replace valid goals with empty ones
+      if (
+        goalMap.goals?.length > 0 && 
+        (!existingGoalMap.goals || existingGoalMap.goals.length === 0)
+      ) {
+        console.log("⚠️ CRITICAL DATA LOSS PREVENTED - Server returned empty goals but we have valid goals in state");
+        console.log("🔒 Will preserve current goals:", JSON.stringify(goalMap.goals, null, 2));
+        
+        // Merge existingGoalMap but keep our current goals
+        const preservedGoalMapData = {
+          ...existingGoalMap,
+          goals: [...goalMap.goals] // Create a deep copy to ensure reactivity
+        };
+        
+        console.log("✅ AFTER PRESERVATION - Final goal map to use:", JSON.stringify(preservedGoalMapData, null, 2));
+        setGoalMap(preservedGoalMapData);
+        return; // Skip the rest of the processing
+      }
+      
+      // Normal processing path (no risk of goal loss detected)
       // Initialize the goal map structure if needed
       let goalMapData = { ...existingGoalMap };
       
@@ -125,9 +155,11 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
           ...goalMapData,
           goals: convertedGoals
         };
+        console.log("🔄 CONVERT - Converted nodes to goals:", JSON.stringify(convertedGoals, null, 2));
       } else if (!goalMapData.goals) {
         // Initialize empty array if neither format exists
         goalMapData.goals = [];
+        console.log("⚠️ NO GOALS FOUND - Initializing empty goals array");
       } else {
         // Normalize timeframe values for existing goals
         goalMapData.goals = goalMapData.goals.map((goal: any) => ({
@@ -135,12 +167,13 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
           // Ensure timeframe is always a string, even if empty
           timeframe: goal.timeframe !== undefined && goal.timeframe !== null ? goal.timeframe : ""
         }));
+        console.log("🔄 NORMALIZE - Normalized timeframes for goals:", JSON.stringify(goalMapData.goals, null, 2));
       }
       
-      console.log("Normalized goal map data:", goalMapData);
+      console.log("✅ AFTER PROCESSING - Final goal map to use:", JSON.stringify(goalMapData, null, 2));
       setGoalMap(goalMapData);
     }
-  }, [existingGoalMap]);
+  }, [existingGoalMap, goalMap]);
   
   // Save goal map mutation
   const saveGoalMapMutation = useMutation({
@@ -327,6 +360,8 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   
   // Handle saving the goal map
   const handleSave = () => {
+    console.log("🔵 SAVE DRAFT - BEFORE:", JSON.stringify(goalMap, null, 2));
+    
     if (!projectId) {
       toast({
         title: "Error",
@@ -352,12 +387,18 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       projectId
     };
     
+    console.log("🔵 SAVE DRAFT - PREPARING MAP:", JSON.stringify(updatedMap, null, 2));
+    console.log("🔵 SAVE DRAFT - GOAL COUNT:", updatedMap.goals.length);
+    
     setIsSaving(true);
     saveGoalMapMutation.mutate(updatedMap);
   };
   
   // Handle submitting the plan
   const handleSubmitPlan = () => {
+    console.log("🔴 SUBMIT PLAN - BEFORE:", JSON.stringify(goalMap, null, 2));
+    console.log("🔴 SUBMIT PLAN - GOAL COUNT:", goalMap.goals.length);
+    
     if (!projectId) {
       toast({
         title: "Error",
@@ -379,13 +420,37 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     // Save the current state first
     handleSave();
     
+    // Create a backup copy of the current goals (in case they get lost during submit)
+    const goalBackup = [...goalMap.goals];
+    console.log("🔴 SUBMIT PLAN - GOALS BACKUP CREATED:", JSON.stringify(goalBackup, null, 2));
+    
     // Then mark the tool as complete
     setIsSubmitting(true);
+    
+    // After submission, verify goals are still there
     submitPlanMutation.mutate();
+    
+    // Safety check to verify goals are preserved (after a delay to let state updates happen)
+    setTimeout(() => {
+      console.log("🔴 SUBMIT PLAN - VERIFICATION CHECK AFTER SUBMIT:");
+      console.log("🔴 CURRENT GOALS COUNT:", goalMap.goals.length);
+      console.log("🔴 BACKUP GOALS COUNT:", goalBackup.length);
+      
+      // If goals were lost in the submission process, restore them
+      if (goalMap.goals.length === 0 && goalBackup.length > 0) {
+        console.log("🔴 SUBMIT PLAN - RESTORING GOALS FROM BACKUP");
+        setGoalMap(prev => ({
+          ...prev,
+          goals: goalBackup
+        }));
+      }
+    }, 1000);
   };
   
   // Add a new goal
   const handleAddGoal = () => {
+    console.log("🟢 ADD GOAL - BEFORE:", JSON.stringify(goalMap, null, 2));
+    
     // Check if we've reached the maximum goals limit (10)
     if (goalMap.goals.length >= 10) {
       toast({
@@ -422,37 +487,55 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     };
     
     // Add the new goal to the list
-    setGoalMap(prev => ({
-      ...prev,
-      goals: [...prev.goals, newGoal]
-    }));
+    setGoalMap(prev => {
+      const updated = {
+        ...prev,
+        goals: [...prev.goals, newGoal]
+      };
+      console.log("🟢 ADD GOAL - AFTER:", JSON.stringify(updated, null, 2));
+      return updated;
+    });
   };
   
   // Update a goal's text
   const handleUpdateGoalText = (id: string, text: string) => {
-    setGoalMap(prev => ({
-      ...prev,
-      goals: prev.goals.map(goal => 
-        goal.id === id ? { ...goal, text } : goal
-      )
-    }));
+    console.log(`🟢 UPDATE GOAL TEXT (${id}) - BEFORE:`, JSON.stringify(goalMap, null, 2));
+    
+    setGoalMap(prev => {
+      const updated = {
+        ...prev,
+        goals: prev.goals.map(goal => 
+          goal.id === id ? { ...goal, text } : goal
+        )
+      };
+      console.log(`🟢 UPDATE GOAL TEXT (${id}) - AFTER:`, JSON.stringify(updated, null, 2));
+      return updated;
+    });
   };
   
   // Update a goal's timeframe
   const handleUpdateGoalTimeframe = (id: string, timeframe: string) => {
+    console.log(`🟢 UPDATE GOAL TIMEFRAME (${id}) - BEFORE:`, JSON.stringify(goalMap, null, 2));
+    
     // Ensure timeframe is always a string, never null/undefined
     const normalizedTimeframe = timeframe !== undefined && timeframe !== null ? timeframe : "";
     
-    setGoalMap(prev => ({
-      ...prev,
-      goals: prev.goals.map(goal => 
-        goal.id === id ? { ...goal, timeframe: normalizedTimeframe } : goal
-      )
-    }));
+    setGoalMap(prev => {
+      const updated = {
+        ...prev,
+        goals: prev.goals.map(goal => 
+          goal.id === id ? { ...goal, timeframe: normalizedTimeframe } : goal
+        )
+      };
+      console.log(`🟢 UPDATE GOAL TIMEFRAME (${id}) - AFTER:`, JSON.stringify(updated, null, 2));
+      return updated;
+    });
   };
   
   // Update a goal's level
   const handleUpdateGoalLevel = (id: string, levelStr: string) => {
+    console.log(`🟢 UPDATE GOAL LEVEL (${id}) - BEFORE:`, JSON.stringify(goalMap, null, 2));
+    
     const level = parseInt(levelStr, 10);
     
     // Count goals at the new level
@@ -468,20 +551,30 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       return;
     }
     
-    setGoalMap(prev => ({
-      ...prev,
-      goals: prev.goals.map(goal => 
-        goal.id === id ? { ...goal, level } : goal
-      )
-    }));
+    setGoalMap(prev => {
+      const updated = {
+        ...prev,
+        goals: prev.goals.map(goal => 
+          goal.id === id ? { ...goal, level } : goal
+        )
+      };
+      console.log(`🟢 UPDATE GOAL LEVEL (${id}) - AFTER:`, JSON.stringify(updated, null, 2));
+      return updated;
+    });
   };
   
   // Delete a goal
   const handleDeleteGoal = (id: string) => {
-    setGoalMap(prev => ({
-      ...prev,
-      goals: prev.goals.filter(goal => goal.id !== id)
-    }));
+    console.log(`🟢 DELETE GOAL (${id}) - BEFORE:`, JSON.stringify(goalMap, null, 2));
+    
+    setGoalMap(prev => {
+      const updated = {
+        ...prev,
+        goals: prev.goals.filter(goal => goal.id !== id)
+      };
+      console.log(`🟢 DELETE GOAL (${id}) - AFTER:`, JSON.stringify(updated, null, 2));
+      return updated;
+    });
   };
   
   // Group goals by level for display
