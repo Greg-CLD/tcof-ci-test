@@ -3,7 +3,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { ArrowLeft, Loader2, Calendar, User, Building, Edit, Trash2, PlusCircle } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Loader2, 
+  Calendar, 
+  User, 
+  Building, 
+  Edit, 
+  Trash2, 
+  PlusCircle, 
+  MapPin, 
+  Compass, 
+  Route 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -210,9 +222,7 @@ export default function ProjectPage() {
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="mb-6">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="plans">Plans</TabsTrigger>
-                <TabsTrigger value="factors">Success Factors</TabsTrigger>
-                <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
+                <TabsTrigger value="getYourBearings">Get Your Bearings</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
@@ -267,38 +277,53 @@ export default function ProjectPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="plans" className="space-y-6">
+              <TabsContent value="getYourBearings" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Project Plans</CardTitle>
-                    <CardDescription>Plans associated with this project</CardDescription>
+                    <CardTitle>Get Your Bearings</CardTitle>
+                    <CardDescription>Tools to help you understand your project context</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground">No plans found for this project.</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="factors" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Success Factors</CardTitle>
-                    <CardDescription>Key factors for project success</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Success factors will appear here once configured.</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="outcomes" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Project Outcomes</CardTitle>
-                    <CardDescription>Tracked outcomes and metrics</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">No outcomes have been defined for this project.</p>
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold mb-4">Available Tools</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Button 
+                            variant="outline" 
+                            className="justify-start"
+                            onClick={() => {
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate(`/tools/goal-mapping/${projectId}`);
+                            }}
+                          >
+                            <MapPin className="mr-2 h-4 w-4" />
+                            Goal Mapping
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="justify-start"
+                            onClick={() => {
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate(`/tools/cynefin-orientation/${projectId}`);
+                            }}
+                          >
+                            <Compass className="mr-2 h-4 w-4" />
+                            Cynefin Orientation
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="justify-start"
+                            onClick={() => {
+                              localStorage.setItem('currentProjectId', projectId);
+                              navigate(`/tools/tcof-journey/${projectId}`);
+                            }}
+                          >
+                            <Route className="mr-2 h-4 w-4" />
+                            TCOF Journey
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
