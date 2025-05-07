@@ -282,11 +282,17 @@ export default function MakeAPlan() {
                   First, Get Your Bearings
                 </Button>
                 
+                {!allThreeCompleted && (
+                  <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4 mb-4">
+                    You haven't finished all tools yet, but you can proceed to Block 1.
+                  </div>
+                )}
+                
                 <Button 
                   className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                  disabled={true}
+                  onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}
                 >
-                  Complete Prerequisites First <ChevronRight className="h-4 w-4 ml-2" />
+                  Go to Block 1 <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </>
