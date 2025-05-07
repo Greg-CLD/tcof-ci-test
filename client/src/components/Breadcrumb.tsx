@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useParams } from "wouter";
 import { Home, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -121,8 +121,17 @@ export function Breadcrumb() {
     crumbs.push({ href: "/settings", label: "Settings" });
   }
   
+  // Get current params via hook
+  const params = useParams();
+  
+  // Debug logging
+  console.log("🔄 Breadcrumb render — location:", location, "params:", params);
+  console.log("📋 Computed crumbs:", crumbs);
+  console.log("🔍 Org/Project IDs:", { orgId, projectId });
+  console.log("📊 Data from API:", { org, proj });
+
   return (
-    <nav className="flex items-center text-sm text-gray-500 mb-4 overflow-x-auto px-4" aria-label="Breadcrumb">
+    <nav aria-label="Breadcrumb" style={{ background: '#f3f4f6', padding: '8px', margin: '4px 0', border: '1px dashed #ccc' }}>
       {crumbs.map((crumb, idx) => (
         <span key={`${crumb.href}-${idx}-${location}`} className="flex items-center">
           <Link
