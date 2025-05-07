@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useProjectContext } from "@/contexts/ProjectContext";
+import { useProgress } from "@/contexts/ProgressContext";
 import {
   STORAGE_KEYS,
   CynefinQuadrant,
@@ -17,7 +18,7 @@ import {
   saveToLocalStorage
 } from "@/lib/storage";
 import { elementToPDF } from "@/lib/pdf-utils";
-import { FileDown, Save, Loader2 } from "lucide-react";
+import { FileDown, Save, Loader2, CheckCircle } from "lucide-react";
 
 // API response type for Cynefin selections
 interface CynefinSelectionResponse {
@@ -148,6 +149,7 @@ export default function CynefinOrientationTool({ projectId: propProjectId }: Cyn
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const { refreshProgress } = useProgress();
   
   // Fetch Cynefin selection data from server for the current project
   const {

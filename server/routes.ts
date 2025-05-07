@@ -670,6 +670,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error marking goal mapping as complete" });
     }
   });
+  
+  // Mark Cynefin Orientation as complete for a project (explicit submit)
+  app.post("/api/project-progress/cynefin-orientation/complete", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { projectId } = req.body;
+      const userId = (req.user as any).id;
+      
+      if (!projectId || !userId) {
+        return res.status(400).json({ message: "Missing project ID" });
+      }
+      
+      // Validate project exists and user has access to it
+      const project = await projectsDb.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Find any Cynefin selections for this project to check if there's data
+      const allSelections = await storage.getCynefinSelections(userId);
+      
+      // Filter for this project - using both embedded projectId and relations
+      const projectSelections = allSelections.filter(selection => {
+        // Check embedded projectId in data
+        if (selection.data && selection.data.projectId) {
+          const selectionProjectId = selection.data.projectId.toString();
+          const compareId = project.id.toString();
+          
+          if (selectionProjectId === compareId) {
+            return true;
+          }
+        }
+        
+        // Check for relations
+        const relations = loadRelations().filter(rel => 
+          rel.fromId === selection.id.toString() && 
+          (rel.toId === project.id.toString() || rel.toId === projectId) && 
+          rel.relType === 'CYNEFIN_SELECTION_FOR_PROJECT'
+        );
+        
+        return relations.length > 0;
+      });
+      
+      // We'll consider the tool complete regardless of whether there are selections,
+      // since this is a manual submission by the user
+      
+      // Return success with a completion status
+      return res.status(200).json({
+        completed: true,
+        projectId,
+        toolName: "cynefinOrientation",
+        lastUpdated: new Date().toISOString(),
+        hasData: projectSelections && projectSelections.length > 0
+      });
+    } catch (error) {
+      console.error("Error marking Cynefin Orientation as complete:", error);
+      return res.status(500).json({ message: "Error marking Cynefin Orientation as complete" });
+    }
+  });
+  
+  // Mark TCOF Journey as complete for a project (explicit submit)
+  app.post("/api/project-progress/tcof-journey/complete", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { projectId } = req.body;
+      const userId = (req.user as any).id;
+      
+      if (!projectId || !userId) {
+        return res.status(400).json({ message: "Missing project ID" });
+      }
+      
+      // Validate project exists and user has access to it
+      const project = await projectsDb.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Find any TCOF journeys for this project to check if there's data
+      const allJourneys = await storage.getTCOFJourneys(userId);
+      
+      // Filter journeys for this project - checking relations and embedded projectId
+      const projectJourneys = allJourneys.filter(journey => {
+        // Check project ID in the journey's embedded data
+        if (journey.data && journey.data.projectId) {
+          const journeyProjectId = journey.data.projectId.toString();
+          const compareId = project.id.toString();
+          
+          if (journeyProjectId === compareId) {
+            return true;
+          }
+        }
+        
+        // Check for relationship between journey and project
+        const relations = loadRelations().filter(rel => 
+          rel.fromId === journey.id.toString() && 
+          (rel.toId === project.id.toString() || rel.toId === projectId) && 
+          rel.relType === 'TCOF_JOURNEY_FOR_PROJECT'
+        );
+        
+        return relations.length > 0;
+      });
+      
+      // We'll consider the tool complete regardless of whether there are journeys,
+      // since this is a manual submission by the user
+      
+      // Return success with a completion status
+      return res.status(200).json({
+        completed: true,
+        projectId,
+        toolName: "tcofJourney",
+        lastUpdated: new Date().toISOString(),
+        hasData: projectJourneys && projectJourneys.length > 0
+      });
+    } catch (error) {
+      console.error("Error marking TCOF Journey as complete:", error);
+      return res.status(500).json({ message: "Error marking TCOF Journey as complete" });
+    }
+  });
 
   // Cynefin Selection API endpoints
   app.get("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
