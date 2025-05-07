@@ -46,17 +46,59 @@ export const ProgressProvider: React.FC<{children: ReactNode}> = ({children}) =>
       if (!projectId) return null;
       
       try {
+        // Initialize completion flags
+        let goalMappingCompleted = false;
+        let cynefinCompleted = false;
+        let tcofJourneyCompleted = false;
+        
         // Try to fetch goal mapping data
-        const goalMappingRes = await apiRequest("GET", `/api/goal-maps/${projectId}`);
-        const goalMappingCompleted = goalMappingRes.ok;
+        try {
+          const goalMappingRes = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
+          if (goalMappingRes.ok) {
+            const goalMapData = await goalMappingRes.json();
+            // Check if there are actual nodes in the goal map
+            goalMappingCompleted = goalMapData && 
+                                   goalMapData.nodes && 
+                                   Array.isArray(goalMapData.nodes) && 
+                                   goalMapData.nodes.length > 0;
+            console.log(`Goal mapping data:`, goalMapData);
+          }
+        } catch (err) {
+          console.error("Error fetching goal mapping data:", err);
+        }
         
         // Try to fetch cynefin orientation data
-        const cynefinRes = await apiRequest("GET", `/api/cynefin-selections/${projectId}`);
-        const cynefinCompleted = cynefinRes.ok;
+        try {
+          const cynefinRes = await apiRequest("GET", `/api/cynefin-selections?projectId=${projectId}`);
+          if (cynefinRes.ok) {
+            const cynefinData = await cynefinRes.json();
+            // Check if there are actual selections in the cynefin data
+            cynefinCompleted = cynefinData && 
+                              cynefinData.data && 
+                              cynefinData.data.selections && 
+                              Array.isArray(cynefinData.data.selections) && 
+                              cynefinData.data.selections.length > 0;
+            console.log(`Cynefin data:`, cynefinData);
+          }
+        } catch (err) {
+          console.error("Error fetching cynefin data:", err);
+        }
         
         // Try to fetch TCOF journey data
-        const tcofJourneyRes = await apiRequest("GET", `/api/tcof-journeys/${projectId}`);
-        const tcofJourneyCompleted = tcofJourneyRes.ok;
+        try {
+          const tcofJourneyRes = await apiRequest("GET", `/api/tcof-journeys?projectId=${projectId}`);
+          if (tcofJourneyRes.ok) {
+            const journeyData = await tcofJourneyRes.json();
+            // Check if there are actual decisions in the journey data
+            tcofJourneyCompleted = journeyData && 
+                                  journeyData.data && 
+                                  journeyData.data.decisions && 
+                                  Object.keys(journeyData.data.decisions).length > 0;
+            console.log(`TCOF Journey data:`, journeyData);
+          }
+        } catch (err) {
+          console.error("Error fetching TCOF journey data:", err);
+        }
         
         // Log the progress checks
         console.log("Project progress checks:", {
@@ -69,9 +111,18 @@ export const ProgressProvider: React.FC<{children: ReactNode}> = ({children}) =>
         return {
           projectId,
           tools: {
-            goalMapping: goalMappingCompleted ? { completed: true } : undefined,
-            cynefinOrientation: cynefinCompleted ? { completed: true } : undefined,
-            tcofJourney: tcofJourneyCompleted ? { completed: true } : undefined
+            goalMapping: goalMappingCompleted ? { 
+              completed: true,
+              lastUpdated: new Date().toISOString() 
+            } : undefined,
+            cynefinOrientation: cynefinCompleted ? { 
+              completed: true, 
+              lastUpdated: new Date().toISOString() 
+            } : undefined,
+            tcofJourney: tcofJourneyCompleted ? { 
+              completed: true, 
+              lastUpdated: new Date().toISOString() 
+            } : undefined
           }
         };
       } catch (err) {
