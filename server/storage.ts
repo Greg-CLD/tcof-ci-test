@@ -176,6 +176,42 @@ export const storage = {
     console.log(`STORAGE: Goal map saved with ID: ${goalMap.id}`);
     return goalMap;
   },
+  
+  async createGoalMap(userId: number, payload: any) {
+    console.log(`STORAGE: Creating goal map for user ${userId} at ${new Date().toISOString()}`);
+    
+    // Extract data from payload
+    const name = payload.name || "Goal Map";
+    const data = payload.data || {};
+    
+    // Log the structure and content
+    console.log(`STORAGE: Goal map name: ${name}`);
+    console.log(`STORAGE: Data structure:`, typeof data === 'object' ? 
+      `Object with keys: ${Object.keys(data).join(', ')}` : 
+      `Type: ${typeof data}`);
+    
+    if (data && data.goals) {
+      console.log(`STORAGE: Number of goals in data: ${data.goals.length}`);
+      console.log(`STORAGE: Goals:`, JSON.stringify(data.goals.map((g: any) => ({ 
+        id: g.id, 
+        level: g.level, 
+        text: g.text?.substring(0, 20) + (g.text?.length > 20 ? '...' : '') 
+      })), null, 2));
+    }
+    
+    // Create the goal map
+    const [goalMap] = await db.insert(goalMaps)
+      .values({
+        userId,
+        name,
+        data,
+        lastUpdated: new Date()
+      })
+      .returning();
+    
+    console.log(`STORAGE: Goal map created with ID: ${goalMap.id}`);
+    return goalMap;
+  },
 
   async updateGoalMap(id: number, data: any, name?: string) {
     console.log(`STORAGE: Updating goal map ${id} at ${new Date().toISOString()}`);
