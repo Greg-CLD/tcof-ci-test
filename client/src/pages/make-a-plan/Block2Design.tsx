@@ -78,6 +78,7 @@ export default function Block2Design() {
   
   // One-time check to redirect if prerequisites are not met
   useEffect(() => {
+    console.log("Routing OK: Block2Design mounted");
     if (projectId && !block1Completed) {
       console.log("Block 1 not completed, redirecting to Block 1");
       navigate(`/make-a-plan/${projectId}/block-1`);

@@ -70,6 +70,7 @@ export default function Block3Deliver() {
   
   // One-time check to redirect if prerequisites are not met
   useEffect(() => {
+    console.log("Routing OK: Block3Deliver mounted");
     if (projectId && !block2Completed) {
       console.log("Block 2 not completed, redirecting to Block 2");
       navigate(`/make-a-plan/${projectId}/block-2`);
