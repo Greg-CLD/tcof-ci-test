@@ -247,12 +247,29 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       
       return await response.json();
     },
-    onSuccess: (data) => {
-      // Log the response data
-      console.log("SUBMIT PLAN - Successfully marked Goal Mapping as complete. Raw Response:", JSON.stringify(data, null, 2));
+    onSuccess: async (data) => {
+      // Log the raw JSON response
+      console.log("SUBMIT PLAN RESPONSE RAW:", data);
       
-      // Ensure projectId is a string for consistent cache invalidation
+      // Your existing toast or UI updates…
+      toast({
+        title: "Plan submitted successfully",
+        description: "Your Goal Mapping has been marked as complete.",
+      });
+      
+      // Then your existing invalidateQueries / refreshProgress calls…
       const projectIdStr = String(projectId);
+      if (refreshProgress) {
+        console.log("SUBMIT PLAN - Refreshing project progress after Goal Mapping completion");
+        refreshProgress();
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["project-progress", projectIdStr] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectIdStr] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectIdStr] });
+    }
       
       toast({
         title: "Plan submitted successfully",

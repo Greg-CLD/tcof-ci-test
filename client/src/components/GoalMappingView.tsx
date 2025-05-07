@@ -36,10 +36,14 @@ export function GoalMappingView({ projectId, onEdit }: GoalMappingViewProps) {
   const { data: goalMap, isLoading } = useQuery<GoalMapData>({
     queryKey: ['/api/goal-maps', projectId],
     queryFn: async () => {
+      console.log("FETCH GOAL MAP REQUEST:", `/api/goal-maps?projectId=${projectId}`);
       const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
+      const json = await res.json();
+      console.log("FETCH GOAL MAP RESPONSE:", json);
+
       if (!res.ok) {
         if (res.status === 404) {
-          console.log('Fallback to empty goals template due to 404 response for project:', projectId);
+          console.log("No goal map found (404) – using empty template");
           return {
             name: "Project Goals",
             goals: [],
@@ -49,9 +53,10 @@ export function GoalMappingView({ projectId, onEdit }: GoalMappingViewProps) {
         }
         throw new Error("Failed to fetch goal map");
       }
-      const jsonResponse = await res.json();
-      console.log(`GET request for /api/goal-maps?projectId=${projectId}, Response:`, JSON.stringify(jsonResponse, null, 2));
-      return jsonResponse;
+      if (json.goals?.length === 0) {
+        console.log("Fetched JSON.goals is empty – preserving previous state if any");
+      }
+      return json;
     },
     enabled: !!projectId,
   });
