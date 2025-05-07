@@ -427,8 +427,32 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     // Then mark the tool as complete
     setIsSubmitting(true);
     
-    // After submission, verify goals are still there
-    submitPlanMutation.mutate();
+    // Call the complete API endpoint with the current goals to ensure they're preserved
+    submitPlanMutation.mutate({ 
+      projectId, 
+      currentGoals: goalMap.goals // Send the current goals with the completion request
+    }, {
+      onSuccess: (data) => {
+        console.log("🟢 SUBMIT PLAN - SUCCESS RESPONSE:", data);
+        // If the server sent back goals, update our state to match
+        if (data.goals && Array.isArray(data.goals) && data.goals.length > 0) {
+          console.log(`🟢 SUBMIT PLAN - Server returned ${data.goals.length} goals`);
+          setGoalMap(prev => ({
+            ...prev,
+            goals: data.goals // Use the goals returned from the server
+          }));
+        }
+      },
+      onError: (error) => {
+        console.error("🔴 SUBMIT PLAN - ERROR:", error);
+        // Restore goals from backup if there was an error
+        console.log("🔴 SUBMIT PLAN - RESTORING GOALS FROM BACKUP AFTER ERROR");
+        setGoalMap(prev => ({
+          ...prev,
+          goals: goalBackup
+        }));
+      }
+    });
     
     // Safety check to verify goals are preserved (after a delay to let state updates happen)
     setTimeout(() => {
@@ -444,7 +468,7 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
           goals: goalBackup
         }));
       }
-    }, 1000);
+    }, 2000); // Extended timeout to ensure async operations complete
   };
   
   // Add a new goal

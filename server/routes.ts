@@ -786,7 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark goal mapping as complete for a project (explicit submit)
   app.post("/api/project-progress/goal-mapping/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const { projectId } = req.body;
+      const { projectId, currentGoals } = req.body; // Extract current goals from request
       const userId = (req.user as any).id;
       
       if (!projectId || !userId) {
@@ -794,6 +794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`Marking goal mapping as complete for project ${projectId} and user ${userId}`);
+      console.log(`Client sent ${currentGoals?.length || 0} goals in the request payload`);
       
       // Validate project exists and user has access to it
       const project = await projectsDb.getProject(projectId);
@@ -830,8 +831,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let goalsData = [];
       
-      // Extract the goals data from the most recent goal map if available
-      if (sortedMaps.length > 0) {
+      // First prioritize the goals sent directly in the request payload
+      if (currentGoals && Array.isArray(currentGoals) && currentGoals.length > 0) {
+        console.log(`Using ${currentGoals.length} goals from the request payload`);
+        goalsData = currentGoals;
+      }
+      // If no goals in request, extract from the most recent goal map if available
+      else if (sortedMaps.length > 0) {
         const latestMap = sortedMaps[0];
         
         // Check if the map has goals data
@@ -853,13 +859,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Found ${goalsData.length} goals in the latest goal map for project ${projectId}`);
       }
       
+      // Ensure we preserve goals by creating or updating the goal map
+      if (goalsData.length > 0) {
+        console.log(`Ensuring goals persistence: Saving ${goalsData.length} goals to goal map`);
+        
+        // Create a payload for saving or updating
+        const goalMapPayload = {
+          projectId,
+          name: "Goal Map",
+          data: {
+            projectId,
+            goals: goalsData,
+            timestamp: new Date().toISOString(),
+            version: "1.0",
+            lastUpdated: Date.now()
+          }
+        };
+        
+        // Check if we need to update or create
+        if (sortedMaps.length > 0) {
+          // Update existing
+          const latestMapId = sortedMaps[0].id;
+          console.log(`Updating existing goal map ${latestMapId} with ${goalsData.length} goals`);
+          await storage.updateGoalMap(latestMapId, goalMapPayload);
+        } else {
+          // Create new
+          console.log(`Creating new goal map with ${goalsData.length} goals`);
+          const newGoalMap = await storage.createGoalMap(userId, goalMapPayload);
+          console.log(`Created new goal map with ID ${newGoalMap.id}`);
+          
+          // Create relation to project
+          const relation = {
+            fromId: newGoalMap.id.toString(),
+            toId: projectId,
+            relType: 'GOAL_MAP_FOR_PROJECT',
+            createdAt: new Date().toISOString()
+          };
+          
+          saveRelation(relation);
+          console.log(`Created relation from goal map ${newGoalMap.id} to project ${projectId}`);
+        }
+      }
+      
       // Store completion status in a dedicated data structure for tool progress
       try {
         console.log("Storing Goal Mapping completion in progress data");
         await storage.storeToolProgress(userId, projectId, "goalMapping", {
           completed: true,
           lastUpdated: new Date().toISOString(),
-          hasData: goalMaps && goalMaps.length > 0,
+          hasData: goalsData.length > 0,
           goals: goalsData, // Store the actual goals data in the progress
           numberOfGoals: goalsData.length
         });
@@ -875,14 +923,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'project', projectId, ':', JSON.stringify(goalMapsAfter, null, 2)
       );
       
-      // Return success with a completion status
+      // Return the goals data back to client to ensure state is preserved
       return res.status(200).json({
         completed: true,
         projectId,
         toolName: "goalMapping",
         lastUpdated: new Date().toISOString(),
-        hasData: goalMaps && goalMaps.length > 0,
-        numberOfGoals: goalsData.length
+        hasData: goalsData.length > 0,
+        numberOfGoals: goalsData.length,
+        goals: goalsData, // Return goals back to client for verification/preservation
+        logs: {
+          operation: "submit-plan-complete",
+          timestamp: new Date().toISOString(),
+          goalCount: goalsData.length,
+          goalsPreserved: true
+        }
       });
     } catch (error) {
       console.error("Error marking goal mapping as complete:", error);
