@@ -340,6 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Try to get the project by UUID or numeric ID
         let project;
+        let originalProjectId = projectId; // Store the original ID as sent by client
         
         try {
           // First try direct lookup using the projectId parameter
@@ -380,23 +381,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get all user's goal maps
         const goalMaps = await storage.getGoalMaps(userId);
         
-        // Filter maps for this project - checking both in relations and embedded projectId
+        // Filter maps for this project - checking multiple possible ID formats
         const projectGoalMaps = goalMaps.filter(map => {
-          // Check project ID in the map's embedded data
-          if (map.data && map.data.projectId) {
-            const mapProjectId = map.data.projectId.toString();
-            const compareId = project.id.toString();
-            
-            if (mapProjectId === compareId) {
-              console.log(`Found map with matching embedded projectId: ${mapProjectId}`);
-              return true;
-            }
+          if (!map.data) return false;
+          
+          // 1. Check for UUID match with project.id
+          if (map.data.projectId && map.data.projectId.toString() === project.id.toString()) {
+            console.log(`Found map with matching project UUID: ${map.data.projectId}`);
+            return true;
           }
           
-          // Check for relationship between map and project
+          // 2. Check for positional ID match with original client-sent ID
+          if (map.data.projectId && map.data.projectId.toString() === originalProjectId.toString()) {
+            console.log(`Found map with matching positional ID: ${map.data.projectId}`);
+            return true;
+          }
+          
+          // 3. Check for original ID in the data structure
+          if (map.data.originalProjectId && map.data.originalProjectId.toString() === originalProjectId.toString()) {
+            console.log(`Found map with matching originalProjectId: ${map.data.originalProjectId}`);
+            return true;
+          }
+          
+          // 4. Check for relationship between map and project
           const relations = loadRelations().filter(rel => 
             rel.fromId === map.id.toString() && 
-            rel.toId === project.id.toString() && 
+            (rel.toId === project.id.toString() || rel.toId === originalProjectId.toString()) && 
             rel.relType === 'GOAL_MAP_FOR_PROJECT'
           );
           
@@ -568,13 +578,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if we need to convert goals to nodes/connections format for compatibility
       let processedData = { ...data };
       
+      // Store both the actual project ID (UUID) and the original client-sent ID
+      // This is crucial for handling both formats in retrieval
+      processedData.projectId = project.id;
+      processedData.originalProjectId = projectId;
+      
       // Log the structure of the data
       console.log("Data structure before processing:", JSON.stringify({
         dataType: typeof data,
         hasGoals: !!data.goals,
         goalCount: data.goals ? data.goals.length : 0,
         hasNodes: !!data.nodes,
-        nodeCount: data.nodes ? data.nodes.length : 0
+        nodeCount: data.nodes ? data.nodes.length : 0,
+        projectId: processedData.projectId,
+        originalProjectId: processedData.originalProjectId
       }, null, 2));
       
       // If we have goals but no nodes, convert goals to nodes
@@ -692,13 +709,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if we need to convert goals to nodes/connections format for compatibility
       let processedData = { ...data };
       
+      // Store both the actual project ID (UUID) and the original client-sent ID
+      // This is crucial for handling both formats in retrieval
+      processedData.projectId = project.id;
+      processedData.originalProjectId = projectId;
+      
       // Log the structure of the data
       console.log("Data structure before processing:", JSON.stringify({
         dataType: typeof data,
         hasGoals: !!data.goals,
         goalCount: data.goals ? data.goals.length : 0,
         hasNodes: !!data.nodes,
-        nodeCount: data.nodes ? data.nodes.length : 0
+        nodeCount: data.nodes ? data.nodes.length : 0,
+        projectId: processedData.projectId,
+        originalProjectId: processedData.originalProjectId
       }, null, 2));
       
       // If we have goals but no nodes, convert goals to nodes
