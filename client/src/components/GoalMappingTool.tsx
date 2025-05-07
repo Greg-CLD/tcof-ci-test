@@ -173,13 +173,26 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       }
       return await response.json();
     },
-    onSuccess: () => {
-      // Use projectUuid for query invalidation
-      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectUuid] });
+    onSuccess: (savedMap) => {
+      // Use the saved map's project ID for query invalidation to ensure consistency
+      const savedMapProjectId = savedMap.projectId || projectUuid;
+      
+      // Invalidate the specific query
+      queryClient.invalidateQueries({ queryKey: ['/api/goal-maps', savedMapProjectId] });
+      
+      // Also invalidate the general goal maps list
+      queryClient.invalidateQueries({ queryKey: ['/api/goal-maps'] });
+      
       toast({
         title: "Map saved",
         description: "Your success map has been saved to your account.",
       });
+      
+      // Refresh the server goal map data
+      if (projectUuid) {
+        queryClient.refetchQueries({ queryKey: ['/api/goal-maps', projectUuid] });
+      }
+      
       setIsEditing(false); // Switch to view mode after saving
     },
     onError: (error: Error) => {
@@ -203,13 +216,29 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       }
       return await response.json();
     },
-    onSuccess: () => {
-      // Use projectUuid for query invalidation
-      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectUuid] });
+    onSuccess: (updatedMap) => {
+      // Use the updated map's project ID for query invalidation to ensure consistency
+      const updatedMapProjectId = updatedMap.projectId || projectUuid;
+      
+      // Invalidate the specific query
+      queryClient.invalidateQueries({ queryKey: ['/api/goal-maps', updatedMapProjectId] });
+      
+      // Also invalidate the general goal maps list
+      queryClient.invalidateQueries({ queryKey: ['/api/goal-maps'] });
+      
+      // Add debug logs
+      console.log(`Invalidated goal maps for project: ${updatedMapProjectId}`);
+      
+      // Refresh the data immediately to ensure view is updated
+      if (projectUuid) {
+        queryClient.refetchQueries({ queryKey: ['/api/goal-maps', projectUuid] });
+      }
+      
       toast({
         title: "Map updated",
         description: "Your success map has been updated successfully.",
       });
+      
       setIsEditing(false); // Switch to view mode after saving
     },
     onError: (error: Error) => {
@@ -380,6 +409,8 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       
       // Save the updated nodes to the server if we already have a map saved
       if (user && projectUuid && serverGoalMap?.id) {
+        console.log(`Adding goal for project UUID: ${projectUuid}`);
+        
         // Create updated map data with the new goal
         const mapData: GoalMapData = {
           name: mapName,
