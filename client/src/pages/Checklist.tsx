@@ -20,7 +20,11 @@ import { ensurePlanForProject } from '@/lib/planHelpers';
 import { useProjects } from '@/hooks/useProjects';
 import { useQueryClient } from '@tanstack/react-query';
 
-export default function Checklist() {
+interface ChecklistProps {
+  projectId?: string;
+}
+
+export default function Checklist({ projectId }: ChecklistProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { selectedPlanId, setSelectedPlanId } = usePlan();
@@ -83,12 +87,13 @@ export default function Checklist() {
     async function ensurePlan() {
       try {
         setLoading(true);
-        const selectedProject = getSelectedProject();
+        // Use the projectId prop if provided, otherwise get the selected project
+        const projectToUse = projectId ? { id: projectId } : getSelectedProject();
         
-        if (selectedProject) {
+        if (projectToUse) {
           // If we have a project but no plan, ensure one exists
-          console.log('Ensuring plan exists for project:', selectedProject.id);
-          const planId = await ensurePlanForProject(selectedProject.id);
+          console.log('Ensuring plan exists for project:', projectToUse.id);
+          const planId = await ensurePlanForProject(projectToUse.id);
           console.log('ensurePlanForProject →', planId);
           
           if (!selectedPlanId || selectedPlanId !== planId) {
@@ -122,7 +127,7 @@ export default function Checklist() {
     }
     
     ensurePlan();
-  }, [selectedPlanId, setSelectedPlanId, getSelectedProject, toast]);
+  }, [selectedPlanId, setSelectedPlanId, getSelectedProject, toast, projectId]);
   
   // Handle plan update
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
@@ -279,7 +284,9 @@ export default function Checklist() {
     <div className="bg-gray-50 min-h-screen py-6 px-4 md:px-6">
       <div className="max-w-6xl mx-auto">
         {/* Outcome Progress Tracking */}
-        {getSelectedProject()?.id ? (
+        {projectId ? (
+          <ChecklistHeader projectId={projectId} />
+        ) : getSelectedProject()?.id ? (
           <ChecklistHeader projectId={getSelectedProject()?.id as string} />
         ) : null}
         
