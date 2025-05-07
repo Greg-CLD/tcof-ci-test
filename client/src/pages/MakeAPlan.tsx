@@ -120,18 +120,57 @@ export default function MakeAPlan() {
             {project ? `${project.name}: Make a Plan` : "Make a Plan"}
           </h1>
           
-          {/* Missing prerequisites list */}
-          {!allThreeCompleted && progress && (
-            <div className="mt-4 mb-4 text-sm text-red-600 font-medium">
-              Please complete: {
-                [
-                  !progress.tools?.goalMapping?.completed && "Goal Mapping",
-                  !progress.tools?.cynefinOrientation?.completed && "Cynefin Orientation",
-                  !progress.tools?.tcofJourney?.completed && "TCOF Journey",
-                ].filter(Boolean).join(", ")
-              }
-            </div>
-          )}
+          {/* Prerequisites status indicators */}
+          <div className="mt-4 mb-4">
+            {!allThreeCompleted && progress ? (
+              <div className="flex flex-col items-center">
+                <div className="text-red-600 font-medium mb-2">
+                  Please complete these prerequisites:
+                </div>
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {[
+                    { 
+                      name: "Goal Mapping", 
+                      completed: progress.tools?.goalMapping?.completed,
+                      path: `/goal-mapping/${projectId}`
+                    },
+                    { 
+                      name: "Cynefin Orientation", 
+                      completed: progress.tools?.cynefinOrientation?.completed,
+                      path: `/cynefin-orientation/${projectId}`
+                    },
+                    { 
+                      name: "TCOF Journey", 
+                      completed: progress.tools?.tcofJourney?.completed,
+                      path: `/tcof-journey/${projectId}`
+                    }
+                  ].map((tool) => (
+                    <div 
+                      key={tool.name}
+                      className={`px-3 py-1 rounded-full flex items-center gap-2 
+                        ${tool.completed 
+                          ? 'bg-green-100 text-green-800 border border-green-300' 
+                          : 'bg-red-100 text-red-800 border border-red-300 cursor-pointer hover:bg-red-200'
+                        }`}
+                      onClick={() => !tool.completed && navigate(tool.path)}
+                    >
+                      {tool.completed ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                      {tool.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : allThreeCompleted && (
+              <div className="flex items-center justify-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full mx-auto w-fit">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">All prerequisites completed!</span>
+              </div>
+            )}
+          </div>
           
           <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-6">
             Create a structured action plan for your transformation or delivery initiative using the
@@ -154,21 +193,45 @@ export default function MakeAPlan() {
         <div className="max-w-4xl mx-auto bg-gradient-to-r from-tcof-light to-white p-8 rounded-xl shadow-md">
           {allThreeCompleted ? (
             <div className="text-center">
-              <h2 className="text-2xl font-semibold mb-4 text-tcof-dark">
-                Congratulations on getting your bearings!
-              </h2>
-              <div className="flex items-center justify-center mb-8">
-                <CheckCircle2 className="text-green-500 h-12 w-12 mr-3" />
-                <p className="text-gray-700 text-lg">
-                  You've completed all the prerequisite tools. Now you're ready to create your plan!
-                </p>
+              <div className="inline-block bg-green-50 border-2 border-green-200 rounded-lg px-6 py-4 mb-6">
+                <h2 className="text-2xl font-semibold mb-4 text-green-800">
+                  Congratulations on getting your bearings!
+                </h2>
+                <div className="flex items-center justify-center mb-4">
+                  <CheckCircle2 className="text-green-500 h-12 w-12 mr-3" />
+                  <p className="text-green-700 text-lg text-left">
+                    You've completed all the prerequisite tools successfully!<br/>
+                    <span className="text-base">Now you're ready to create your comprehensive action plan.</span>
+                  </p>
+                </div>
               </div>
-              <Button 
-                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white px-6 py-3 text-lg"
-                onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}
-              >
-                Go to Block 1 <ChevronRight className="h-5 w-5 ml-2" />
-              </Button>
+              
+              <h3 className="text-xl font-medium mb-5 text-tcof-dark">Ready to start planning?</h3>
+              
+              <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-8">
+                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-tcof-teal max-w-xs w-full">
+                  <h4 className="font-bold text-lg mb-2">Block 1: Discover</h4>
+                  <p className="text-gray-600 text-sm mb-4">Define success criteria and outline key success factors for your project</p>
+                  <Button 
+                    className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full"
+                    onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}
+                  >
+                    Start with Block 1 <ChevronRight className="h-5 w-5 ml-2" />
+                  </Button>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-gray-300 max-w-xs w-full opacity-75">
+                  <h4 className="font-bold text-lg mb-2">Full Journey</h4>
+                  <p className="text-gray-600 text-sm mb-4">See an overview of all three planning blocks and your progress so far</p>
+                  <Button 
+                    variant="outline"
+                    className="border-tcof-teal text-tcof-teal hover:bg-tcof-light w-full"
+                    onClick={() => navigate(`/make-a-plan/${projectId}/full`)}
+                  >
+                    View All Blocks <ChevronRight className="h-5 w-5 ml-2" />
+                  </Button>
+                </div>
+              </div>
             </div>
           ) : (
             <>
@@ -268,20 +331,65 @@ export default function MakeAPlan() {
         </div>
       </section>
       
-      {/* Coming Soon Banner - shown only when prerequisites are not complete */}
-      {!allThreeCompleted && (
+      {/* Call to action for incomplete prerequisites */}
+      {!allThreeCompleted && progress && (
         <section className="py-16 bg-gradient-to-r from-tcof-dark to-tcof-teal">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl text-white font-bold mb-4">Coming Soon</h2>
+            <h2 className="text-3xl text-white font-bold mb-4">Complete Your Journey</h2>
             <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8">
-              Our planning tool is currently in development. Sign up to be notified when it launches.
+              You're almost there! Finish the prerequisite tools to unlock the full planning experience.
             </p>
-            <Button 
-              className="bg-white text-tcof-dark hover:bg-gray-100"
-              onClick={() => navigate("/auth")}
-            >
-              Create Account for Updates
-            </Button>
+            
+            <div className="flex flex-wrap gap-4 justify-center max-w-xl mx-auto mb-8">
+              {[
+                { 
+                  name: "Goal Mapping", 
+                  completed: progress.tools?.goalMapping?.completed,
+                  path: `/goal-mapping/${projectId}`,
+                  icon: Award,
+                  description: "Set clear outcomes and objectives"
+                },
+                { 
+                  name: "Cynefin Orientation", 
+                  completed: progress.tools?.cynefinOrientation?.completed,
+                  path: `/cynefin-orientation/${projectId}`,
+                  icon: Clock,
+                  description: "Understand your project complexity"
+                },
+                { 
+                  name: "TCOF Journey", 
+                  completed: progress.tools?.tcofJourney?.completed,
+                  path: `/tcof-journey/${projectId}`,
+                  icon: ClipboardList,
+                  description: "Map your delivery approach"
+                }
+              ]
+              .filter(tool => !tool.completed)
+              .map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Button 
+                    key={tool.name}
+                    className="bg-white text-tcof-dark hover:bg-gray-100 flex items-center gap-2 p-6"
+                    onClick={() => navigate(tool.path)}
+                  >
+                    <div className="flex-shrink-0">
+                      <Icon className="h-6 w-6 text-tcof-teal" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold">{tool.name}</div>
+                      <div className="text-sm text-gray-600">{tool.description}</div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 ml-auto" />
+                  </Button>
+                );
+              })}
+            </div>
+            
+            <p className="text-white/90 text-sm max-w-xl mx-auto">
+              Completing these tools will help ensure your plan is built on a solid foundation
+              of research-backed principles.
+            </p>
           </div>
         </section>
       )}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { Home, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -7,138 +7,153 @@ import { apiRequest } from "@/lib/queryClient";
 interface Crumb {
   href: string;
   label: string;
+  isActive?: boolean;
 }
 
-// Component build timestamp for HMR verification
-const BUILD_TIMESTAMP = new Date().toISOString(); 
-console.log(`💡 Breadcrumb module evaluated at ${BUILD_TIMESTAMP} - HMR TEST WORKING!`);
-// Visual indicator to show update is working
-console.log('🔥 HOT MODULE REPLACEMENT IS WORKING! 🔥');
-// @ts-ignore - Testing HMR
-console.log('✅ The reload() modification in main.tsx is successful!');
+// URL segment to display name mapping
+const SEGMENT_LABELS: Record<string, string> = {
+  'organisations': 'Organisations',
+  'projects': 'Projects',
+  'goal-mapping': 'Goal Mapping',
+  'cynefin-orientation': 'Cynefin Orientation',
+  'tcof-journey': 'TCOF Journey',
+  'make-a-plan': 'Make a Plan',
+  'block-1': 'Block 1: Discover',
+  'block-2': 'Block 2: Design',
+  'block-3': 'Block 3: Deliver',
+  'checklist': 'Checklist', 
+  'settings': 'Settings',
+  'profile': 'Profile',
+  'admin': 'Admin'
+};
 
 /**
- * Breadcrumb component that shows the current navigation path
- * Computes breadcrumbs directly during render based on current URL
+ * Breadcrumb component that dynamically shows the current navigation path
+ * Computes breadcrumbs during render based on current URL
  */
 export function Breadcrumb() {
-  // Log on each component render to verify reactivity
-  console.log(`🧭 Breadcrumb rendered at ${new Date().toISOString()} (built: ${BUILD_TIMESTAMP})`);
   const [location] = useLocation();
   
-  // Extract IDs from path
-  const pathParts = location.split('/').filter(Boolean);
+  // Extract path segments for route building
+  const pathSegments = location.split('/').filter(Boolean);
   
-  // Determine orgId and projectId based on URL structure
-  let orgId: string | undefined = undefined;
-  let projectId: string | undefined = undefined;
+  // Extract entity IDs from the URL path
+  const orgId = useMemo(() => {
+    const orgIndex = pathSegments.indexOf('organisations');
+    return orgIndex !== -1 && orgIndex + 1 < pathSegments.length ? pathSegments[orgIndex + 1] : undefined;
+  }, [pathSegments]);
   
-  const orgIndex = pathParts.indexOf('organisations');
-  if (orgIndex !== -1 && orgIndex + 1 < pathParts.length) {
-    orgId = pathParts[orgIndex + 1];
-  }
-  
-  const projIndex = pathParts.indexOf('projects');
-  if (projIndex !== -1 && projIndex + 1 < pathParts.length) {
-    projectId = pathParts[projIndex + 1];
-  }
-  
-  // Check for project in make-a-plan routes
-  const planIndex = pathParts.indexOf('make-a-plan');
-  if (planIndex !== -1 && planIndex + 1 < pathParts.length && !pathParts[planIndex + 1].includes('block') && pathParts[planIndex + 1] !== 'full') {
-    projectId = pathParts[planIndex + 1];
-  }
-  
-  // Fallback to localStorage for orgId if not in URL
-  if (!orgId && projectId) {
-    const storedOrgId = localStorage.getItem('currentOrgId');
-    if (storedOrgId) {
-      orgId = storedOrgId;
+  const projectId = useMemo(() => {
+    // Check for project ID in standard paths
+    const projIndex = pathSegments.indexOf('projects');
+    if (projIndex !== -1 && projIndex + 1 < pathSegments.length) {
+      return pathSegments[projIndex + 1];
     }
-  }
+    
+    // Check for project ID in make-a-plan routes
+    const planIndex = pathSegments.indexOf('make-a-plan');
+    if (planIndex !== -1 && planIndex + 1 < pathSegments.length && 
+        !pathSegments[planIndex + 1].includes('block') && 
+        pathSegments[planIndex + 1] !== 'full' &&
+        pathSegments[planIndex + 1] !== 'checklist') {
+      return pathSegments[planIndex + 1];
+    }
+    
+    return undefined;
+  }, [pathSegments]);
   
-  // Fetch organization data
-  const { data: org, isLoading: orgLoading } = useQuery({
+  // Fetch organization data from API if we have an ID
+  const { data: org } = useQuery({
     queryKey: ["organisation", orgId],
     queryFn: () => apiRequest("GET", `/api/organisations/${orgId}`).then(r => r.json()),
     enabled: !!orgId,
   });
   
-  // Fetch project data
-  const { data: proj, isLoading: projLoading } = useQuery({
+  // Fetch project data from API if we have an ID
+  const { data: proj } = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => apiRequest("GET", `/api/projects/${projectId}`).then(r => r.json()),
     enabled: !!projectId,
   });
-  
-  // Build breadcrumb trail
-  const crumbs: Crumb[] = [
-    { href: "/", label: "Home" },
-  ];
-  
-  // Add Organizations link when relevant
-  if (pathParts.includes('organisations')) {
-    crumbs.push({ href: "/organisations", label: "Organisations" });
+
+  // Generate dynamic breadcrumbs based on current URL
+  const crumbs = useMemo(() => {
+    const result: Crumb[] = [
+      { href: "/", label: "Home" }
+    ];
     
-    if (orgId) {
-      crumbs.push({
-        href: `/organisations/${orgId}`,
-        label: orgLoading ? orgId : (org?.name || orgId)
-      });
-    }
-  }
-  
-  // Add Project link when relevant
-  if (projectId) {
-    const projectUrl = orgId 
-      ? `/organisations/${orgId}/projects/${projectId}` 
-      : `/projects/${projectId}`;
+    let currentPath = "";
+    
+    // Build breadcrumb trail by walking through path segments
+    for (let i = 0; i < pathSegments.length; i++) {
+      const segment = pathSegments[i];
+      currentPath += `/${segment}`;
       
-    crumbs.push({
-      href: projectUrl,
-      label: projLoading ? projectId : (proj?.name || projectId)
-    });
-  }
-  
-  // Add tool-specific breadcrumbs
-  if (location.includes("/goal-mapping")) {
-    crumbs.push({ href: "", label: "Goal Mapping" });
-  } else if (location.includes("/cynefin-orientation")) {
-    crumbs.push({ href: "", label: "Cynefin Orientation" });
-  } else if (location.includes("/tcof-journey")) {
-    crumbs.push({ href: "", label: "TCOF Journey" });
-  } else if (location.includes("/make-a-plan")) {
-    if (!location.includes("/block-")) {
-      crumbs.push({ href: "", label: "Make a Plan" });
-    } else {
-      crumbs.push({ 
-        href: projectId ? `/make-a-plan/${projectId}` : "/make-a-plan", 
-        label: "Make a Plan" 
-      });
+      // Skip IDs for cleaner breadcrumb display
+      if (i > 0 && segment === orgId && pathSegments[i-1] === 'organisations') {
+        // Add organization with its fetched name
+        result.push({
+          href: currentPath,
+          label: org?.name || 'Organization'
+        });
+        continue;
+      }
       
-      // Add block info
-      if (location.includes("/block-1")) {
-        crumbs.push({ href: "", label: "Block 1: Discover" });
-      } else if (location.includes("/block-2")) {
-        crumbs.push({ href: "", label: "Block 2: Design" });
-      } else if (location.includes("/block-3")) {
-        crumbs.push({ href: "", label: "Block 3: Deliver" });
+      if (i > 0 && segment === projectId && 
+          (pathSegments[i-1] === 'projects' || pathSegments[i-1] === 'make-a-plan')) {
+        // Add project with its fetched name
+        result.push({
+          href: currentPath,
+          label: proj?.name || 'Project'
+        });
+        continue;
+      }
+      
+      // Handle special cases for block pages in make-a-plan
+      if (segment.startsWith('block-') && pathSegments.includes('make-a-plan')) {
+        // For block pages, add make-a-plan root first if not already added
+        if (!result.some(crumb => crumb.label === 'Make a Plan')) {
+          const planPath = projectId 
+            ? `/make-a-plan/${projectId}` 
+            : '/make-a-plan';
+          
+          result.push({
+            href: planPath,
+            label: 'Make a Plan'
+          });
+        }
+        
+        // Then add the block crumb
+        result.push({
+          href: currentPath,
+          label: SEGMENT_LABELS[segment] || segment,
+          isActive: i === pathSegments.length - 1
+        });
+        continue;
+      }
+      
+      // For standard URL segments, add the translated label
+      if (SEGMENT_LABELS[segment]) {
+        result.push({
+          href: currentPath,
+          label: SEGMENT_LABELS[segment],
+          isActive: i === pathSegments.length - 1
+        });
       }
     }
-  } else if (location.includes("/profile/edit") || location.includes("/edit-basic")) {
-    crumbs.push({ href: "", label: "Edit Profile" });
-  } else if (location.includes("/settings")) {
-    crumbs.push({ href: "/settings", label: "Settings" });
-  }
+    
+    // Mark the last crumb as active
+    if (result.length > 0) {
+      result[result.length - 1].isActive = true;
+    }
+    
+    return result;
+  }, [pathSegments, orgId, projectId, org, proj]);
   
-  // Get current params via hook
-  const params = useParams();
-  
-  // Debug logging
-  console.log("🔄 Breadcrumb render — location:", location, "params:", params);
-  console.log("📋 Computed crumbs:", crumbs);
+  // Debug logging for development
+  console.log("🧭 Breadcrumb segments:", pathSegments);
   console.log("🔍 Org/Project IDs:", { orgId, projectId });
-  console.log("📊 Data from API:", { org, proj });
+  console.log("📋 Computed crumbs:", crumbs);
 
   return (
     <nav aria-label="Breadcrumb" style={{ 
