@@ -105,6 +105,7 @@ export function ToolProgressTracker({ projectId, organisationId, className = '' 
       </CardHeader>
       <CardContent>
         <div className="mb-4">
+          {/* Progress bar changes color based on completion percentage */}
           <Progress 
             value={overallProgress} 
             className="h-2" 

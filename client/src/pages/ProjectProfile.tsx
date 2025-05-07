@@ -31,6 +31,7 @@ import { Briefcase, ChevronLeft, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2 } from 'lucide-react';
 import { ProjectProfileView } from '@/components/ProjectProfileView';
+import { ToolProgressTracker } from '@/components/ToolProgressTracker';
 
 // Form validation schema
 const projectFormSchema = z.object({
@@ -422,11 +423,21 @@ export default function ProjectProfile({ editMode = false }: ProjectProfileProps
         
         {/* Conditional Rendering: Either show View or Edit Form */}
         {isExistingProject && !isEditing && !shouldForceEditForm ? (
-          <ProjectProfileView 
-            project={project} 
-            onEdit={handleEditClick}
-            isLoading={isSaved || projectLoading}
-          />
+          <div className="space-y-6">
+            {/* Project Profile Information */}
+            <ProjectProfileView 
+              project={project} 
+              onEdit={handleEditClick}
+              isLoading={isSaved || projectLoading}
+            />
+            
+            {/* Tool Progress Tracker (shown only in view mode, not edit mode) */}
+            <ToolProgressTracker 
+              projectId={project?.id}
+              organisationId={project?.organisationId}
+              className="mt-4"
+            />
+          </div>
         ) : (
           <Card className="shadow-md">
             <CardHeader className="bg-tcof-light/50">
