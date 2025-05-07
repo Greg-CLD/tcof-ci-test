@@ -868,6 +868,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue even if there's an error storing the progress
       }
       
+      // Log goal maps to verify they aren't being wiped out
+      const goalMapsAfter = await storage.getGoalMaps(userId);
+      console.log(
+        '🔍 [POST complete] Current goalMaps for user', userId, 
+        'project', projectId, ':', JSON.stringify(goalMapsAfter, null, 2)
+      );
+      
       // Return success with a completion status
       return res.status(200).json({
         completed: true,

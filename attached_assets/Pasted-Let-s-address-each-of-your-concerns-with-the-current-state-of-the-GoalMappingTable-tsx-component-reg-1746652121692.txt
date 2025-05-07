@@ -1,0 +1,20 @@
+Let's address each of your concerns with the current state of the GoalMappingTable.tsx component regarding the persistence regression:
+
+1. Mutation Handlers
+Handles saveGoalMapMutation or handleSave: The submitPlanMutation.onSuccess currently does not explicitly call saveGoalMapMutation or handleSave directly after submission. It primarily focuses on invalidating queries and refreshing progress. If additional data saving is required before marking the tool as complete, handleSave() should be invoked explicitly.
+
+Query Invalidations: The submitPlanMutation.onSuccess correctly calls queryClient.invalidateQueries(['api/goal-maps', projectId]) as well as queryClient.invalidateQueries(['api/goal-maps']). This ensures the cache is invalidated, prompting a fresh refetch.
+
+Calls refreshProgress(): The progress is refreshed by calling refreshProgress(), which is confirmed in the logs with messages such as "SUBMIT PLAN - Refreshing project progress after Goal Mapping completion."
+
+No setGoalMap with Empty Template: The current logic does not utilize setGoalMap with an empty template after submission, which aligns with expectations to avoid overwriting with empty data.
+
+2. Data Loading Logic
+Fallback for Empty Responses: The useQuery fetch for /api/goal-maps?projectId=… uses a fallback to an empty template only when a 404 status is returned. This behavior should be inspected to confirm it doesn’t activate erroneously on 200-empty responses, maintaining the current goal state effectively.
+3. State Initialization
+Avoid Extra useEffect or setGoalMap Calls: Review indicates no additional useEffect or setGoalMap calls have been added post-submission to overwrite the goals array inadvertently. This is crucial for maintaining state consistency post-operation.
+4. Logging Output
+Log Checks:
+The console.log statements in place confirm the logging of the raw GET response and detail the onSuccess flows, ensuring thorough reviewing capability.
+Any fallbacks within the query function’s conditional logic are also logged, allowing for tracking the point at which certain conditions engage.
+Upon confirming the above implementations, ensure that the current functionality aligns with the intended behavior. If the issue persists, discrepancies might lie within how external conditions (server responses, context updates) interact with this code flow.
