@@ -174,7 +174,8 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectId] });
+      // Use projectUuid for query invalidation
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectUuid] });
       toast({
         title: "Map saved",
         description: "Your success map has been saved to your account.",
@@ -203,7 +204,8 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectId] });
+      // Use projectUuid for query invalidation
+      queryClient.invalidateQueries({ queryKey: ["/api/goal-maps", projectUuid] });
       toast({
         title: "Map updated",
         description: "Your success map has been updated successfully.",
@@ -240,7 +242,7 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
     originalDeleteNode(nodeId);
     
     // Then update the server if we have a server goal map
-    if (user && projectId && serverGoalMap?.id) {
+    if (user && projectUuid && serverGoalMap?.id) {
       // Create updated map data without the deleted node
       const updatedNodes = nodes.filter(node => node.id !== nodeId);
       const updatedConnections = connections.filter(
@@ -252,7 +254,7 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
         nodes: updatedNodes,
         connections: updatedConnections,
         lastUpdated: Date.now(),
-        projectId: projectId
+        projectId: projectUuid // Use projectUuid for consistent format
       };
       
       // Update the server-side map
@@ -265,7 +267,7 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       // Also update local storage
       saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, mapData);
     }
-  }, [originalDeleteNode, nodes, connections, user, projectId, serverGoalMap, updateMapMutation, mapName]);
+  }, [originalDeleteNode, nodes, connections, user, projectUuid, serverGoalMap, updateMapMutation, mapName]);
   
   // Switch to edit mode
   const handleEditClick = () => {
@@ -377,14 +379,14 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       });
       
       // Save the updated nodes to the server if we already have a map saved
-      if (user && projectId && serverGoalMap?.id) {
+      if (user && projectUuid && serverGoalMap?.id) {
         // Create updated map data with the new goal
         const mapData: GoalMapData = {
           name: mapName,
           nodes: updatedNodes,
           connections: connections,
           lastUpdated: Date.now(),
-          projectId: projectId
+          projectId: projectUuid // Use projectUuid for consistent format
         };
         
         // Update the server-side map
@@ -429,7 +431,7 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       nodes: nodes,
       connections: connections,
       lastUpdated: Date.now(),
-      projectId: projectId // Include project ID directly
+      projectId: projectUuid // Use projectUuid for consistent format
     };
     
     // First save to localStorage for backup/offline use
@@ -446,7 +448,7 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
     }
     
     // Then save to database if user is logged in
-    if (user && projectId) {
+    if (user && projectUuid) {
       // If we have a server goal map already, update it
       if (serverGoalMap?.id) {
         updateMapMutation.mutate({
@@ -459,7 +461,7 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
         saveMapMutation.mutate({
           name: mapName,
           data: mapData,
-          projectId
+          projectId: projectUuid // Pass the UUID format
         });
       }
     } else {
