@@ -117,10 +117,31 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
   // Get the project ID from props or context
   const projectId = propProjectId || currentProject?.id;
   
+  // Fetch the actual project to ensure we have the correct ID format (UUID)
+  const {
+    data: projectData,
+    isLoading: projectLoading,
+  } = useQuery({
+    queryKey: ['/api/projects', projectId],
+    queryFn: async () => {
+      if (!projectId) throw new Error("No project selected");
+      const res = await apiRequest("GET", `/api/projects/${projectId}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch project data");
+      }
+      return await res.json();
+    },
+    enabled: !!projectId,
+  });
+  
+  // Use the project UUID from the fetched project data
+  const projectUuid = projectData?.id;
+  
   // Log for debugging
   useEffect(() => {
     console.log(`GoalMappingTool: Using projectId: ${projectId} (from props: ${propProjectId}, from context: ${currentProject?.id})`);
-  }, [projectId, propProjectId, currentProject?.id]);
+    console.log(`GoalMappingTool: Fetched UUID: ${projectUuid}`);
+  }, [projectId, propProjectId, currentProject?.id, projectUuid]);
   
   // Fetch goal map data from server for the current project
   const {
@@ -128,10 +149,10 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
     isLoading: goalMapLoading,
     error: goalMapError
   } = useQuery<GoalMapData>({
-    queryKey: ['/api/goal-maps', projectId],
+    queryKey: ['/api/goal-maps', projectUuid],
     queryFn: async () => {
-      if (!projectId) throw new Error("No project selected");
-      const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
+      if (!projectUuid) throw new Error("No project UUID available");
+      const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectUuid}`);
       if (!res.ok) {
         if (res.status === 404) {
           return null; // No goal map found for this project
@@ -140,7 +161,7 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
       }
       return await res.json();
     },
-    enabled: !!projectId,
+    enabled: !!projectUuid,
   });
   
   // Database save mutation
