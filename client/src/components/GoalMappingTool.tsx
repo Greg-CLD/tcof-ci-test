@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -205,13 +205,46 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
     nodes,
     connections,
     addNode,
-    deleteNode,
+    deleteNode: originalDeleteNode,
     clearCanvas,
     loadCanvasData,
   } = useCanvas({
     initialNodes: [], 
     initialConnections: []
   });
+  
+  // Wrapper for deleteNode that also updates the server
+  const deleteNode = useCallback((nodeId: string) => {
+    // First, delete the node locally
+    originalDeleteNode(nodeId);
+    
+    // Then update the server if we have a server goal map
+    if (user && projectId && serverGoalMap?.id) {
+      // Create updated map data without the deleted node
+      const updatedNodes = nodes.filter(node => node.id !== nodeId);
+      const updatedConnections = connections.filter(
+        conn => conn.sourceId !== nodeId && conn.targetId !== nodeId
+      );
+      
+      const mapData: GoalMapData = {
+        name: mapName,
+        nodes: updatedNodes,
+        connections: updatedConnections,
+        lastUpdated: Date.now(),
+        projectId: projectId
+      };
+      
+      // Update the server-side map
+      updateMapMutation.mutate({
+        id: serverGoalMap.id,
+        name: mapName,
+        data: mapData
+      });
+      
+      // Also update local storage
+      saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, mapData);
+    }
+  }, [originalDeleteNode, nodes, connections, user, projectId, serverGoalMap, updateMapMutation, mapName]);
   
   // Switch to edit mode
   const handleEditClick = () => {
@@ -321,6 +354,28 @@ export default function GoalMappingTool({ projectId: propProjectId }: GoalMappin
         nodes: updatedNodes,
         connections: connections
       });
+      
+      // Save the updated nodes to the server if we already have a map saved
+      if (user && projectId && serverGoalMap?.id) {
+        // Create updated map data with the new goal
+        const mapData: GoalMapData = {
+          name: mapName,
+          nodes: updatedNodes,
+          connections: connections,
+          lastUpdated: Date.now(),
+          projectId: projectId
+        };
+        
+        // Update the server-side map
+        updateMapMutation.mutate({
+          id: serverGoalMap.id,
+          name: mapName,
+          data: mapData
+        });
+        
+        // Also update local storage
+        saveToLocalStorage(STORAGE_KEYS.GOAL_MAP, mapData);
+      }
     }
     
     setGoalInput("");
