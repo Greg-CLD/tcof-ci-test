@@ -406,17 +406,8 @@ export default function ProjectPage() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="checklist" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Project Checklist</CardTitle>
-                    <CardDescription>Track and manage tasks for this project</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Pass projectId as a prop to the Checklist component */}
-                    <Checklist />
-                  </CardContent>
-                </Card>
+              <TabsContent value="checklist">
+                <Checklist projectId={projectId} />
               </TabsContent>
             </Tabs>
           </div>
