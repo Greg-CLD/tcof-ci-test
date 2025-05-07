@@ -64,6 +64,9 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // State to capture server logs for debugging
+  const [logs, setLogs] = useState<any>(null);
+  
   // Fetch existing goal map for this project
   const { data: existingGoalMap, isLoading } = useQuery<GoalMapData>({
     queryKey: ['/api/goal-maps', projectId],
@@ -201,6 +204,21 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
       
       console.log("SAVE DRAFT - Goal map saved successfully. Response:", data);
       
+      // Capture server logs for debugging
+      if (data.logs) {
+        console.log("SAVE DRAFT - Server logs:", data.logs);
+        setLogs(data.logs);
+      } else {
+        // If server doesn't return logs, create our own debug info
+        setLogs({
+          operation: "save-draft",
+          timestamp: new Date().toISOString(),
+          response: data,
+          goals: data.goals || (data.data && data.data.goals) || [],
+          goalCount: data.goals?.length || (data.data && data.data.goals?.length) || 0
+        });
+      }
+      
       // Ensure projectId is a string for consistent cache invalidation
       const projectIdStr = String(projectId);
       
@@ -253,6 +271,23 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     onSuccess: (data) => {
       // Log the raw JSON response
       console.log("SUBMIT PLAN RESPONSE RAW:", data);
+      
+      // Capture server logs for debugging
+      if (data.logs) {
+        console.log("SUBMIT PLAN - Server logs:", data.logs);
+        setLogs(data.logs);
+      } else {
+        // If server doesn't return logs, create our own debug info
+        setLogs({
+          operation: "submit-plan",
+          timestamp: new Date().toISOString(),
+          response: data,
+          currentGoals: goalMap.goals,
+          currentGoalCount: goalMap.goals.length,
+          responseGoals: data.goals || (data.data && data.data.goals) || [],
+          responseGoalCount: data.goals?.length || (data.data && data.data.goals?.length) || 0
+        });
+      }
       
       toast({
         title: "Plan submitted successfully",
@@ -590,6 +625,16 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
           <li>Timeframes are optional - add when known</li>
         </ul>
       </div>
+      
+      {/* Debug logs section */}
+      {logs && (
+        <div className="mt-6 border border-amber-300 bg-amber-50 rounded-md p-4">
+          <h3 className="font-medium text-amber-800 mb-2">Debug Logs:</h3>
+          <pre className="text-xs bg-white p-3 rounded border border-amber-200 overflow-x-auto max-h-[400px] overflow-y-auto">
+            {JSON.stringify(logs, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }

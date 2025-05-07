@@ -400,5 +400,16 @@
       "createdAt": "2025-05-07T20:41:05.412Z"
     },
     "timestamp": "2025-05-07T20:54:45.243Z"
+  },
+  {
+    "id": "74ea2d02-891e-4b96-854b-e43858f9b164",
+    "fromId": "30",
+    "toId": "3",
+    "relType": "GOAL_MAP_FOR_PROJECT",
+    "projectId": "3",
+    "meta": {
+      "createdAt": "2025-05-07T21:19:58.192Z"
+    },
+    "timestamp": "2025-05-07T21:20:00.264Z"
   }
 ]
