@@ -356,23 +356,20 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     }
   });
 
-  // Submit plan mutation
+  // Submit plan mutation - ONLY sets {completed: true} flag, doesn't touch goal-map storage
   const submitPlanMutation = useMutation({
-    mutationFn: async (payload: { projectId: string; currentGoals: GoalTableRow[] }) => {
+    mutationFn: async (payload: { projectId: string; currentGoals?: GoalTableRow[] }) => {
       if (!payload.projectId) throw new Error("No project selected");
       
       // Ensure projectId is properly formatted as a string
       const projectIdStr = String(payload.projectId);
       
-      // Add projectId to the payload for consistency
-      const fullPayload = { 
-        projectId: projectIdStr,
-        currentGoals: payload.currentGoals 
-      };
-      console.log("SUBMIT PLAN - Sending payload:", JSON.stringify(fullPayload, null, 2));
+      // Simplified payload - only send the projectId since server will only write {completed: true}
+      const simplePayload = { projectId: projectIdStr };
+      console.log("SUBMIT PLAN - Sending payload:", JSON.stringify(simplePayload, null, 2));
       
-      // Mark the goal mapping as complete with the current goals
-      const response = await apiRequest("POST", "/api/project-progress/goal-mapping/complete", fullPayload);
+      // Mark the goal mapping as complete (this will ONLY set the completed flag)
+      const response = await apiRequest("POST", "/api/project-progress/goal-mapping/complete", simplePayload);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -508,30 +505,24 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
     // Then mark the tool as complete
     setIsSubmitting(true);
     
-    // Call the complete API endpoint with the current goals to ensure they're preserved
+    // Call the complete API endpoint with ONLY the projectId
+    // This will just set {completed: true} on the server without touching goal data
     submitPlanMutation.mutate({ 
-      projectId, 
-      currentGoals: goalMap.goals // Send the current goals with the completion request
+      projectId
+      // No goals are sent - we don't want to modify the goal map storage
     }, {
       onSuccess: (data) => {
         console.log("🟢 SUBMIT PLAN - SUCCESS RESPONSE:", data);
-        // If the server sent back goals, update our state to match
-        if (data.goals && Array.isArray(data.goals) && data.goals.length > 0) {
-          console.log(`🟢 SUBMIT PLAN - Server returned ${data.goals.length} goals`);
-          setGoalMap(prev => ({
-            ...prev,
-            goals: data.goals // Use the goals returned from the server
-          }));
-        }
+        // The server no longer sends back goals, it only sets {completed: true}
+        // So we don't need to update our local state with server data
       },
       onError: (error) => {
         console.error("🔴 SUBMIT PLAN - ERROR:", error);
-        // Restore goals from backup if there was an error
-        console.log("🔴 SUBMIT PLAN - RESTORING GOALS FROM BACKUP AFTER ERROR");
-        setGoalMap(prev => ({
-          ...prev,
-          goals: goalBackup
-        }));
+        toast({
+          title: "Error submitting plan",
+          description: "There was an error marking the goal mapping as complete.",
+          variant: "destructive",
+        });
       }
     });
     
