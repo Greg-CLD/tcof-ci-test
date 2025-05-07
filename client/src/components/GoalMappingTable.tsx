@@ -68,9 +68,11 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
   const { data: existingGoalMap, isLoading } = useQuery<GoalMapData>({
     queryKey: ['/api/goal-maps', projectId],
     queryFn: async () => {
+      console.log('Fetching goal map for projectId:', projectId);
       const res = await apiRequest("GET", `/api/goal-maps?projectId=${projectId}`);
       if (!res.ok) {
         if (res.status === 404) {
+          console.log('No goal map found (404), returning empty template');
           // Return a new empty map if none exists
           return {
             name: "Project Goals",
@@ -81,9 +83,12 @@ export function GoalMappingTable({ projectId }: GoalMappingTableProps) {
         }
         throw new Error("Failed to fetch goal map");
       }
-      return await res.json();
+      const data = await res.json();
+      console.log('Refetched goals:', data);
+      return data;
     },
     enabled: !!projectId,
+    onSuccess: data => console.log('useQuery onSuccess - Refetched goals:', data),
   });
   
   // Load data from server when available

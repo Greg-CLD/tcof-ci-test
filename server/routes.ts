@@ -333,6 +333,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
       
+      console.log('Fetching goal map for projectId:', req.query.projectId);
+      
       if (projectId) {
         console.log(`Fetching goal maps for project ID: ${projectId} (type: ${typeof projectId})`);
         
@@ -418,25 +420,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Format response with normalized data structure
           const latestMap = projectGoalMaps[0];
-          return res.json({
+          const responseData = {
             id: latestMap.id,
             name: latestMap.data?.name || latestMap.name,
             nodes: latestMap.data?.nodes || [],
             connections: latestMap.data?.connections || [],
             lastUpdated: latestMap.data?.lastUpdated || (latestMap.lastModified ? latestMap.lastModified.getTime() : Date.now()),
             projectId: project.id // Always use the actual project ID
-          });
+          };
+          
+          console.log('Fetched goal map data:', JSON.stringify(responseData, null, 2));
+          return res.json(responseData);
         } else {
           // Return an empty goal map template instead of 404 to avoid client errors
           console.log(`No goal maps found for project ${project.id}, returning empty template`);
-          return res.json({
+          
+          const emptyTemplate = {
             id: null,
             name: "New Goal Map",
             nodes: [],
             connections: [],
             lastUpdated: Date.now(),
             projectId: project.id // Always use the actual project ID
-          });
+          };
+          
+          console.log('Sending empty goal map template:', JSON.stringify(emptyTemplate, null, 2));
+          return res.json(emptyTemplate);
         }
       } else {
         // Get all user's goal maps
