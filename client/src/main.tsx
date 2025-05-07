@@ -1,3 +1,21 @@
+// Unregister any service worker and disable HTTP cache in dev
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs =>
+    regs.forEach(reg => reg.unregister())
+  );
+}
+
+// Disable Vite's built-in cache headers during hot-reload
+if (import.meta.env.DEV) {
+  // TypeScript-safe way to override window.location.reload
+  const originalReload = window.location.reload;
+  window.location.reload = () => {
+    // @ts-ignore - Force a hard reload
+    originalReload(true);
+    return true;
+  };
+}
+
 import React from "react";
 import { createRoot } from "react-dom/client";
 import * as ReactDOM from "react-dom";
