@@ -176,6 +176,7 @@ export default function Block1Discover() {
   
   // Load server ratings on mount
   useEffect(() => {
+    console.log('🔍 Block1Discover - useEffect for evaluations triggered, count:', evaluations?.length);
     if (evaluations && evaluations.length > 0) {
       // Create a map of factorId -> resonance from server evaluations
       const serverRatings = evaluations.reduce((acc: Record<string, string>, curr) => {
@@ -186,21 +187,30 @@ export default function Block1Discover() {
         return acc;
       }, {});
       
-      // Merge with existing plan ratings if needed
-      if (plan?.blocks?.block1?.successFactorRatings) {
-        saveBlock('block1', {
-          successFactorRatings: {
-            ...plan.blocks.block1.successFactorRatings,
-            ...serverRatings
-          },
-          lastUpdated: new Date().toISOString(),
-        });
-      }
+      console.log('🔄 Block1Discover - Server ratings loaded:', serverRatings);
+      
+      // Always merge with plan ratings and make sure they're updated
+      const currentRatings = plan?.blocks?.block1?.successFactorRatings || {};
+      console.log('🔄 Block1Discover - Current plan ratings:', currentRatings);
+      
+      const updatedRatings = {
+        ...currentRatings,
+        ...serverRatings
+      };
+      
+      console.log('🔄 Block1Discover - Merged ratings:', updatedRatings);
+      
+      // Save to block
+      saveBlock('block1', {
+        successFactorRatings: updatedRatings,
+        lastUpdated: new Date().toISOString(),
+      });
       
       // Initialize pending ratings with server values
-      setPendingRatings(serverRatings);
+      setPendingRatings(updatedRatings);
+      console.log('🔄 Block1Discover - Updated pending ratings state:', updatedRatings);
     }
-  }, [evaluations, projectId]);
+  }, [evaluations, projectId, plan]);
   
   // Handle success factor evaluation change
   const handleEvaluationChange = (factorId: string, evaluation: string) => {
@@ -576,12 +586,16 @@ export default function Block1Discover() {
                                             key={option.value}
                                             type="button"
                                             onClick={() => handleEvaluationChange(factor.id, option.value)}
-                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                              isSelected 
-                                                ? 'bg-tcof-teal text-white ring-2 ring-tcof-dark' 
-                                                : 'bg-gray-100 hover:bg-gray-200'
-                                            }`}
+                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 
+                                              ${isSelected 
+                                                ? 'bg-tcof-teal text-white ring-2 ring-tcof-dark scale-110 shadow-md transform' 
+                                                : 'bg-gray-100 hover:bg-gray-200 hover:shadow hover:scale-105'
+                                              }
+                                              focus:outline-none focus:ring-2 focus:ring-tcof-teal focus:ring-opacity-50
+                                              active:scale-95 active:transform
+                                            `}
                                             title={`${option.label} – ${option.desc}`}
+                                            aria-label={`Rate as ${option.label}: ${option.desc}`}
                                           >
                                             <span className="text-lg">{option.symbol}</span>
                                           </button>
@@ -590,7 +604,9 @@ export default function Block1Discover() {
                                     </div>
                                     
                                     {plan?.blocks?.block1?.successFactorRatings?.[factor.id] && (
-                                      <div className="text-sm text-gray-600">
+                                      <div className="text-sm mt-2 font-medium text-tcof-dark bg-tcof-light/30 p-2 rounded-md">
+                                        <span className="font-bold">Selected: </span>
+                                        {RESONANCE_OPTIONS.find(opt => opt.value === plan?.blocks?.block1?.successFactorRatings?.[factor.id])?.label} — 
                                         {RESONANCE_OPTIONS.find(opt => opt.value === plan?.blocks?.block1?.successFactorRatings?.[factor.id])?.desc}
                                       </div>
                                     )}
