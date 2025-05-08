@@ -24,10 +24,10 @@ const AuthRequired: React.FC<AuthRequiredProps> = ({
         <h2 className="text-2xl font-bold text-tcof-dark mb-4">Authentication Required</h2>
         <p className="text-gray-600 mb-6">{message}</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          {/* Use navigate function for consistent behavior */}
+          {/* Trigger Replit Auth login flow directly */}
           <Button 
             className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-            onClick={() => navigate("/auth")}
+            onClick={() => window.location.href = "/api/login"}
           >
             Sign In
           </Button>
