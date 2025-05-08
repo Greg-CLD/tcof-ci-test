@@ -1,36 +1,19 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
+// Define login credentials type
+type LoginCredentials = {
+  username: string;
+  password: string;
+};
 
 export function useAuth() {
   const { toast } = useToast();
   const [authError, setAuthError] = useState<string | null>(null);
   
-  // Check URL for auth error parameters on mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const error = urlParams.get('auth_error');
-    
-    if (error) {
-      console.log("Auth error from URL:", error);
-      setAuthError(error);
-      
-      // Remove error param from URL
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('auth_error');
-      window.history.replaceState({}, document.title, newUrl.toString());
-      
-      // Show error toast
-      toast({
-        title: "Authentication Error",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  }, []);
-
   // Main auth query - gets current user if logged in
   const { 
     data: user, 
@@ -42,36 +25,64 @@ export function useAuth() {
     retry: false,
   });
 
-  // Login mutation - redirects to Replit login
+  // Login mutation with username and password
   const loginMutation = useMutation({
-    mutationFn: async () => {
-      try {
-        // Add cache-busting parameter
-        const loginUrl = `/api/login?t=${Date.now()}`;
-        
-        // Redirect to login endpoint
-        window.location.href = loginUrl;
-        return {} as User; // Type coercion for TS (function never returns)
-      } catch (error) {
-        console.error("Login error:", error);
-        throw error;
+    mutationFn: async (credentials: LoginCredentials) => {
+      setAuthError(null);
+      const response = await apiRequest("POST", "/api/login", credentials);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Login failed");
       }
+      
+      return response.json();
+    },
+    onSuccess: (userData) => {
+      // Update user data in cache
+      queryClient.setQueryData(["/api/auth/user"], userData);
+      
+      toast({
+        title: "Login successful",
+        description: `Welcome, ${userData.username}!`,
+      });
+    },
+    onError: (error: Error) => {
+      setAuthError(error.message);
+      
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
-  // Logout mutation - redirects to logout endpoint
+  // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      try {
-        // Clear user data from cache
-        queryClient.setQueryData(["/api/auth/user"], null);
-        
-        // Redirect to logout endpoint
-        window.location.href = "/api/logout";
-      } catch (error) {
-        console.error("Logout error:", error);
-        throw error;
+      const response = await apiRequest("POST", "/api/logout");
+      
+      if (!response.ok) {
+        throw new Error("Logout failed");
       }
+      
+      // Clear user data from cache
+      queryClient.setQueryData(["/api/auth/user"], null);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
+import { useForm } from "react-hook-form";
 import {
   Card,
   CardContent,
@@ -10,24 +11,52 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, LogIn } from "lucide-react";
+import { AlertCircle, Loader2, LogIn, Key } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+// Create a schema for form validation
+const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 /**
- * Auth page with simplified login flow using Replit Auth.
- * Creates a consistent user experience with a single sign-on option.
+ * Auth page with username and password login
  */
 export default function AuthPage() {
   const [location, setLocation] = useLocation();
-  const { user, isLoading, loginMutation } = useAuth();
+  const { user, isLoading, authError, loginMutation } = useAuth();
   
-  // Handle login with Replit Auth
-  const handleLogin = () => {
-    loginMutation.mutate();
-  };
-
+  // Set up form with react-hook-form
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+  
+  // Handle login form submission
+  function onSubmit(values: LoginFormValues) {
+    loginMutation.mutate(values);
+  }
+  
   // Redirect to home if already logged in
   useEffect(() => {
     if (user) {
@@ -66,32 +95,78 @@ export default function AuthPage() {
                 <CardHeader>
                   <CardTitle>Sign In</CardTitle>
                   <CardDescription>
-                    Use your Replit account to access the application
+                    Enter your credentials to access the application
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-gray-600">
-                    The TCOF Strategic Planning Toolkit uses Replit for secure authentication. 
-                    Click below to sign in or create an account.
-                  </p>
+                  {authError && (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      <AlertDescription>{authError}</AlertDescription>
+                    </Alert>
+                  )}
                   
-                  <Button 
-                    onClick={handleLogin}
-                    className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                    disabled={loginMutation.isPending}
-                  >
-                    {loginMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Redirecting to login...
-                      </>
-                    ) : (
-                      <>
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Sign In with Replit
-                      </>
-                    )}
-                  </Button>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Enter your username" 
+                                {...field} 
+                                autoComplete="username"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="password" 
+                                placeholder="Enter your password" 
+                                {...field} 
+                                autoComplete="current-password"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                            <FormDescription>
+                              Demo credentials: "admin" / "admin123"
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit"
+                        className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        disabled={loginMutation.isPending}
+                      >
+                        {loginMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Signing in...
+                          </>
+                        ) : (
+                          <>
+                            <Key className="mr-2 h-4 w-4" />
+                            Sign In
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
                 </CardContent>
               </Card>
             </div>
@@ -142,7 +217,7 @@ export default function AuthPage() {
 
               <Alert className="bg-tcof-teal/10 border-tcof-teal">
                 <AlertDescription>
-                  Sign in with your Replit account to save your strategic planning tools and track progress across multiple projects.
+                  Sign in to save your strategic planning tools and track progress across multiple projects.
                 </AlertDescription>
               </Alert>
             </div>

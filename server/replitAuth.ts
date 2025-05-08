@@ -1,34 +1,15 @@
-import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
-
 import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
-import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import crypto from "crypto";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
-}
+// TEMPORARY SOLUTION: Using a local strategy with hardcoded credentials 
+// since we're having issues with OpenID Connect
 
-const getOidcConfig = memoize(
-  async () => {
-    console.log("Discovering OpenID configuration with REPL_ID:", process.env.REPL_ID);
-    try {
-      return await client.discovery(
-        // Always use HTTPS for discovery
-        new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-        process.env.REPL_ID!
-      );
-    } catch (error) {
-      console.error("Error discovering OpenID configuration:", error);
-      throw error;
-    }
-  },
-  { maxAge: 3600 * 1000 }
-);
-
+// Function to create a session store
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
@@ -45,194 +26,162 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      // Set secure to false in development to allow non-HTTPS cookies
-      secure: false,
+      secure: false, // Set to false to work in development
       maxAge: sessionTtl,
-      sameSite: 'lax', // Allows for cross-site requests while still providing some CSRF protection
+      sameSite: 'lax',
     },
   });
 }
 
-function updateUserSession(
-  user: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
-) {
-  user.claims = tokens.claims();
-  user.access_token = tokens.access_token;
-  user.refresh_token = tokens.refresh_token;
-  user.expires_at = user.claims?.exp;
+// Helper function to hash passwords
+async function hashPassword(password: string) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  return new Promise<string>((resolve, reject) => {
+    crypto.pbkdf2(password, salt, 1000, 64, "sha512", (err, derivedKey) => {
+      if (err) return reject(err);
+      resolve(`${derivedKey.toString("hex")}.${salt}`);
+    });
+  });
 }
 
-async function upsertUser(
-  claims: any,
-) {
-  try {
-    console.log("Upserting user with claims:", JSON.stringify(claims, null, 2));
-    
-    // Only include fields that actually exist in the database schema
-    await storage.upsertUser({
-      id: claims["sub"],
-      email: claims["email"],
-      username: claims["email"]?.split('@')[0] || `user-${claims["sub"]}`, // Generate username if not available
-      avatarUrl: claims["profile_image_url"] // Use avatarUrl instead of profileImageUrl
+// Helper function to verify passwords
+async function verifyPassword(candidatePassword: string, hashedPassword: string) {
+  const [hash, salt] = hashedPassword.split('.');
+  return new Promise<boolean>((resolve, reject) => {
+    crypto.pbkdf2(candidatePassword, salt, 1000, 64, "sha512", (err, derivedKey) => {
+      if (err) return reject(err);
+      resolve(derivedKey.toString("hex") === hash);
     });
-    console.log("User upserted successfully");
+  });
+}
+
+// Function to create a new test user if it doesn't exist
+async function createTestUser() {
+  try {
+    // Check if the test user already exists
+    const existingUser = await storage.getUserByUsername("admin");
+    
+    if (!existingUser) {
+      // Create the test user with a hashed password
+      const hashedPassword = await hashPassword("admin123");
+      
+      const newUser = await storage.createUser({
+        // Generate a random ID for the user
+        id: `local-${crypto.randomBytes(8).toString("hex")}`,
+        username: "admin",
+        email: "admin@example.com",
+        password: hashedPassword,
+        firstName: "Admin",
+        lastName: "User",
+      });
+      
+      console.log("Created test user:", newUser.username);
+    } else {
+      console.log("Test user already exists:", existingUser.username);
+    }
   } catch (error) {
-    console.error("Error in upsertUser:", error);
-    throw error;
+    console.error("Error creating test user:", error);
   }
 }
 
+// Main function to set up authentication
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
-  console.log("OIDC Config received:", config.issuer);
+  // Create a test user on startup
+  await createTestUser();
 
-  const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-    verified: passport.AuthenticateCallback
-  ) => {
+  // Set up the LocalStrategy for authentication
+  passport.use(new LocalStrategy(async (username, password, done) => {
     try {
-      const user = {};
-      updateUserSession(user, tokens);
-      await upsertUser(tokens.claims());
-      verified(null, user);
+      // Get the user by username
+      const user = await storage.getUserByUsername(username);
+      
+      // If user doesn't exist or password doesn't match, return false
+      if (!user || !user.password || !(await verifyPassword(password, user.password))) {
+        return done(null, false, { message: "Invalid credentials" });
+      }
+      
+      // Return the user if authentication succeeds
+      return done(null, user);
     } catch (error) {
-      console.error("Error in verify function:", error);
-      verified(error as Error);
+      return done(error);
     }
-  };
+  }));
 
-  // Register a single strategy with a generic name
-  const strategy = new Strategy(
-    {
-      name: "replit",
-      config,
-      scope: "openid email profile offline_access",
-      // Dynamically determine callback URL based on request
-      callbackURL: "/api/callback",
-    },
-    verify,
-  );
-  passport.use(strategy);
-  console.log("Registered generic Replit auth strategy");
+  // Serialize and deserialize user
+  passport.serializeUser((user: Express.User, done) => {
+    done(null, user.id);
+  });
+  
+  passport.deserializeUser(async (id: string, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  });
 
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
-
-  app.get("/api/login", (req, res, next) => {
-    console.log("Login request from:", req.hostname);
-    
-    // Use the simplified strategy with dynamic callback URL
-    const protocol = req.protocol || "https";
-    const fullUrl = `${protocol}://${req.headers.host}`;
-    console.log(`Full base URL: ${fullUrl}`);
-    
-    passport.authenticate("replit", {
-      prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-      callbackURL: `${fullUrl}/api/callback`,
+  // Login endpoint
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) {
+        console.error("Error during authentication:", err);
+        return res.status(500).json({ error: true, message: "Server error", status: 500 });
+      }
+      
+      if (!user) {
+        console.log("Login failed:", info?.message || "Invalid credentials");
+        return res.status(401).json({ error: true, message: info?.message || "Invalid credentials", status: 401 });
+      }
+      
+      // Log in the user
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("Error during login:", loginErr);
+          return res.status(500).json({ error: true, message: "Login failed", status: 500 });
+        }
+        
+        // Remove sensitive information
+        const userWithoutPassword = { ...user };
+        delete userWithoutPassword.password;
+        
+        console.log("User logged in successfully:", user.username);
+        return res.status(200).json(userWithoutPassword);
+      });
     })(req, res, next);
   });
 
-  app.get("/api/callback", (req, res, next) => {
-    console.log("Auth callback received", req.query);
+  // Auth check endpoint
+  app.get("/api/auth/user", isAuthenticated, (req, res) => {
+    // Remove sensitive information
+    const userWithoutPassword = { ...req.user };
+    delete (userWithoutPassword as any).password;
     
-    // Set a cookie to indicate we've attempted the callback
-    res.cookie('auth_callback_attempted', 'true', { 
-      maxAge: 60000, // 1 minute
-      httpOnly: true,
-      sameSite: 'lax'
-    });
-
-    // Determine the full callback URL to match login request
-    const protocol = req.protocol || "https";
-    const fullCallbackUrl = `${protocol}://${req.headers.host}/api/callback`;
-    console.log(`Using callback URL: ${fullCallbackUrl}`);
-    
-    try {
-      passport.authenticate("replit", {
-        callbackURL: fullCallbackUrl,
-        successReturnToOrRedirect: "/",
-        failureRedirect: "/?auth_failed=true",
-      })(req, res, (err) => {
-        if (err) {
-          console.error("Authentication error:", err);
-          
-          // Extract error info for client-side handling
-          const errorInfo = {
-            message: err.message || 'Unknown error',
-            code: err.code || 'NO_CODE',
-          };
-          console.log("Error info:", errorInfo);
-          
-          // Redirect to home with error info
-          const encodedErrorMessage = encodeURIComponent(errorInfo.message);
-          return res.redirect(`/?auth_error=${encodedErrorMessage}`);
-        }
-        next();
-      });
-    } catch (error: any) {
-      console.error("Unexpected error in auth callback:", error);
-      return res.redirect(`/?auth_error=${encodeURIComponent(error?.message || 'Authentication error')}`);
-    }
+    res.json(userWithoutPassword);
   });
 
-  app.get("/api/logout", (req, res) => {
-    req.logout(() => {
-      // Build the full URL for the post-logout redirect
-      const protocol = req.protocol || "https";
-      const fullUrl = `${protocol}://${req.headers.host}`;
-      
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: fullUrl,
-        }).href
-      );
+  // Logout endpoint
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error("Error during logout:", err);
+        return res.status(500).json({ error: true, message: "Logout failed", status: 500 });
+      }
+      res.sendStatus(200);
     });
-  });
-
-  // Return user data endpoint
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
   });
 }
 
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
-
-  if (!req.isAuthenticated() || !user?.expires_at) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
+// Middleware to check if a user is authenticated
+export const isAuthenticated: RequestHandler = (req, res, next) => {
+  if (req.isAuthenticated()) {
     return next();
   }
-
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    return res.redirect("/api/login");
-  }
-
-  try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
-  } catch (error) {
-    return res.redirect("/api/login");
-  }
+  
+  res.status(401).json({ message: "Authentication required" });
 };
