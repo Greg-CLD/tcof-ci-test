@@ -21,6 +21,8 @@ import { useSuccessFactors } from "@/hooks/useSuccessFactors";
 import { useResonanceRatings, type RatingInput } from "@/hooks/useResonanceRatings";
 
 export default function Block1Step1() {
+  console.log('🔥 Block1Step1 v2 loaded 🔥');
+  
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { plan, saveBlock } = usePlan();
