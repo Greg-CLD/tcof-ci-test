@@ -26,7 +26,9 @@ import {
   X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { loadPlan, savePlan, Stage, PlanRecord, TaskItem } from '@/lib/plan-db';
+import { loadPlan, savePlan, createEmptyPlan, Stage, PlanRecord, TaskItem } from '@/lib/plan-db';
+import { storage } from '@/lib/storageAdapter';
+import { useProject } from '@/hooks/use-project';
 
 interface FinalChecklistProps {
   projectId?: string;
@@ -88,18 +90,57 @@ export default function FinalChecklist({ projectId: propProjectId }: FinalCheckl
   // Effect to load plan data when project ID is available
   useEffect(() => {
     async function ensurePlan() {
-      if (projectId) {
-        try {
-          const loadedPlan = await loadPlan(projectId);
-          setPlan(loadedPlan);
-        } catch (error) {
-          console.error('Failed to load plan:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to load plan data',
-            variant: 'destructive'
-          });
+      if (!projectId) return;
+      
+      try {
+        // Try to load all plans and find one associated with this project
+        const planIds = await storage.list();
+        let projectPlan: PlanRecord | null = null;
+        
+        for (const id of planIds) {
+          const loadedPlan = await loadPlan(id);
+          if (loadedPlan && loadedPlan.projectId === projectId) {
+            projectPlan = loadedPlan;
+            break;
+          }
         }
+        
+        if (projectPlan) {
+          console.log(`Found existing plan for project ${projectId}`);
+          setPlan(projectPlan);
+          return;
+        }
+        
+        // If we don't have an appropriate plan, create a new one
+        console.log(`Creating new plan for project ${projectId}`);
+        const projectResponse = await fetch(`/api/projects/${projectId}`);
+        
+        if (!projectResponse.ok) {
+          throw new Error(`Failed to fetch project details: ${projectResponse.statusText}`);
+        }
+        
+        const projectData = await projectResponse.json();
+        if (projectData) {
+          const newPlanId = await createEmptyPlan(
+            `${projectData.name} Plan`,
+            `Plan for ${projectData.name}`,
+            projectId
+          );
+          
+          const newPlan = await loadPlan(newPlanId);
+          if (newPlan) {
+            setPlan(newPlan);
+          } else {
+            throw new Error('Failed to load newly created plan');
+          }
+        }
+      } catch (error) {
+        console.error('Error ensuring plan exists:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load or create plan for this project',
+          variant: 'destructive'
+        });
       }
     }
     
