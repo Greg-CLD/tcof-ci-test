@@ -11,7 +11,8 @@
       "Definition": [],
       "Delivery": [],
       "Closure": []
-    }
+    },
+    "description": "Define clear, achievable goals that solve known problems."
   },
   {
     "id": "sf-2",
@@ -29,7 +30,8 @@
         "Confirm you have access to a master builder ready for the next stage"
       ],
       "Closure": []
-    }
+    },
+    "description": "Find a capable leader with relevant experience who can guide the project."
   },
   {
     "id": "sf-3",
@@ -49,7 +51,8 @@
         "Support champions to influence others"
       ],
       "Closure": []
-    }
+    },
+    "description": "Build a cohesive team and identify champions to drive the change."
   },
   {
     "id": "sf-4",
@@ -69,7 +72,8 @@
         "Stakeholder communications, training and engagement"
       ],
       "Closure": []
-    }
+    },
+    "description": "Engage stakeholders early and maintain their support throughout the project."
   },
   {
     "id": "sf-5",
@@ -85,7 +89,8 @@
       ],
       "Delivery": [],
       "Closure": []
-    }
+    },
+    "description": "Learn from similar past projects to avoid repeating mistakes."
   },
   {
     "id": "sf-6",
@@ -99,7 +104,8 @@
       "Definition": [],
       "Delivery": [],
       "Closure": []
-    }
+    },
+    "description": "Use proven solutions instead of reinventing the wheel."
   },
   {
     "id": "sf-7",
@@ -118,7 +124,8 @@
         "Scale up and go big. Roll out sections / modular solution to other areas"
       ],
       "Closure": []
-    }
+    },
+    "description": "Break solutions into manageable modules that can be built incrementally."
   },
   {
     "id": "sf-8",
@@ -136,7 +143,8 @@
         "Continue regular learning and reflection sessions (at least monthly)"
       ],
       "Closure": []
-    }
+    },
+    "description": "Test ideas with small experiments and adjust based on feedback."
   },
   {
     "id": "sf-9",
@@ -154,7 +162,8 @@
         "Continuously identify and mitigate risks (review at least monthly)"
       ],
       "Closure": []
-    }
+    },
+    "description": "Identify and mitigate risks continuously throughout the project."
   },
   {
     "id": "sf-10",
@@ -171,7 +180,8 @@
         "Build optimism allowances into all forecasts."
       ],
       "Closure": []
-    }
+    },
+    "description": "Account for typical optimism bias in estimates and forecasts."
   },
   {
     "id": "sf-11",
@@ -192,7 +202,8 @@
       "Closure": [
         "Record results for posterity"
       ]
-    }
+    },
+    "description": "Focus on measurable outcomes and be prepared to pivot if goals are not being met."
   },
   {
     "id": "sf-12",
@@ -208,6 +219,7 @@
         "Adapt the requirements / plan / scope based as new information comes to light."
       ],
       "Closure": []
-    }
+    },
+    "description": "Maintain flexibility to adapt to changing requirements and circumstances."
   }
 ]

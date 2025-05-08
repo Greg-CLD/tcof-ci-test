@@ -1,177 +1,177 @@
 # API Documentation
 
-## Admin API Endpoints
+## Success Factors
 
-### Success Factors
+The success factors API endpoints provide access to the TCOF Success Factors, which are key principles for successful technology implementation.
 
-These endpoints allow administrators to manage success factors for the TCOF toolkit.
+### Get All Success Factors
 
-#### GET `/api/admin/success-factors`
+Retrieves all success factors.
 
-Returns a list of all success factors.
+**Endpoint:** `GET /api/admin/canonical-success-factors`
 
 **Response:**
+- 200 OK: Returns an array of success factors
+- 401 Unauthorized: Authentication required
+- 403 Forbidden: User does not have admin privileges
+
+**Example Response:**
 ```json
 [
   {
-    "id": "1.1",
-    "title": "Ask Why",
-    "description": "Ensure the project has a clear and compelling purpose",
+    "id": "sf-1",
+    "title": "1.1 Ask Why",
+    "description": "Define clear, achievable goals that solve known problems.",
     "tasks": {
-      "Identification": ["Task 1", "Task 2"],
-      "Definition": ["Task 1", "Task 2"],
-      "Delivery": ["Task 1", "Task 2"],
-      "Closure": ["Task 1", "Task 2"]
+      "Identification": ["Align with organizational goals", "Define measurable outcomes"],
+      "Definition": [],
+      "Delivery": [],
+      "Closure": []
     }
   },
-  // Additional factors...
+  {
+    "id": "sf-2",
+    "title": "1.2 Get a Masterbuilder",
+    "description": "Find a capable leader with relevant experience who can guide the project.",
+    "tasks": {
+      "Identification": ["Identify project leader", "Assess leadership capability"],
+      "Definition": ["Establish project governance"],
+      "Delivery": ["Review leadership effectiveness"],
+      "Closure": []
+    }
+  }
 ]
 ```
 
-#### GET `/api/admin/success-factors/:id`
+### Get Success Factor by ID
 
-Returns a specific success factor by ID.
+Retrieves a specific success factor by its ID.
+
+**Endpoint:** `GET /api/admin/canonical-success-factors/:id`
 
 **Parameters:**
-- `id`: The ID of the success factor to retrieve (e.g., "1.1")
+- `id` (path parameter): The ID of the success factor to retrieve
 
 **Response:**
+- 200 OK: Returns the requested success factor
+- 401 Unauthorized: Authentication required
+- 403 Forbidden: User does not have admin privileges
+- 404 Not Found: Success factor with the specified ID not found
+
+**Example Response:**
 ```json
 {
-  "id": "1.1",
-  "title": "Ask Why",
-  "description": "Ensure the project has a clear and compelling purpose",
+  "id": "sf-1",
+  "title": "1.1 Ask Why",
+  "description": "Define clear, achievable goals that solve known problems.",
   "tasks": {
-    "Identification": ["Task 1", "Task 2"],
-    "Definition": ["Task 1", "Task 2"],
-    "Delivery": ["Task 1", "Task 2"],
-    "Closure": ["Task 1", "Task 2"]
+    "Identification": ["Align with organizational goals", "Define measurable outcomes"],
+    "Definition": [],
+    "Delivery": [],
+    "Closure": []
   }
 }
 ```
 
-#### POST `/api/admin/success-factors`
+### Create Success Factor
 
 Creates a new success factor.
 
+**Endpoint:** `POST /api/admin/canonical-success-factors`
+
 **Request Body:**
 ```json
 {
-  "id": "1.5",
-  "title": "New Success Factor",
+  "id": "sf-13",
+  "title": "5.1 New Success Factor",
   "description": "Description of the new success factor",
   "tasks": {
     "Identification": ["Task 1", "Task 2"],
-    "Definition": ["Task 1", "Task 2"],
-    "Delivery": ["Task 1", "Task 2"],
-    "Closure": ["Task 1", "Task 2"]
+    "Definition": ["Task 3"],
+    "Delivery": ["Task 4"],
+    "Closure": ["Task 5"]
   }
 }
 ```
-
-**Required Fields:**
-- `id`: String, required
-- `title`: String, required
-- `tasks`: Object with arrays for each project stage, required
-- `description`: String, optional (defaults to empty string)
 
 **Response:**
+- 201 Created: Success factor created successfully
+- 400 Bad Request: Invalid request body
+- 401 Unauthorized: Authentication required
+- 403 Forbidden: User does not have admin privileges
+- 409 Conflict: Success factor with the specified ID already exists
+
+**Example Response:**
 ```json
 {
-  "id": "1.5",
-  "title": "New Success Factor",
+  "id": "sf-13",
+  "title": "5.1 New Success Factor",
   "description": "Description of the new success factor",
   "tasks": {
     "Identification": ["Task 1", "Task 2"],
-    "Definition": ["Task 1", "Task 2"],
-    "Delivery": ["Task 1", "Task 2"],
-    "Closure": ["Task 1", "Task 2"]
+    "Definition": ["Task 3"],
+    "Delivery": ["Task 4"],
+    "Closure": ["Task 5"]
   }
 }
 ```
 
-#### PUT `/api/admin/success-factors/:id`
+### Update Success Factor
 
 Updates an existing success factor.
 
+**Endpoint:** `PUT /api/admin/canonical-success-factors/:id`
+
 **Parameters:**
-- `id`: The ID of the success factor to update (e.g., "1.1")
+- `id` (path parameter): The ID of the success factor to update
 
 **Request Body:**
 ```json
 {
-  "id": "1.1",
-  "title": "Updated Success Factor Title",
+  "title": "1.1 Ask Why (Updated)",
   "description": "Updated description for the success factor",
   "tasks": {
-    "Identification": ["Updated Task 1", "Updated Task 2"],
-    "Definition": ["Updated Task 1", "Updated Task 2"],
-    "Delivery": ["Updated Task 1", "Updated Task 2"],
-    "Closure": ["Updated Task 1", "Updated Task 2"]
+    "Identification": ["Updated task 1", "Updated task 2"],
+    "Definition": ["New definition task"],
+    "Delivery": ["New delivery task"],
+    "Closure": ["New closure task"]
   }
 }
 ```
-
-**Required Fields:**
-- `id`: String, required (must match the ID in the URL)
-- `title`: String, required
-- `tasks`: Object with arrays for each project stage, required
-- `description`: String, optional (defaults to empty string)
 
 **Response:**
+- 200 OK: Success factor updated successfully
+- 400 Bad Request: Invalid request body
+- 401 Unauthorized: Authentication required
+- 403 Forbidden: User does not have admin privileges
+- 404 Not Found: Success factor with the specified ID not found
+
+**Example Response:**
 ```json
 {
-  "id": "1.1",
-  "title": "Updated Success Factor Title",
+  "id": "sf-1",
+  "title": "1.1 Ask Why (Updated)",
   "description": "Updated description for the success factor",
   "tasks": {
-    "Identification": ["Updated Task 1", "Updated Task 2"],
-    "Definition": ["Updated Task 1", "Updated Task 2"],
-    "Delivery": ["Updated Task 1", "Updated Task 2"],
-    "Closure": ["Updated Task 1", "Updated Task 2"]
+    "Identification": ["Updated task 1", "Updated task 2"],
+    "Definition": ["New definition task"],
+    "Delivery": ["New delivery task"],
+    "Closure": ["New closure task"]
   }
 }
 ```
 
-#### DELETE `/api/admin/success-factors/:id`
+### Delete Success Factor
 
 Deletes a success factor.
 
+**Endpoint:** `DELETE /api/admin/canonical-success-factors/:id`
+
 **Parameters:**
-- `id`: The ID of the success factor to delete (e.g., "1.1")
+- `id` (path parameter): The ID of the success factor to delete
 
 **Response:**
-```json
-{
-  "success": true,
-  "message": "Success factor with ID 1.1 deleted"
-}
-```
-
-## Public API Endpoints
-
-### Success Factors
-
-These endpoints are available to all authenticated users.
-
-#### GET `/api/factors`
-
-Returns all success factors.
-
-**Response:**
-```json
-[
-  {
-    "id": "1.1",
-    "title": "Ask Why",
-    "description": "Ensure the project has a clear and compelling purpose",
-    "tasks": {
-      "Identification": ["Task 1", "Task 2"],
-      "Definition": ["Task 1", "Task 2"],
-      "Delivery": ["Task 1", "Task 2"],
-      "Closure": ["Task 1", "Task 2"]
-    }
-  },
-  // Additional factors...
-]
-```
+- 204 No Content: Success factor deleted successfully
+- 401 Unauthorized: Authentication required
+- 403 Forbidden: User does not have admin privileges
+- 404 Not Found: Success factor with the specified ID not found
