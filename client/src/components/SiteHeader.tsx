@@ -28,8 +28,9 @@ import {
   Briefcase
 } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { UserMenu, LoginButton } from "@/components/auth-buttons";
+import { AuthStatus } from "@/components/AuthStatus";
 import ProjectBanner from "@/components/ProjectBanner";
 import logoImage from "../assets/logo.png";
 
@@ -144,7 +145,10 @@ export default function SiteHeader() {
           </div>
           
           {/* Desktop User Profile / Auth Buttons */}
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-4">
+            <div className="text-xs">
+              <AuthStatus />
+            </div>
             {isLoggedIn ? (
               <UserMenu />
             ) : (
@@ -238,6 +242,9 @@ export default function SiteHeader() {
               {isLoggedIn && (
                 <>
                   <div className="border-t border-gray-100 pt-2 space-y-2">
+                    <div className="px-3 py-2 text-xs">
+                      <AuthStatus />
+                    </div>
                     <Link 
                       href="/dashboard"
                       onClick={handleNavigation}
@@ -293,6 +300,9 @@ export default function SiteHeader() {
               
               {!isLoggedIn && (
                 <div className="border-t border-gray-100 pt-2 flex flex-col gap-2">
+                  <div className="px-3 py-2 text-xs">
+                    <AuthStatus />
+                  </div>
                   <div className="w-full">
                     <LoginButton />
                   </div>
