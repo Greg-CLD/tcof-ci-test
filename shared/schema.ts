@@ -141,13 +141,17 @@ export const outcomeProgress = pgTable("outcome_progress", {
   };
 });
 
-// Users table - for authentication and user management
+// Users table - for authentication and user management (supports Replit Auth)
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: varchar("username", { length: 255 }).notNull().unique(),
-  password: text("password").notNull(),
-  email: varchar("email", { length: 255 }).unique(),
+  id: varchar("id").primaryKey(), // Changed to varchar to support Replit Auth ID format
+  username: varchar("username", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  firstName: varchar("first_name", { length: 255 }),
+  lastName: varchar("last_name", { length: 255 }),
+  bio: text("bio"),
+  profileImageUrl: varchar("profile_image_url", { length: 255 }),
   avatarUrl: varchar("avatar_url", { length: 255 }),
+  password: text("password"), // Made optional for Replit Auth
   notificationPrefs: jsonb("notification_prefs").default('{}'),
   locale: varchar("locale", { length: 50 }).default('en-US'),
   timezone: varchar("timezone", { length: 50 }).default('UTC'),
@@ -303,30 +307,22 @@ export const successFactorRatingSelectSchema = createSelectSchema(successFactorR
 // Enhance user schema with validations
 export const userInsertSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, "Username must be at least 3 characters"),
-  email: (schema) => schema.email("Must provide a valid email"),
-  password: (schema) => schema
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+  email: (schema) => schema.email("Must provide a valid email").optional().nullable(),
   avatarUrl: (schema) => schema.url().optional().nullable(),
+  profileImageUrl: (schema) => schema.url().optional().nullable(),
 });
 
-// Custom update schema without required password and username
+// Custom update schema for user profile
 export const userUpdateSchema = z.object({
-  email: z.string().email("Must provide a valid email").optional(),
+  email: z.string().email("Must provide a valid email").optional().nullable(),
+  firstName: z.string().optional().nullable(),
+  lastName: z.string().optional().nullable(),
+  bio: z.string().optional().nullable(),
   avatarUrl: z.string().url().optional().nullable(),
+  profileImageUrl: z.string().url().optional().nullable(),
   notificationPrefs: z.record(z.boolean()).optional(),
   locale: z.string().optional(),
   timezone: z.string().optional(),
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character")
-    .optional(),
 });
 
 // Schema for password change
