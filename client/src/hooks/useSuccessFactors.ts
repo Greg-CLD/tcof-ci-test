@@ -16,6 +16,8 @@ export interface NormalizedSuccessFactor {
 }
 
 export function useSuccessFactors() {
+  console.log('📊 useSuccessFactors hook initialized');
+  
   const {
     data: rawSuccessFactors,
     isLoading,
@@ -27,15 +29,41 @@ export function useSuccessFactors() {
     refetchOnWindowFocus: false,
   });
 
+  // Log diagnostic info but directly without effects
+  if (rawSuccessFactors) {
+    console.log(`📊 useSuccessFactors - Successfully fetched ${rawSuccessFactors.length} success factors`);
+    if (rawSuccessFactors.length > 0) {
+      console.log('📊 First success factor sample:', rawSuccessFactors[0]);
+    }
+  }
+
+  if (error) {
+    console.error('📊 useSuccessFactors - Error fetching success factors:', error);
+  }
+
   // Normalize the data to match our UI expectations
-  const successFactors: NormalizedSuccessFactor[] = rawSuccessFactors 
-    ? rawSuccessFactors.map(factor => ({
+  const successFactors: NormalizedSuccessFactor[] = [];
+  
+  if (rawSuccessFactors) {
+    rawSuccessFactors.forEach((factor: SuccessFactor) => {
+      if (!factor.id || !factor.factor) {
+        console.warn('📊 useSuccessFactors - Malformed factor data:', factor);
+      }
+      
+      successFactors.push({
         id: factor.id,
         title: factor.factor, // Map 'factor' to 'title'
-        description: factor.description,
+        description: factor.description || '', // Ensure description has a default
         category: factor.category
-      }))
-    : [];
+      });
+    });
+    
+    console.log(`📊 useSuccessFactors - Normalized ${successFactors.length} success factors`);
+    
+    if (successFactors.length > 0 && rawSuccessFactors && successFactors.length !== rawSuccessFactors.length) {
+      console.warn('📊 useSuccessFactors - Count mismatch between raw and normalized data');
+    }
+  }
 
   return {
     successFactors,

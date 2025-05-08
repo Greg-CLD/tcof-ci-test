@@ -204,34 +204,53 @@ export default function Block1Discover() {
   
   // Handle success factor evaluation change
   const handleEvaluationChange = (factorId: string, evaluation: string) => {
+    console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'evaluation:', evaluation);
+    
     // Update local state
-    setPendingRatings(prev => ({
-      ...prev,
-      [factorId]: evaluation
-    }));
+    setPendingRatings(prev => {
+      const newState = {
+        ...prev,
+        [factorId]: evaluation
+      };
+      console.log('🔄 Block1Discover.pendingRatings - before:', prev, 'after:', newState);
+      return newState;
+    });
+    
+    // Get current ratings from plan
+    const currentRatings = plan?.blocks?.block1?.successFactorRatings || {};
+    console.log('🔄 Block1Discover - current plan ratings:', currentRatings);
     
     // Save directly to the block for immediate UI feedback
+    const updatedRatings = {
+      ...currentRatings,
+      [factorId]: evaluation
+    };
+    console.log('🔄 Block1Discover - saving updated ratings to plan:', updatedRatings);
+    
     saveBlock('block1', {
-      successFactorRatings: {
-        ...plan?.blocks?.block1?.successFactorRatings,
-        [factorId]: evaluation
-      },
+      successFactorRatings: updatedRatings,
       lastUpdated: new Date().toISOString(),
     });
   };
   
   // Handle saving all ratings to server
   const handleSaveRatings = async () => {
+    console.log('🔄 Block1Discover.handleSaveRatings - starting batch save operation');
+    
     try {
       // Get ratings from the plan's block1 data
       const currentRatings = plan?.blocks?.block1?.successFactorRatings || {};
+      console.log('🔄 Block1Discover.handleSaveRatings - current ratings from plan:', currentRatings);
       
       // Convert to array of EvaluationInput objects for server persistence
+      console.log('🔄 Block1Discover.handleSaveRatings - mapping ratings to API inputs');
+      const evaluationInputs: Array<{factorId: string, resonance: number, notes?: string}> = [];
+      
       const promises = Object.entries(currentRatings).map(async ([factorId, resonance]) => {
         try {
           // Make sure we have valid data
           if (!factorId || resonance === undefined || resonance === null) {
-            console.warn(`Skipping invalid rating for factorId: ${factorId}, resonance: ${resonance}`);
+            console.warn(`🔸 Block1Discover - Skipping invalid rating for factorId: ${factorId}, resonance: ${resonance}`);
             return null;
           }
           
@@ -241,34 +260,43 @@ export default function Block1Discover() {
             resonanceNum = typeof resonance === 'number' ? resonance : parseInt(resonance as string);
             // Validate the number is between 1-5
             if (isNaN(resonanceNum) || resonanceNum < 1 || resonanceNum > 5) {
-              console.warn(`Invalid resonance value: ${resonance}, setting to default 3`);
+              console.warn(`🔸 Block1Discover - Invalid resonance value: ${resonance}, setting to default 3`);
               resonanceNum = 3; // Default to middle value if invalid
             }
           } catch (parseErr) {
-            console.warn(`Failed to parse resonance: ${resonance}, setting to default 3`);
+            console.warn(`🔸 Block1Discover - Failed to parse resonance: ${resonance}, setting to default 3`, parseErr);
             resonanceNum = 3; // Default to middle value if parsing fails
           }
           
-          return await updateSingleEvaluation({
+          const evaluationInput = {
             factorId,
             resonance: resonanceNum,
             notes: '' // Optional notes field
-          });
+          };
+          
+          evaluationInputs.push(evaluationInput);
+          console.log(`🔄 Block1Discover - Saving rating for factor ${factorId}: ${resonanceNum}`);
+          
+          return await updateSingleEvaluation(evaluationInput);
         } catch (err) {
-          console.error(`Error saving rating for factor ${factorId}:`, err);
+          console.error(`🔴 Block1Discover - Error saving rating for factor ${factorId}:`, err);
           return null;
         }
       });
       
+      console.log('🔄 Block1Discover - Prepared evaluation inputs:', evaluationInputs);
+      console.log('🔄 Block1Discover - Waiting for all update promises to resolve');
+      
       // Wait for all updates to complete
       await Promise.all(promises);
+      console.log('🔄 Block1Discover - All updates completed successfully');
       
       toast({
         title: "Ratings saved",
         description: "Your factor evaluations have been saved to the server.",
       });
     } catch (error) {
-      console.error("Error saving ratings:", error);
+      console.error("🔴 Block1Discover - Error saving ratings:", error);
       toast({
         title: "Failed to save ratings",
         description: "There was an error saving your evaluations to the server.",
