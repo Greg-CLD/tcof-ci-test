@@ -36,7 +36,7 @@ export default function Block1Step1() {
     data: successFactors,
     isLoading: factorsLoading
   } = useQuery({
-    queryKey: ['success-factors'],
+    queryKey: ['/api/success-factors'],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/success-factors");
       if (!res.ok) {

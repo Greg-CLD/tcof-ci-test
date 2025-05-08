@@ -25,6 +25,7 @@ import {
 import projectsRouter from './routes/projects.js';
 import plansRouter from './routes/plans.js';
 import usersRouter from './routes/users.js';
+import { readFileSync } from 'fs';
 
 // Initialize Stripe with your secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -268,6 +269,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup basic health check endpoint
   app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
+  });
+  
+  // Public endpoint to get success factors
+  app.get('/api/success-factors', (req, res) => {
+    try {
+      // Get success factors from the factorsDb
+      const successFactors = factorsDb.getAll();
+      
+      // Transform the data to match the structure needed by the client
+      const formattedFactors = successFactors.map(factor => ({
+        id: factor.id,
+        name: factor.title,
+        description: factor.tasks 
+          ? `Tasks for various project stages (${Object.keys(factor.tasks).length} stages available)`
+          : 'No description available'
+      }));
+      
+      res.status(200).json(formattedFactors);
+    } catch (error) {
+      console.error('Error fetching success factors:', error);
+      res.status(500).json({ message: 'Failed to fetch success factors' });
+    }
   });
 
   // Route for creating a checkout session for the Starter Kit (£9)
