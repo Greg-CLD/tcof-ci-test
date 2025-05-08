@@ -48,8 +48,9 @@ export default function Block2Step5() {
     createPolicy,
     updatePolicy,
     deletePolicy,
-    isCreating: isCreatingPolicy,
-    isDeleting: isDeletingPolicy 
+    newPolicyName,
+    setNewPolicyName,
+    isSaving: isPolicySaving 
   } = useProjectPolicies(projectId);
   
   // Get and manage project tasks
@@ -66,9 +67,6 @@ export default function Block2Step5() {
   
   // UI state: which policy is expanded
   const [expandedPolicyId, setExpandedPolicyId] = useState<string | null>(null);
-  
-  // State for new policy input
-  const [newPolicyName, setNewPolicyName] = useState('');
   
   // State to track task text inputs for each policy and stage
   const [taskInputs, setTaskInputs] = useState<Record<string, Record<string, string>>>({});
@@ -331,14 +329,14 @@ export default function Block2Step5() {
   };
   
   // Get the tasks for a specific policy and stage
-  const getTasksForPolicy = (policyId: string, stage: string) => {
+  const getTasksForPolicy = (policyId: string, stage: string): Task[] => {
     if (!tasks) return [];
     
     return tasks.filter(
       task => task.sourceId === policyId && 
               task.stage === stage && 
               task.origin === 'policy'
-    );
+    ) as Task[];
   };
   
   // When complete, update progress
@@ -400,9 +398,9 @@ export default function Block2Step5() {
               </div>
               <Button 
                 onClick={handleCreatePolicy} 
-                disabled={isCreatingPolicy || !newPolicyName.trim()}
+                disabled={isPolicySaving || !newPolicyName.trim()}
               >
-                {isCreatingPolicy ? (
+                {isPolicySaving ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
                   <Plus className="h-4 w-4 mr-2" />
@@ -422,7 +420,7 @@ export default function Block2Step5() {
               </div>
             ) : (
               <div className="space-y-6">
-                {policies.map(policy => (
+                {policies.map((policy: { id: string; name: string }) => (
                   <Card key={policy.id} className="border-tcof-blue">
                     <CardHeader 
                       className={`${editingPolicyId !== policy.id ? 'cursor-pointer hover:bg-slate-50' : ''}`}
@@ -541,7 +539,7 @@ interface TasksForStageProps {
     id: string;
     name: string;
   }>;
-  getTasksForPolicy: (policyId: string, stage: string) => any[];
+  getTasksForPolicy: (policyId: string, stage: string) => Task[];
   onSaveTask: (policyId: string, stage: string, text: string, existingTaskId?: string) => void;
   onDeleteTask: (taskId: string) => void;
   isSaving: boolean;
@@ -567,7 +565,7 @@ function TasksForStage({
 }: TasksForStageProps) {
   return (
     <div className="space-y-6">
-      {policies.map(policy => (
+      {policies.map((policy: { id: string; name: string }) => (
         <div key={`${policy.id}-${stage}`} className="space-y-4">
           <h3 className="text-md font-medium">Tasks for this stage:</h3>
           
@@ -590,10 +588,18 @@ function TasksForStage({
   );
 }
 
+interface Task {
+  id: string;
+  text: string;
+  stage: string;
+  sourceId: string;
+  origin: string;
+}
+
 interface TaskListProps {
   policyId: string;
   stage: string;
-  tasks: any[];
+  tasks: Task[];
   onSaveTask: (policyId: string, stage: string, text: string, existingTaskId?: string) => void;
   onDeleteTask: (taskId: string) => void;
   isSaving: boolean;
