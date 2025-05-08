@@ -253,7 +253,7 @@ export const storage = {
   comparePasswords,
 
   // Goal Map methods
-  async getGoalMaps(userId: number) {
+  async getGoalMaps(userId: string) {
     return await db.query.goalMaps.findMany({
       where: eq(goalMaps.userId, userId),
       orderBy: desc(goalMaps.lastUpdated)
@@ -266,7 +266,7 @@ export const storage = {
     });
   },
 
-  async saveGoalMap(userId: number, name: string, data: any) {
+  async saveGoalMap(userId: string, name: string, data: any) {
     console.log(`STORAGE: Saving goal map for user ${userId} at ${new Date().toISOString()}`);
     console.log(`STORAGE: Goal map data structure:`, typeof data === 'object' ? 
       `Object with keys: ${Object.keys(data).join(', ')}` : 

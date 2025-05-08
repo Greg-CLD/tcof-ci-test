@@ -16,6 +16,20 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
 
+// Users table - for authentication and user management 
+// UPDATED: Using text/string ID to match our application code
+export const users = pgTable("users", {
+  id: text("id").primaryKey(), // Text ID to better support auth serialization
+  username: text("username").notNull(),
+  email: text("email"),
+  password: text("password"),
+  avatarUrl: varchar("avatar_url"),
+  notificationPrefs: jsonb("notification_prefs").default('{}'),
+  locale: varchar("locale").default('en-US'),
+  timezone: varchar("timezone").default('UTC'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Legacy tables needed for compatibility with existing code
 export const goalMaps = pgTable("goal_maps", {
   id: serial("id").primaryKey(),
@@ -139,20 +153,6 @@ export const outcomeProgress = pgTable("outcome_progress", {
   return {
     projectOutcomeIdx: index("project_outcome_idx").on(table.projectId, table.outcomeId),
   };
-});
-
-// Users table - for authentication and user management 
-// UPDATED: Using text/string ID to match our application code
-export const users = pgTable("users", {
-  id: text("id").primaryKey(), // Text ID to better support auth serialization
-  username: text("username").notNull(),
-  email: text("email"),
-  password: text("password"),
-  avatarUrl: varchar("avatar_url"),
-  notificationPrefs: jsonb("notification_prefs").default('{}'),
-  locale: varchar("locale").default('en-US'),
-  timezone: varchar("timezone").default('UTC'),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Plan metadata (serialized as JSON in DB, but with schema for validation)
@@ -305,7 +305,6 @@ export const userInsertSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, "Username must be at least 3 characters"),
   email: (schema) => schema.email("Must provide a valid email").optional().nullable(),
   avatarUrl: (schema) => schema.url().optional().nullable(),
-  profileImageUrl: (schema) => schema.url().optional().nullable(),
 });
 
 // Custom update schema for user profile - matches actual database schema
