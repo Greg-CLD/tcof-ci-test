@@ -8,32 +8,52 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogIn, LogOut, User, Settings } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export function LoginButton() {
+  const [location, setLocation] = useLocation();
+  const { loginMutation } = useAuth();
+  
+  const navigateToAuth = () => {
+    setLocation("/auth");
+  };
+  
   return (
-    <Button asChild variant="outline">
-      <a href="/api/login" className="flex items-center gap-2">
-        <LogIn className="w-4 h-4" />
-        <span>Log In</span>
-      </a>
+    <Button 
+      variant="outline"
+      onClick={navigateToAuth}
+      className="flex items-center gap-2"
+    >
+      <LogIn className="w-4 h-4" />
+      <span>Log In</span>
     </Button>
   );
 }
 
 export function LogoutButton() {
+  const { logoutMutation } = useAuth();
+  
+  const handleLogout = () => {
+    if (logoutMutation) {
+      logoutMutation.mutate();
+    }
+  };
+  
   return (
-    <Button asChild variant="outline" className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200">
-      <a href="/api/logout" className="flex items-center gap-2">
-        <LogOut className="w-4 h-4" />
-        <span>Log Out</span>
-      </a>
+    <Button 
+      variant="outline" 
+      className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200 flex items-center gap-2"
+      onClick={handleLogout}
+    >
+      <LogOut className="w-4 h-4" />
+      <span>Log Out</span>
     </Button>
   );
 }
 
 export function UserMenu() {
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
+  const [location, setLocation] = useLocation();
 
   if (!user) {
     return <LoginButton />;
@@ -42,6 +62,12 @@ export function UserMenu() {
   const initials = user.username ? 
     user.username.substring(0, 2).toUpperCase() : 
     "U";
+    
+  const handleLogout = () => {
+    if (logoutMutation) {
+      logoutMutation.mutate();
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -61,7 +87,7 @@ export function UserMenu() {
           </div>
         </div>
         <DropdownMenuItem asChild>
-          <Link to="/settings/profile" className="cursor-pointer flex w-full items-center">
+          <Link to="/profile" className="cursor-pointer flex w-full items-center">
             <User className="mr-2 h-4 w-4" />
             <span>Profile</span>
           </Link>
@@ -72,11 +98,14 @@ export function UserMenu() {
             <span>Settings</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href="/api/logout" className="cursor-pointer flex w-full items-center text-red-500 hover:text-red-700">
+        <DropdownMenuItem>
+          <button 
+            onClick={handleLogout}
+            className="cursor-pointer flex w-full items-center text-red-500 hover:text-red-700"
+          >
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
-          </a>
+          </button>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

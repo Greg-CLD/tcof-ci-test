@@ -29,7 +29,7 @@ import Checklist from "@/pages/Checklist";
 import FactorChecklist from "@/pages/FactorChecklist";
 import FinalChecklist from "@/pages/FinalChecklist";
 import Pricing from "@/pages/Pricing";
-import AuthPage from "@/pages/auth-page";
+import AuthPage from "@/pages/AuthPage";
 import UserHistory from "@/pages/UserHistory";
 import ProfilePage from "@/pages/ProfilePage";
 import UserProfileSettings from "@/pages/UserProfileSettings";
