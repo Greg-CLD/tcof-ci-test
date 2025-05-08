@@ -1,0 +1,35 @@
+
+Prompt 1: Add description to the DB and seed defaults
+
+markdown
+CopyEdit
+Problem:  We need a `description` column on our canonical‐factors table so descriptions can persist.
+Fix:  1. Write a Drizzle migration to alter `success_factors` → add `description TEXT NOT NULL DEFAULT ''`.  2. Update the model in `server/models/successFactors.ts` to include `description`.  3. In `server/ensureCanonicalFactors.ts`, seed each factor’s `description` from the JSON (so existing data isn’t lost).
+
+Prompt 2: Extend Admin API to handle descriptions
+
+swift
+CopyEdit
+Problem:  The admin endpoints only surface `title` today. They must also return and accept `description`.
+Fix:  1. In `server/api/admin/success‐factors.ts` (or equivalent):     • Update GET handler to include `description` in its JSON.     • Update the PUT handler (`/api/admin/success‐factors/:id`) to accept `{ title, description }` and persist both.  2. Add/adjust any DTOs or validation so `description` is required.
+
+Prompt 3: Show & edit descriptions in Admin UI
+
+perl
+CopyEdit
+Problem:  AdminSuccessFactorEditor.tsx only edits titles.
+Fix:  1. In `client/src/pages/admin/AdminSuccessFactorEditor.tsx`:     • Add a “Description” column beside “Title”.     • Render each factor’s `description` in an inline‐editable `<textarea>`.     • Wire the Save button (or inline‐save) to send `{ title, description }` to PUT `/api/admin/success-factors/:id`.
+
+Prompt 4: Scaffold Ratings API & React-Query hooks
+
+typescript
+CopyEdit
+Problem:  We need to fetch + save project‐specific “resonance” ratings for each factor.
+Fix:  1. Create `server/api/projects/[projectId]/success-factor-ratings.ts`:     • GET → returns `[{ factorId, resonance }]`     • PUT → accepts an array `[{ factorId, resonance }]` and upserts per projectId.  2. In `client/src/hooks/`:     • Add `useSuccessFactors()` → fetches `{ factorId, title, description }` from `/api/admin/success-factors` or a public `/api/success-factors`.     • Add `useResonanceRatings(projectId)` → React Query GET/PUT to the new ratings endpoint.
+
+Prompt 5: Wire up Block 1 Step 1 UI
+
+vbnet
+CopyEdit
+Problem:  Block 1 Step 1 shows no titles/descriptions, still says “Importance,” and ratings don’t save.
+Fix:  1. In `client/src/components/Block1Step1.tsx` (or wherever Step 1 lives):     • Use `useSuccessFactors()` to render each factor’s `title` + `description`.     • Change the table/header label from “Importance” → “Resonance”.     • Use `useResonanceRatings(projectId)` to populate the 1–5 selectors and to submit on change or via “Save Progress.”  2. Ensure after saving, a page refresh re-loads the saved resonance values.
