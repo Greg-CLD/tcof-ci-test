@@ -1,6 +1,10 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useAuth as useAuthHook } from "@/hooks/useAuth";
-import { User } from "@shared/schema";
+import { User, InsertUser } from "@shared/schema";
+import { UseMutationResult } from "@tanstack/react-query";
+
+// Login type
+type LoginData = Pick<InsertUser, "username" | "password">;
 
 // Create auth context with default values
 type AuthContextType = {
@@ -8,6 +12,9 @@ type AuthContextType = {
   isLoading: boolean;
   isAuthenticated: boolean;
   error: Error | null;
+  loginMutation?: UseMutationResult<User, Error, LoginData>;
+  logoutMutation?: UseMutationResult<void, Error, void>;
+  registerMutation?: UseMutationResult<User, Error, InsertUser>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

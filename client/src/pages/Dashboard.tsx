@@ -28,10 +28,35 @@ import {
   Pie
 } from "recharts";
 import { 
-  GoalMap, 
-  CynefinSelection as CynefinSelectionType, 
-  TcofJourney 
+  goalMaps as goalMapsTable, 
+  cynefinSelections as cynefinSelectionsTable, 
+  tcofJourneys as tcofJourneysTable 
 } from "@shared/schema";
+
+// Define types to match the DB schema
+type GoalMap = {
+  id: number;
+  name: string;
+  data: unknown;
+  userId: number;
+  lastUpdated: Date;
+};
+
+type CynefinSelectionType = {
+  id: number;
+  name: string;
+  data: unknown;
+  userId: number;
+  lastUpdated: Date;
+};
+
+type TcofJourney = {
+  id: number;
+  name: string;
+  data: unknown;
+  userId: number;
+  lastUpdated: Date;
+};
 import { formatDate } from "@/lib/pdf-utils";
 import {
   MapPin,

@@ -20,10 +20,35 @@ import { Loader2, Save, Clock, ArrowLeft, User, FileDown, Edit, Trash2, MapPin }
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/pdf-utils";
 import { 
-  GoalMap, 
-  CynefinSelection as CynefinSelectionType, 
-  TcofJourney 
+  goalMaps as goalMapsTable, 
+  cynefinSelections as cynefinSelectionsTable, 
+  tcofJourneys as tcofJourneysTable 
 } from "@shared/schema";
+
+// Define types to match the DB schema
+type GoalMap = {
+  id: number;
+  name: string;
+  data: unknown;
+  userId: number;
+  lastUpdated: Date;
+};
+
+type CynefinSelectionType = {
+  id: number;
+  name: string;
+  data: unknown;
+  userId: number;
+  lastUpdated: Date;
+};
+
+type TcofJourney = {
+  id: number;
+  name: string;
+  data: unknown;
+  userId: number;
+  lastUpdated: Date;
+};
 
 export default function ProfilePage() {
   const [location, setLocation] = useLocation();
@@ -421,7 +446,7 @@ export default function ProfilePage() {
                           <div className="space-y-4">
                             <div>
                               <Button
-                                onClick={() => logoutMutation.mutate()}
+                                onClick={() => logoutMutation?.mutate()}
                                 variant="outline"
                                 className="w-full border-red-500 text-red-500 hover:bg-red-50"
                               >
