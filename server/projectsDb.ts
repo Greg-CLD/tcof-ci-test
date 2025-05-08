@@ -11,6 +11,7 @@ import { db } from '../db';
 const DATA_DIR = path.join(process.cwd(), 'data');
 const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json');
 const TASKS_FILE = path.join(DATA_DIR, 'project_tasks.json');
+const POLICIES_FILE = path.join(DATA_DIR, 'project_policies.json');
 
 // Project data type
 export interface Project {
@@ -68,6 +69,12 @@ if (!fs.existsSync(TASKS_FILE)) {
   console.log('Created empty project_tasks.json file');
 }
 
+// Initialize project policies data file if it doesn't exist
+if (!fs.existsSync(POLICIES_FILE)) {
+  fs.writeFileSync(POLICIES_FILE, JSON.stringify([], null, 2), 'utf8');
+  console.log('Created empty project_policies.json file');
+}
+
 /**
  * Load all projects from the data file
  */
@@ -116,6 +123,32 @@ function saveProjectTasks(tasks: ProjectTask[]): boolean {
     return true;
   } catch (error) {
     console.error('Error saving project tasks:', error);
+    return false;
+  }
+}
+
+/**
+ * Load all project policies from the data file
+ */
+function loadProjectPolicies(): ProjectPolicy[] {
+  try {
+    const data = fs.readFileSync(POLICIES_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading project policies:', error);
+    return [];
+  }
+}
+
+/**
+ * Save project policies to the data file
+ */
+function saveProjectPolicies(policies: ProjectPolicy[]): boolean {
+  try {
+    fs.writeFileSync(POLICIES_FILE, JSON.stringify(policies, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving project policies:', error);
     return false;
   }
 }
@@ -467,7 +500,7 @@ export const projectsDb = {
       projectId: string;
       text: string;
       stage: 'identification' | 'definition' | 'delivery' | 'closure';
-      origin: 'heuristic' | 'factor';
+      origin: 'heuristic' | 'factor' | 'policy';
       sourceId: string;
       completed?: boolean;
       createdAt?: string;
@@ -581,6 +614,154 @@ export const projectsDb = {
       return result;
     } catch (error) {
       console.error('Error deleting project task:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Get all policies for a project
+   * @param projectId Project ID
+   * @returns Array of policies for the project
+   */
+  getProjectPolicies: async (projectId: string): Promise<ProjectPolicy[]> => {
+    try {
+      // Load all policies
+      const policies = loadProjectPolicies();
+      
+      // Filter policies by project ID
+      const projectPolicies = policies.filter(p => p.projectId === projectId);
+      
+      console.log(`Found ${projectPolicies.length} policies for project ${projectId}`);
+      
+      return projectPolicies;
+    } catch (error) {
+      console.error('Error getting project policies:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Create a new policy for a project
+   * @param policyData Policy data
+   * @returns The created policy or null if creation failed
+   */
+  createProjectPolicy: async (
+    policyData: {
+      projectId: string;
+      name: string;
+    }
+  ): Promise<ProjectPolicy | null> => {
+    try {
+      // Create new policy object
+      const policy: ProjectPolicy = {
+        id: uuidv4(),
+        projectId: policyData.projectId,
+        name: policyData.name,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Load existing policies
+      const policies = loadProjectPolicies();
+      
+      // Add new policy
+      policies.push(policy);
+      
+      // Save updated policies list
+      const saved = saveProjectPolicies(policies);
+      
+      if (saved) {
+        console.log(`Policy saved → ${policy.id}`);
+        return policy;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error creating project policy:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Update a project policy
+   * @param policyId Policy ID
+   * @param data Updated policy data
+   * @returns The updated policy or null if update failed
+   */
+  updateProjectPolicy: async (
+    policyId: string,
+    data: {
+      name?: string;
+    }
+  ): Promise<ProjectPolicy | null> => {
+    try {
+      // Load all policies
+      const policies = loadProjectPolicies();
+      
+      // Find policy index
+      const index = policies.findIndex(p => p.id === policyId);
+      
+      if (index === -1) {
+        return null;
+      }
+      
+      // Update policy
+      policies[index] = {
+        ...policies[index],
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Save updated policies list
+      const saved = saveProjectPolicies(policies);
+      
+      if (saved) {
+        return policies[index];
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error updating project policy:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Delete a project policy
+   * @param policyId Policy ID
+   * @returns Success status
+   */
+  deleteProjectPolicy: async (policyId: string): Promise<boolean> => {
+    try {
+      // Load all policies
+      const policies = loadProjectPolicies();
+      
+      // Filter out the policy to delete
+      const updatedPolicies = policies.filter(p => p.id !== policyId);
+      
+      if (updatedPolicies.length === policies.length) {
+        // No policy was removed
+        console.log(`No policy found with ID ${policyId} to delete`);
+        return false;
+      }
+      
+      // Save updated policies list
+      console.log(`Removing policy ${policyId}, policies count: ${policies.length} -> ${updatedPolicies.length}`);
+      const result = saveProjectPolicies(updatedPolicies);
+      
+      // Also delete any tasks associated with this policy
+      const tasks = loadProjectTasks();
+      const filteredTasks = tasks.filter(t => !(t.origin === 'policy' && t.sourceId === policyId));
+      
+      if (filteredTasks.length !== tasks.length) {
+        console.log(`Removing ${tasks.length - filteredTasks.length} tasks associated with policy ${policyId}`);
+        saveProjectTasks(filteredTasks);
+      }
+      
+      console.log(`Policy deletion result: ${result}`);
+      return result;
+    } catch (error) {
+      console.error('Error deleting project policy:', error);
       return false;
     }
   }
