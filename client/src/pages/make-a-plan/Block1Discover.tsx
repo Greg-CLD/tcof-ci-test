@@ -346,10 +346,10 @@ export default function Block1Discover() {
                     </p>
                     <ol className="list-decimal list-inside space-y-3 mb-6">
                       <li className="pl-2">
-                        <span className="font-medium">Rating TCOF Success Factors</span>
+                        <span className="font-medium">Evaluating TCOF Success Factors</span>
                         <p className="text-sm text-gray-600 mt-1 ml-7">
-                          Assess which of the 12 standard success factors are most important 
-                          for your specific project context.
+                          Indicate how each of the 12 standard success factors resonates with you 
+                          based on your experience and project context.
                         </p>
                       </li>
                       <li className="pl-2">
@@ -396,9 +396,9 @@ export default function Block1Discover() {
               <TabsContent value="successFactors" className="pt-6">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-2">Rate TCOF Success Factors</h2>
+                    <h2 className="text-xl font-semibold mb-2">Evaluate TCOF Success Factors</h2>
                     <p className="text-gray-600 mb-6">
-                      For each success factor, indicate how important it is for your specific project. 
+                      For each success factor, indicate how it resonates with your experience and project context. 
                       This will help prioritize tasks in your plan.
                     </p>
                     
@@ -409,7 +409,7 @@ export default function Block1Discover() {
                     ) : (
                       <div className="overflow-auto">
                         <Table>
-                          <TableCaption>TCOF success factors prioritization</TableCaption>
+                          <TableCaption>TCOF success factors resonance evaluation</TableCaption>
                           <TableHeader>
                             <TableRow>
                               <TableHead className="w-[300px]">Factor</TableHead>
@@ -436,21 +436,32 @@ export default function Block1Discover() {
                                   </TooltipProvider>
                                 </TableCell>
                                 <TableCell>
-                                  <Select
-                                    value={plan?.blocks?.block1?.successFactorRatings?.[factor.id] || ""}
-                                    onValueChange={(value) => handleRatingChange(factor.id, value)}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select importance" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {RATING_OPTIONS.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                          {option.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <div className="flex flex-col space-y-2">
+                                    <Select
+                                      value={plan?.blocks?.block1?.successFactorRatings?.[factor.id] || ""}
+                                      onValueChange={(value) => handleRatingChange(factor.id, value)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select resonance level" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {RESONANCE_OPTIONS.map((option) => (
+                                          <SelectItem key={option.value} value={option.value}>
+                                            <div className="flex items-center gap-2">
+                                              <span>{option.symbol}</span>
+                                              <span>{option.label}</span>
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    
+                                    {plan?.blocks?.block1?.successFactorRatings?.[factor.id] && (
+                                      <div className="text-sm text-gray-600">
+                                        {RESONANCE_OPTIONS.find(opt => opt.value === plan?.blocks?.block1?.successFactorRatings?.[factor.id])?.desc}
+                                      </div>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -619,9 +630,9 @@ export default function Block1Discover() {
                       <h3 className="text-lg font-medium mb-3">Block 1 Summary</h3>
                       <div className="space-y-4">
                         <div>
-                          <h4 className="font-medium">Success Factors Rated:</h4>
+                          <h4 className="font-medium">Success Factors Evaluated:</h4>
                           <p className="text-sm text-gray-600">
-                            {Object.keys(plan?.blocks?.block1?.successFactorRatings || {}).length} of {successFactors?.length || 0} factors
+                            {Object.keys(plan?.blocks?.block1?.successFactorRatings || {}).length} of {successFactors?.length || 0} factors evaluated for resonance
                           </p>
                         </div>
                         <div>
