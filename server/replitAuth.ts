@@ -66,14 +66,22 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-    username: claims["email"]?.split('@')[0] || `user-${claims["sub"]}`, // Generate username if not available
-  });
+  try {
+    console.log("Upserting user with claims:", JSON.stringify(claims, null, 2));
+    
+    // Only include fields that actually exist in the database schema
+    // This matches the actual table structure from our database inspection
+    await storage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      username: claims["email"]?.split('@')[0] || `user-${claims["sub"]}`, // Generate username if not available
+      avatarUrl: claims["profile_image_url"] // Use avatarUrl instead of profileImageUrl
+    });
+    console.log("User upserted successfully");
+  } catch (error) {
+    console.error("Error in upsertUser:", error);
+    throw error;
+  }
 }
 
 export async function setupAuth(app: Express) {

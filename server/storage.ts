@@ -93,26 +93,26 @@ export const storage = {
     }
   },
 
-  async createUser(userData: { username: string; password?: string; email?: string; id?: string; firstName?: string; lastName?: string; bio?: string; profileImageUrl?: string }) {
+  async createUser(userData: { username: string; password?: string; email?: string; id?: string; avatarUrl?: string }) {
     try {
+      console.log("storage.createUser called with:", JSON.stringify(userData, null, 2));
+      
       // Hash the password if provided
       const hashedPassword = userData.password ? await hashPassword(userData.password) : null;
       
+      // Only include fields that actually exist in the database
       const values = {
         id: userData.id || Date.now().toString(), // Use provided ID or generate one
         username: userData.username,
         password: hashedPassword,
         email: userData.email || null,
-        firstName: userData.firstName || null,
-        lastName: userData.lastName || null,
-        bio: userData.bio || null,
-        profileImageUrl: userData.profileImageUrl || null,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        avatarUrl: userData.avatarUrl || null
       };
       
+      console.log("Creating user with values:", JSON.stringify(values, null, 2));
       const [user] = await db.insert(users).values(values).returning();
       
+      console.log("User created successfully:", user.id);
       return user;
     } catch (error) {
       console.error('Error creating user:', error);
@@ -120,31 +120,43 @@ export const storage = {
     }
   },
   
-  async upsertUser(userData: { id: string; username: string; email?: string; firstName?: string; lastName?: string; bio?: string; profileImageUrl?: string }) {
+  async upsertUser(userData: { id: string; username: string; email?: string; avatarUrl?: string }) {
     try {
+      console.log("storage.upsertUser called with:", JSON.stringify(userData, null, 2));
+      
       // Check if user already exists
       const existingUser = await this.getUser(userData.id);
       
       if (existingUser) {
-        // Update existing user
+        console.log("Updating existing user:", userData.id);
+        // Update existing user - only use fields that exist in the database
         const [updatedUser] = await db
           .update(users)
           .set({
             username: userData.username,
             email: userData.email || existingUser.email,
-            firstName: userData.firstName || existingUser.firstName,
-            lastName: userData.lastName || existingUser.lastName,
-            bio: userData.bio || existingUser.bio,
-            profileImageUrl: userData.profileImageUrl || existingUser.profileImageUrl,
-            updatedAt: new Date()
+            avatarUrl: userData.avatarUrl || existingUser.avatarUrl
           })
           .where(eq(users.id, userData.id))
           .returning();
         
+        console.log("User updated successfully:", updatedUser.id);
         return updatedUser;
       } else {
-        // Create new user
-        return await this.createUser(userData);
+        console.log("Creating new user:", userData.id);
+        // Create new user with only the fields that exist in the database
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            id: userData.id,
+            username: userData.username,
+            email: userData.email || null,
+            avatarUrl: userData.avatarUrl || null
+          })
+          .returning();
+        
+        console.log("New user created successfully:", newUser.id);
+        return newUser;
       }
     } catch (error) {
       console.error('Error upserting user:', error);
