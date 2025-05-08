@@ -16,7 +16,7 @@ import StepNavigation from '@/components/StepNavigation';
 import { useFrameworkTasks } from '@/hooks/useFrameworkTasks';
 import { useToolProgress } from '@/hooks/useToolProgress';
 import { usePlan } from '@/contexts/PlanContext';
-import EditableTaskPanel from '@/components/task/EditableTaskPanel';
+import { EditableTaskPanel, StageType } from '@/components/task/EditableTaskPanel';
 
 export default function Block3Step7() {
   const { projectId } = useParams<{ projectId?: string }>();

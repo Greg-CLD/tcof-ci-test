@@ -17,7 +17,7 @@ import MakeAPlanLayout from '@/layouts/MakeAPlanLayout';
 import { useProjectContext } from '@/contexts/ProjectContext';
 import { useToolProgress } from '@/hooks/useToolProgress';
 import { usePolicyTasks } from '@/hooks/usePolicyTasks';
-import EditableTaskPanel from '@/components/task/EditableTaskPanel';
+import { EditableTaskPanel, StageType } from '@/components/task/EditableTaskPanel';
 
 export default function Block2Step5() {
   const { projectId } = useParams();
