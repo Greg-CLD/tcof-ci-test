@@ -168,43 +168,80 @@ export const storage = {
     }
   },
   
-  async upsertUser(userData: { id: string; username: string; email?: string; avatarUrl?: string }) {
+  async upsertUser(userData: { id: string | number; username: string; email?: string; avatarUrl?: string }) {
     try {
       console.log("storage.upsertUser called with:", JSON.stringify(userData, null, 2));
       
+      // Convert ID to number for database operations
+      let userId: number;
+      if (typeof userData.id === 'string') {
+        userId = parseInt(userData.id, 10);
+        if (isNaN(userId)) {
+          userId = Date.now(); // Fallback if conversion fails
+          console.log(`Invalid user ID: ${userData.id}, using fallback: ${userId}`);
+        }
+      } else {
+        userId = userData.id as number;
+      }
+      
+      console.log(`Using userId for upsert: ${userId} (type: ${typeof userId})`);
+      
       // Check if user already exists
-      const existingUser = await this.getUser(userData.id);
+      const existingUser = await this.getUser(userId);
       
       if (existingUser) {
-        console.log("Updating existing user:", userData.id);
-        // Update existing user - only use fields that exist in the database
-        const [updatedUser] = await db
-          .update(users)
-          .set({
-            username: userData.username,
-            email: userData.email || existingUser.email,
-            avatarUrl: userData.avatarUrl || existingUser.avatarUrl
-          })
-          .where(eq(users.id, userData.id))
-          .returning();
+        console.log("Updating existing user:", userId);
         
-        console.log("User updated successfully:", updatedUser.id);
-        return updatedUser;
+        // Use raw SQL to update user to avoid type issues with Drizzle
+        const result = await db.execute(
+          sql`UPDATE users 
+              SET username = ${userData.username}, 
+                  email = ${userData.email || existingUser.email}, 
+                  avatar_url = ${userData.avatarUrl || existingUser.avatar_url}
+              WHERE id = ${userId}
+              RETURNING *`
+        );
+        
+        if (result.rows && result.rows.length > 0) {
+          const user = result.rows[0];
+          console.log("User updated successfully:", user.id);
+          
+          return {
+            id: user.id,
+            username: user.username,
+            password: user.password,
+            email: user.email,
+            avatarUrl: user.avatar_url,
+            createdAt: user.created_at
+          };
+        }
+        
+        throw new Error('Failed to update user: No user returned from update operation');
       } else {
-        console.log("Creating new user:", userData.id);
-        // Create new user with only the fields that exist in the database
-        const [newUser] = await db
-          .insert(users)
-          .values({
-            id: userData.id,
-            username: userData.username,
-            email: userData.email || null,
-            avatarUrl: userData.avatarUrl || null
-          })
-          .returning();
+        console.log("Creating new user:", userId);
         
-        console.log("New user created successfully:", newUser.id);
-        return newUser;
+        // Use raw SQL to insert user to avoid type issues with Drizzle
+        const result = await db.execute(
+          sql`INSERT INTO users (id, username, email, avatar_url) 
+              VALUES (${userId}, ${userData.username}, ${userData.email || null}, ${userData.avatarUrl || null})
+              RETURNING *`
+        );
+        
+        if (result.rows && result.rows.length > 0) {
+          const user = result.rows[0];
+          console.log("New user created successfully:", user.id);
+          
+          return {
+            id: user.id,
+            username: user.username,
+            password: user.password,
+            email: user.email,
+            avatarUrl: user.avatar_url,
+            createdAt: user.created_at
+          };
+        }
+        
+        throw new Error('Failed to create user: No user returned from insert operation');
       }
     } catch (error) {
       console.error('Error upserting user:', error);

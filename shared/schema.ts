@@ -19,7 +19,7 @@ import { z } from "zod";
 // Legacy tables needed for compatibility with existing code
 export const goalMaps = pgTable("goal_maps", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: text("user_id").notNull().references(() => users.id),
   name: varchar("name", { length: 255 }).notNull(),
   data: jsonb("data").notNull(),
   lastUpdated: timestamp("last_updated").defaultNow().notNull()
@@ -27,7 +27,7 @@ export const goalMaps = pgTable("goal_maps", {
 
 export const cynefinSelections = pgTable("cynefin_selections", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: text("user_id").notNull().references(() => users.id),
   name: varchar("name", { length: 255 }).notNull(),
   data: jsonb("data").notNull(),
   lastUpdated: timestamp("last_updated").defaultNow().notNull()
@@ -35,7 +35,7 @@ export const cynefinSelections = pgTable("cynefin_selections", {
 
 export const tcofJourneys = pgTable("tcof_journeys", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: text("user_id").notNull().references(() => users.id),
   name: varchar("name", { length: 255 }).notNull(),
   data: jsonb("data").notNull(),
   lastUpdated: timestamp("last_updated").defaultNow().notNull()
@@ -53,7 +53,7 @@ export const organisations = pgTable("organisations", {
 // Organisation memberships table
 export const organisationMemberships = pgTable("organisation_memberships", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   organisationId: uuid("organisation_id").notNull().references(() => organisations.id, { onDelete: "cascade" }),
   role: varchar("role", { length: 50 }).notNull().default("member"), // 'owner', 'admin', 'member'
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -81,7 +81,7 @@ export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  userId: integer("user_id"),
+  userId: text("user_id").references(() => users.id),
   goalMapId: integer("goal_map_id"),
   cynefinSelectionId: integer("cynefin_selection_id"),
   tcofJourneyId: integer("tcof_journey_id"),
@@ -122,7 +122,7 @@ export const outcomes = pgTable("outcomes", {
   description: text("description"),
   level: varchar("level", { length: 50 }).notNull(), // e.g. "level1", "level2", "custom"
   isCustom: boolean("is_custom").default(false),
-  createdByUserId: integer("created_by_user_id"), // If created by a user
+  createdByUserId: text("created_by_user_id").references(() => users.id), // If created by a user
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -142,9 +142,9 @@ export const outcomeProgress = pgTable("outcome_progress", {
 });
 
 // Users table - for authentication and user management 
-// This definition matches the actual database schema (verified via SQL query)
+// UPDATED: Using text/string ID to match our application code
 export const users = pgTable("users", {
-  id: integer("id").primaryKey(), // Integer ID in the actual database
+  id: text("id").primaryKey(), // Text ID to better support auth serialization
   username: text("username").notNull(),
   email: text("email"),
   password: text("password"),
@@ -159,7 +159,7 @@ export const users = pgTable("users", {
 export const plans = pgTable("plans", {
   id: uuid("id").primaryKey().defaultRandom(),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  userId: integer("user_id").references(() => users.id),
+  userId: text("user_id").references(() => users.id),
   name: varchar("name", { length: 255 }),
   blocks: jsonb("blocks").notNull().default(JSON.stringify({
     block1: {

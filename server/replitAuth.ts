@@ -134,9 +134,11 @@ export async function setupAuth(app: Express) {
       
       console.log(`User deserialized successfully: ${user.username}`);
       done(null, user);
-    } catch (error) {
-      console.error(`Error deserializing user: ${error.message}`);
-      done(error);
+    } catch (error: any) {
+      // Safely handle error of unknown type
+      const errorMessage = error?.message || 'Unknown error during user deserialization';
+      console.error(`Error deserializing user: ${errorMessage}`);
+      done(new Error(errorMessage));
     }
   });
 
