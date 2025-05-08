@@ -239,8 +239,18 @@ export default function Block3Step6() {
         }
       });
       
+      toast({
+        title: "Frameworks saved",
+        description: "Your framework selections have been saved successfully",
+      });
+      
     } catch (error) {
       console.error("Error saving frameworks:", error);
+      toast({
+        title: "Error saving frameworks",
+        description: "Failed to save your framework selections",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
