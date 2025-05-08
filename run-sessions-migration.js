@@ -1,8 +1,11 @@
 /**
  * Script to create the sessions table for Replit Auth
  */
-const { Pool } = require('pg');
-require('dotenv').config();
+import pg from 'pg';
+import dotenv from 'dotenv';
+
+const { Pool } = pg;
+dotenv.config();
 
 async function createSessionsTable() {
   console.log('Creating sessions table...');

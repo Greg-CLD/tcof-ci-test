@@ -5,9 +5,9 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 import { 
-  insertUserSchema, 
   User as SelectUser, 
-  InsertUser 
+  InsertUser,
+  userInsertSchema 
 } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], null);
+      queryClient.setQueryData(["/api/auth/user"], null);
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
