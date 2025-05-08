@@ -229,12 +229,16 @@ export default function Block1Step1() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {successFactors?.map((factor: { id: string; name: string; description: string }) => (
+                      {successFactors.map((factor) => (
                         <TableRow key={factor.id}>
                           <TableCell className="py-4">
                             <div>
-                              <h3 className="font-medium text-tcof-dark">{factor.name}</h3>
-                              <p className="text-sm text-gray-600 mt-1">{factor.description.substring(0, 100)}...</p>
+                              <h3 className="font-medium text-tcof-dark">{factor.title}</h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {factor.description && factor.description.length > 100 
+                                  ? `${factor.description.substring(0, 100)}...` 
+                                  : factor.description}
+                              </p>
                             </div>
                           </TableCell>
                           <TableCell>
