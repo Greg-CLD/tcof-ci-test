@@ -20,6 +20,7 @@ export interface PlanData {
     block2?: {
       tasks: any[];
       stakeholders: any[];
+      heuristicLinks?: any[];
       completed: boolean;
     };
     block3?: {

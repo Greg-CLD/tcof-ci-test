@@ -128,10 +128,11 @@ export default function Block2Design() {
       
       {/* Tabs Navigation */}
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="mb-8">
-        <TabsList className="grid grid-cols-4 w-full max-w-4xl mx-auto">
+        <TabsList className="grid grid-cols-5 w-full max-w-4xl mx-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="step1">Step 1: Create Tasks</TabsTrigger>
           <TabsTrigger value="step2">Step 2: Stakeholder Mapping</TabsTrigger>
+          <TabsTrigger value="step3">Step 3: Heuristic Mapping</TabsTrigger>
           <TabsTrigger value="summary">Summary & Next Steps</TabsTrigger>
         </TabsList>
         
@@ -352,6 +353,68 @@ export default function Block2Design() {
               </Button>
               <Button 
                 className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                onClick={() => setActiveTab("step3")}
+              >
+                Continue to Step 3 <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        {/* Step 3: Heuristic Mapping Tab */}
+        <TabsContent value="step3" className="pt-6">
+          <Card className="max-w-4xl mx-auto">
+            <CardHeader>
+              <CardTitle className="text-tcof-dark">Step 3: Heuristic Mapping</CardTitle>
+              <CardDescription>
+                Map your personal heuristics to TCOF Success Factors
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-6 text-gray-700">
+                Link each of your custom heuristics from Block 1 to the most relevant TCOF Success Factor.
+                This ensures your personal guiding principles align with established best practices.
+              </p>
+              
+              {/* Redirect to the dedicated mapping page */}
+              <div className="bg-gray-50 p-6 rounded-lg mb-6 text-center">
+                <p className="mb-4">
+                  The Heuristic Mapping feature is available on a dedicated page for better usability.
+                </p>
+                <Button 
+                  onClick={() => navigate(`/make-a-plan/${projectId}/block-2/step-3`)}
+                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                >
+                  Open Heuristic Mapping Tool
+                </Button>
+              </div>
+              
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+                <p className="text-amber-800">
+                  <strong>Tip:</strong> Mapping your heuristics to success factors ensures your custom
+                  principles inherit the proven tasks and practices associated with each factor.
+                </p>
+              </div>
+              
+              <div className="flex justify-end">
+                <Button 
+                  variant="outline" 
+                  className="mr-2"
+                  onClick={handleSaveBlock}
+                >
+                  Save Progress
+                </Button>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab("step2")}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 2
+              </Button>
+              <Button 
+                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
                 onClick={() => setActiveTab("summary")}
               >
                 Continue to Summary <ArrowRight className="ml-2 h-4 w-4" />
@@ -425,9 +488,9 @@ export default function Block2Design() {
             <CardFooter className="flex justify-between">
               <Button 
                 variant="outline" 
-                onClick={() => setActiveTab("step2")}
+                onClick={() => setActiveTab("step3")}
               >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 2
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 3
               </Button>
               <Button 
                 className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
