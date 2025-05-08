@@ -176,10 +176,13 @@ export default function Block1Discover() {
   
   // Load server ratings on mount
   useEffect(() => {
-    if (evaluations.length > 0) {
+    if (evaluations && evaluations.length > 0) {
       // Create a map of factorId -> resonance from server evaluations
       const serverRatings = evaluations.reduce((acc: Record<string, string>, curr) => {
-        acc[curr.factorId] = curr.resonance.toString();
+        // Safety check to ensure resonance is defined
+        if (curr && curr.factorId && curr.resonance !== undefined) {
+          acc[curr.factorId] = curr.resonance.toString();
+        }
         return acc;
       }, {});
       
@@ -226,9 +229,29 @@ export default function Block1Discover() {
       // Convert to array of EvaluationInput objects for server persistence
       const promises = Object.entries(currentRatings).map(async ([factorId, resonance]) => {
         try {
+          // Make sure we have valid data
+          if (!factorId || resonance === undefined || resonance === null) {
+            console.warn(`Skipping invalid rating for factorId: ${factorId}, resonance: ${resonance}`);
+            return null;
+          }
+          
+          // Parse resonance safely
+          let resonanceNum: number;
+          try {
+            resonanceNum = typeof resonance === 'number' ? resonance : parseInt(resonance as string);
+            // Validate the number is between 1-5
+            if (isNaN(resonanceNum) || resonanceNum < 1 || resonanceNum > 5) {
+              console.warn(`Invalid resonance value: ${resonance}, setting to default 3`);
+              resonanceNum = 3; // Default to middle value if invalid
+            }
+          } catch (parseErr) {
+            console.warn(`Failed to parse resonance: ${resonance}, setting to default 3`);
+            resonanceNum = 3; // Default to middle value if parsing fails
+          }
+          
           return await updateSingleEvaluation({
             factorId,
-            resonance: parseInt(resonance as string),
+            resonance: resonanceNum,
             notes: '' // Optional notes field
           });
         } catch (err) {

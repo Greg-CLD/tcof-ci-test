@@ -43,10 +43,12 @@ export default function Block1Step1() {
   
   // Initialize local state from DB evaluations
   useEffect(() => {
-    if (evaluations.length > 0) {
+    if (evaluations && evaluations.length > 0) {
       const evaluationMap: {[key: string]: number} = {};
       evaluations.forEach(evaluation => {
-        evaluationMap[evaluation.factorId] = evaluation.resonance;
+        if (evaluation && evaluation.factorId && evaluation.resonance !== undefined) {
+          evaluationMap[evaluation.factorId] = evaluation.resonance;
+        }
       });
       setLocalEvaluations(evaluationMap);
     }
@@ -117,20 +119,52 @@ export default function Block1Step1() {
   
   // Handle save button click
   const handleSave = async () => {
-    // Format local evaluations for the API
-    const evaluationInputs: EvaluationInput[] = Object.entries(localEvaluations).map(([factorId, resonance]) => ({
-      factorId,
-      resonance
-    }));
+    // Format local evaluations for the API, filtering out any invalid values
+    const evaluationInputs: EvaluationInput[] = Object.entries(localEvaluations)
+      .filter(([factorId, resonance]) => {
+        // Filter out entries with missing factorId or undefined/invalid resonance
+        if (!factorId || resonance === undefined || resonance === null) {
+          console.warn(`Skipping invalid evaluation: factorId=${factorId}, resonance=${resonance}`);
+          return false;
+        }
+        // Ensure resonance is a valid number between 1-5
+        const resonanceNum = typeof resonance === 'number' ? resonance : parseInt(resonance as unknown as string);
+        if (isNaN(resonanceNum) || resonanceNum < 1 || resonanceNum > 5) {
+          console.warn(`Skipping out-of-range resonance value: ${resonance}`);
+          return false;
+        }
+        return true;
+      })
+      .map(([factorId, resonance]) => ({
+        factorId,
+        resonance
+      }));
     
-    // Save to PlanContext
+    // Save to PlanContext (only valid evaluations)
+    const validEvaluations = Object.fromEntries(
+      Object.entries(localEvaluations).filter(([_, resonance]) => 
+        resonance !== undefined && resonance !== null && 
+        (typeof resonance === 'number' ? resonance >= 1 && resonance <= 5 : 
+          !isNaN(parseInt(resonance as unknown as string)))
+      )
+    );
+    
     saveBlock('block1', {
-      successFactorRatings: localEvaluations,
+      successFactorRatings: validEvaluations,
       lastUpdated: new Date().toISOString(),
     });
     
     // Save to database
     try {
+      if (evaluationInputs.length === 0) {
+        toast({
+          title: "No evaluations to save",
+          description: "There are no valid evaluations to save to the server.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       await updateEvaluations(evaluationInputs);
       
       toast({
