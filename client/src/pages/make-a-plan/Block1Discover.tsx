@@ -847,11 +847,11 @@ export default function Block1Discover() {
                         <Button
                           variant="outline"
                           onClick={handleSave}
-                          disabled={isRatingsSaving || saveMutation.isPending}
+                          disabled={isRatingsSaving}
                           className="flex items-center"
                         >
                           <Save className="mr-2 h-4 w-4" />
-                          {isRatingsSaving || saveMutation.isPending ? 'Saving...' : 'Save All Changes'}
+                          {isRatingsSaving ? 'Saving...' : 'Save Progress'}
                         </Button>
                         <Button
                           onClick={() => setActiveTab("personalHeuristics")}
@@ -951,11 +951,11 @@ export default function Block1Discover() {
                         <Button
                           variant="outline"
                           onClick={handleSave}
-                          disabled={isRatingsSaving || saveMutation.isPending}
+                          disabled={isRatingsSaving}
                           className="flex items-center"
                         >
                           <Save className="mr-2 h-4 w-4" />
-                          {isRatingsSaving || saveMutation.isPending ? 'Saving...' : 'Save All Changes'}
+                          {isRatingsSaving ? 'Saving...' : 'Save Progress'}
                         </Button>
                         <Button
                           onClick={() => setActiveTab("summary")}
@@ -1044,11 +1044,11 @@ export default function Block1Discover() {
                         <Button
                           variant="outline"
                           onClick={handleSave}
-                          disabled={isRatingsSaving || saveMutation.isPending}
+                          disabled={isRatingsSaving}
                           className="flex items-center"
                         >
                           <Save className="mr-2 h-4 w-4" />
-                          {isRatingsSaving || saveMutation.isPending ? 'Saving...' : 'Save All Changes'}
+                          {isRatingsSaving ? 'Saving...' : 'Save Progress'}
                         </Button>
                         <Button
                           onClick={handleCompleteBlock}
