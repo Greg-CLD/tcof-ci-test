@@ -440,7 +440,9 @@ export const storage = {
       return {
         ...updatedMap,
         // Always include flattened goals for easier access
-        goals: updatedMap.data && 'goals' in updatedMap.data ? updatedMap.data.goals : [],
+        goals: updatedMap.data && typeof updatedMap.data === 'object' && updatedMap.data !== null && 'goals' in updatedMap.data 
+          ? updatedMap.data.goals 
+          : [],
       };
     } catch (error: any) {
       console.error('STORAGE: Error updating goal map:', error);

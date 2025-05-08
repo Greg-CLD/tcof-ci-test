@@ -116,7 +116,7 @@ export const projects = pgTable("projects", {
 // New table for success factor ratings
 export const successFactorRatings = pgTable("success_factor_ratings", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   factorId: varchar("factor_id", { length: 255 }).notNull(),
   resonance: integer("resonance").notNull(), // Rating from 1-5
   notes: text("notes"),
@@ -158,7 +158,7 @@ export const outcomeProgress = pgTable("outcome_progress", {
 // Plan metadata (serialized as JSON in DB, but with schema for validation)
 export const plans = pgTable("plans", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   userId: text("user_id").references(() => users.id),
   name: varchar("name", { length: 255 }),
   blocks: jsonb("blocks").notNull().default(JSON.stringify({
