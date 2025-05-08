@@ -23,7 +23,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import ProjectProgressTracker from "@/components/home/ProjectProgressTracker";
 import QuickLinkButtons from "@/components/home/QuickLinkButtons";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
   const [location, navigate] = useLocation();
