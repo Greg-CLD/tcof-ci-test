@@ -48,25 +48,12 @@ export const storage = {
   }),
 
   // User methods
-  async getUser(id: number) {
+  async getUser(id: string) {
     try {
-      // Use a direct SQL query to avoid the ORM column mapping issue
-      const result = await db.execute(
-        sql`SELECT id, username, email, password, created_at FROM users WHERE id = ${id}`
-      );
+      const [user] = await db.select().from(users).where(eq(users.id, id));
       
-      if (result && result.rows && result.rows.length > 0) {
-        const row = result.rows[0];
-        return {
-          id: row.id,
-          username: row.username,
-          email: row.email,
-          password: row.password,
-          createdAt: row.created_at,
-          updatedAt: null, // This column doesn't exist in the database
-          firstName: null, // This column doesn't exist in the database
-          lastName: null   // This column doesn't exist in the database
-        };
+      if (user) {
+        return user;
       }
       
       return null;
@@ -78,23 +65,10 @@ export const storage = {
 
   async getUserByUsername(username: string) {
     try {
-      // Use a direct SQL query to avoid the ORM column mapping issue, based on the actual schema
-      const result = await db.execute(
-        sql`SELECT id, username, email, password, created_at FROM users WHERE username = ${username}`
-      );
+      const [user] = await db.select().from(users).where(eq(users.username, username));
       
-      if (result && result.rows && result.rows.length > 0) {
-        const row = result.rows[0];
-        return {
-          id: row.id,
-          username: row.username,
-          email: row.email,
-          password: row.password,
-          createdAt: row.created_at,
-          updatedAt: null, // This field doesn't exist in the database
-          firstName: null, // This field doesn't exist in the database
-          lastName: null   // This field doesn't exist in the database
-        };
+      if (user) {
+        return user;
       }
       
       return null;
@@ -104,33 +78,23 @@ export const storage = {
     }
   },
 
-  async createUser(userData: { username: string; password: string; email?: string }) {
+  async createUser(userData: { username: string; password?: string; email?: string; id?: string }) {
     try {
-      // Hash the password before storing
-      const hashedPassword = await hashPassword(userData.password);
+      // Hash the password if provided
+      const hashedPassword = userData.password ? await hashPassword(userData.password) : null;
       
-      // Use direct SQL query to avoid column name mismatches
-      const result = await db.execute(
-        sql`INSERT INTO users (username, password, email, created_at)
-            VALUES (${userData.username}, ${hashedPassword}, ${userData.email || null}, ${new Date()})
-            RETURNING id, username, email, created_at`
-      );
+      const values = {
+        id: userData.id || Date.now().toString(), // Use provided ID or generate one
+        username: userData.username,
+        password: hashedPassword,
+        email: userData.email || null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
       
-      if (result.rows && result.rows.length > 0) {
-        const row = result.rows[0];
-        return {
-          id: row.id,
-          username: row.username,
-          email: row.email,
-          password: hashedPassword,
-          createdAt: row.created_at,
-          updatedAt: null,
-          firstName: null,
-          lastName: null
-        };
-      }
+      const [user] = await db.insert(users).values(values).returning();
       
-      throw new Error('Failed to create user');
+      return user;
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;

@@ -2,9 +2,6 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import session from "express-session";
 import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
@@ -14,7 +11,7 @@ import { projectsDb } from './projectsDb';
 import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation, RelationType } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
 import { eq, and } from 'drizzle-orm';
-import { db } from '../db/index';
+import { db } from './db';
 import {
   userInsertSchema as insertUserSchema,
   projectInsertSchema,
@@ -26,6 +23,7 @@ import projectsRouter from './routes/projects.js';
 import plansRouter from './routes/plans.js';
 import usersRouter from './routes/users.js';
 import { readFileSync } from 'fs';
+import { setupAuth, isAuthenticated } from './replitAuth';
 
 // Initialize Stripe with your secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -34,166 +32,8 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
-// Set up authentication middleware
-function setupAuth(app: Express) {
-  if (!process.env.SESSION_SECRET) {
-    process.env.SESSION_SECRET = "tcof-dev-secret-key-change-in-production";
-    console.warn("SESSION_SECRET not set, using default value. Set this in production!");
-  }
-
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: storage.sessionStore,
-    cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    }
-  };
-
-  app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByUsername(username);
-        if (!user) {
-          return done(null, false, { message: "Incorrect username." });
-        }
-        
-        // Ensure password is treated as string
-        const isPasswordValid = await storage.comparePasswords(password, String(user.password));
-        if (!isPasswordValid) {
-          return done(null, false, { message: "Incorrect password." });
-        }
-        
-        return done(null, user);
-      } catch (err) {
-        return done(err);
-      }
-    })
-  );
-
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  });
-
-  // Authentication routes
-  app.post("/api/register", async (req, res) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      
-      // Check if user already exists
-      const existingUser = await storage.getUserByUsername(userData.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-      
-      // Create the user - ensure email is a string or undefined, not null
-      const user = await storage.createUser({
-        username: userData.username,
-        password: userData.password,
-        email: userData.email || undefined
-      });
-      
-      // Log the user in
-      req.login(user, (err) => {
-        if (err) {
-          console.error('Error during login after registration:', err);
-          return res.status(500).json({ message: "Account created but couldn't log you in automatically, please log in manually" });
-        }
-        
-        // Return filtered user data
-        return res.status(201).json({
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          createdAt: user.createdAt
-        });
-      });
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          message: "Invalid registration data", 
-          errors: error.errors.map(e => `${e.path.join('.')}: ${e.message}`) 
-        });
-      }
-      
-      console.error("Registration error:", error);
-      
-      // Provide more specific error message if possible
-      if (error.code === '23505') {
-        return res.status(400).json({ message: "Username or email already exists" });
-      }
-      
-      return res.status(500).json({ message: "Registration failed, please try again" });
-    }
-  });
-
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) {
-        console.error('Login error:', err);
-        return res.status(500).json({ message: "Server error during login, please try again" });
-      }
-      
-      if (!user) {
-        return res.status(401).json({ message: info?.message || "Invalid username or password" });
-      }
-      
-      req.login(user, (loginErr) => {
-        if (loginErr) {
-          console.error('Session error during login:', loginErr);
-          return res.status(500).json({ message: "Error creating session, please try again" });
-        }
-        
-        // Return user data
-        return res.status(200).json({
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          createdAt: user.createdAt
-        });
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Logout failed" });
-      }
-      res.status(200).json({ message: "Logged out successfully" });
-    });
-  });
-
-  app.get("/api/user", (req, res) => {
-    if (req.isAuthenticated()) {
-      res.json(req.user);
-    } else {
-      res.status(401).json({ message: "Not authenticated" });
-    }
-  });
-}
-
-// Check if user is authenticated middleware
-function isAuthenticated(req: Request, res: Response, next: any) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ message: "Authentication required" });
-}
+// The legacy setupAuth and isAuthenticated functions are now imported from replitAuth.ts 
+// and will be used instead of these local implementations
 
 // Check if user is an admin (case-insensitive email check)
 function isAdmin(req: Request, res: Response, next: any) {
