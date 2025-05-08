@@ -82,10 +82,9 @@ export function useProjectPolicies(projectId?: string) {
   };
 
   // Helper function to handle policy deletion
-  const deletePolicy = async (policyId: string) => {
-    if (!projectId || !policyId) return false;
+  const deletePolicy = async (policyId: string): Promise<void> => {
+    if (!projectId || !policyId) return;
     await deletePolicyMutation.mutateAsync(policyId);
-    return true;
   };
 
   return {

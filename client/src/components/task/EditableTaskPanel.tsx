@@ -44,7 +44,7 @@ interface EditableTaskPanelProps {
   onUpdateTaskStatus?: (taskId: string, completed: boolean) => void;
 }
 
-export default function EditableTaskPanel({
+export function EditableTaskPanel({
   title,
   description,
   tasks,
@@ -272,3 +272,5 @@ export default function EditableTaskPanel({
     </Card>
   );
 }
+
+export default EditableTaskPanel;
