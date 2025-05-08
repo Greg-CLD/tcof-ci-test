@@ -60,7 +60,12 @@ export default function Block1Step2() {
   // Add heuristic mutation with optimistic UI
   const addHeuristicMutation = useMutation({
     mutationFn: async (newHeuristicText: string) => {
-      const updatedHeuristics = [...heuristics, newHeuristicText];
+      // Create new heuristic object
+      const newHeuristicObj: PersonalHeuristic = { 
+        name: newHeuristicText,
+        description: ""
+      };
+      const updatedHeuristics = [...heuristics, newHeuristicObj];
       
       // Save to block1
       return saveBlock('block1', {
@@ -75,12 +80,19 @@ export default function Block1Step2() {
       // Snapshot the previous value
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
       
+      // Create new heuristic object
+      const newHeuristicObj: PersonalHeuristic = { name: newHeuristicText };
+      
       // Optimistically update to the new value
       queryClient.setQueryData(['plan', projectId], (old: any) => {
         if (!old) return old;
         
         const currentHeuristics = old.blocks?.block1?.personalHeuristics || [];
-        const updatedHeuristics = [...currentHeuristics, newHeuristicText];
+        // Ensure all existing heuristics are objects
+        const currentHeuristicsAsObjects = currentHeuristics.map(h => 
+          typeof h === 'string' ? { name: h } : h
+        );
+        const updatedHeuristics = [...currentHeuristicsAsObjects, newHeuristicObj];
         
         return {
           ...old,
@@ -96,7 +108,7 @@ export default function Block1Step2() {
       });
       
       // Update local state for UI
-      setHeuristics(prev => [...prev, newHeuristicText]);
+      setHeuristics(prev => [...prev, newHeuristicObj]);
       
       // Show immediate feedback
       toast({
@@ -372,7 +384,7 @@ export default function Block1Step2() {
                           key={index} 
                           className="flex items-center justify-between p-3 bg-white rounded border hover:bg-gray-50"
                         >
-                          <span>{heuristic}</span>
+                          <span>{typeof heuristic === 'string' ? heuristic : heuristic.name}</span>
                           <Button 
                             variant="ghost" 
                             size="icon"
