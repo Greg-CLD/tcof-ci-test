@@ -27,19 +27,18 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    // Don't create the table - we're already creating it with our schema
-    createTableIfMissing: false,
+    createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
   });
   return session({
-    secret: process.env.SESSION_SECRET || 'tcof-secure-session-secret',
+    secret: process.env.SESSION_SECRET || "temp-session-secret-for-dev",
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Only use secure in production
+      secure: process.env.NODE_ENV === "production",
       maxAge: sessionTtl,
     },
   });
@@ -55,15 +54,16 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(claims: any) {
+async function upsertUser(
+  claims: any,
+) {
   await storage.upsertUser({
     id: claims["sub"],
-    username: claims["username"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
-    bio: claims["bio"],
     profileImageUrl: claims["profile_image_url"],
+    username: claims["email"]?.split('@')[0] || `user-${claims["sub"]}`, // Generate username if not available
   });
 }
 
@@ -85,7 +85,8 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
+  for (const domain of process.env
+    .REPLIT_DOMAINS!.split(",")) {
     const strategy = new Strategy(
       {
         name: `replitauth:${domain}`,
@@ -124,6 +125,18 @@ export async function setupAuth(app: Express) {
         }).href
       );
     });
+  });
+
+  // Return user data endpoint
+  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
   });
 }
 
