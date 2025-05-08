@@ -1,0 +1,32 @@
+Goal/TLDR:
+In Block 2 – Step 3, present each user-defined heuristic (from Block 1 Step 2) alongside a dropdown of the 12 Canonical TCOF Success Factors (plus “No Match”), persisting links via React Query and filtering linked heuristics out of later steps.
+
+Prompt for the Agent:
+	Title: Block 2 Step 3 – Heuristic ↔ Success-Factor Linking
+	Goal: In Block 2 Step 3, enable users to map each of their custom heuristics (created in Block 1 Step 2) to one of the 12 TCOF Success Factors—or “No Match”—so that linked heuristics inherit their factor’s tasks in subsequent steps.
+	Tasks:
+	1. Component & Data Hooks
+		○ File: client/src/pages/MakeAPlanBlock2Step3.tsx (or the existing Step 3 component).
+		○ Import and use:
+			§ usePersonalHeuristics(projectId) to fetch the heuristics list.
+			§ useHeuristicLinks(projectId) to fetch and update mapping entries.
+			§ React Query’s useMutation & useQueryClient for persistence.
+	2. UI Layout
+		○ For each heuristic in the list:
+			§ Left cell: display heuristic.text.
+			§ Right cell: a <Select> with:
+				□ 12 fixed <SelectItem value="factorId">Factor Name</SelectItem>.
+				□ <SelectItem value={null}>No Match / Not Applicable</SelectItem>.
+		○ If no heuristics, show: “Add at least one heuristic in Block 1 before linking.”
+	3. Link Behavior
+		○ On dropdown change:
+			§ Call mutation to upsert { projectId, heuristicId, factorId }.
+			§ Invalidate ['heuristicLinks', projectId] so the UI refreshes.
+		○ Pre-select existing links on load from useHeuristicLinks.
+	4. Downstream Impact
+		○ In Step 4 (task identification), automatically exclude any heuristics that have a non-null factorId, since they’ll inherit tasks from the linked factor.
+	5. Styling & Accessibility
+		○ Use existing UI components (SelectTrigger, SelectContent, etc.) and Tailwind utilities for layout.
+		○ Ensure keyboard-accessible dropdown navigation.
+	Deliverable:
+		○ A functional Block 2 Step 3 screen where users link heuristics to success factors, with mappings persisted and linked heuristics filtered out in Step 4.
