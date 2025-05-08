@@ -99,6 +99,22 @@ export const projects = pgTable("projects", {
   isProfileComplete: boolean("is_profile_complete").default(false),
 });
 
+// New table for success factor ratings
+export const successFactorRatings = pgTable("success_factor_ratings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  factorId: varchar("factor_id", { length: 255 }).notNull(),
+  resonance: integer("resonance").notNull(), // Rating from 1-5
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Ensure unique constraint for project+factor combination
+    projectFactorIdx: index("project_factor_idx").on(table.projectId, table.factorId),
+  };
+});
+
 // Outcomes table - standard outcomes from the framework + custom user outcomes
 export const outcomes = pgTable("outcomes", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -182,6 +198,7 @@ export const sessions = pgTable(
 export const projectsRelations = relations(projects, ({ many, one }) => ({
   plans: many(plans),
   outcomeProgress: many(outcomeProgress),
+  successFactorRatings: many(successFactorRatings),
   
   // Add relationship to organisation
   organisation: one(organisations, {
@@ -202,6 +219,13 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
     fields: [projects.tcofJourneyId],
     references: [tcofJourneys.id]
   })
+}));
+
+export const successFactorRatingsRelations = relations(successFactorRatings, ({ one }) => ({
+  project: one(projects, {
+    fields: [successFactorRatings.projectId],
+    references: [projects.id]
+  }),
 }));
 
 export const outcomesRelations = relations(outcomes, ({ many }) => ({
@@ -269,6 +293,12 @@ export const outcomeSelectSchema = createSelectSchema(outcomes);
 
 export const outcomeProgressInsertSchema = createInsertSchema(outcomeProgress);
 export const outcomeProgressSelectSchema = createSelectSchema(outcomeProgress);
+
+// Success factor ratings schemas
+export const successFactorRatingInsertSchema = createInsertSchema(successFactorRatings, {
+  resonance: (schema) => schema.min(1, "Rating must be at least 1").max(5, "Rating must be at most 5"),
+});
+export const successFactorRatingSelectSchema = createSelectSchema(successFactorRatings);
 
 // Enhance user schema with validations
 export const userInsertSchema = createInsertSchema(users, {
@@ -350,6 +380,10 @@ export type PasswordChange = z.infer<typeof passwordChangeSchema>;
 
 export type Plan = z.infer<typeof planSelectSchema>;
 export type InsertPlan = z.infer<typeof planInsertSchema>;
+
+// Success factor rating types
+export type SuccessFactorRating = z.infer<typeof successFactorRatingSelectSchema>;
+export type InsertSuccessFactorRating = z.infer<typeof successFactorRatingInsertSchema>;
 
 // Add organisation types
 export type Organisation = z.infer<typeof organisationSelectSchema>;
