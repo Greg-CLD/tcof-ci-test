@@ -9,7 +9,7 @@ import { z } from 'zod';
 const router = express.Router();
 
 // GET /api/projects/:projectId/success-factor-ratings
-router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req, res) => {
+router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { projectId } = req.params;
     const userId = (req.user as any).id;
@@ -24,7 +24,9 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
     
     if (!projectExists) {
       console.log(`❌ [API:GET] Project ${projectId} not found`);
-      return res.status(404).json({ message: 'Project not found' });
+      const notFoundError = new Error('Project not found') as any;
+      notFoundError.status = 404;
+      throw notFoundError;
     }
     
     // Check if user has access to this project
@@ -40,11 +42,15 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
         
         if (!isMember) {
           console.log(`⛔ [API:GET] Unauthorized access to project ${projectId} by user ${userId}`);
-          return res.status(403).json({ message: 'Unauthorized access to project' });
+          const unauthorizedError = new Error('Unauthorized access to project') as any;
+          unauthorizedError.status = 403;
+          throw unauthorizedError;
         }
       } else {
         console.log(`⛔ [API:GET] Unauthorized access to project ${projectId} by user ${userId}`);
-        return res.status(403).json({ message: 'Unauthorized access to project' });
+        const unauthorizedError = new Error('Unauthorized access to project') as any;
+        unauthorizedError.status = 403;
+        throw unauthorizedError;
       }
     }
     
@@ -57,12 +63,12 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
     return res.status(200).json(ratings);
   } catch (error) {
     console.error('❌ [API:GET] Error fetching success factor ratings:', error);
-    return res.status(500).json({ message: 'Failed to fetch success factor ratings' });
+    next(error); // Pass error to the error-logging middleware
   }
 });
 
 // PUT /api/projects/:projectId/success-factor-ratings
-router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, res) => {
+router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { projectId } = req.params;
     const userId = (req.user as any).id;
@@ -79,7 +85,10 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
     } catch (error) {
       if (error instanceof z.ZodError) {
         console.error('❌ [API:PUT] Validation failed - Errors:', JSON.stringify(error.errors));
-        return res.status(400).json({ message: 'Invalid input', errors: error.errors });
+        const validationError = new Error('Invalid input') as any;
+        validationError.status = 400;
+        validationError.errors = error.errors;
+        throw validationError;
       }
       throw error;
     }
@@ -91,7 +100,9 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
     
     if (!projectExists) {
       console.log(`❌ [API:PUT] Project ${projectId} not found`);
-      return res.status(404).json({ message: 'Project not found' });
+      const notFoundError = new Error('Project not found') as any;
+      notFoundError.status = 404;
+      throw notFoundError;
     }
     
     // Check if user has access to this project
@@ -107,11 +118,15 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
         
         if (!isMember) {
           console.log(`⛔ [API:PUT] Unauthorized access to project ${projectId} by user ${userId}`);
-          return res.status(403).json({ message: 'Unauthorized access to project' });
+          const unauthorizedError = new Error('Unauthorized access to project') as any;
+          unauthorizedError.status = 403;
+          throw unauthorizedError;
         }
       } else {
         console.log(`⛔ [API:PUT] Unauthorized access to project ${projectId} by user ${userId}`);
-        return res.status(403).json({ message: 'Unauthorized access to project' });
+        const unauthorizedError = new Error('Unauthorized access to project') as any;
+        unauthorizedError.status = 403;
+        throw unauthorizedError;
       }
     }
     
@@ -172,12 +187,7 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
     });
   } catch (error) {
     console.error('❌ [API:PUT] Error updating success factor ratings:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return res.status(500).json({ 
-      message: 'Failed to update success factor ratings',
-      error: errorMessage,
-      details: process.env.NODE_ENV !== 'production' ? String(error) : undefined
-    });
+    next(error); // Pass error to the error-logging middleware
   }
 });
 
