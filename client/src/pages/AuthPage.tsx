@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import {
   Card,
@@ -145,20 +145,17 @@ export default function AuthPage() {
     }
   };
 
-  // Handle login submission
-  const onLoginSubmit = (data: LoginFormValues) => {
+  // Handle login submission - direct to Replit Auth
+  const onLoginSubmit = () => {
     if (loginMutation) {
-      loginMutation.mutate(data);
+      loginMutation.mutate();
     }
   };
 
-  // Handle registration submission
-  const onRegisterSubmit = (data: RegisterFormValues) => {
+  // Handle registration submission - direct to Replit Auth
+  const onRegisterSubmit = () => {
     if (registerMutation) {
-      // Omit confirmPassword as it's not needed in the API
-      const { confirmPassword, ...registerData } = data;
-      // ID will be generated in the registerMutation
-      registerMutation.mutate(registerData);
+      registerMutation.mutate();
     }
   };
 
@@ -199,57 +196,32 @@ export default function AuthPage() {
                     <CardHeader>
                       <CardTitle>Log In</CardTitle>
                       <CardDescription>
-                        Enter your credentials to access your account
+                        Log in with your Replit account to access the application
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <Form {...loginForm}>
-                        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                          <FormField
-                            control={loginForm.control}
-                            name="username"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Username</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Enter your username" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={loginForm.control}
-                            name="password"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Password</FormLabel>
-                                <FormControl>
-                                  <Input type="password" placeholder="Enter your password" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <Button 
-                            type="submit" 
-                            className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                            disabled={loginMutation?.isPending}
-                          >
-                            {loginMutation?.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Logging in...
-                              </>
-                            ) : (
-                              <>
-                                <LogIn className="mr-2 h-4 w-4" />
-                                Log In
-                              </>
-                            )}
-                          </Button>
-                        </form>
-                      </Form>
+                    <CardContent className="space-y-4">
+                      <p className="text-gray-600">
+                        Click the button below to log in securely with your Replit account.
+                        No need to create a separate password.
+                      </p>
+                      
+                      <Button 
+                        onClick={onLoginSubmit} 
+                        className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        disabled={loginMutation?.isPending}
+                      >
+                        {loginMutation?.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Redirecting to login...
+                          </>
+                        ) : (
+                          <>
+                            <LogIn className="mr-2 h-4 w-4" />
+                            Log In with Replit
+                          </>
+                        )}
+                      </Button>
                     </CardContent>
                     <CardFooter className="flex flex-col">
                       <div className="flex items-center justify-between w-full">
@@ -277,128 +249,28 @@ export default function AuthPage() {
                         Register for a new account to get started
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <Form {...registerForm}>
-                        <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                          <FormField
-                            control={registerForm.control}
-                            name="username"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Username</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Choose a username" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={registerForm.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <div className="flex space-x-2">
-                                  <FormControl>
-                                    <Input 
-                                      type="email" 
-                                      placeholder="Enter your email" 
-                                      {...field} 
-                                      onBlur={() => handleEmailBlur(field.value)}
-                                    />
-                                  </FormControl>
-                                  {field.value && field.value.includes('@') && (
-                                    <Button 
-                                      type="button"
-                                      variant="outline"
-                                      className="shrink-0"
-                                      onClick={() => checkAccount(field.value)}
-                                      disabled={isCheckingAccount}
-                                    >
-                                      {isCheckingAccount ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        'Check'
-                                      )}
-                                    </Button>
-                                  )}
-                                </div>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          {/* Account check status alerts */}
-                          {accountCheckStatus.checked && (
-                            <Alert className={accountCheckStatus.exists ? 
-                              "bg-amber-50 border-amber-500" : 
-                              "bg-green-50 border-green-500"
-                            }>
-                              {accountCheckStatus.exists ? (
-                                <>
-                                  <AlertCircle className="h-4 w-4 text-amber-500" />
-                                  <AlertTitle className="text-amber-800">Account Already Exists</AlertTitle>
-                                  <AlertDescription className="text-amber-700">
-                                    An account with this email already exists. We've switched to the login tab with your username. Please enter your password to continue.
-                                  </AlertDescription>
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                  <AlertTitle className="text-green-800">Email Available</AlertTitle>
-                                  <AlertDescription className="text-green-700">
-                                    This email is available for registration. Please complete the form to create your account.
-                                  </AlertDescription>
-                                </>
-                              )}
-                            </Alert>
-                          )}
-                          <FormField
-                            control={registerForm.control}
-                            name="password"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Password</FormLabel>
-                                <FormControl>
-                                  <Input type="password" placeholder="Create a password" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={registerForm.control}
-                            name="confirmPassword"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Confirm Password</FormLabel>
-                                <FormControl>
-                                  <Input type="password" placeholder="Confirm your password" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <Button 
-                            type="submit" 
-                            className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                            disabled={registerMutation?.isPending}
-                          >
-                            {registerMutation?.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Creating Account...
-                              </>
-                            ) : (
-                              <>
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Create Account
-                              </>
-                            )}
-                          </Button>
-                        </form>
-                      </Form>
+                    <CardContent className="space-y-4">
+                      <p className="text-gray-600">
+                        Create an account using your Replit credentials. This will let you save your projects and access them anytime.
+                      </p>
+                      
+                      <Button 
+                        onClick={onRegisterSubmit} 
+                        className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        disabled={registerMutation?.isPending}
+                      >
+                        {registerMutation?.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Redirecting to registration...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Sign Up with Replit
+                          </>
+                        )}
+                      </Button>
                     </CardContent>
                     <CardFooter className="flex flex-col">
                       <div className="flex items-center justify-between w-full">
