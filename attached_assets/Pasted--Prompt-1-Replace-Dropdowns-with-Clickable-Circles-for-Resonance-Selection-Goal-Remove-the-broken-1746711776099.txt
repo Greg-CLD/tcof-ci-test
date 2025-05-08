@@ -1,0 +1,70 @@
+✅ Prompt 1: Replace Dropdowns with Clickable Circles for Resonance Selection
+Goal:
+Remove the broken dropdowns and replace them with five inline clickable circles (1–5), with tooltips showing the meaning of each resonance level.
+
+csharp
+Copy code
+Problem:
+  The dropdown UI for selecting Resonance isn’t working—selections reset immediately and don’t persist.
+
+Fix:
+  1. In `client/src/pages/make-a-plan/Block1Discover.tsx`, remove the dropdown/select menu used for resonance.
+
+  2. Define a local constant inside the component:
+     ```ts
+     const resonanceOptions = [
+       { value: 1, symbol: '❌', label: "Doesn’t land", desc: "I don’t feel this…" },
+       { value: 2, symbol: '🤔', label: "Unfamiliar", desc: "I’ve never seen it in action." },
+       { value: 3, symbol: '🟡', label: "Seems true", desc: "I believe it’s useful." },
+       { value: 4, symbol: '✅', label: "Proven", desc: "I’ve used this and it worked." },
+       { value: 5, symbol: '🔥', label: "Hard-won truth", desc: "It’s burned into how I work." },
+     ];
+     ```
+
+  3. For each Success Factor row:
+     - Render the five `resonanceOptions.map()` as buttons or styled circles.
+     - Each should show the emoji (`opt.symbol`) and have a `title={opt.label + ' – ' + opt.desc}` for hover.
+     - On click, update local component state:
+       ```ts
+       const [ratings, setRatings] = useState<Record<string, number>>({});
+       const handleSelect = (factorId: string, value: number) => {
+         setRatings(prev => ({ ...prev, [factorId]: value }));
+       };
+       ```
+
+  4. Visually highlight the selected button using conditional styling (`bg-blue-100` or similar).
+
+Please implement just this UI logic—no backend calls or data fetch/save yet. Reply with:
+✅ Resonance options render  
+✅ Selection updates local state  
+✅ Tooltip/hover works
+⏭️ Prompt 2: Persist Resonance Selections to the Server
+Goal:
+Allow users to save their resonance selections and have them persist after page reload.
+
+csharp
+Copy code
+Problem:
+  Resonance values selected via UI are not being saved or restored on page load.
+
+Fix:
+  1. Use `useResonanceRatings(projectId)`:
+     - On mount, load ratings and call `setRatings()` with the result.
+     - On click “Save Progress,” call a mutation with the updated ratings:
+       ```ts
+       await mutateAsync(ratings);  // ratings is Record<factorId, number>
+       await queryClient.invalidateQueries(['resonanceRatings', projectId]);
+       ```
+
+  2. Add a Save button to the page:
+     ```tsx
+     <button onClick={handleSave} className="btn btn-primary">Save Progress</button>
+     ```
+
+  3. Confirm that:
+     - Selections are saved to the API.
+     - Refreshing the page reloads the saved values and highlights them in the UI.
+
+Please implement this save + reload logic after the circles are working. Reply with:
+✅ Save button works  
+✅ Ratings persist after refresh

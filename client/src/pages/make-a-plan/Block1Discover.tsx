@@ -437,24 +437,26 @@ export default function Block1Discover() {
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex flex-col space-y-2">
-                                    <Select
-                                      value={plan?.blocks?.block1?.successFactorRatings?.[factor.id] || ""}
-                                      onValueChange={(value) => handleEvaluationChange(factor.id, value)}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select resonance level" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {RESONANCE_OPTIONS.map((option) => (
-                                          <SelectItem key={option.value} value={option.value}>
-                                            <div className="flex items-center gap-2">
-                                              <span>{option.symbol}</span>
-                                              <span>{option.label}</span>
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                    <div className="flex space-x-2">
+                                      {RESONANCE_OPTIONS.map((option) => {
+                                        const isSelected = plan?.blocks?.block1?.successFactorRatings?.[factor.id] === option.value;
+                                        return (
+                                          <button
+                                            key={option.value}
+                                            type="button"
+                                            onClick={() => handleEvaluationChange(factor.id, option.value)}
+                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                              isSelected 
+                                                ? 'bg-tcof-teal text-white ring-2 ring-tcof-dark' 
+                                                : 'bg-gray-100 hover:bg-gray-200'
+                                            }`}
+                                            title={`${option.label} – ${option.desc}`}
+                                          >
+                                            <span className="text-lg">{option.symbol}</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
                                     
                                     {plan?.blocks?.block1?.successFactorRatings?.[factor.id] && (
                                       <div className="text-sm text-gray-600">
