@@ -17,6 +17,7 @@ const getOidcConfig = memoize(
     console.log("Discovering OpenID configuration with REPL_ID:", process.env.REPL_ID);
     try {
       return await client.discovery(
+        // Always use HTTPS for discovery
         new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
         process.env.REPL_ID!
       );
@@ -45,7 +46,6 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       // Set secure to false in development to allow non-HTTPS cookies
-      // This is important for Replit Auth to work in the development environment
       secure: false,
       maxAge: sessionTtl,
       sameSite: 'lax', // Allows for cross-site requests while still providing some CSRF protection
@@ -70,7 +70,6 @@ async function upsertUser(
     console.log("Upserting user with claims:", JSON.stringify(claims, null, 2));
     
     // Only include fields that actually exist in the database schema
-    // This matches the actual table structure from our database inspection
     await storage.upsertUser({
       id: claims["sub"],
       email: claims["email"],
@@ -91,114 +90,108 @@ export async function setupAuth(app: Express) {
   app.use(passport.session());
 
   const config = await getOidcConfig();
+  console.log("OIDC Config received:", config.issuer);
 
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const user = {};
+      updateUserSession(user, tokens);
+      await upsertUser(tokens.claims());
+      verified(null, user);
+    } catch (error) {
+      console.error("Error in verify function:", error);
+      verified(error as Error);
+    }
   };
 
-  // Get all possible domains from environment variable
-  const domains = process.env.REPLIT_DOMAINS!.split(",");
-  console.log("Configuring auth strategies for domains:", domains);
-  
-  // Register a strategy for each domain with both HTTP and HTTPS protocols
-  for (const domain of domains) {
-    const replit_domain = domain.trim();
-    
-    // Create a strategy specifically for the Replit domain format
-    const strategy = new Strategy(
-      {
-        name: `replitauth:${replit_domain}`,
-        config,
-        scope: "openid email profile offline_access",
-        callbackURL: `https://${replit_domain}/api/callback`,
-      },
-      verify,
-    );
-    passport.use(strategy);
-    console.log(`Registered auth strategy for domain: ${replit_domain}`);
-  }
+  // Register a single strategy with a generic name
+  const strategy = new Strategy(
+    {
+      name: "replit",
+      config,
+      scope: "openid email profile offline_access",
+      // Dynamically determine callback URL based on request
+      callbackURL: "/api/callback",
+    },
+    verify,
+  );
+  passport.use(strategy);
+  console.log("Registered generic Replit auth strategy");
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    console.log("Login request from hostname:", req.hostname);
-    console.log("REPLIT_DOMAINS set to:", process.env.REPLIT_DOMAINS);
+    console.log("Login request from:", req.hostname);
     
-    // Use hostname directly from the request
-    const strategy = `replitauth:${req.hostname}`;
-    console.log("Using auth strategy:", strategy);
+    // Use the simplified strategy with dynamic callback URL
+    const protocol = req.protocol || "https";
+    const fullUrl = `${protocol}://${req.headers.host}`;
+    console.log(`Full base URL: ${fullUrl}`);
     
-    passport.authenticate(strategy, {
+    passport.authenticate("replit", {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
+      callbackURL: `${fullUrl}/api/callback`,
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    console.log("Auth callback received", req.query, "from hostname:", req.hostname);
+    console.log("Auth callback received", req.query);
     
     // Set a cookie to indicate we've attempted the callback
-    // This helps break potential infinite loops
     res.cookie('auth_callback_attempted', 'true', { 
       maxAge: 60000, // 1 minute
       httpOnly: true,
       sameSite: 'lax'
     });
 
-    // Explicitly use the strategy matching the hostname
-    const strategy = `replitauth:${req.hostname}`;
-    console.log("Using callback strategy:", strategy);
+    // Determine the full callback URL to match login request
+    const protocol = req.protocol || "https";
+    const fullCallbackUrl = `${protocol}://${req.headers.host}/api/callback`;
+    console.log(`Using callback URL: ${fullCallbackUrl}`);
     
     try {
-      passport.authenticate(strategy, {
+      passport.authenticate("replit", {
+        callbackURL: fullCallbackUrl,
         successReturnToOrRedirect: "/",
         failureRedirect: "/?auth_failed=true",
-        failWithError: true
       })(req, res, (err) => {
         if (err) {
-          console.error("Authentication error details:", err);
+          console.error("Authentication error:", err);
           
-          // Try to extract useful information from the error for debugging
+          // Extract error info for client-side handling
           const errorInfo = {
             message: err.message || 'Unknown error',
             code: err.code || 'NO_CODE',
-            cause: err.cause ? JSON.stringify(err.cause) : 'No cause information'
           };
           console.log("Error info:", errorInfo);
           
-          // Pass error information as URL parameters for the client to handle
-          // Encode the error message to avoid issues with special characters
+          // Redirect to home with error info
           const encodedErrorMessage = encodeURIComponent(errorInfo.message);
-          const encodedErrorCode = encodeURIComponent(errorInfo.code);
-          
-          // Instead of redirecting back to login (which might cause an infinite loop),
-          // redirect to home page with error parameters
-          return res.redirect(`/?auth_error=${encodedErrorMessage}&error_code=${encodedErrorCode}`);
+          return res.redirect(`/?auth_error=${encodedErrorMessage}`);
         }
         next();
       });
     } catch (error: any) {
       console.error("Unexpected error in auth callback:", error);
-      
-      // Handle errors that occur before the passport authenticate call
-      const encodedErrorMessage = encodeURIComponent(error?.message || 'Unexpected authentication error');
-      return res.redirect(`/?auth_error=${encodedErrorMessage}`);
+      return res.redirect(`/?auth_error=${encodeURIComponent(error?.message || 'Authentication error')}`);
     }
   });
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
+      // Build the full URL for the post-logout redirect
+      const protocol = req.protocol || "https";
+      const fullUrl = `${protocol}://${req.headers.host}`;
+      
       res.redirect(
         client.buildEndSessionUrl(config, {
           client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          post_logout_redirect_uri: fullUrl,
         }).href
       );
     });
