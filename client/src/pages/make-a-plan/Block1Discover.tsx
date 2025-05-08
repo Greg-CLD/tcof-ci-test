@@ -326,7 +326,7 @@ export default function Block1Discover() {
   };
   
   // Handle adding a new personal heuristic
-  const handleAddHeuristic = () => {
+  const handleAddHeuristic = async () => {
     if (!newHeuristic.name.trim()) {
       toast({
         title: "Missing information",
@@ -336,40 +336,78 @@ export default function Block1Discover() {
       return;
     }
     
+    console.log('🔄 Block1Discover.handleAddHeuristic - Adding new personal heuristic:', newHeuristic);
+    
     const updatedHeuristics = [
       ...(plan?.blocks?.block1?.personalHeuristics || []),
       { ...newHeuristic, id: Date.now().toString() }
     ];
     
-    // Save directly to block1
-    saveBlock('block1', {
-      personalHeuristics: updatedHeuristics,
-      lastUpdated: new Date().toISOString(),
-    });
-    
-    setNewHeuristic({ name: "", description: "" });
-    
-    toast({
-      title: "Heuristic added",
-      description: "Your personal heuristic has been added successfully.",
-    });
+    try {
+      // Save directly to block1
+      saveBlock('block1', {
+        personalHeuristics: updatedHeuristics,
+        lastUpdated: new Date().toISOString(),
+      });
+      
+      // Also save to server
+      console.log('🔄 Block1Discover.handleAddHeuristic - Saving to server via saveMutation');
+      await saveMutation.mutateAsync();
+      
+      // Refresh queries to ensure we have the latest data
+      console.log('🔄 Block1Discover.handleAddHeuristic - Invalidating queries to refresh data');
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+      
+      setNewHeuristic({ name: "", description: "" });
+      
+      toast({
+        title: "Heuristic added",
+        description: "Your personal heuristic has been added successfully and saved to the server.",
+      });
+    } catch (error) {
+      console.error("🔴 Block1Discover.handleAddHeuristic - Error saving heuristic:", error);
+      toast({
+        title: "Error saving heuristic",
+        description: "There was an error saving your heuristic. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Handle removing a personal heuristic
-  const handleRemoveHeuristic = (id: string) => {
+  const handleRemoveHeuristic = async (id: string) => {
+    console.log('🔄 Block1Discover.handleRemoveHeuristic - Removing heuristic with id:', id);
+    
     const updatedHeuristics = (plan?.blocks?.block1?.personalHeuristics || [])
       .filter((h: { id: string }) => h.id !== id);
     
-    // Save directly to block1
-    saveBlock('block1', {
-      personalHeuristics: updatedHeuristics,
-      lastUpdated: new Date().toISOString(),
-    });
-    
-    toast({
-      title: "Heuristic removed",
-      description: "The personal heuristic has been removed successfully.",
-    });
+    try {
+      // Save directly to block1
+      saveBlock('block1', {
+        personalHeuristics: updatedHeuristics,
+        lastUpdated: new Date().toISOString(),
+      });
+      
+      // Also save to server
+      console.log('🔄 Block1Discover.handleRemoveHeuristic - Saving to server via saveMutation');
+      await saveMutation.mutateAsync();
+      
+      // Refresh queries to ensure we have the latest data
+      console.log('🔄 Block1Discover.handleRemoveHeuristic - Invalidating queries to refresh data');
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+      
+      toast({
+        title: "Heuristic removed",
+        description: "The personal heuristic has been removed and changes saved to the server.",
+      });
+    } catch (error) {
+      console.error("🔴 Block1Discover.handleRemoveHeuristic - Error removing heuristic:", error);
+      toast({
+        title: "Error removing heuristic",
+        description: "There was an error removing the heuristic. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Handle saving the success criteria

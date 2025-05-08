@@ -1,0 +1,38 @@
+Problem:
+  In Step 2 (Personal Heuristics) of the Make a Plan flow, new heuristics disappear immediately after pressing Save—they’re not persisting or re-rendering.
+
+Goal:
+  Ensure that when a user adds or edits a heuristic and clicks Save, the entry is saved to the server and remains visible on the page (and after a refresh).
+
+Suggestions / Steps:
+
+1. **Client – Save Call**  
+   - File: `client/src/pages/make-a-plan/Block1Step2.tsx`  
+   - Confirm the Save button calls the correct hook/mutation (e.g. `usePersonalHeuristics(projectId).mutateAsync`) with payload `{ text: newHeuristic }`.  
+   - Add a console.log before and after the mutation to verify the payload and response.
+
+2. **Client – State Update & Refetch**  
+   - After the mutation resolves, explicitly refetch or invalidate the `usePersonalHeuristics` query so that the UI list is updated.  
+   - In your `useEffect`, ensure you repopulate local state from the refetched data.
+
+3. **API Endpoint**  
+   - File: `server/routes/api/projects/[projectId]/heuristics.ts` (or equivalent)  
+   - Verify there’s a POST/PUT handler that upserts the heuristic into the database and returns the full updated list.  
+   - Log incoming `req.body` and confirm the server responds with the updated heuristics array.
+
+4. **Database Upsert**  
+   - Ensure the upsert logic in the handler correctly uses `projectId` and stores the new heuristic text.  
+   - Confirm that after upsert, the returned payload contains the newly added heuristic.
+
+5. **Validation & Testing**  
+   - Manually add a heuristic, click Save, and confirm:  
+     • No console errors  
+     • Network request status 200 with correct payload  
+     • The new heuristic appears in the list immediately  
+   - Refresh the page and confirm the heuristic still appears.
+
+Please implement these fixes and report back:
+✅ Save mutation called correctly  
+✅ Query invalidated/refetched  
+✅ API upsert returns updated list  
+✅ Heuristic persists in UI and after reload  
