@@ -306,6 +306,42 @@ export default function Block1Discover() {
     });
   };
   
+  // Simplified function to save resonance ratings
+  const handleSave = async () => {
+    console.log('🔄 Block1Discover.handleSave - Starting save operation');
+    
+    try {
+      // Map ratings to the payload format expected by the API
+      const payload = Object.entries(pendingRatings).map(([factorId, r]) => ({ 
+        factorId, 
+        resonance: typeof r === 'number' ? r : parseInt(r as string) 
+      }));
+      
+      console.log('🔄 Block1Discover.handleSave - Mapped payload:', payload);
+      
+      // Send the ratings to the server
+      await updateEvaluations(payload);
+      
+      // Show success message
+      toast({
+        title: "Ratings saved",
+        description: "Your factor evaluations have been saved successfully.",
+      });
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['resonanceRatings', projectId] });
+      
+      console.log('🔄 Block1Discover.handleSave - Save completed successfully');
+    } catch (error) {
+      console.error("🔴 Block1Discover.handleSave - Error:", error);
+      toast({
+        title: "Failed to save ratings",
+        description: "There was an error saving your evaluations. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
   // Combined function to save both local progress and send to server
   const handleSaveAll = async () => {
     console.log('🔄 Block1Discover.handleSaveAll - starting combined save operation');
@@ -330,48 +366,8 @@ export default function Block1Discover() {
       console.log('🔄 Block1Discover.handleSaveAll - saving local progress first');
       await saveMutation.mutateAsync();
       
-      // Convert to array of EvaluationInput objects for server persistence
-      console.log('🔄 Block1Discover.handleSaveAll - mapping ratings to API inputs');
-      const evaluationInputs: Array<{factorId: string, resonance: number, notes?: string}> = [];
-      
-      // Process each rating entry
-      Object.entries(combinedRatings).forEach(([factorId, resonance]) => {
-        // Skip invalid data
-        if (!factorId || resonance === undefined || resonance === null) {
-          console.warn(`🔸 Block1Discover - Skipping invalid rating for factorId: ${factorId}, resonance: ${resonance}`);
-          return;
-        }
-        
-        // Parse resonance safely
-        let resonanceNum: number;
-        try {
-          resonanceNum = typeof resonance === 'number' ? resonance : parseInt(resonance as string);
-          // Validate the number is between 1-5
-          if (isNaN(resonanceNum) || resonanceNum < 1 || resonanceNum > 5) {
-            console.warn(`🔸 Block1Discover - Invalid resonance value: ${resonance}, setting to default 3`);
-            resonanceNum = 3; // Default to middle value if invalid
-          }
-        } catch (parseErr) {
-          console.warn(`🔸 Block1Discover - Failed to parse resonance: ${resonance}, setting to default 3`, parseErr);
-          resonanceNum = 3; // Default to middle value if parsing fails
-        }
-        
-        evaluationInputs.push({
-          factorId,
-          resonance: resonanceNum,
-          notes: '' // Optional notes field
-        });
-      });
-      
-      console.log('🔄 Block1Discover - Prepared evaluation inputs:', evaluationInputs);
-      
-      if (evaluationInputs.length > 0) {
-        // Use the batch update method instead of individual promises
-        await updateEvaluations(evaluationInputs);
-        console.log('🔄 Block1Discover - All updates completed successfully');
-      } else {
-        console.warn('⚠️ Block1Discover - No valid ratings to save');
-      }
+      // Use the new simplified handler to save ratings to the server
+      await handleSave();
       
       toast({
         title: "All changes saved",
@@ -850,7 +846,7 @@ export default function Block1Discover() {
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
-                          onClick={handleSaveAll}
+                          onClick={handleSave}
                           disabled={isRatingsSaving || saveMutation.isPending}
                           className="flex items-center"
                         >
@@ -954,7 +950,7 @@ export default function Block1Discover() {
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
-                          onClick={handleSaveAll}
+                          onClick={handleSave}
                           disabled={isRatingsSaving || saveMutation.isPending}
                           className="flex items-center"
                         >
@@ -1047,7 +1043,7 @@ export default function Block1Discover() {
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
-                          onClick={handleSaveAll}
+                          onClick={handleSave}
                           disabled={isRatingsSaving || saveMutation.isPending}
                           className="flex items-center"
                         >
