@@ -545,14 +545,14 @@ export const storage = {
   // Project methods
   async getProjects(userId: string) {
     return await db.query.projects.findMany({
-      where: eq(projects.userId, userId),
+      where: (projects) => eq(projects.userId, userId),
       orderBy: desc(projects.lastUpdated)
     });
   },
 
   async getProject(id: string) {
     return await db.query.projects.findFirst({
-      where: eq(projects.id, id),
+      where: (projects) => eq(projects.id, id),
       with: {
         goalMap: true,
         cynefinSelection: true,
@@ -609,7 +609,7 @@ export const storage = {
     const [updatedProject] = await db
       .update(projects)
       .set(updateValues)
-      .where(eq(projects.id, id))
+      .where((projects) => eq(projects.id, id))
       .returning();
     
     return updatedProject;
