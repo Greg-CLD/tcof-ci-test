@@ -24,13 +24,38 @@ import { ArrowLeft, ChevronRight, Info, Save } from "lucide-react";
 import { useSuccessFactors } from "@/hooks/useSuccessFactors";
 import { useResonanceRatings, type EvaluationInput } from "@/hooks/useResonanceRatings";
 
-// Define the success factor resonance options
+// Define the success factor resonance options with improved descriptions
 const RESONANCE_OPTIONS = [
-  { value: "1", symbol: '❌', label: "Doesn't land", desc: "I don't feel this…" },
-  { value: "2", symbol: '🤔', label: "Unfamiliar", desc: "I've never seen it in action." },
-  { value: "3", symbol: '🟡', label: "Seems true", desc: "I believe it's useful." },
-  { value: "4", symbol: '✅', label: "Proven", desc: "I've used this and it worked." },
-  { value: "5", symbol: '🔥', label: "Hard-won truth", desc: "It's burned into how I work." },
+  { 
+    value: "1", 
+    symbol: '❌', 
+    label: "Doesn't Resonate", 
+    desc: "This factor doesn't seem relevant to my project context."
+  },
+  { 
+    value: "2", 
+    symbol: '🤔', 
+    label: "Slightly Familiar", 
+    desc: "I recognize this, but haven't seen much evidence of its importance." 
+  },
+  { 
+    value: "3", 
+    symbol: '🟡', 
+    label: "Moderately Important", 
+    desc: "This seems valuable and I should consider it." 
+  },
+  { 
+    value: "4", 
+    symbol: '✅', 
+    label: "Very Important", 
+    desc: "I've experienced this and know it's valuable for success." 
+  },
+  { 
+    value: "5", 
+    symbol: '🔥', 
+    label: "Critical Factor", 
+    desc: "This is absolutely essential to my project's success." 
+  },
 ];
 
 export default function Block1Step1() {
@@ -228,16 +253,27 @@ export default function Block1Step1() {
             </div>
             
             {/* Completion status */}
-            <div className="mt-4 sm:mt-0 bg-tcof-light rounded-lg px-4 py-2 flex items-center">
-              <div className="w-32 bg-gray-200 rounded-full h-4 mr-3">
-                <div 
-                  className="bg-tcof-teal h-4 rounded-full"
-                  style={{ width: `${completionPercentage}%` }}
-                ></div>
+            <div className="mt-4 sm:mt-0 bg-tcof-light rounded-lg px-4 py-3 flex items-center">
+              <div className="flex flex-col mr-3">
+                <span className="text-sm font-medium text-tcof-dark mb-1">
+                  Factors Evaluated: {Object.keys(localEvaluations).length}/{successFactors?.length || 12}
+                </span>
+                <div className="w-32 bg-gray-200 rounded-full h-4">
+                  <div 
+                    className={`h-4 rounded-full transition-all duration-500 ease-out ${
+                      completionPercentage >= 100 
+                        ? 'bg-green-500' 
+                        : completionPercentage >= 50 
+                          ? 'bg-tcof-teal' 
+                          : 'bg-tcof-light'
+                    }`}
+                    style={{ width: `${completionPercentage}%` }}
+                  ></div>
+                </div>
               </div>
-              <span className="text-sm font-medium text-tcof-dark">
-                {completionPercentage}% Complete
-              </span>
+              <div className="text-sm font-medium text-tcof-dark flex flex-col items-center justify-center bg-white rounded-full w-12 h-12 border-2 border-tcof-teal">
+                <span>{completionPercentage}%</span>
+              </div>
             </div>
           </div>
           
@@ -245,8 +281,9 @@ export default function Block1Step1() {
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold mb-4">Evaluate TCOF Success Factors</h2>
               <p className="text-gray-600 mb-6">
-                For each success factor, indicate how strongly it resonates with your specific project.
-                This will help prioritize tasks in your plan.
+                For each success factor, evaluate how strongly it resonates with your specific project context.
+                Your evaluations will help prioritize and customize tasks in your project plan.
+                Click on the emoji circles below to indicate importance levels.
               </p>
               
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
@@ -270,11 +307,11 @@ export default function Block1Step1() {
               ) : (
                 <div className="overflow-auto">
                   <Table>
-                    <TableCaption>TCOF success factors resonance evaluation</TableCaption>
+                    <TableCaption>TCOF Success Factors Evaluation</TableCaption>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[400px]">Success Factor</TableHead>
-                        <TableHead>Resonance Evaluation</TableHead>
+                        <TableHead>Importance Evaluation</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -302,17 +339,28 @@ export default function Block1Step1() {
                                           <button
                                             type="button"
                                             onClick={() => handleEvaluationChange(factor.id, option.value)}
-                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
                                               isSelected 
-                                                ? 'bg-tcof-teal text-white ring-2 ring-tcof-dark shadow-md transform scale-110' 
-                                                : 'bg-gray-100 hover:bg-gray-200 hover:shadow'
+                                                ? 'bg-tcof-teal text-white ring-2 ring-tcof-dark shadow-lg transform scale-110' 
+                                                : `bg-gray-100 hover:bg-gray-200 hover:shadow ${
+                                                    option.value === "1" ? "hover:bg-red-50" :
+                                                    option.value === "2" ? "hover:bg-orange-50" :
+                                                    option.value === "3" ? "hover:bg-yellow-50" :
+                                                    option.value === "4" ? "hover:bg-green-50" :
+                                                    "hover:bg-tcof-light"
+                                                  }`
                                             }`}
+                                            aria-label={`Rate as ${option.label}`}
                                           >
-                                            <span className="text-lg">{option.symbol}</span>
+                                            <span className="text-xl">{option.symbol}</span>
                                           </button>
                                         </TooltipTrigger>
-                                        <TooltipContent className="font-medium">
-                                          <p><strong>{option.label}</strong>: {option.desc}</p>
+                                        <TooltipContent side="top" className="max-w-xs bg-white border border-gray-200 shadow-lg rounded-lg p-3">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-lg">{option.symbol}</span>
+                                            <span className="font-bold text-tcof-dark">{option.label}</span>
+                                          </div>
+                                          <p className="text-sm text-gray-600">{option.desc}</p>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
@@ -320,8 +368,8 @@ export default function Block1Step1() {
                                 })}
                               </div>
                               <div className="flex justify-between text-xs text-gray-500 w-full px-1">
-                                <span>Doesn't resonate</span>
-                                <span>Strongly resonates</span>
+                                <span>Not relevant</span>
+                                <span>Critical factor</span>
                               </div>
                             </div>
                           </TableCell>
