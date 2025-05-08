@@ -134,14 +134,14 @@ export default function Block1Step1() {
       await updateRatings(ratingInputs);
       
       toast({
-        title: "Ratings saved",
-        description: "Your success factor ratings have been saved successfully."
+        title: "Evaluations saved",
+        description: "Your success factor evaluations have been saved successfully."
       });
     } catch (error) {
-      console.error("Error saving ratings to database:", error);
+      console.error("Error saving evaluations to database:", error);
       toast({
-        title: "Error saving ratings",
-        description: "There was an error saving your ratings to the database. Your changes have been saved locally.",
+        title: "Error saving evaluations",
+        description: "There was an error saving your evaluations to the database. Your changes have been saved locally.",
         variant: "destructive"
       });
     }
@@ -176,8 +176,8 @@ export default function Block1Step1() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-tcof-dark">Block 1: Rate Success Factors</h1>
-              <p className="text-gray-600 mt-1">Rate how strongly each success factor resonates with your project</p>
+              <h1 className="text-3xl font-bold text-tcof-dark">Block 1: Evaluate Success Factors</h1>
+              <p className="text-gray-600 mt-1">Evaluate how strongly each success factor resonates with your project</p>
             </div>
             
             {/* Completion status */}
@@ -196,7 +196,7 @@ export default function Block1Step1() {
           
           <Card>
             <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Rate TCOF Success Factors</h2>
+              <h2 className="text-xl font-semibold mb-4">Evaluate TCOF Success Factors</h2>
               <p className="text-gray-600 mb-6">
                 For each success factor, indicate how strongly it resonates with your specific project.
                 This will help prioritize tasks in your plan.
@@ -209,8 +209,8 @@ export default function Block1Step1() {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm text-blue-700">
-                      Your ratings are automatically saved as you make selections.
-                      Rate all 12 factors for the best results.
+                      Your evaluations are automatically saved as you make selections.
+                      Evaluate all 12 factors for the best results.
                     </p>
                   </div>
                 </div>
@@ -223,11 +223,11 @@ export default function Block1Step1() {
               ) : (
                 <div className="overflow-auto">
                   <Table>
-                    <TableCaption>TCOF success factors resonance rating</TableCaption>
+                    <TableCaption>TCOF success factors resonance evaluation</TableCaption>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[400px]">Success Factor</TableHead>
-                        <TableHead>Resonance Rating</TableHead>
+                        <TableHead>Resonance Evaluation</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -296,7 +296,7 @@ export default function Block1Step1() {
                     variant="outline"
                     onClick={handleSave}
                   >
-                    <Save className="mr-2 h-4 w-4" /> Save Ratings
+                    <Save className="mr-2 h-4 w-4" /> Save Evaluations
                   </Button>
                   <Button
                     onClick={() => navigate(`/make-a-plan/${projectId}/block-1/step-2`)}
