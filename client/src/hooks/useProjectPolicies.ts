@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 
 interface ProjectPolicy {
@@ -9,90 +10,93 @@ interface ProjectPolicy {
   updatedAt?: string;
 }
 
+interface CreatePolicyParams {
+  name: string;
+}
+
 export function useProjectPolicies(projectId?: string) {
   const queryClient = useQueryClient();
-  
-  // Query to fetch policies for the project
-  const { 
-    data: policies,
+  const [newPolicyName, setNewPolicyName] = useState('');
+
+  // Fetch policies for the project
+  const {
+    data: policies = [],
     isLoading,
-    error,
-    refetch
-  } = useQuery<ProjectPolicy[]>({
-    queryKey: [`/api/projects/${projectId}/policies`],
-    enabled: !!projectId,
+    error
+  } = useQuery({
+    queryKey: ['/api/projects', projectId, 'policies'],
+    queryFn: async () => {
+      if (!projectId) return [];
+      const response = await apiRequest('GET', `/api/projects/${projectId}/policies`);
+      return await response.json();
+    },
+    enabled: !!projectId
   });
-  
-  // Mutation to create a new policy
+
+  // Create a new policy
   const createPolicyMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const res = await apiRequest('POST', `/api/projects/${projectId}/policies`, { name });
-      return await res.json();
+    mutationFn: async (data: CreatePolicyParams) => {
+      const response = await apiRequest('POST', `/api/projects/${projectId}/policies`, data);
+      return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/policies`] });
-    },
-    onError: (error) => {
-      console.error('Error creating policy:', error);
-      throw error;
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'policies'] });
+      setNewPolicyName('');
     }
   });
-  
-  // Mutation to update an existing policy
+
+  // Update an existing policy
   const updatePolicyMutation = useMutation({
-    mutationFn: async ({ policyId, name }: { policyId: string, name: string }) => {
-      const res = await apiRequest('PUT', `/api/projects/${projectId}/policies/${policyId}`, { name });
-      return await res.json();
+    mutationFn: async ({ policyId, name }: { policyId: string; name: string }) => {
+      const response = await apiRequest('PUT', `/api/projects/${projectId}/policies/${policyId}`, { name });
+      return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/policies`] });
-    },
-    onError: (error) => {
-      console.error('Error updating policy:', error);
-      throw error;
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'policies'] });
     }
   });
-  
-  // Mutation to delete a policy
+
+  // Delete a policy
   const deletePolicyMutation = useMutation({
     mutationFn: async (policyId: string) => {
-      const res = await apiRequest('DELETE', `/api/projects/${projectId}/policies/${policyId}`);
-      return await res.json();
+      const response = await apiRequest('DELETE', `/api/projects/${projectId}/policies/${policyId}`);
+      return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/policies`] });
-      // Also invalidate the tasks since they reference policies
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
-    },
-    onError: (error) => {
-      console.error('Error deleting policy:', error);
-      throw error;
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'policies'] });
+      // Also invalidate tasks since deleting a policy removes its tasks
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'tasks'] });
     }
   });
-  
-  // Convenience functions
+
+  // Helper function to handle policy creation
   const createPolicy = async (name: string) => {
-    return await createPolicyMutation.mutateAsync(name);
+    if (!name.trim() || !projectId) return null;
+    return await createPolicyMutation.mutateAsync({ name });
   };
-  
+
+  // Helper function to handle policy update
   const updatePolicy = async (policyId: string, name: string) => {
+    if (!name.trim() || !projectId || !policyId) return null;
     return await updatePolicyMutation.mutateAsync({ policyId, name });
   };
-  
+
+  // Helper function to handle policy deletion
   const deletePolicy = async (policyId: string) => {
-    return await deletePolicyMutation.mutateAsync(policyId);
+    if (!projectId || !policyId) return false;
+    await deletePolicyMutation.mutateAsync(policyId);
+    return true;
   };
-  
+
   return {
     policies,
     isLoading,
     error,
-    refetch,
+    newPolicyName,
+    setNewPolicyName,
     createPolicy,
     updatePolicy,
     deletePolicy,
-    isCreating: createPolicyMutation.isPending,
-    isUpdating: updatePolicyMutation.isPending,
-    isDeleting: deletePolicyMutation.isPending,
+    isSaving: createPolicyMutation.isPending || updatePolicyMutation.isPending || deletePolicyMutation.isPending
   };
 }

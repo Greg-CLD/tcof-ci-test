@@ -56,8 +56,8 @@ router.post("/:projectId/tasks", isAuthenticated, async (req, res) => {
       return res.status(400).json({ message: "Valid stage is required (identification, definition, delivery, closure)" });
     }
     
-    if (!origin || !['heuristic', 'factor'].includes(origin)) {
-      return res.status(400).json({ message: "Valid origin is required (heuristic, factor)" });
+    if (!origin || !['heuristic', 'factor', 'policy'].includes(origin)) {
+      return res.status(400).json({ message: "Valid origin is required (heuristic, factor, policy)" });
     }
     
     if (!sourceId) {
