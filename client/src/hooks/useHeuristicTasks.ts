@@ -78,7 +78,7 @@ export function useHeuristicTasks(projectId?: string): HeuristicTasksHook {
     
     try {
       // Find if this is a new temporary ID or an existing one
-      const isNewTask = !tasks.some(t => t.id === taskId);
+      const isNewTask = tasks ? !tasks.some(t => t.id === taskId) : true;
       
       if (isNewTask) {
         // This is a new task with a temporary ID, create it
