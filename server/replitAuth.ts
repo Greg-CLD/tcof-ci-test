@@ -98,35 +98,22 @@ export async function setupAuth(app: Express) {
   const domains = process.env.REPLIT_DOMAINS!.split(",");
   console.log("Configuring auth strategies for domains:", domains);
   
+  // Register a strategy for each domain with both HTTP and HTTPS protocols
   for (const domain of domains) {
-    // Create standard HTTPS strategy
-    const httpsStrategy = new Strategy(
+    const replit_domain = domain.trim();
+    
+    // Create a strategy specifically for the Replit domain format
+    const strategy = new Strategy(
       {
-        name: `replitauth:${domain}`,
+        name: `replitauth:${replit_domain}`,
         config,
         scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
+        callbackURL: `https://${replit_domain}/api/callback`,
       },
       verify,
     );
-    passport.use(httpsStrategy);
-    console.log(`Registered HTTPS strategy for domain: ${domain}`);
-    
-    // For development, create an HTTP strategy
-    if (process.env.NODE_ENV !== 'production') {
-      const httpDomain = domain.replace('https://', 'http://');
-      const httpStrategy = new Strategy(
-        {
-          name: `replitauth:${httpDomain}`,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `http://${httpDomain}/api/callback`,
-        },
-        verify,
-      );
-      passport.use(httpStrategy);
-      console.log(`Registered HTTP strategy for domain: ${httpDomain}`);
-    }
+    passport.use(strategy);
+    console.log(`Registered auth strategy for domain: ${replit_domain}`);
   }
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
@@ -147,18 +134,55 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    console.log("Auth callback received", req.query);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
-      failWithError: true
-    })(req, res, (err) => {
-      if (err) {
-        console.error("Authentication error:", err);
-        return res.redirect("/api/login");
-      }
-      next();
+    console.log("Auth callback received", req.query, "from hostname:", req.hostname);
+    
+    // Set a cookie to indicate we've attempted the callback
+    // This helps break potential infinite loops
+    res.cookie('auth_callback_attempted', 'true', { 
+      maxAge: 60000, // 1 minute
+      httpOnly: true,
+      sameSite: 'lax'
     });
+
+    // Explicitly use the strategy matching the hostname
+    const strategy = `replitauth:${req.hostname}`;
+    console.log("Using callback strategy:", strategy);
+    
+    try {
+      passport.authenticate(strategy, {
+        successReturnToOrRedirect: "/",
+        failureRedirect: "/?auth_failed=true",
+        failWithError: true
+      })(req, res, (err) => {
+        if (err) {
+          console.error("Authentication error details:", err);
+          
+          // Try to extract useful information from the error for debugging
+          const errorInfo = {
+            message: err.message || 'Unknown error',
+            code: err.code || 'NO_CODE',
+            cause: err.cause ? JSON.stringify(err.cause) : 'No cause information'
+          };
+          console.log("Error info:", errorInfo);
+          
+          // Pass error information as URL parameters for the client to handle
+          // Encode the error message to avoid issues with special characters
+          const encodedErrorMessage = encodeURIComponent(errorInfo.message);
+          const encodedErrorCode = encodeURIComponent(errorInfo.code);
+          
+          // Instead of redirecting back to login (which might cause an infinite loop),
+          // redirect to home page with error parameters
+          return res.redirect(`/?auth_error=${encodedErrorMessage}&error_code=${encodedErrorCode}`);
+        }
+        next();
+      });
+    } catch (error: any) {
+      console.error("Unexpected error in auth callback:", error);
+      
+      // Handle errors that occur before the passport authenticate call
+      const encodedErrorMessage = encodeURIComponent(error?.message || 'Unexpected authentication error');
+      return res.redirect(`/?auth_error=${encodedErrorMessage}`);
+    }
   });
 
   app.get("/api/logout", (req, res) => {
