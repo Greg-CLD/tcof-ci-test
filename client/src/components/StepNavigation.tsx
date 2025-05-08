@@ -10,6 +10,7 @@ interface StepNavigationProps {
   completeButtonText?: string;
   disableComplete?: boolean;
   showComplete?: boolean;
+  nextDisabled?: boolean;
 }
 
 const StepNavigation: React.FC<StepNavigationProps> = ({
@@ -19,6 +20,7 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
   completeButtonText = "Complete",
   disableComplete = false,
   showComplete = true,
+  nextDisabled = false,
 }) => {
   return (
     <div className="flex justify-between mt-8">
@@ -46,7 +48,7 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
         )}
         
         {nextLink && (
-          <Button asChild>
+          <Button asChild disabled={nextDisabled}>
             <Link href={nextLink}>
               Next
               <ChevronRight className="h-4 w-4 ml-2" />
