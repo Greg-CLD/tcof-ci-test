@@ -114,14 +114,28 @@ export async function setupAuth(app: Express) {
 
   // Serialize and deserialize user
   passport.serializeUser((user: any, done) => {
-    done(null, user.id);
+    console.log(`Serializing user: ${user.username}, id: ${user.id}, type: ${typeof user.id}`);
+    
+    // Ensure we're storing the ID in the expected format for deserializing later
+    done(null, user.id.toString());
   });
   
   passport.deserializeUser(async (id: string, done) => {
     try {
+      console.log(`Deserializing user with id: ${id}, type: ${typeof id}`);
+      
+      // Get the user with the string ID - the storage method handles conversion
       const user = await storage.getUser(id);
+      
+      if (!user) {
+        console.error(`Failed to deserialize user with id: ${id} - no user found`);
+        return done(null, false);
+      }
+      
+      console.log(`User deserialized successfully: ${user.username}`);
       done(null, user);
     } catch (error) {
+      console.error(`Error deserializing user: ${error.message}`);
       done(error);
     }
   });

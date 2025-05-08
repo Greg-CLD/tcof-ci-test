@@ -48,14 +48,36 @@ export const storage = {
   }),
 
   // User methods
-  async getUser(id: string) {
+  async getUser(id: string | number) {
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, id));
+      console.log(`getUser called with id: ${id} (type: ${typeof id})`);
       
-      if (user) {
+      // Convert string ID to number since the users table has an integer ID column
+      let userId: number;
+      if (typeof id === 'string') {
+        userId = parseInt(id, 10);
+        console.log(`Converted string ID to number: ${userId}`);
+      } else {
+        userId = id as number;
+      }
+      
+      if (isNaN(userId)) {
+        console.error(`Invalid user ID: ${id} (could not convert to number)`);
+        return null;
+      }
+      
+      // Use explicit SQL query to avoid type issues with the ORM
+      const result = await db.execute(
+        sql`SELECT * FROM users WHERE id = ${userId}`
+      );
+      
+      if (result.rows && result.rows.length > 0) {
+        const user = result.rows[0];
+        console.log(`User found: ${user.username}`);
         return user;
       }
       
+      console.log(`No user found with id: ${id}`);
       return null;
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -93,27 +115,53 @@ export const storage = {
     }
   },
 
-  async createUser(userData: { username: string; password?: string; email?: string; id?: string; avatarUrl?: string }) {
+  async createUser(userData: { username: string; password?: string; email?: string; id?: string | number; avatarUrl?: string }) {
     try {
       console.log("storage.createUser called with:", JSON.stringify(userData, null, 2));
       
       // Hash the password if provided
       const hashedPassword = userData.password ? await hashPassword(userData.password) : null;
       
-      // Only include fields that actually exist in the database
-      const values = {
-        id: userData.id || Date.now().toString(), // Use provided ID or generate one
-        username: userData.username,
-        password: hashedPassword,
-        email: userData.email || null,
-        avatarUrl: userData.avatarUrl || null
-      };
+      // Convert or generate user ID as number
+      let userId: number;
+      if (userData.id) {
+        // Convert string ID to number if needed
+        if (typeof userData.id === 'string') {
+          userId = parseInt(userData.id, 10);
+          if (isNaN(userId)) {
+            userId = Date.now(); // Fallback if conversion fails
+          }
+        } else {
+          userId = userData.id as number;
+        }
+      } else {
+        userId = Date.now();
+      }
       
-      console.log("Creating user with values:", JSON.stringify(values, null, 2));
-      const [user] = await db.insert(users).values(values).returning();
+      console.log(`Using userId: ${userId} (type: ${typeof userId})`);
       
-      console.log("User created successfully:", user.id);
-      return user;
+      // Use raw SQL to insert user to avoid type issues with Drizzle
+      const result = await db.execute(
+        sql`INSERT INTO users (id, username, password, email, avatar_url) 
+            VALUES (${userId}, ${userData.username}, ${hashedPassword}, ${userData.email || null}, ${userData.avatarUrl || null})
+            RETURNING *`
+      );
+      
+      if (result.rows && result.rows.length > 0) {
+        const user = result.rows[0];
+        console.log("User created successfully:", user.id);
+        
+        return {
+          id: user.id,
+          username: user.username,
+          password: user.password,
+          email: user.email,
+          avatarUrl: user.avatar_url,
+          createdAt: user.created_at
+        };
+      }
+      
+      throw new Error('Failed to create user: No user returned from insert operation');
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;
