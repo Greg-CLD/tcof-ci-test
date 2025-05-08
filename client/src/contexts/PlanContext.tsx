@@ -82,6 +82,14 @@ export const PlanProvider: React.FC<{children: ReactNode}> = ({children}) => {
       try {
         const res = await apiRequest("GET", `/api/plans/project/${projectId}`);
         if (!res.ok) {
+          if (res.status === 401) {
+            console.warn("Authentication required to fetch plan");
+            // Return an empty plan structure for unauthenticated users
+            return {
+              projectId,
+              blocks: {}
+            };
+          }
           console.error(`Failed to fetch plan: ${res.status} ${res.statusText}`);
           return null;
         }

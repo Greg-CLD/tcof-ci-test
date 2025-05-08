@@ -1,75 +1,157 @@
 import { Router } from 'express';
-import { db } from '../../../db.js';
-import { plans } from '../../../../shared/schema.js';
-import { eq, and } from 'drizzle-orm';
-import { isAuthenticated } from '../../../middlewares/auth.js';
+// Correct path to projectsDb.js
+import { projectsDb } from '../../../projectsDb.js';
 
 const router = Router();
 
 /**
  * PATCH to update a specific block of a plan for a project, creating the plan if it doesn't exist
  */
-router.patch('/api/plans/project/:projectId/block/:blockId', isAuthenticated, async (req, res) => {
+router.patch('/plans/project/:projectId/block/:blockId', async (req, res) => {
   try {
     const { projectId, blockId } = req.params;
     const blockData = req.body;
     
-    if (!blockData) {
-      return res.status(400).json({ message: "Block data is required" });
+    if (!projectId || !blockId) {
+      return res.status(400).json({ 
+        message: 'Missing required parameters',
+        details: 'Both projectId and blockId are required'
+      });
     }
-
-    // Check if a plan for this project already exists
-    const [existingPlan] = await db.select().from(plans)
-      .where(and(
-        eq(plans.projectId, projectId),
-        eq(plans.userId, req.user.id)
-      ));
     
-    if (existingPlan) {
-      // Update the specific block
-      const updatedBlocks = {...existingPlan.blocks};
-      
-      if (!updatedBlocks[blockId]) {
-        updatedBlocks[blockId] = {};
-      }
-      
-      updatedBlocks[blockId] = {
-        ...updatedBlocks[blockId],
-        ...blockData
-      };
-
-      // Save the updated plan
-      const [updatedPlan] = await db.update(plans)
-        .set({
-          blocks: updatedBlocks,
-          updatedAt: new Date()
-        })
-        .where(eq(plans.id, existingPlan.id))
-        .returning();
-
-      return res.status(200).json(updatedPlan);
-    } else {
-      // Create a new plan with the provided block data
-      const initialBlocks = {
-        [blockId]: blockData
-      };
-      
-      const [newPlan] = await db.insert(plans)
-        .values({
-          projectId,
-          userId: req.user.id,
-          name: `Plan for Project ${projectId}`,
-          blocks: initialBlocks
-        })
-        .returning();
-      
-      return res.status(201).json(newPlan);
+    // Verify user has access to this project
+    const project = await projectsDb.getProject(projectId);
+    const userId = req.user.id;
+    
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
     }
+    
+    if (project.userId !== userId) {
+      return res.status(403).json({ message: 'Unauthorized access to project' });
+    }
+    
+    // Load the existing plan or create a new one
+    let plan = await projectsDb.getProjectPlan(projectId);
+    
+    if (!plan) {
+      plan = {
+        projectId,
+        blocks: {},
+        lastUpdated: Date.now()
+      };
+    }
+    
+    // Update the specific block
+    plan.blocks = plan.blocks || {};
+    plan.blocks[blockId] = blockData;
+    plan.lastUpdated = Date.now();
+    
+    // Save the updated plan
+    await projectsDb.saveProjectPlan(projectId, plan);
+    
+    return res.status(200).json({
+      message: 'Block saved successfully',
+      blockId,
+      projectId,
+      lastUpdated: plan.lastUpdated
+    });
   } catch (error) {
-    console.error('Error updating plan block:', error);
-    return res.status(500).json({ message: "Failed to update plan block" });
+    console.error('Error saving project block:', error);
+    return res.status(500).json({ 
+      message: 'Failed to save project block',
+      error: error.message 
+    });
   }
 });
 
-// Export router
+/**
+ * GET to retrieve a specific block of a plan for a project
+ */
+router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
+  try {
+    const { projectId, blockId } = req.params;
+    
+    if (!projectId || !blockId) {
+      return res.status(400).json({ 
+        message: 'Missing required parameters',
+        details: 'Both projectId and blockId are required'
+      });
+    }
+    
+    // Verify user has access to this project
+    const project = await projectsDb.getProject(projectId);
+    const userId = req.user.id;
+    
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    
+    if (project.userId !== userId) {
+      return res.status(403).json({ message: 'Unauthorized access to project' });
+    }
+    
+    // Load the plan
+    const plan = await projectsDb.getProjectPlan(projectId);
+    
+    if (!plan || !plan.blocks || !plan.blocks[blockId]) {
+      return res.status(404).json({ 
+        message: 'Block not found',
+        details: `Block "${blockId}" not found for project "${projectId}"`
+      });
+    }
+    
+    return res.status(200).json(plan.blocks[blockId]);
+  } catch (error) {
+    console.error('Error retrieving project block:', error);
+    return res.status(500).json({ 
+      message: 'Failed to retrieve project block',
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * GET to retrieve an entire plan for a project
+ */
+router.get('/plans/project/:projectId', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    
+    if (!projectId) {
+      return res.status(400).json({ 
+        message: 'Missing required parameter', 
+        details: 'ProjectId is required'
+      });
+    }
+    
+    // Verify user has access to this project
+    const project = await projectsDb.getProject(projectId);
+    const userId = req.user.id;
+    
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    
+    if (project.userId !== userId) {
+      return res.status(403).json({ message: 'Unauthorized access to project' });
+    }
+    
+    // Load the plan
+    const plan = await projectsDb.getProjectPlan(projectId);
+    
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+    
+    return res.status(200).json(plan);
+  } catch (error) {
+    console.error('Error retrieving project plan:', error);
+    return res.status(500).json({ 
+      message: 'Failed to retrieve project plan',
+      error: error.message 
+    });
+  }
+});
+
 export default router;

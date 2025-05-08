@@ -301,7 +301,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Register the improved plans API endpoints
     const plansApiRouter = await import('./routes/api/plans/index.js');
-    app.use('/api', plansApiRouter.default);
+    
+    // Apply authentication middleware to all plans API routes
+    app.use('/api', (req, res, next) => {
+      // Check if request is authenticated
+      if (req.isAuthenticated()) {
+        return next();
+      }
+      // Otherwise return 401 Unauthorized
+      res.status(401).json({ message: "Authentication required" });
+    }, plansApiRouter.default);
     
     console.log('Plans routes registered successfully');
   } catch (error) {
