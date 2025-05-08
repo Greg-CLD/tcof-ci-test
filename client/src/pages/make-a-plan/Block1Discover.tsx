@@ -631,9 +631,12 @@ export default function Block1Discover() {
   
   const completionPercentage = calculateCompletionPercentage();
   
-  // Helper function to get emoji option details by value
-  const getOptionByValue = (value: number) => {
-    return RESONANCE_OPTIONS.find(opt => opt.value === value) || null;
+  // Helper function to get emoji option details by value with additional safety checks
+  const getOptionByValue = (value?: number | null) => {
+    if (value === undefined || value === null) return null;
+    // Handle both numeric values and string values that need conversion
+    const numericValue = typeof value === 'string' ? parseInt(value, 10) : value;
+    return isNaN(numericValue) ? null : RESONANCE_OPTIONS.find(opt => opt.value === numericValue) || null;
   };
   
   return (
@@ -840,29 +843,67 @@ export default function Block1Discover() {
                           </Table>
                         </div>
                         
-                        {/* Ratings Preview Panel */}
-                        <div className="mt-8 p-4 bg-gray-50 border rounded-md">
-                          <h3 className="text-lg font-semibold mb-3">Preview Your Ratings</h3>
+                        {/* Enhanced Live Ratings Preview Panel */}
+                        <div className="mt-8 p-4 bg-gray-50 border rounded-md shadow-sm">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold">Live Preview: Your Ratings</h3>
+                            <div className="text-sm text-gray-500">
+                              {Object.keys(ratings).length} of {successFactors?.length || 0} factors rated
+                            </div>
+                          </div>
+                          
                           {Object.keys(ratings).length > 0 ? (
-                            <ul className="space-y-2">
+                            <div className="space-y-3">
                               {successFactors?.map((factor: any) => {
                                 const ratingValue = ratings[factor.factorId];
                                 const option = getOptionByValue(ratingValue);
                                 
-                                if (!ratingValue || !option) return null;
-                                
+                                // Display all factors, but highlight those with ratings
                                 return (
-                                  <li key={factor.factorId} className="flex items-start">
-                                    <span className="text-lg mr-2">{option.symbol}</span>
-                                    <span className="font-medium">{factor.title}:</span>
-                                    <span className="ml-2 text-gray-600">{option.label}</span>
-                                  </li>
+                                  <div 
+                                    key={factor.factorId} 
+                                    className={`p-2 rounded-md transition-all duration-300 ${
+                                      ratingValue ? 'bg-white border border-tcof-teal/20' : 'opacity-50'
+                                    }`}
+                                  >
+                                    <div className="flex items-center">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
+                                        ${ratingValue 
+                                          ? 'bg-tcof-teal text-white' 
+                                          : 'bg-gray-100 text-gray-400'
+                                        }`}
+                                      >
+                                        {option?.symbol || '?'}
+                                      </div>
+                                      <div className="ml-3 flex-1">
+                                        <div className="font-medium text-sm">{factor.title}</div>
+                                        {ratingValue ? (
+                                          <div className="text-sm flex items-center mt-1">
+                                            <span className="text-tcof-blue font-medium">{option?.label}</span>
+                                            <span className="ml-2 text-gray-500 text-xs italic">{option?.desc}</span>
+                                          </div>
+                                        ) : (
+                                          <div className="text-xs text-gray-400 italic mt-1">Not yet rated</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
                                 );
                               })}
-                            </ul>
+                            </div>
                           ) : (
-                            <p className="text-gray-500 italic">No ratings selected yet. Click the emoji buttons above to rate each factor.</p>
+                            <div className="p-6 text-center bg-white rounded-md border border-dashed border-gray-300">
+                              <div className="text-3xl mb-2">👆</div>
+                              <p className="text-gray-500">No ratings selected yet.</p>
+                              <p className="text-gray-400 text-sm mt-1">Click on the emoji buttons above to rate factors.</p>
+                            </div>
                           )}
+                          
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="text-sm text-gray-600">
+                              Ratings are automatically previewed here but will only be saved when you click "Confirm & Save".
+                            </div>
+                          </div>
                         </div>
                         
                         <div className="mt-8 flex justify-end gap-4">
