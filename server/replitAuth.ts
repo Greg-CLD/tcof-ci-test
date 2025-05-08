@@ -26,7 +26,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Set to false to work in development
+      secure: false, // Disable secure for development
       maxAge: sessionTtl,
       sameSite: 'lax',
     },
@@ -72,7 +72,7 @@ async function createTestUser() {
         email: "admin@example.com",
         password: hashedPassword,
         // Match only the columns that exist in the actual database
-        avatar_url: "https://ui-avatars.com/api/?name=Admin&background=random",
+        avatarUrl: "https://ui-avatars.com/api/?name=Admin&background=random",
       });
       
       console.log("Created test user:", newUser.username);
@@ -113,7 +113,7 @@ export async function setupAuth(app: Express) {
   }));
 
   // Serialize and deserialize user
-  passport.serializeUser((user: Express.User, done) => {
+  passport.serializeUser((user: any, done) => {
     done(null, user.id);
   });
   
@@ -128,7 +128,7 @@ export async function setupAuth(app: Express) {
 
   // Login endpoint
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         console.error("Error during authentication:", err);
         return res.status(500).json({ error: true, message: "Server error", status: 500 });
