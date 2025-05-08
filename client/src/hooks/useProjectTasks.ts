@@ -1,117 +1,132 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
-export interface ProjectTask {
-  id?: string;
+interface ProjectTask {
+  id: string;
   projectId: string;
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
   origin: 'heuristic' | 'factor';
-  sourceId: string; // heuristicId or factorId
+  sourceId: string;
   completed?: boolean;
+  assignedTo?: string;
+  dueDate?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
+interface CreateTaskParams {
+  projectId: string;
+  text: string;
+  stage: 'identification' | 'definition' | 'delivery' | 'closure';
+  origin: 'heuristic' | 'factor';
+  sourceId: string;
+  assignedTo?: string;
+  dueDate?: string;
+}
+
+interface UpdateTaskParams {
+  text?: string;
+  stage?: 'identification' | 'definition' | 'delivery' | 'closure';
+  completed?: boolean;
+  assignedTo?: string;
+  dueDate?: string;
+}
+
 export function useProjectTasks(projectId?: string) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   
-  // Fetch tasks for the project
-  const { data: tasks = [], isLoading, error } = useQuery<ProjectTask[]>({
-    queryKey: ["project-tasks", projectId],
-    queryFn: async () => {
-      if (!projectId) return [];
-      
-      const res = await apiRequest("GET", `/api/projects/${projectId}/tasks`);
-      if (!res.ok) {
-        throw new Error("Failed to fetch project tasks");
-      }
-      return res.json();
-    },
+  // Query to fetch tasks for the project
+  const { 
+    data: tasks,
+    isLoading,
+    error,
+    refetch
+  } = useQuery<ProjectTask[]>({
+    queryKey: [`/api/projects/${projectId}/tasks`],
     enabled: !!projectId,
   });
   
-  // Create or update a task
-  const saveTaskMutation = useMutation({
-    mutationFn: async (taskData: Omit<ProjectTask, 'id' | 'createdAt' | 'updatedAt'>) => {
-      if (!projectId) {
-        throw new Error("Project ID is required");
-      }
-      
-      // Make the API request
-      const res = await apiRequest("POST", `/api/projects/${projectId}/tasks`, taskData);
-      if (!res.ok) {
-        throw new Error("Failed to save task");
-      }
-      return res.json();
+  // Mutation to create a new task
+  const createTaskMutation = useMutation({
+    mutationFn: async (taskData: CreateTaskParams) => {
+      const res = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
+      return await res.json();
     },
     onSuccess: () => {
-      // Invalidate the tasks query to trigger a refetch
-      queryClient.invalidateQueries({queryKey: ["project-tasks", projectId]});
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error saving task",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error) => {
+      console.error('Error creating task:', error);
+      throw error;
     }
   });
   
-  // Delete a task
+  // Mutation to update an existing task
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
+      const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+    },
+    onError: (error) => {
+      console.error('Error updating task:', error);
+      throw error;
+    }
+  });
+  
+  // Mutation to delete a task
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
-      if (!projectId) {
-        throw new Error("Project ID is required");
-      }
-      
-      const res = await apiRequest("DELETE", `/api/projects/${projectId}/tasks/${taskId}`);
-      if (!res.ok) {
-        throw new Error("Failed to delete task");
-      }
-      return { success: true };
+      const res = await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${taskId}`);
+      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ["project-tasks", projectId]});
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error deleting task",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error) => {
+      console.error('Error deleting task:', error);
+      throw error;
     }
   });
   
-  // Get tasks for a specific heuristic and stage
-  const getTasksForHeuristic = (heuristicId: string, stage: string) => {
-    return tasks.filter(
-      task => task.sourceId === heuristicId && 
-              task.origin === 'heuristic' && 
-              task.stage === stage
-    );
+  // Convenience functions
+  const createTask = async (taskData: CreateTaskParams) => {
+    return await createTaskMutation.mutateAsync(taskData);
   };
   
-  // Save a task
-  const saveTask = async (taskData: Omit<ProjectTask, 'id' | 'createdAt' | 'updatedAt'>) => {
-    return saveTaskMutation.mutateAsync(taskData);
+  const updateTask = async (taskId: string, data: UpdateTaskParams) => {
+    return await updateTaskMutation.mutateAsync({ taskId, data });
   };
   
-  // Delete a task
   const deleteTask = async (taskId: string) => {
-    return deleteTaskMutation.mutateAsync(taskId);
+    return await deleteTaskMutation.mutateAsync(taskId);
+  };
+  
+  // Helper function to get tasks by source ID and stage
+  const getTasksBySource = (sourceId: string, stage?: string) => {
+    if (!tasks) return [];
+    
+    if (stage) {
+      return tasks.filter(task => task.sourceId === sourceId && task.stage === stage);
+    }
+    
+    return tasks.filter(task => task.sourceId === sourceId);
   };
   
   return {
     tasks,
     isLoading,
     error,
-    getTasksForHeuristic,
-    saveTask,
+    refetch,
+    createTask,
+    updateTask,
     deleteTask,
-    isSaving: saveTaskMutation.isPending,
-    isDeleting: deleteTaskMutation.isPending
+    getTasksBySource,
+    isCreating: createTaskMutation.isPending,
+    isUpdating: updateTaskMutation.isPending,
+    isDeleting: deleteTaskMutation.isPending,
   };
 }

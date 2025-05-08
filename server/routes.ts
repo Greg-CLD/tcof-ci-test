@@ -250,6 +250,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('Error registering projects routes:', error);
   }
   
+  // Register task routes
+  try {
+    const tasksRoutes = await import('./routes/tasks.js');
+    app.use('/api/projects', tasksRoutes.default);
+    console.log('Task routes registered successfully');
+  } catch (error) {
+    console.error('Error registering task routes:', error);
+  }
+  
   // Register plans routes
   try {
     app.use('/', plansRouter);

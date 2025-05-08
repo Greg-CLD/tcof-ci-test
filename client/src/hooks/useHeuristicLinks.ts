@@ -1,103 +1,98 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { usePlan } from "@/contexts/PlanContext";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
-export interface HeuristicLink {
+interface HeuristicLink {
+  id: string;
   heuristicId: string;
-  factorId: string | null;
+  factorId: string;
+  projectId: string;
+  userId: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function useHeuristicLinks(projectId?: string) {
-  const { plan, saveBlock } = usePlan();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   
-  // Fetch existing heuristic links
-  const { data: heuristicLinks = [] } = useQuery<HeuristicLink[]>({
-    queryKey: ["heuristicLinks", projectId],
-    queryFn: async () => {
-      if (!projectId || !plan) return [];
-      
-      // If we have heuristic links in the plan context, use those
-      if (plan.blocks?.block2?.heuristicLinks) {
-        return plan.blocks.block2.heuristicLinks;
-      }
-      
-      return [];
-    },
-    enabled: !!projectId && !!plan,
+  // Query to fetch heuristic links for the project
+  const { 
+    data: links,
+    isLoading,
+    error,
+    refetch
+  } = useQuery<HeuristicLink[]>({
+    queryKey: [`/api/projects/${projectId}/heuristic-links`],
+    enabled: !!projectId,
   });
   
-  // Mutation to update a heuristic link
-  const updateHeuristicLinkMutation = useMutation({
-    mutationFn: async (linkData: HeuristicLink) => {
-      if (!projectId || !plan) {
-        throw new Error("Project ID or plan not available");
-      }
-      
-      // Get current links or initialize empty array
-      const currentLinks = plan.blocks?.block2?.heuristicLinks || [];
-      
-      // Update or add the link
-      const updatedLinks = [...currentLinks];
-      const existingLinkIndex = updatedLinks.findIndex(
-        link => link.heuristicId === linkData.heuristicId
-      );
-      
-      if (existingLinkIndex >= 0) {
-        updatedLinks[existingLinkIndex] = linkData;
+  // Mutation to create or update a heuristic link
+  const updateLinkMutation = useMutation({
+    mutationFn: async ({ heuristicId, factorId }: { heuristicId: string, factorId: string | null }) => {
+      // If factorId is null, we're removing the link
+      if (factorId === null) {
+        // Find the existing link if any
+        const existingLink = links?.find(link => link.heuristicId === heuristicId);
+        if (existingLink) {
+          // Delete the link
+          const res = await apiRequest('DELETE', `/api/projects/${projectId}/heuristic-links/${existingLink.id}`);
+          return await res.json();
+        }
+        return null;
       } else {
-        updatedLinks.push(linkData);
+        // Find if there's already a link for this heuristic
+        const existingLink = links?.find(link => link.heuristicId === heuristicId);
+        
+        if (existingLink) {
+          // Update existing link
+          const res = await apiRequest('PUT', `/api/projects/${projectId}/heuristic-links/${existingLink.id}`, { factorId });
+          return await res.json();
+        } else {
+          // Create new link
+          const res = await apiRequest('POST', `/api/projects/${projectId}/heuristic-links`, { 
+            heuristicId,
+            factorId
+          });
+          return await res.json();
+        }
       }
-      
-      // Save to plan context
-      await saveBlock('block2', {
-        heuristicLinks: updatedLinks,
-        lastUpdated: new Date().toISOString(),
-      });
-      
-      return updatedLinks;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ["heuristicLinks", projectId]});
-      toast({
-        title: "Link updated",
-        description: "The heuristic mapping has been updated",
-      });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/heuristic-links`] });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error updating link",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error) => {
+      console.error('Error updating heuristic link:', error);
+      throw error;
     }
   });
   
-  // Function to update a heuristic link
+  // Convenience functions for updating links
   const updateHeuristicLink = async (heuristicId: string, factorId: string | null) => {
-    await updateHeuristicLinkMutation.mutateAsync({ heuristicId, factorId });
+    return await updateLinkMutation.mutateAsync({ heuristicId, factorId });
   };
   
-  // Function to get the factor ID for a heuristic
-  const getFactorIdForHeuristic = (heuristicId: string): string | null => {
-    const link = heuristicLinks.find(link => link.heuristicId === heuristicId);
+  // Helper function to get the factor ID for a heuristic (if linked)
+  const getFactorIdForHeuristic = (heuristicId: string) => {
+    if (!links) return null;
+    
+    const link = links.find(link => link.heuristicId === heuristicId);
     return link ? link.factorId : null;
   };
   
-  // Function to get all linked heuristics
-  const getLinkedHeuristics = (): string[] => {
-    return heuristicLinks
-      .filter(link => link.factorId !== null)
-      .map(link => link.heuristicId);
+  // Helper function to get all linked heuristic IDs
+  const getLinkedHeuristics = () => {
+    if (!links) return [];
+    
+    return links.map(link => link.heuristicId);
   };
   
   return {
-    heuristicLinks,
+    links,
+    isLoading,
+    error,
+    refetch,
     updateHeuristicLink,
     getFactorIdForHeuristic,
     getLinkedHeuristics,
-    isLoading: updateHeuristicLinkMutation.isPending
+    isUpdating: updateLinkMutation.isPending,
   };
 }

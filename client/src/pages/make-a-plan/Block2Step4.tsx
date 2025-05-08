@@ -1,268 +1,356 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, useLocation } from "wouter";
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'wouter';
+import { usePersonalHeuristics } from '@/hooks/usePersonalHeuristics';
+import { useHeuristicLinks } from '@/hooks/useHeuristicLinks';
+import { useProjectTasks } from '@/hooks/useProjectTasks';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, ArrowLeft, ArrowRight, Plus, X, Save } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import ProjectBanner from "@/components/ProjectBanner";
-import { usePersonalHeuristics } from "@/hooks/usePersonalHeuristics";
-import { useHeuristicLinks } from "@/hooks/useHeuristicLinks";
-import { useProjectTasks, type ProjectTask } from "@/hooks/useProjectTasks";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+// We don't need ToolCard for this component
+import StepNavigation from '@/components/StepNavigation';
+import MakeAPlanLayout from '@/layouts/MakeAPlanLayout';
+import { useProjectContext } from '@/contexts/ProjectContext';
+import { useToolProgress } from '@/hooks/useToolProgress';
 
 export default function Block2Step4() {
-  const [location, navigate] = useLocation();
-  const { projectId } = useParams<{ projectId?: string }>();
+  const { projectId } = useParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<string>("identification");
-  const [saveStatus, setSaveStatus] = useState<Record<string, boolean>>({});
   
-  // Fetch personal heuristics
-  const { data: personalHeuristics = [], isLoading: isLoadingHeuristics } = usePersonalHeuristics(projectId);
+  // Get the project name
+  const { currentProject } = useProjectContext();
   
-  // Fetch heuristic links to filter out linked heuristics
-  const { heuristicLinks, getLinkedHeuristics } = useHeuristicLinks(projectId);
+  // Tool progress tracking
+  const { updateToolProgress } = useToolProgress();
   
-  // Fetch project tasks
-  const { 
-    tasks, 
-    getTasksForHeuristic, 
-    saveTask, 
-    deleteTask, 
-    isLoading: isLoadingTasks, 
-    isSaving 
+  // Get personal heuristics
+  const { heuristics, isLoading: loadingHeuristics } = usePersonalHeuristics(projectId);
+  
+  // Get heuristic links to identify unlinked heuristics
+  const { links, isLoading: loadingLinks } = useHeuristicLinks(projectId);
+  
+  // Get and manage project tasks
+  const {
+    tasks,
+    isLoading: loadingTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    isCreating,
+    isUpdating,
+    isDeleting,
   } = useProjectTasks(projectId);
   
-  // Get list of linked heuristic IDs
-  const linkedHeuristicIds = getLinkedHeuristics();
+  // UI state: which heuristic is expanded
+  const [expandedHeuristicId, setExpandedHeuristicId] = useState<string | null>(null);
+  
+  // State to track task text inputs for each heuristic and stage
+  const [taskInputs, setTaskInputs] = useState<Record<string, Record<string, string>>>({});
+  
+  // Keep track of which tasks are being saved
+  const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({});
+  
+  // Project stages
+  const stages = [
+    { id: 'identification', label: 'Identification' },
+    { id: 'definition', label: 'Definition' },
+    { id: 'delivery', label: 'Delivery' },
+    { id: 'closure', label: 'Closure' }
+  ];
   
   // Filter to get only unlinked heuristics
-  const unlinkedHeuristics = personalHeuristics.filter(
-    h => !linkedHeuristicIds.includes(h.id)
-  );
+  const unlinkedHeuristics = React.useMemo(() => {
+    if (!heuristics || !links) return [];
+    
+    // A heuristic is linked if it appears in any link
+    const linkedHeuristicIds = links.map(link => link.heuristicId);
+    
+    // Return only heuristics that don't appear in any link
+    return heuristics.filter(heuristic => !linkedHeuristicIds.includes(heuristic.id));
+  }, [heuristics, links]);
   
-  // Handler for saving a task
+  // Initialize task inputs when tasks are loaded
+  useEffect(() => {
+    if (tasks && tasks.length > 0) {
+      const newTaskInputs: Record<string, Record<string, string>> = {};
+      
+      // Group tasks by heuristic and stage
+      tasks.forEach(task => {
+        if (task.origin === 'heuristic') {
+          if (!newTaskInputs[task.sourceId]) {
+            newTaskInputs[task.sourceId] = {};
+          }
+          
+          // If we already have 3 tasks for this heuristic and stage, skip
+          const existingTasksForStage = tasks.filter(
+            t => t.sourceId === task.sourceId && t.stage === task.stage && t.origin === 'heuristic'
+          );
+          
+          const stageKey = `${task.stage}-${existingTasksForStage.indexOf(task)}`;
+          newTaskInputs[task.sourceId][stageKey] = task.text;
+        }
+      });
+      
+      setTaskInputs(newTaskInputs);
+    }
+  }, [tasks]);
+  
+  // Handle saving a task
   const handleSaveTask = async (heuristicId: string, stage: string, text: string, existingTaskId?: string) => {
     if (!text.trim()) return;
-    if (!projectId) return;
+    
+    const taskKey = `${heuristicId}-${stage}${existingTaskId ? `-${existingTaskId}` : ''}`;
+    setSavingStatus(prev => ({ ...prev, [taskKey]: true }));
     
     try {
-      // Set saving status for this specific task
-      setSaveStatus(prev => ({ ...prev, [`${heuristicId}-${stage}-${text}`]: true }));
-      
-      // Prepare task data
-      const taskData: Omit<ProjectTask, 'id' | 'createdAt' | 'updatedAt'> = {
-        projectId,
-        text: text.trim(),
-        stage: stage as 'identification' | 'definition' | 'delivery' | 'closure',
-        origin: 'heuristic',
-        sourceId: heuristicId
-      };
-      
-      // If we have an existing task ID, include it in the request for update
       if (existingTaskId) {
-        Object.assign(taskData, { id: existingTaskId });
+        // Update existing task
+        await updateTask(existingTaskId, { text });
+        toast({
+          title: "Task updated",
+          description: "Your task has been updated successfully",
+        });
+      } else {
+        // Create new task
+        const existingTasksForStage = tasks ? tasks.filter(
+          t => t.sourceId === heuristicId && t.stage === stage && t.origin === 'heuristic'
+        ) : [];
+        
+        // Only allow up to 3 tasks per stage per heuristic
+        if (existingTasksForStage.length >= 3) {
+          toast({
+            title: "Maximum tasks reached",
+            description: "You can only have up to 3 tasks per stage for each heuristic",
+            variant: "destructive",
+          });
+          setSavingStatus(prev => ({ ...prev, [taskKey]: false }));
+          return;
+        }
+        
+        await createTask({
+          projectId: projectId || '',
+          text,
+          stage: stage as 'identification' | 'definition' | 'delivery' | 'closure',
+          origin: 'heuristic',
+          sourceId: heuristicId,
+        });
+        
+        toast({
+          title: "Task created",
+          description: "Your task has been saved successfully",
+        });
+        
+        // Clear the input after successful creation
+        setTaskInputs(prev => {
+          const newInputs = { ...prev };
+          if (!newInputs[heuristicId]) newInputs[heuristicId] = {};
+          newInputs[heuristicId][`${stage}-new`] = '';
+          return newInputs;
+        });
       }
-      
-      // Save the task
-      await saveTask(taskData);
-      
-      // Show saved indicator and then clear it after 3 seconds
-      setTimeout(() => {
-        setSaveStatus(prev => ({ ...prev, [`${heuristicId}-${stage}-${text}`]: false }));
-      }, 3000);
-      
     } catch (error) {
-      console.error("Error saving task:", error);
+      console.error('Error saving task:', error);
       toast({
         title: "Error saving task",
-        description: "There was a problem saving your task. Please try again.",
-        variant: "destructive"
+        description: "There was an error saving your task. Please try again.",
+        variant: "destructive",
       });
+    } finally {
+      setSavingStatus(prev => ({ ...prev, [taskKey]: false }));
     }
   };
   
-  // Handler for deleting a task
+  // Handle deleting a task
   const handleDeleteTask = async (taskId: string) => {
-    if (!taskId) return;
-    
     try {
       await deleteTask(taskId);
       toast({
         title: "Task deleted",
-        description: "The task has been removed successfully."
+        description: "Your task has been deleted successfully",
       });
     } catch (error) {
-      console.error("Error deleting task:", error);
+      console.error('Error deleting task:', error);
       toast({
         title: "Error deleting task",
-        description: "There was a problem deleting your task. Please try again.",
-        variant: "destructive"
+        description: "There was an error deleting your task. Please try again.",
+        variant: "destructive",
       });
     }
   };
   
-  // If we don't have a project ID, show a message
-  if (!projectId) {
+  // Handle input change for task text
+  const handleTaskInputChange = (
+    heuristicId: string,
+    stage: string,
+    value: string,
+    index: number
+  ) => {
+    setTaskInputs(prev => {
+      const newInputs = { ...prev };
+      if (!newInputs[heuristicId]) newInputs[heuristicId] = {};
+      newInputs[heuristicId][`${stage}-${index}`] = value;
+      return newInputs;
+    });
+  };
+  
+  // Handle task editing saving (triggered by blur or enter key)
+  const handleTaskBlur = (
+    heuristicId: string,
+    stage: string,
+    text: string,
+    taskId?: string
+  ) => {
+    if (text.trim()) {
+      handleSaveTask(heuristicId, stage, text, taskId);
+    }
+  };
+  
+  // Handle enter key for task input
+  const handleTaskKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    heuristicId: string,
+    stage: string,
+    text: string,
+    taskId?: string
+  ) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTaskBlur(heuristicId, stage, text, taskId);
+    }
+  };
+  
+  // Get the tasks for a specific heuristic and stage
+  const getTasksForHeuristic = (heuristicId: string, stage: string) => {
+    if (!tasks) return [];
+    
+    return tasks.filter(
+      task => task.sourceId === heuristicId && 
+              task.stage === stage && 
+              task.origin === 'heuristic'
+    );
+  };
+  
+  // When complete, update progress
+  const handleComplete = async () => {
+    if (projectId) {
+      await updateToolProgress(projectId, 'make-a-plan', 'block-2-step-4', { completed: true });
+      toast({
+        title: "Progress saved",
+        description: "Your progress has been saved successfully",
+      });
+    }
+  };
+  
+  // Loading state
+  if (loadingHeuristics || loadingLinks || loadingTasks) {
     return (
-      <div className="container mx-auto p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Select a Project</h2>
-        <p className="mb-6">Please select a project from your organisations page first.</p>
-        <Button onClick={() => navigate("/organisations")}>
-          Go to Organisations
-        </Button>
-      </div>
+      <MakeAPlanLayout
+        title="Create tasks for your unlinked heuristics"
+        description="For any personal heuristics not linked to success factors, you need to create tasks manually."
+        currentStep={4}
+        block={2}
+      >
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-lg text-muted-foreground">Loading your heuristics and tasks...</span>
+        </div>
+      </MakeAPlanLayout>
     );
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Project Banner */}
-      <ProjectBanner />
-      
-      {/* Main content */}
-      <div className="container mx-auto px-4 py-8">
-        {/* Back button */}
-        <Button 
-          variant="outline" 
-          onClick={() => navigate(`/make-a-plan/${projectId}/block-2`)}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Block 2
-        </Button>
-        
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col mb-6">
-            <h1 className="text-3xl font-bold text-tcof-dark">
-              Block 2: Step 4 - Tasks for Unlinked Heuristics
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Create tasks for each project stage based on your unlinked heuristics
-            </p>
-          </div>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Create Tasks for Unlinked Heuristics</CardTitle>
-              <CardDescription>
-                For each heuristic not linked to a success factor, you can create up to 3 tasks per project stage.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingHeuristics || isLoadingTasks ? (
-                <div className="text-center py-8">
-                  <div className="spinner h-8 w-8 mx-auto mb-4 border-4 border-tcof-teal border-t-transparent rounded-full animate-spin"></div>
-                  <p>Loading heuristics and tasks...</p>
-                </div>
-              ) : unlinkedHeuristics.length === 0 ? (
-                <div className="text-center py-8 border rounded-lg bg-amber-50">
-                  <p className="text-amber-800 font-medium">
-                    All heuristics are linked. Unlink one in Step 3 to add tasks here.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate(`/make-a-plan/${projectId}/block-2/step-3`)}
-                    className="mt-4"
-                  >
-                    Go to Heuristic Mapping
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Stage tabs */}
-                  <Tabs defaultValue="identification" value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid grid-cols-4 mb-4">
-                      <TabsTrigger value="identification">Identification</TabsTrigger>
-                      <TabsTrigger value="definition">Definition</TabsTrigger>
-                      <TabsTrigger value="delivery">Delivery</TabsTrigger>
-                      <TabsTrigger value="closure">Closure</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="identification">
-                      <TasksForStage 
-                        stage="identification"
-                        heuristics={unlinkedHeuristics}
-                        getTasksForHeuristic={getTasksForHeuristic}
-                        onSaveTask={handleSaveTask}
-                        onDeleteTask={handleDeleteTask}
-                        isSaving={isSaving}
-                        saveStatus={saveStatus}
-                      />
-                    </TabsContent>
-                    
-                    <TabsContent value="definition">
-                      <TasksForStage 
-                        stage="definition"
-                        heuristics={unlinkedHeuristics}
-                        getTasksForHeuristic={getTasksForHeuristic}
-                        onSaveTask={handleSaveTask}
-                        onDeleteTask={handleDeleteTask}
-                        isSaving={isSaving}
-                        saveStatus={saveStatus}
-                      />
-                    </TabsContent>
-                    
-                    <TabsContent value="delivery">
-                      <TasksForStage 
-                        stage="delivery"
-                        heuristics={unlinkedHeuristics}
-                        getTasksForHeuristic={getTasksForHeuristic}
-                        onSaveTask={handleSaveTask}
-                        onDeleteTask={handleDeleteTask}
-                        isSaving={isSaving}
-                        saveStatus={saveStatus}
-                      />
-                    </TabsContent>
-                    
-                    <TabsContent value="closure">
-                      <TasksForStage 
-                        stage="closure"
-                        heuristics={unlinkedHeuristics}
-                        getTasksForHeuristic={getTasksForHeuristic}
-                        onSaveTask={handleSaveTask}
-                        onDeleteTask={handleDeleteTask}
-                        isSaving={isSaving}
-                        saveStatus={saveStatus}
-                      />
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              )}
-              
-              <div className="mt-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 className="font-medium text-tcof-dark mb-2 flex items-center">
-                  <Check className="h-5 w-5 text-tcof-teal mr-2" />
-                  Tasks and Project Stages
-                </h3>
-                <p className="text-gray-700 text-sm">
-                  For each unlinked heuristic, you can create specific tasks across four project stages. 
-                  Tasks automatically save as you type, and you can add up to 3 tasks per stage per heuristic.
+    <MakeAPlanLayout
+      title="Create tasks for your unlinked heuristics"
+      description="For any personal heuristics not linked to success factors, you need to create tasks manually."
+      currentStep={4}
+      block={2}
+    >
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Unlinked Personal Heuristics</CardTitle>
+            <CardDescription>
+              Your personal heuristics that aren't linked to any TCOF Success Factors need manually-created tasks.
+              You can add up to 3 tasks per stage for each heuristic.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {unlinkedHeuristics.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+                <h3 className="text-xl font-semibold">No unlinked heuristics found</h3>
+                <p className="text-muted-foreground mt-2 max-w-md">
+                  All of your personal heuristics are linked to TCOF Success Factors. 
+                  This means tasks will be automatically generated for them.
                 </p>
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/make-a-plan/${projectId}/block-2/step-3`)}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 3
-              </Button>
-              <Button
-                onClick={() => navigate(`/make-a-plan/${projectId}/block-2`)}
-                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-              >
-                Continue <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+            ) : (
+              <div className="space-y-6">
+                {unlinkedHeuristics.map(heuristic => (
+                  <Card key={heuristic.id} className="border-tcof-blue">
+                    <CardHeader 
+                      className="cursor-pointer hover:bg-slate-50" 
+                      onClick={() => setExpandedHeuristicId(
+                        expandedHeuristicId === heuristic.id ? null : heuristic.id
+                      )}
+                    >
+                      <CardTitle className="text-lg">{heuristic.text}</CardTitle>
+                    </CardHeader>
+                    
+                    {expandedHeuristicId === heuristic.id && (
+                      <CardContent>
+                        <Tabs defaultValue="identification">
+                          <TabsList className="mb-4">
+                            {stages.map(stage => (
+                              <TabsTrigger key={stage.id} value={stage.id}>
+                                {stage.label}
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
+                          
+                          {stages.map(stage => (
+                            <TabsContent key={stage.id} value={stage.id}>
+                              <TasksForStage
+                                stage={stage.id}
+                                heuristics={[heuristic]}
+                                getTasksForHeuristic={getTasksForHeuristic}
+                                onSaveTask={handleSaveTask}
+                                onDeleteTask={handleDeleteTask}
+                                isSaving={isCreating || isUpdating}
+                                saveStatus={savingStatus}
+                              />
+                            </TabsContent>
+                          ))}
+                        </Tabs>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <StepNavigation
+          prevLink={`/make-a-plan/${projectId}/block-2/step-3`}
+          nextLink={`/make-a-plan/${projectId}/block-2`}
+          onComplete={handleComplete}
+        />
       </div>
-    </div>
+    </MakeAPlanLayout>
   );
 }
 
-// Component for tasks within a specific stage
 interface TasksForStageProps {
   stage: string;
   heuristics: Array<{
@@ -283,18 +371,13 @@ function TasksForStage({
   onSaveTask,
   onDeleteTask,
   isSaving,
-  saveStatus
+  saveStatus,
 }: TasksForStageProps) {
   return (
     <div className="space-y-6">
-      {heuristics.map((heuristic) => (
-        <div 
-          key={heuristic.id}
-          className="p-4 border rounded-lg bg-white hover:border-tcof-teal transition-colors"
-        >
-          <h3 className="font-semibold text-tcof-dark mb-3">
-            UH{heuristic.id.slice(-2)}: {heuristic.text}
-          </h3>
+      {heuristics.map(heuristic => (
+        <div key={`${heuristic.id}-${stage}`} className="space-y-4">
+          <h3 className="text-md font-medium">Tasks for this stage:</h3>
           
           <TaskList
             heuristicId={heuristic.id}
@@ -311,7 +394,6 @@ function TasksForStage({
   );
 }
 
-// Component for task list for a specific heuristic and stage
 interface TaskListProps {
   heuristicId: string;
   stage: string;
@@ -329,122 +411,142 @@ function TaskList({
   onSaveTask,
   onDeleteTask,
   isSaving,
-  saveStatus
+  saveStatus,
 }: TaskListProps) {
-  const [newTask, setNewTask] = useState<string>("");
-  const [editingTasks, setEditingTasks] = useState<Record<string, string>>({});
-  const maxTasks = 3;
+  const [newTaskText, setNewTaskText] = useState('');
   
-  // Handler for task input change
-  const handleTaskChange = (taskId: string, value: string) => {
-    setEditingTasks(prev => ({
-      ...prev,
-      [taskId]: value
-    }));
-  };
-  
-  // Handler for task input blur (save on blur)
-  const handleTaskBlur = (taskId: string) => {
-    if (editingTasks[taskId] && editingTasks[taskId].trim()) {
-      onSaveTask(heuristicId, stage, editingTasks[taskId], taskId);
+  // Handle saving a new task
+  const handleSaveNewTask = () => {
+    if (newTaskText.trim()) {
+      onSaveTask(heuristicId, stage, newTaskText);
+      setNewTaskText('');
     }
   };
   
-  // Handler for task input key press (save on Enter)
-  const handleTaskKeyPress = (e: React.KeyboardEvent<HTMLInputElement>, taskId: string) => {
-    if (e.key === 'Enter' && editingTasks[taskId] && editingTasks[taskId].trim()) {
-      onSaveTask(heuristicId, stage, editingTasks[taskId], taskId);
-      if (e.currentTarget) {
-        e.currentTarget.blur(); // Remove focus after save
-      }
+  // Handle editing an existing task
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
+  const [editTaskText, setEditTaskText] = useState('');
+  
+  // Start editing a task
+  const handleEditTask = (taskId: string, text: string) => {
+    setEditTaskId(taskId);
+    setEditTaskText(text);
+  };
+  
+  // Save edits to an existing task
+  const handleSaveEdit = (taskId: string) => {
+    if (editTaskText.trim()) {
+      onSaveTask(heuristicId, stage, editTaskText, taskId);
+      setEditTaskId(null);
     }
   };
   
-  // Handler for adding a new task
-  const handleAddTask = () => {
-    if (newTask.trim()) {
-      onSaveTask(heuristicId, stage, newTask);
-      setNewTask("");
+  // Cancel task editing
+  const handleCancelEdit = () => {
+    setEditTaskId(null);
+  };
+  
+  // Handle keypress in edit mode
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, taskId: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEdit(taskId);
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
     }
   };
   
-  // Initialize editing tasks when tasks change
-  useEffect(() => {
-    const initialEditingTasks: Record<string, string> = {};
-    tasks.forEach(task => {
-      initialEditingTasks[task.id] = task.text;
-    });
-    setEditingTasks(initialEditingTasks);
-  }, [tasks]);
+  // Determine if we've reached the maximum number of tasks (3) for this stage
+  const maxTasksReached = tasks.length >= 3;
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Existing tasks */}
-      {tasks.map((task) => (
-        <div key={task.id} className="flex items-center gap-2">
-          <Input
-            value={editingTasks[task.id] || ""}
-            onChange={(e) => handleTaskChange(task.id, e.target.value)}
-            onBlur={() => handleTaskBlur(task.id)}
-            onKeyDown={(e) => handleTaskKeyPress(e, task.id)}
-            placeholder="Enter task details..."
-            className="flex-1"
-          />
-          
-          {/* Saved indicator */}
-          {saveStatus[`${heuristicId}-${stage}-${editingTasks[task.id]}`] && (
-            <span className="text-green-500 flex items-center">
-              <Check className="h-4 w-4 mr-1" />
-              <span className="text-xs">Saved</span>
-            </span>
-          )}
-          
-          {/* Delete button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDeleteTask(task.id)}
-            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+      {tasks.length > 0 ? (
+        <div className="space-y-2">
+          {tasks.map(task => (
+            <div key={task.id} className="flex items-center gap-2 group">
+              {editTaskId === task.id ? (
+                // Edit mode
+                <>
+                  <Input
+                    value={editTaskText}
+                    onChange={(e) => setEditTaskText(e.target.value)}
+                    onBlur={() => handleSaveEdit(task.id)}
+                    onKeyDown={(e) => handleEditKeyDown(e, task.id)}
+                    className="flex-1"
+                    autoFocus
+                  />
+                  {saveStatus[`${heuristicId}-${stage}-${task.id}`] ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                </>
+              ) : (
+                // View mode
+                <>
+                  <div 
+                    className="flex-1 py-2 px-3 bg-gray-50 rounded-md cursor-text"
+                    onClick={() => handleEditTask(task.id, task.text)}
+                  >
+                    {task.text}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDeleteTask(task.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      ) : (
+        <div className="py-4 text-center bg-gray-50 rounded-md">
+          <p className="text-muted-foreground">No tasks yet. Add up to 3 tasks for this stage.</p>
+        </div>
+      )}
       
       {/* Add new task input */}
-      {tasks.length < maxTasks && (
+      {!maxTasksReached && (
         <div className="flex items-center gap-2">
           <Input
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            placeholder="Add a new task..."
+            placeholder="Add a new task for this stage..."
+            value={newTaskText}
+            onChange={(e) => setNewTaskText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSaveNewTask();
+              }
+            }}
             className="flex-1"
           />
           <Button
-            variant="outline"
+            onClick={handleSaveNewTask}
+            disabled={!newTaskText.trim() || isSaving}
             size="sm"
-            onClick={handleAddTask}
-            disabled={!newTask.trim() || isSaving}
-            className="flex items-center gap-1"
           >
-            <Plus className="h-4 w-4" />
-            Add Task
+            {saveStatus[`${heuristicId}-${stage}-new`] ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            Add
           </Button>
         </div>
       )}
       
-      {/* Task limit indicator */}
-      {tasks.length === 0 && (
-        <p className="text-sm text-gray-500 italic">
-          No tasks created yet. Add up to 3 tasks for this heuristic in the {stage} stage.
-        </p>
+      {maxTasksReached && (
+        <div className="flex items-center text-amber-600 text-sm">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          Maximum of 3 tasks reached for this stage
+        </div>
       )}
       
-      {tasks.length === maxTasks && (
-        <p className="text-sm text-amber-500">
-          Maximum of 3 tasks reached for this stage.
-        </p>
-      )}
+      <Separator className="my-4" />
     </div>
   );
 }

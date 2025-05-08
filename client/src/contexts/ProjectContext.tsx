@@ -1,88 +1,69 @@
-import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 
-import { Project as ProjectType } from '@/hooks/useProjects';
-
-// Use the same Project type from useProjects
-type Project = ProjectType;
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  organizationId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  sector?: string;
+  status?: string;
+}
 
 interface ProjectContextType {
   currentProject: Project | null;
-  setCurrentProject: (project: Project | null) => void;
-  refreshProject: () => Promise<void>;
+  isLoading: boolean;
+  error: Error | null;
+  setCurrentProject: (project: Project) => void;
 }
 
-const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+const ProjectContext = createContext<ProjectContextType | null>(null);
 
-export function ProjectProvider({ children }: { children: ReactNode }) {
+export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-
+  const [projectId, setProjectId] = useState<string | null>(null);
+  
+  // Detect project ID from localStorage or URL
   useEffect(() => {
-    // On mount, try to load the project from localStorage
-    const storedProjectId = localStorage.getItem('currentProjectId');
-    const storedOrgId = localStorage.getItem('currentOrgId');
-    
+    const storedProjectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
     if (storedProjectId) {
-      // Fetch current project data
-      const loadProject = async () => {
-        try {
-          const res = await apiRequest('GET', `/api/projects/${storedProjectId}`);
-          if (res.ok) {
-            const project = await res.json();
-            setCurrentProject(project);
-            
-            // Also make sure we have the current org ID stored
-            if (project.organisationId && !storedOrgId) {
-              localStorage.setItem('currentOrgId', project.organisationId);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load project from ID:', error);
-        }
-      };
-      
-      loadProject();
+      setProjectId(storedProjectId);
     }
   }, []);
-
-  // When project changes, update localStorage
-  useEffect(() => {
-    if (currentProject) {
-      localStorage.setItem('currentProjectId', currentProject.id);
+  
+  // Fetch project data if ID is available
+  const { isLoading, error } = useQuery<Project>({
+    queryKey: [`/api/projects/${projectId}`],
+    queryFn: async () => {
+      if (!projectId) return null;
       
-      // Also store the organisation ID for context
-      if (currentProject.organisationId) {
-        localStorage.setItem('currentOrgId', currentProject.organisationId);
-      }
-    }
-  }, [currentProject]);
-
-  // Function to refresh the current project data
-  const refreshProject = async () => {
-    if (!currentProject) return;
-    
-    try {
-      const res = await apiRequest('GET', `/api/projects/${currentProject.id}`);
-      if (res.ok) {
-        const refreshedProject = await res.json();
-        setCurrentProject(refreshedProject);
-      }
-    } catch (error) {
-      console.error('Failed to refresh project:', error);
-    }
-  };
-
+      const res = await apiRequest('GET', `/api/projects/${projectId}`);
+      const data = await res.json();
+      setCurrentProject(data);
+      return data;
+    },
+    enabled: !!projectId,
+  });
+  
   return (
-    <ProjectContext.Provider value={{ currentProject, setCurrentProject, refreshProject }}>
+    <ProjectContext.Provider value={{ 
+      currentProject, 
+      isLoading, 
+      error: error as Error, 
+      setCurrentProject 
+    }}>
       {children}
     </ProjectContext.Provider>
   );
-}
+};
 
-export function useProjectContext() {
+export const useProjectContext = (): ProjectContextType => {
   const context = useContext(ProjectContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useProjectContext must be used within a ProjectProvider');
   }
   return context;
-}
+};
