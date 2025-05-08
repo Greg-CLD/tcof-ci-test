@@ -27,6 +27,7 @@ import Block3Deliver from "@/pages/make-a-plan/Block3Deliver";
 import Block3Complete from "@/pages/Block3Complete";
 import Checklist from "@/pages/Checklist";
 import FactorChecklist from "@/pages/FactorChecklist";
+import FinalChecklist from "@/pages/FinalChecklist";
 import Pricing from "@/pages/Pricing";
 import AuthPage from "@/pages/auth-page";
 import UserHistory from "@/pages/UserHistory";
@@ -404,6 +405,12 @@ function Router() {
       <Route path="/checklist">
         <ProtectedRouteGuard>
           <Checklist />
+        </ProtectedRouteGuard>
+      </Route>
+      
+      <Route path="/final-checklist">
+        <ProtectedRouteGuard>
+          <FinalChecklist />
         </ProtectedRouteGuard>
       </Route>
       
