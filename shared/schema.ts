@@ -141,22 +141,18 @@ export const outcomeProgress = pgTable("outcome_progress", {
   };
 });
 
-// Users table - for authentication and user management (supports Replit Auth)
+// Users table - for authentication and user management 
+// This definition matches the actual database schema (verified via SQL query)
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey(), // Changed to varchar to support Replit Auth ID format
-  username: varchar("username", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }),
-  firstName: varchar("first_name", { length: 255 }),
-  lastName: varchar("last_name", { length: 255 }),
-  bio: text("bio"),
-  profileImageUrl: varchar("profile_image_url", { length: 255 }),
-  avatarUrl: varchar("avatar_url", { length: 255 }),
-  password: text("password"), // Made optional for Replit Auth
+  id: integer("id").primaryKey(), // Integer ID in the actual database
+  username: text("username").notNull(),
+  email: text("email"),
+  password: text("password"),
+  avatarUrl: varchar("avatar_url"),
   notificationPrefs: jsonb("notification_prefs").default('{}'),
-  locale: varchar("locale", { length: 50 }).default('en-US'),
-  timezone: varchar("timezone", { length: 50 }).default('UTC'),
+  locale: varchar("locale").default('en-US'),
+  timezone: varchar("timezone").default('UTC'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Plan metadata (serialized as JSON in DB, but with schema for validation)
@@ -312,14 +308,10 @@ export const userInsertSchema = createInsertSchema(users, {
   profileImageUrl: (schema) => schema.url().optional().nullable(),
 });
 
-// Custom update schema for user profile
+// Custom update schema for user profile - matches actual database schema
 export const userUpdateSchema = z.object({
   email: z.string().email("Must provide a valid email").optional().nullable(),
-  firstName: z.string().optional().nullable(),
-  lastName: z.string().optional().nullable(),
-  bio: z.string().optional().nullable(),
   avatarUrl: z.string().url().optional().nullable(),
-  profileImageUrl: z.string().url().optional().nullable(),
   notificationPrefs: z.record(z.boolean()).optional(),
   locale: z.string().optional(),
   timezone: z.string().optional(),

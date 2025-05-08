@@ -66,13 +66,13 @@ async function createTestUser() {
       const hashedPassword = await hashPassword("admin123");
       
       const newUser = await storage.createUser({
-        // Generate a random ID for the user
-        id: `local-${crypto.randomBytes(8).toString("hex")}`,
+        // Generate a random ID for the user (note: DB schema uses integer IDs, not varchar)
+        id: Math.floor(Date.now() / 1000).toString(), // Unix timestamp as string ID
         username: "admin",
         email: "admin@example.com",
         password: hashedPassword,
-        firstName: "Admin",
-        lastName: "User",
+        // Match only the columns that exist in the actual database
+        avatar_url: "https://ui-avatars.com/api/?name=Admin&background=random",
       });
       
       console.log("Created test user:", newUser.username);
