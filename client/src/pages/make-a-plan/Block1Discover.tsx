@@ -233,91 +233,72 @@ export default function Block1Discover() {
     isSaving: isRatingsSaving 
   } = useResonanceRatings(projectId);
   
-  // Local state for ratings to enable batch saving
-  const [pendingRatings, setPendingRatings] = useState<Record<string, string>>({});
+  // Local state for ratings - using number types for values
+  const [ratings, setRatings] = useState<Record<string, number>>({});
   
   // Load server ratings on mount
   useEffect(() => {
     console.log('🔍 Block1Discover - useEffect for evaluations triggered, count:', evaluations?.length);
     if (evaluations && evaluations.length > 0) {
       // Create a map of factorId -> resonance from server evaluations
-      const serverRatings = evaluations.reduce((acc: Record<string, string>, curr) => {
+      const serverRatings = evaluations.reduce((acc: Record<string, number>, curr) => {
         // Safety check to ensure resonance is defined
         if (curr && curr.factorId && curr.resonance !== undefined) {
-          acc[curr.factorId] = curr.resonance.toString();
+          // Parse the resonance value to a number
+          acc[curr.factorId] = typeof curr.resonance === 'number' 
+            ? curr.resonance 
+            : parseInt(curr.resonance.toString(), 10);
         }
         return acc;
       }, {});
       
       console.log('🔄 Block1Discover - Server ratings loaded:', serverRatings);
       
-      // Always merge with plan ratings and make sure they're updated
-      const currentRatings = plan?.blocks?.block1?.successFactorRatings || {};
-      console.log('🔄 Block1Discover - Current plan ratings:', currentRatings);
+      // Set our local state with server values
+      setRatings(serverRatings);
+      console.log('🔄 Block1Discover - Updated ratings state:', serverRatings);
       
-      const updatedRatings = {
-        ...currentRatings,
-        ...serverRatings
-      };
-      
-      console.log('🔄 Block1Discover - Merged ratings:', updatedRatings);
-      
-      // Save to block
+      // Also save to the plan for persistence
       saveBlock('block1', {
-        successFactorRatings: updatedRatings,
+        successFactorRatings: serverRatings,
         lastUpdated: new Date().toISOString(),
       });
-      
-      // Initialize pending ratings with server values
-      setPendingRatings(updatedRatings);
-      console.log('🔄 Block1Discover - Updated pending ratings state:', updatedRatings);
     }
-  }, [evaluations, projectId, plan]);
+  }, [evaluations, projectId]);
   
-  // Handle success factor evaluation change
-  const handleEvaluationChange = (factorId: string, evaluation: string) => {
-    console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'evaluation:', evaluation);
+  // Handle success factor evaluation change (now only updates local state)
+  const handleEvaluationChange = (factorId: string, value: number) => {
+    console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'value:', value);
     
-    // Update local state with all previous pendingRatings intact
-    setPendingRatings(prev => {
+    // Update local state with the new rating
+    setRatings(prev => {
       const newState = {
         ...prev,
-        [factorId]: evaluation
+        [factorId]: value
       };
-      console.log('🔄 Block1Discover.pendingRatings - before:', prev, 'after:', newState);
+      console.log('🔄 Block1Discover.ratings - before:', prev, 'after:', newState);
       return newState;
-    });
-    
-    // Get current ratings from plan
-    const currentRatings = plan?.blocks?.block1?.successFactorRatings || {};
-    console.log('🔄 Block1Discover - current plan ratings:', currentRatings);
-    
-    // Save directly to the block for immediate UI feedback
-    // IMPORTANT: Make sure all previous ratings are preserved by spreading the currentRatings first
-    const updatedRatings = {
-      ...currentRatings,
-      [factorId]: evaluation
-    };
-    console.log('🔄 Block1Discover - saving updated ratings to plan:', updatedRatings);
-    
-    saveBlock('block1', {
-      successFactorRatings: updatedRatings,
-      lastUpdated: new Date().toISOString(),
     });
   };
   
   // Simplified function to save resonance ratings
-  const handleSave = async () => {
-    console.log('🔄 Block1Discover.handleSave - Starting save operation');
+  const handleConfirmAndSave = async () => {
+    console.log('🔄 Block1Discover.handleConfirmAndSave - Starting save operation');
     
     try {
+      // First save ratings to local plan 
+      saveBlock('block1', {
+        successFactorRatings: ratings,
+        lastUpdated: new Date().toISOString(),
+      });
+      
       // Map ratings to the payload format expected by the API
-      const payload = Object.entries(pendingRatings).map(([factorId, r]) => ({ 
+      const payload = Object.entries(ratings).map(([factorId, value]) => ({ 
         factorId, 
-        resonance: typeof r === 'number' ? r : parseInt(r as string) 
+        resonance: value 
       }));
       
-      console.log('🔄 Block1Discover.handleSave - Mapped payload:', payload);
+      console.log('🔄 Block1Discover.handleConfirmAndSave - Mapped payload:', payload);
       
       // Send the ratings to the server
       await updateEvaluations(payload);
@@ -331,9 +312,9 @@ export default function Block1Discover() {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['resonanceRatings', projectId] });
       
-      console.log('🔄 Block1Discover.handleSave - Save completed successfully');
+      console.log('🔄 Block1Discover.handleConfirmAndSave - Save completed successfully');
     } catch (error) {
-      console.error("🔴 Block1Discover.handleSave - Error:", error);
+      console.error("🔴 Block1Discover.handleConfirmAndSave - Error:", error);
       toast({
         title: "Failed to save ratings",
         description: "There was an error saving your evaluations. Please try again.",
@@ -347,27 +328,12 @@ export default function Block1Discover() {
     console.log('🔄 Block1Discover.handleSaveAll - starting combined save operation');
     
     try {
-      // First make sure our pendingRatings are synced to the plan
-      // This ensures what we see in the UI is what we're saving
-      const combinedRatings = {
-        ...plan?.blocks?.block1?.successFactorRatings || {},
-        ...pendingRatings
-      };
-      
-      console.log('🔄 Block1Discover.handleSaveAll - combined ratings:', combinedRatings);
-      
-      // Save combined ratings to the plan
-      await saveBlock('block1', {
-        successFactorRatings: combinedRatings,
-        lastUpdated: new Date().toISOString(),
-      });
-      
-      // Then save local progress using the mutation
+      // Save local progress using the mutation
       console.log('🔄 Block1Discover.handleSaveAll - saving local progress first');
       await saveMutation.mutateAsync();
       
-      // Use the new simplified handler to save ratings to the server
-      await handleSave();
+      // Use the new handler to save ratings to the server
+      await handleConfirmAndSave();
       
       toast({
         title: "All changes saved",

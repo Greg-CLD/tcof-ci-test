@@ -1,0 +1,73 @@
+Context:
+  In `client/src/pages/make-a-plan/Block1Discover.tsx`, we’ve struggled to get per-click saves working reliably. We want to simplify by showing a live preview of all selections and performing one consolidated save.
+
+Goal:
+  Replace per-click mutations with a “Preview selections” panel and a single “Confirm & Save” action that persists all ratings at once.
+
+Steps:
+
+1. **Maintain Local State Only**  
+   - Keep using:
+     ```ts
+     const [ratings, setRatings] = useState<Record<string, number>>({});
+     ```
+   - Remove any per-click `mutateAsync` calls.  
+   - The emoji grid remains interactive, updating `ratings` on click via:
+     ```ts
+     const handleSelect = (factorId, value) =>
+       setRatings(prev => ({ ...prev, [factorId]: value }));
+     ```
+
+2. **Add Live Preview Panel**  
+   - Below the emoji grid, render a “Preview” section:
+     ```tsx
+     <div className="preview">
+       <h3>Preview Your Ratings</h3>
+       <ul>
+         {factors.map(f => (
+           <li key={f.factorId}>
+             {f.title}: 
+             {resonanceOptions.find(o => o.value === ratings[f.factorId])?.symbol}
+             {' '}
+             {resonanceOptions.find(o => o.value === ratings[f.factorId])?.label}
+           </li>
+         ))}
+       </ul>
+     </div>
+     ```
+   - Update in real time as the user clicks emojis.
+
+3. **Single Confirm & Save Button**  
+   - Replace all existing Save buttons with one at the bottom:
+     ```tsx
+     <button onClick={handleConfirm} className="btn btn-primary">
+       Confirm & Save
+     </button>
+     ```
+   - Implement `handleConfirm()`:
+     ```ts
+     const { mutateAsync } = useResonanceRatings(projectId);
+     const handleConfirm = async () => {
+       const payload = Object.entries(ratings).map(([factorId, r]) => ({ factorId, resonance: r }));
+       try {
+         await mutateAsync(payload);
+         toast.success('Ratings saved successfully');
+         queryClient.invalidateQueries(['resonanceRatings', projectId]);
+       } catch {
+         toast.error('Save failed; please try again');
+       }
+     };
+     ```
+
+4. **Hydration on Mount**  
+   - On component mount, use your hook to load saved ratings and call `setRatings(savedRatings)` so the preview and grid initialize correctly.
+
+5. **Validation**  
+   - Click various emojis; observe the live preview updating.  
+   - Click “Confirm & Save”; verify one network call with correct payload and a success toast.  
+   - Refresh the page and ensure both grid highlights and preview reflect the saved ratings.
+
+Please implement these changes and reply:
+✅ Live preview working  
+✅ Single Confirm & Save persists all ratings  
+✅ Ratings reload correctly on refresh
