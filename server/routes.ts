@@ -1295,7 +1295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const { name, data } = req.body;
       
       if (!name || !data) {
@@ -1326,7 +1326,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure user owns this selection
-      if (existingSelection.userId !== (req.user as any).id) {
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      if (existingSelection.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
@@ -1341,7 +1342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TCOF Journey API endpoints
   app.get("/api/tcof-journeys", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (projectId) {
@@ -1469,7 +1470,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure user owns this journey
-      if (journey.userId !== (req.user as any).id) {
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      if (journey.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
@@ -1482,7 +1484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tcof-journeys", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const { name, data } = req.body;
       
       if (!name || !data) {
@@ -1513,7 +1515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure user owns this journey
-      if (existingJourney.userId !== (req.user as any).id) {
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      if (existingJourney.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
@@ -1528,7 +1531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Project API endpoints
   app.get("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.query.id as string;
       const organisationId = req.query.organisationId as string;
       
@@ -1599,7 +1602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Outcome API endpoints
   app.get("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.params.projectId;
       
       // Get the project to verify existence
@@ -1645,7 +1648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update selected outcomes for a project
   app.patch("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.params.projectId;
       const { selectedOutcomeIds } = req.body;
       
@@ -1696,7 +1699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a custom outcome
   app.post("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.params.projectId;
       const { title, level = 'custom' } = req.body;
       
