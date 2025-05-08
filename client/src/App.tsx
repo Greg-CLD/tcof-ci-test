@@ -43,7 +43,8 @@ import ProjectPage from "@/pages/ProjectPage";
 import BasicProjectEditPage from "@/pages/BasicProjectEditPage";
 import TestAuth from "@/pages/TestAuth";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
-import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ProtectedRouteGuard } from "@/components/ProtectedRouteGuard";
@@ -197,7 +198,7 @@ const TCOFJourneyPage = () => {
 
 function Router() {
   const { isAuthenticated } = useAuthProtection();
-  const { user } = useAuth();
+  const { user, isAuthenticated: isAuthenticatedWithReplit } = useAuth();
   const [location, navigate] = useLocation();
   const hasRedirectedRef = useRef(false);
   
@@ -205,10 +206,10 @@ function Router() {
   // Instead we'll use more granular control with direct conditional rendering
   
   // Log current location on each render for debugging
-  console.log("Current location in Router:", location, { user, hasRedirected: hasRedirectedRef.current });
+  console.log("Current location in Router:", location, { user, isAuthenticated: isAuthenticatedWithReplit, hasRedirected: hasRedirectedRef.current });
   
   // Hard-Stop Redirect Rule: Run once per mount, with a ref to prevent multiple redirects
-  if (user && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
+  if ((user || isAuthenticatedWithReplit) && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
     console.log("NAVIGATE FROM", location, "TO /all-projects (ONE-TIME REDIRECT)");
     hasRedirectedRef.current = true;
     navigate('/all-projects');
@@ -234,7 +235,7 @@ function Router() {
   }
   
   // For organization routes, if not logged in, redirect to home
-  if (!user && (location === '/organisations' || location.startsWith('/organisations/'))) {
+  if ((!user && !isAuthenticatedWithReplit) && (location === '/organisations' || location.startsWith('/organisations/'))) {
     return (
       <Redirect to="/" />
     );
@@ -248,7 +249,7 @@ function Router() {
 
       {/* All Projects route - authenticated users only */}
       <Route path="/all-projects">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <AllProjects />
           </ProtectedRouteGuard>
@@ -259,7 +260,7 @@ function Router() {
       
       {/* Organizations management - authenticated users only */}
       <Route path="/organisations">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <OrganisationListPage />
           </ProtectedRouteGuard>
@@ -270,7 +271,7 @@ function Router() {
       
       {/* Organisation Dashboard - authenticated users only */}
       <Route path="/organisations/:orgId">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <OrganisationDashboardPage />
           </ProtectedRouteGuard>
@@ -281,7 +282,7 @@ function Router() {
       
       {/* Organisation Heuristics - authenticated users only */}
       <Route path="/organisations/:orgId/heuristics">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <OrganisationHeuristicsPage />
           </ProtectedRouteGuard>
@@ -298,7 +299,7 @@ function Router() {
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/settings">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <UserProfileSettings />
           </ProtectedRouteGuard>
@@ -343,92 +344,156 @@ function Router() {
         </ProtectedRouteGuard>
       </Route>
       <Route path="/make-a-plan/:projectId/landing">
-        <ProtectedRouteGuard>
-          <MakeAPlanLanding />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <MakeAPlanLanding />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1/step-1">
-        <ProtectedRouteGuard>
-          <Block1Step1 />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Block1Step1 />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1/step-2">
-        <ProtectedRouteGuard>
-          <Block1Step2 />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Block1Step2 />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1">
-        <ProtectedRouteGuard>
-          <Block1Discover />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Block1Discover />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-3">
-        <ProtectedRouteGuard>
-          <Block2Step3 />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Block2Step3 />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-4">
-        <ProtectedRouteGuard>
-          <Block2Step4 />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Block2Step4 />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-5">
-        <ProtectedRouteGuard>
-          <Block2Step5 />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Block2Step5 />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2">
-        <ProtectedRouteGuard>
-          <Block2Design />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Block2Design />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-3">
-        <ProtectedRouteGuard>
-          <Block3Deliver />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Block3Deliver />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId/full">
-        <ProtectedRouteGuard>
-          <MakeAPlanFull />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <MakeAPlanFull />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan/:projectId">
-        <ProtectedRouteGuard>
-          <MakeAPlan />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <MakeAPlan />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/make-a-plan">
-        <ProtectedRouteGuard>
-          <MakeAPlan />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <MakeAPlan />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       <Route path="/checklist">
-        <ProtectedRouteGuard>
-          <Checklist />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <Checklist />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       
       <Route path="/final-checklist">
-        <ProtectedRouteGuard>
-          <FinalChecklist />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <FinalChecklist />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       
       <Route path="/factor-checklist">
-        <ProtectedRouteGuard>
-          <FactorChecklist />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <FactorChecklist />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       
       <Route path="/projects/:projectId/outcomes">
-        <ProtectedRouteGuard>
-          <OutcomeManagement />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <OutcomeManagement />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       
       {/* Project Setup Page (for editing project profile) */}
       <Route path="/projects/:projectId/setup">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -440,7 +505,7 @@ function Router() {
       {/* NEW SIMPLIFIED EDIT ROUTES */}
       {/* Basic Project Edit Page - direct route */}
       <Route path="/projects/:projectId/edit-basic">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <BasicProjectEditPage />
           </ProtectedRouteGuard>
@@ -451,7 +516,7 @@ function Router() {
       
       {/* Basic Project Edit Page with Organization context */}
       <Route path="/organisations/:orgId/projects/:projectId/edit-basic">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <BasicProjectEditPage />
           </ProtectedRouteGuard>
@@ -462,7 +527,7 @@ function Router() {
       
       {/* Project Profile Edit Page - OLD PATH */}
       <Route path="/projects/:projectId/profile/edit">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -473,15 +538,19 @@ function Router() {
       
       {/* Project Detail Page - OLD PATH */}
       <Route path="/projects/:projectId">
-        <ProtectedRouteGuard>
-          <ProjectPage />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <ProjectPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       
       {/* NEW ROUTES WITH ORGANIZATION CONTEXT */}
       {/* Project Profile Edit Page with Organization */}
       <Route path="/organisations/:orgId/projects/:projectId/profile/edit">
-        {user ? (
+        {user || isAuthenticatedWithReplit ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -492,9 +561,13 @@ function Router() {
       
       {/* Project Detail Page with Organization */}
       <Route path="/organisations/:orgId/projects/:projectId">
-        <ProtectedRouteGuard>
-          <ProjectPage />
-        </ProtectedRouteGuard>
+        {user || isAuthenticatedWithReplit ? (
+          <ProtectedRouteGuard>
+            <ProjectPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
       </Route>
       
       {/* Dashboard route - protected like other tools */}
