@@ -114,12 +114,16 @@ export default function Block1Discover() {
   // Initialize local state from plan data
   useEffect(() => {
     if (plan) {
+      // Load success criteria
       if (plan.blocks?.block1?.successCriteria) {
         setSuccessCriteria(plan.blocks.block1.successCriteria);
       }
       
-      // The rest of the data (success factor evaluations and personal heuristics)
-      // will be directly accessed from the plan object when rendering
+      // Load saved success factor ratings into pending ratings
+      if (plan.blocks?.block1?.successFactorRatings) {
+        console.log('🔄 Block1Discover.useEffect - Loading saved ratings into pendingRatings:', plan.blocks.block1.successFactorRatings);
+        setPendingRatings(plan.blocks.block1.successFactorRatings);
+      }
     }
   }, [plan]);
   
@@ -628,7 +632,9 @@ export default function Block1Discover() {
                                   <div className="flex flex-col space-y-2">
                                     <div className="flex space-x-2">
                                       {RESONANCE_OPTIONS.map((option) => {
-                                        const isSelected = plan?.blocks?.block1?.successFactorRatings?.[factor.id] === option.value;
+                                        // Check both pending ratings (unsaved) and plan ratings (saved to server)
+                                        const isSelected = pendingRatings?.[factor.id] === option.value;
+                                        
                                         return (
                                           <button
                                             key={option.value}
@@ -651,11 +657,11 @@ export default function Block1Discover() {
                                       })}
                                     </div>
                                     
-                                    {plan?.blocks?.block1?.successFactorRatings?.[factor.id] && (
+                                    {pendingRatings?.[factor.id] && (
                                       <div className="text-sm mt-2 font-medium text-tcof-dark bg-tcof-light/30 p-2 rounded-md">
                                         <span className="font-bold">Selected: </span>
-                                        {RESONANCE_OPTIONS.find(opt => opt.value === plan?.blocks?.block1?.successFactorRatings?.[factor.id])?.label} — 
-                                        {RESONANCE_OPTIONS.find(opt => opt.value === plan?.blocks?.block1?.successFactorRatings?.[factor.id])?.desc}
+                                        {RESONANCE_OPTIONS.find(opt => opt.value === pendingRatings?.[factor.id])?.label} — 
+                                        {RESONANCE_OPTIONS.find(opt => opt.value === pendingRatings?.[factor.id])?.desc}
                                       </div>
                                     )}
                                   </div>
