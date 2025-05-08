@@ -280,10 +280,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Transform the data to match the structure needed by the client
       const formattedFactors = successFactors.map(factor => ({
         id: factor.id,
-        name: factor.title,
-        description: factor.tasks 
+        factor: factor.title,
+        description: factor.description || (factor.tasks 
           ? `Tasks for various project stages (${Object.keys(factor.tasks).length} stages available)`
-          : 'No description available'
+          : 'No description available'),
+        category: factor.category || 'Uncategorized'
       }));
       
       res.status(200).json(formattedFactors);
