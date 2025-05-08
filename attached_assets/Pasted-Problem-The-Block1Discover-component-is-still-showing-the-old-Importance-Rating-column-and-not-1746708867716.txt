@@ -1,0 +1,39 @@
+Problem:
+  The Block1Discover component is still showing the old “Importance Rating” column and not rendering our new five‐level “Resonance” controls.
+
+Fix:
+  1. **Remove Legacy Code**  
+     - Open `client/src/pages/make-a-plan/Block1Discover.tsx`.  
+     - Delete any `<th>` or `<td>` labeled “Importance” or “Select importance.”  
+     - Remove any dead‐code branches, flags, or placeholders related to “importance.”  
+
+  2. **Implement Resonance Scale**  
+     - Define an array of options:
+       ```ts
+       const options = [
+         { value: 1, symbol: '❌', label: "Doesn’t land",    desc: "I don’t feel this…" },
+         { value: 2, symbol: '🤔', label: "Unfamiliar",      desc: "I’ve never seen it in action." },
+         { value: 3, symbol: '🟡', label: "Seems true",     desc: "I believe it’s useful." },
+         { value: 4, symbol: '✅', label: "Proven",         desc: "I’ve used this and it worked." },
+         { value: 5, symbol: '🔥', label: "Hard-won truth", desc: "It’s burned into how I work." },
+       ];
+       ```
+     - In the table header row, add `<th>Resonance</th>`.
+     - For each factor row, render a `<fieldset>` or radio‐group showing those five tiles (symbol + label), with the description in a tooltip or beneath.
+  
+  3. **Wire Data & Persistence**  
+     - Ensure you import and call `useResonanceRatings(projectId)`:
+       - Initialize with `useQuery` to fetch existing ratings.
+       - Use `useMutation` to save a single `{ factorId, resonance }` on change.
+       - On success, invalidate the ratings query so the UI re‐renders.
+  
+  4. **Confirm at Runtime**  
+     - Add a `console.log('🔧 Block1Discover updated with Resonance')` at the top of the component to verify your changes load.
+     - Hard‐refresh the browser (`Ctrl+Shift+R`) and check the console.
+
+  5. **Report Back**  
+     After implementing these steps, reply with:
+     - “✅ Legacy column removed”
+     - “✅ Resonance UI implemented”
+     - “✅ Data fetch & save working”
+     - “✅ Runtime log visible in console”

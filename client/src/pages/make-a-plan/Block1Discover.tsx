@@ -46,13 +46,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// Define the success factor rating options
-const RATING_OPTIONS = [
-  { value: "high", label: "High Importance", description: "Critical to project success" },
-  { value: "medium", label: "Medium Importance", description: "Important but not critical" },
-  { value: "low", label: "Low Importance", description: "Useful but not essential" },
-  { value: "na", label: "Not Applicable", description: "Not relevant to this project" },
+// Define the success factor resonance options
+const RESONANCE_OPTIONS = [
+  { value: "1", symbol: '❌', label: "Doesn't land", desc: "I don't feel this…" },
+  { value: "2", symbol: '🤔', label: "Unfamiliar", desc: "I've never seen it in action." },
+  { value: "3", symbol: '🟡', label: "Seems true", desc: "I believe it's useful." },
+  { value: "4", symbol: '✅', label: "Proven", desc: "I've used this and it worked." },
+  { value: "5", symbol: '🔥', label: "Hard-won truth", desc: "It's burned into how I work." },
 ];
+
+console.log('🔧 Block1Discover updated with Resonance');
 
 export default function Block1Discover() {
   const [location, navigate] = useLocation();
@@ -411,7 +414,7 @@ export default function Block1Discover() {
                             <TableRow>
                               <TableHead className="w-[300px]">Factor</TableHead>
                               <TableHead>Description</TableHead>
-                              <TableHead className="w-[200px]">Importance Rating</TableHead>
+                              <TableHead className="w-[300px]">Resonance</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
