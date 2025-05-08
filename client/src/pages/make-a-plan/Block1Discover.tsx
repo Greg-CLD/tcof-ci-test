@@ -142,7 +142,7 @@ export default function Block1Discover() {
     }
   }, [plan]);
   
-  // Save progress mutation
+  // Save progress mutation with optimistic updates
   const saveMutation = useMutation({
     mutationFn: async () => {
       // Save just the block1 data
@@ -151,22 +151,64 @@ export default function Block1Discover() {
         lastUpdated: new Date().toISOString(),
       });
     },
+    onMutate: (newData) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      queryClient.cancelQueries({ queryKey: ['plan', projectId] });
+      
+      // Snapshot the previous value
+      const previousPlan = queryClient.getQueryData(['plan', projectId]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['plan', projectId], (old: any) => {
+        if (!old) return old;
+        
+        return {
+          ...old,
+          blocks: {
+            ...old.blocks,
+            block1: {
+              ...old.blocks?.block1,
+              successCriteria,
+              lastUpdated: new Date().toISOString(),
+            }
+          }
+        };
+      });
+      
+      // Display toast immediately to provide instant feedback
+      toast({
+        title: "Saving progress...",
+        description: "Your changes are being saved.",
+      });
+      
+      // Return a context object with the previous plan
+      return { previousPlan };
+    },
     onSuccess: () => {
       toast({
         title: "Progress saved",
         description: "Your changes have been saved successfully.",
       });
       
-      // Refresh plan data
+      // Refresh plan data to ensure it's in sync with the server
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     },
-    onError: (error) => {
+    onError: (error, _newData, context) => {
+      // If the mutation fails, use the context we saved to roll back
+      if (context?.previousPlan) {
+        queryClient.setQueryData(['plan', projectId], context.previousPlan);
+      }
+      
       toast({
         title: "Failed to save progress",
-        description: "There was an error saving your changes. Please try again.",
+        description: "There was an error saving your changes. Your changes have been reverted.",
         variant: "destructive",
       });
       console.error("Save error:", error);
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure data is in sync with server
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     }
   });
   
@@ -349,6 +391,161 @@ export default function Block1Discover() {
     }
   };
   
+  // Heuristic add mutation with optimistic UI
+  const addHeuristicMutation = useMutation({
+    mutationFn: async (newHeuristicData: { name: string, description: string }) => {
+      const newHeuristicWithId = { ...newHeuristicData, id: Date.now().toString() };
+      const updatedHeuristics = [
+        ...(plan?.blocks?.block1?.personalHeuristics || []),
+        newHeuristicWithId
+      ];
+      
+      // Save to block1
+      return saveBlock('block1', {
+        personalHeuristics: updatedHeuristics,
+        lastUpdated: new Date().toISOString(),
+      });
+    },
+    onMutate: async (newHeuristicData) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
+      
+      // Snapshot the previous value
+      const previousPlan = queryClient.getQueryData(['plan', projectId]);
+      
+      // Create the new heuristic with ID
+      const newHeuristicWithId = { ...newHeuristicData, id: Date.now().toString() };
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['plan', projectId], (old: any) => {
+        if (!old) return old;
+        
+        const updatedHeuristics = [
+          ...(old.blocks?.block1?.personalHeuristics || []),
+          newHeuristicWithId
+        ];
+        
+        return {
+          ...old,
+          blocks: {
+            ...old.blocks,
+            block1: {
+              ...old.blocks?.block1,
+              personalHeuristics: updatedHeuristics,
+              lastUpdated: new Date().toISOString(),
+            }
+          }
+        };
+      });
+      
+      // Show immediate feedback
+      toast({
+        title: "Adding heuristic...",
+        description: "Your personal heuristic is being saved.",
+      });
+      
+      return { previousPlan, newHeuristicWithId };
+    },
+    onSuccess: (_result, _variables, context) => {
+      setNewHeuristic({ name: "", description: "" });
+      
+      toast({
+        title: "Heuristic added",
+        description: "Your personal heuristic has been added successfully.",
+      });
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previousPlan) {
+        queryClient.setQueryData(['plan', projectId], context.previousPlan);
+      }
+      
+      console.error("🔴 Error adding heuristic:", error);
+      toast({
+        title: "Error adding heuristic",
+        description: "There was an error saving your heuristic. Your changes have been reverted.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+    }
+  });
+  
+  // Heuristic remove mutation with optimistic UI
+  const removeHeuristicMutation = useMutation({
+    mutationFn: async (heuristicId: string) => {
+      const updatedHeuristics = (plan?.blocks?.block1?.personalHeuristics || [])
+        .filter((h: { id: string }) => h.id !== heuristicId);
+      
+      // Save to block1
+      return saveBlock('block1', {
+        personalHeuristics: updatedHeuristics,
+        lastUpdated: new Date().toISOString(),
+      });
+    },
+    onMutate: async (heuristicId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
+      
+      // Snapshot the previous value
+      const previousPlan = queryClient.getQueryData(['plan', projectId]);
+      
+      // Find the heuristic being removed for potential restore
+      const heuristicToRemove = plan?.blocks?.block1?.personalHeuristics?.find(
+        (h: { id: string }) => h.id === heuristicId
+      );
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['plan', projectId], (old: any) => {
+        if (!old) return old;
+        
+        const updatedHeuristics = (old.blocks?.block1?.personalHeuristics || [])
+          .filter((h: { id: string }) => h.id !== heuristicId);
+        
+        return {
+          ...old,
+          blocks: {
+            ...old.blocks,
+            block1: {
+              ...old.blocks?.block1,
+              personalHeuristics: updatedHeuristics,
+              lastUpdated: new Date().toISOString(),
+            }
+          }
+        };
+      });
+      
+      // Show immediate feedback
+      toast({
+        title: "Removing heuristic...",
+        description: "The personal heuristic is being removed.",
+      });
+      
+      return { previousPlan, heuristicToRemove };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Heuristic removed",
+        description: "The personal heuristic has been removed successfully.",
+      });
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previousPlan) {
+        queryClient.setQueryData(['plan', projectId], context.previousPlan);
+      }
+      
+      console.error("🔴 Error removing heuristic:", error);
+      toast({
+        title: "Error removing heuristic",
+        description: "There was an error removing the heuristic. Your changes have been reverted.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+    }
+  });
+  
   // Handle adding a new personal heuristic
   const handleAddHeuristic = async () => {
     if (!newHeuristic.name.trim()) {
@@ -362,39 +559,12 @@ export default function Block1Discover() {
     
     console.log('🔄 Block1Discover.handleAddHeuristic - Adding new personal heuristic:', newHeuristic);
     
-    const updatedHeuristics = [
-      ...(plan?.blocks?.block1?.personalHeuristics || []),
-      { ...newHeuristic, id: Date.now().toString() }
-    ];
-    
     try {
-      // Save directly to block1
-      saveBlock('block1', {
-        personalHeuristics: updatedHeuristics,
-        lastUpdated: new Date().toISOString(),
-      });
-      
-      // Also save to server
-      console.log('🔄 Block1Discover.handleAddHeuristic - Saving to server via saveMutation');
-      await saveMutation.mutateAsync();
-      
-      // Refresh queries to ensure we have the latest data
-      console.log('🔄 Block1Discover.handleAddHeuristic - Invalidating queries to refresh data');
-      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
-      
-      setNewHeuristic({ name: "", description: "" });
-      
-      toast({
-        title: "Heuristic added",
-        description: "Your personal heuristic has been added successfully and saved to the server.",
-      });
+      // Use the mutation with optimistic updates
+      await addHeuristicMutation.mutateAsync(newHeuristic);
     } catch (error) {
       console.error("🔴 Block1Discover.handleAddHeuristic - Error saving heuristic:", error);
-      toast({
-        title: "Error saving heuristic",
-        description: "There was an error saving your heuristic. Please try again.",
-        variant: "destructive",
-      });
+      // Error handling is done in the mutation callbacks
     }
   };
   
@@ -402,35 +572,12 @@ export default function Block1Discover() {
   const handleRemoveHeuristic = async (id: string) => {
     console.log('🔄 Block1Discover.handleRemoveHeuristic - Removing heuristic with id:', id);
     
-    const updatedHeuristics = (plan?.blocks?.block1?.personalHeuristics || [])
-      .filter((h: { id: string }) => h.id !== id);
-    
     try {
-      // Save directly to block1
-      saveBlock('block1', {
-        personalHeuristics: updatedHeuristics,
-        lastUpdated: new Date().toISOString(),
-      });
-      
-      // Also save to server
-      console.log('🔄 Block1Discover.handleRemoveHeuristic - Saving to server via saveMutation');
-      await saveMutation.mutateAsync();
-      
-      // Refresh queries to ensure we have the latest data
-      console.log('🔄 Block1Discover.handleRemoveHeuristic - Invalidating queries to refresh data');
-      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
-      
-      toast({
-        title: "Heuristic removed",
-        description: "The personal heuristic has been removed and changes saved to the server.",
-      });
+      // Use the mutation with optimistic updates
+      await removeHeuristicMutation.mutateAsync(id);
     } catch (error) {
       console.error("🔴 Block1Discover.handleRemoveHeuristic - Error removing heuristic:", error);
-      toast({
-        title: "Error removing heuristic",
-        description: "There was an error removing the heuristic. Please try again.",
-        variant: "destructive",
-      });
+      // Error handling is done in the mutation callbacks
     }
   };
   

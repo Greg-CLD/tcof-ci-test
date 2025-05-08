@@ -7,12 +7,14 @@ import { usePlan } from "@/contexts/PlanContext";
 import { useToast } from "@/hooks/use-toast";
 import ProjectBanner from "@/components/ProjectBanner";
 import { ArrowLeft, ChevronRight, Plus, X, Save } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Block1Step2() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { plan, saveBlock } = usePlan();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Input ref for returning focus after adding
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +45,218 @@ export default function Block1Step2() {
     );
   }
   
+  // Add heuristic mutation with optimistic UI
+  const addHeuristicMutation = useMutation({
+    mutationFn: async (newHeuristicText: string) => {
+      const updatedHeuristics = [...heuristics, newHeuristicText];
+      
+      // Save to block1
+      return saveBlock('block1', {
+        personalHeuristics: updatedHeuristics,
+        lastUpdated: new Date().toISOString(),
+      });
+    },
+    onMutate: async (newHeuristicText) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
+      
+      // Snapshot the previous value
+      const previousPlan = queryClient.getQueryData(['plan', projectId]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['plan', projectId], (old: any) => {
+        if (!old) return old;
+        
+        const currentHeuristics = old.blocks?.block1?.personalHeuristics || [];
+        const updatedHeuristics = [...currentHeuristics, newHeuristicText];
+        
+        return {
+          ...old,
+          blocks: {
+            ...old.blocks,
+            block1: {
+              ...old.blocks?.block1,
+              personalHeuristics: updatedHeuristics,
+              lastUpdated: new Date().toISOString(),
+            }
+          }
+        };
+      });
+      
+      // Update local state for UI
+      setHeuristics(prev => [...prev, newHeuristicText]);
+      
+      // Show immediate feedback
+      toast({
+        title: "Adding heuristic...",
+        description: "Your personal heuristic is being saved.",
+      });
+      
+      return { previousPlan };
+    },
+    onSuccess: () => {
+      // Clear input and return focus
+      setNewHeuristic("");
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+      
+      toast({
+        title: "Heuristic added",
+        description: "Your custom heuristic has been added successfully."
+      });
+    },
+    onError: (error, _variables, context) => {
+      // If the mutation fails, use the context we saved to roll back
+      if (context?.previousPlan) {
+        queryClient.setQueryData(['plan', projectId], context.previousPlan);
+        
+        // Also reset local state from the plan
+        if (context.previousPlan?.blocks?.block1?.personalHeuristics) {
+          setHeuristics(context.previousPlan.blocks.block1.personalHeuristics);
+        }
+      }
+      
+      console.error("Error adding heuristic:", error);
+      toast({
+        title: "Failed to add heuristic",
+        description: "There was an error saving your heuristic. Your changes have been reverted.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure data is in sync with server
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+    }
+  });
+  
+  // Remove heuristic mutation with optimistic UI
+  const removeHeuristicMutation = useMutation({
+    mutationFn: async (index: number) => {
+      const updatedHeuristics = heuristics.filter((_, i) => i !== index);
+      
+      // Save to block1
+      return saveBlock('block1', {
+        personalHeuristics: updatedHeuristics,
+        lastUpdated: new Date().toISOString(),
+      });
+    },
+    onMutate: async (index) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
+      
+      // Snapshot the previous values
+      const previousPlan = queryClient.getQueryData(['plan', projectId]);
+      const previousHeuristics = [...heuristics];
+      
+      // Calculate new heuristics
+      const updatedHeuristics = heuristics.filter((_, i) => i !== index);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['plan', projectId], (old: any) => {
+        if (!old) return old;
+        
+        return {
+          ...old,
+          blocks: {
+            ...old.blocks,
+            block1: {
+              ...old.blocks?.block1,
+              personalHeuristics: updatedHeuristics,
+              lastUpdated: new Date().toISOString(),
+            }
+          }
+        };
+      });
+      
+      // Update local state for UI
+      setHeuristics(updatedHeuristics);
+      
+      // Show immediate feedback
+      toast({
+        title: "Removing heuristic...",
+        description: "Your heuristic is being removed."
+      });
+      
+      return { previousPlan, previousHeuristics };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Heuristic removed",
+        description: "Your custom heuristic has been removed successfully."
+      });
+    },
+    onError: (error, _variables, context) => {
+      // Revert to previous plan data
+      if (context?.previousPlan) {
+        queryClient.setQueryData(['plan', projectId], context.previousPlan);
+      }
+      
+      // Revert local state
+      if (context?.previousHeuristics) {
+        setHeuristics(context.previousHeuristics);
+      }
+      
+      console.error("Error removing heuristic:", error);
+      toast({
+        title: "Failed to remove heuristic",
+        description: "There was an error removing your heuristic. Your changes have been reverted.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure data is in sync with server
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+    }
+  });
+  
+  // Save all heuristics mutation with optimistic UI
+  const saveHeuristicsMutation = useMutation({
+    mutationFn: async () => {
+      return saveBlock('block1', {
+        personalHeuristics: heuristics,
+        lastUpdated: new Date().toISOString(),
+      });
+    },
+    onMutate: async () => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
+      
+      // Snapshot the previous value
+      const previousPlan = queryClient.getQueryData(['plan', projectId]);
+      
+      // Show immediate feedback
+      toast({
+        title: "Saving heuristics...",
+        description: "Your custom heuristics are being saved."
+      });
+      
+      return { previousPlan };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Heuristics saved",
+        description: "Your custom heuristics have been saved successfully."
+      });
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previousPlan) {
+        queryClient.setQueryData(['plan', projectId], context.previousPlan);
+      }
+      
+      console.error("Error saving heuristics:", error);
+      toast({
+        title: "Failed to save heuristics",
+        description: "There was an error saving your heuristics. Please try again.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure data is in sync with server
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+    }
+  });
+  
   // Handle adding a new heuristic
   const handleAddHeuristic = () => {
     const trimmedHeuristic = newHeuristic.trim();
@@ -56,58 +270,20 @@ export default function Block1Step2() {
       return;
     }
     
-    // Add to local state
-    const updatedHeuristics = [...heuristics, trimmedHeuristic];
-    setHeuristics(updatedHeuristics);
-    
-    // Save to PlanContext
-    saveBlock('block1', {
-      personalHeuristics: updatedHeuristics,
-      lastUpdated: new Date().toISOString(),
-    });
-    
-    // Clear input and return focus
-    setNewHeuristic("");
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-    
-    toast({
-      title: "Heuristic added",
-      description: "Your custom heuristic has been added."
-    });
+    // Use the mutation with optimistic updates
+    addHeuristicMutation.mutate(trimmedHeuristic);
   };
   
   // Handle removing a heuristic
   const handleRemoveHeuristic = (index: number) => {
-    const updatedHeuristics = heuristics.filter((_, i) => i !== index);
-    
-    // Update local state
-    setHeuristics(updatedHeuristics);
-    
-    // Save to PlanContext
-    saveBlock('block1', {
-      personalHeuristics: updatedHeuristics,
-      lastUpdated: new Date().toISOString(),
-    });
-    
-    toast({
-      title: "Heuristic removed",
-      description: "Your custom heuristic has been removed."
-    });
+    // Use the mutation with optimistic updates
+    removeHeuristicMutation.mutate(index);
   };
   
   // Handle save button click
   const handleSave = () => {
-    saveBlock('block1', {
-      personalHeuristics: heuristics,
-      lastUpdated: new Date().toISOString(),
-    });
-    
-    toast({
-      title: "Heuristics saved",
-      description: "Your custom heuristics have been saved successfully."
-    });
+    // Use the mutation with optimistic updates
+    saveHeuristicsMutation.mutate();
   };
   
   // Handle pressing Enter in the input field

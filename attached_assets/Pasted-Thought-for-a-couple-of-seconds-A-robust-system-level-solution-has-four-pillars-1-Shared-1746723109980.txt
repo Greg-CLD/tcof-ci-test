@@ -1,0 +1,130 @@
+Thought for a couple of seconds
+
+
+A robust system‐level solution has four pillars:
+
+1. **Shared Type/Schema Package**
+
+   * Consolidates all your Zod/Drizzle schemas and TS interfaces in a common `shared/types` module.
+   * Both client hooks (`useResonanceRatings`, `usePersonalHeuristics`) and server handlers import from it, eliminating contract drift.
+
+2. **Optimistic UI with Rollback & Toasts**
+
+   * On any “Save” action, immediately update local state so the user sees instant feedback.
+   * Kick off the mutation in the background; if it fails, roll back and show a toast error.
+   * This ensures the UI never “loses” a selection because it always reflects what the user clicked.
+
+3. **Centralized Error‐Logging Middleware**
+
+   * Wrap all Express routes in an error handler that:
+     • Logs detailed metadata (projectId, userId, payload) to a log service or console.
+     • Transforms unexpected throws into descriptive 4xx/5xx responses.
+   * Clients can then show precise error messages instead of generic popups.
+
+4. **End‐to‐End Playwright Tests**
+
+   * Write tests that:
+     • Click every resonance emoji and heuristic Save.
+     • Assert DB state (via a test helper) matches expected.
+   * This catches regressions early.
+
+---
+
+## Agent Prompts
+
+**Prompt A: Create Shared Types Package**
+
+```
+Goal: Establish a single source of truth for all request/response schemas.
+
+1. Create a new folder `shared/types`.
+2. Move your Zod schemas (`ratingSchema`, `heuristicSchema`, etc.) and Drizzle model types into it.
+3. Refactor:
+   - Server routes (e.g. `/api/projects/:projectId/success-factor-ratings.ts`) to import schemas from `shared/types`.
+   - Client hooks (`useResonanceRatings`, `usePersonalHeuristics`) to import their TS interfaces from `shared/types`.
+4. Update `tsconfig.json` paths so both client and server resolve `shared/types` correctly.
+
+Reply when done:  
+✅ shared/types created  
+✅ imports updated  
+```
+
+**Prompt B: Implement Optimistic UI & Toasts**
+
+````
+Goal: Give users instant feedback on saves and handle failures gracefully.
+
+1. In `Block1Discover.tsx` and `Block1Step2.tsx`, wrap your `useMutation` calls with:
+   ```ts
+   const mutation = useMutation(saveFn, {
+     onMutate: newData => {
+       queryClient.cancelQueries(['ratings', projectId]);
+       const previous = queryClient.getQueryData(['ratings', projectId]);
+       queryClient.setQueryData(['ratings', projectId], old => ({ ...old, ...newData }));
+       return { previous };
+     },
+     onError: (_err, _newData, context) => {
+       queryClient.setQueryData(['ratings', projectId], context.previous);
+       toast.error('Save failed—changes reverted');
+     },
+     onSettled: () => {
+       queryClient.invalidateQueries(['ratings', projectId]);
+     },
+   });
+````
+
+2. Add a simple toast utility (e.g. `react-hot-toast`) if not already present.
+3. Ensure “Save Progress” uses this mutation.
+
+Reply:
+✅ optimistic updates in place
+✅ toasts display on error
+
+```
+
+**Prompt C: Add Centralized Error‐Logging Middleware**  
+```
+
+Goal: Surface detailed errors and prevent silent 500s.
+
+1. In `server/middlewares/errorLogger.ts`, add:
+
+   ```ts
+   import { Request, Response, NextFunction } from 'express';
+   export default function errorLogger(err, req: Request, res: Response, next: NextFunction) {
+     console.error({ path: req.path, user: req.userId, body: req.body, err });
+     res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+   }
+   ```
+2. In `server/index.js`, after all routes, `app.use(errorLogger)`.
+3. Remove any ad‐hoc try/catch that swallowed errors without logging.
+
+Reply:
+✅ errorLogger middleware added
+✅ routes now return descriptive errors
+
+```
+
+**Prompt D: Write Playwright E2E Tests**  
+```
+
+Goal: Catch future regressions by automating the flow.
+
+1. Create `tests/e2e/block1.spec.ts`.
+2. Write a test that:
+
+   * Visits `/make-a-plan/123/block-1`.
+   * Clicks the 3rd resonance emoji for the first factor.
+   * Clicks “Save Progress”.
+   * Refreshes the page.
+   * Asserts that the 3rd emoji is still highlighted.
+3. Create `tests/e2e/heuristics.spec.ts` similarly for Step 2.
+4. Use a test helper to query the test DB for persisted values and assert they match.
+
+Reply:
+✅ E2E tests created and passing
+
+```
+
+Implement these in sequence A→D. Once all are green, the underlying issues will be solved and hard to regress.
+```
