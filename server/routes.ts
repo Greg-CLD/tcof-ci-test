@@ -286,6 +286,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('Error registering framework tasks routes:', error);
   }
   
+  // Register success factor ratings routes
+  try {
+    const successFactorRatingsRouter = await import('./routes/api/projects/success-factor-ratings.js');
+    app.use('/api/projects', successFactorRatingsRouter.default);
+    console.log('Success factor ratings routes registered successfully');
+  } catch (error) {
+    console.error('Error registering success factor ratings routes:', error);
+  }
+  
   // Register plans routes
   try {
     app.use('/', plansRouter);

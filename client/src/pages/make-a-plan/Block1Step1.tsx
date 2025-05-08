@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -15,43 +14,59 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { usePlan } from "@/contexts/PlanContext";
-import { useProgress } from "@/contexts/ProgressContext";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ProjectBanner from "@/components/ProjectBanner";
 import { ArrowLeft, ChevronRight, Info, Save } from "lucide-react";
+import { useSuccessFactors } from "@/hooks/useSuccessFactors";
+import { useResonanceRatings, type RatingInput } from "@/hooks/useResonanceRatings";
 
 export default function Block1Step1() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { plan, saveBlock } = usePlan();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
-  // Local state for ratings
-  const [ratings, setRatings] = useState<{[key: string]: string}>({});
+  // Use our new hooks
+  const { successFactors, isLoading: factorsLoading } = useSuccessFactors();
+  const { 
+    ratings, 
+    isLoading: ratingsLoading, 
+    updateRatings,
+    updateSingleRating,
+    isSaving
+  } = useResonanceRatings(projectId);
   
-  // Fetch success factors data
-  const {
-    data: successFactors,
-    isLoading: factorsLoading
-  } = useQuery({
-    queryKey: ['/api/success-factors'],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/success-factors");
-      if (!res.ok) {
-        throw new Error("Failed to fetch success factors");
-      }
-      return res.json();
-    }
-  });
+  // Local state for ratings (merges DB ratings with local changes)
+  const [localRatings, setLocalRatings] = useState<{[key: string]: number}>({});
   
-  // Initialize local state from plan data
+  // Initialize local state from DB ratings
   useEffect(() => {
-    if (plan?.blocks?.block1?.successFactorRatings) {
-      setRatings(plan.blocks.block1.successFactorRatings);
+    if (ratings.length > 0) {
+      const ratingMap: {[key: string]: number} = {};
+      ratings.forEach(rating => {
+        ratingMap[rating.factorId] = rating.resonance;
+      });
+      setLocalRatings(ratingMap);
     }
-  }, [plan]);
+  }, [ratings]);
+  
+  // Initialize from plan context as fallback
+  useEffect(() => {
+    if (plan?.blocks?.block1?.successFactorRatings && Object.keys(localRatings).length === 0) {
+      const planRatings = plan.blocks.block1.successFactorRatings;
+      const convertedRatings: {[key: string]: number} = {};
+      
+      // Convert string ratings to numbers
+      Object.keys(planRatings).forEach(factorId => {
+        const rating = parseInt(planRatings[factorId]);
+        if (!isNaN(rating) && rating >= 1 && rating <= 5) {
+          convertedRatings[factorId] = rating;
+        }
+      });
+      
+      setLocalRatings(convertedRatings);
+    }
+  }, [plan, localRatings]);
   
   // Guard against invalid state - no project ID available
   if (!projectId) {
@@ -67,41 +82,74 @@ export default function Block1Step1() {
   }
   
   // Handle rating change
-  const handleRatingChange = (factorId: string, rating: string) => {
-    // Update local state
-    setRatings(prev => ({
+  const handleRatingChange = async (factorId: string, ratingValue: string) => {
+    const numericRating = parseInt(ratingValue);
+    
+    // Update local state for immediate UI feedback
+    setLocalRatings(prev => ({
       ...prev,
-      [factorId]: rating
+      [factorId]: numericRating
     }));
     
     // Save to PlanContext
     saveBlock('block1', {
       successFactorRatings: {
         ...plan?.blocks?.block1?.successFactorRatings,
-        [factorId]: rating
+        [factorId]: ratingValue
       },
       lastUpdated: new Date().toISOString(),
     });
+    
+    // Save to database
+    try {
+      await updateSingleRating({
+        factorId,
+        resonance: numericRating
+      });
+    } catch (error) {
+      console.error("Error saving rating to database:", error);
+      // UI already updated from local state, so no need to show error toast
+      // as it's saved in context
+    }
   };
   
   // Handle save button click
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Format local ratings for the API
+    const ratingInputs: RatingInput[] = Object.entries(localRatings).map(([factorId, resonance]) => ({
+      factorId,
+      resonance
+    }));
+    
+    // Save to PlanContext
     saveBlock('block1', {
-      successFactorRatings: ratings,
+      successFactorRatings: localRatings,
       lastUpdated: new Date().toISOString(),
     });
     
-    toast({
-      title: "Ratings saved",
-      description: "Your success factor ratings have been saved successfully."
-    });
+    // Save to database
+    try {
+      await updateRatings(ratingInputs);
+      
+      toast({
+        title: "Ratings saved",
+        description: "Your success factor ratings have been saved successfully."
+      });
+    } catch (error) {
+      console.error("Error saving ratings to database:", error);
+      toast({
+        title: "Error saving ratings",
+        description: "There was an error saving your ratings to the database. Your changes have been saved locally.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Calculate completion percentage
   const calculateCompletionPercentage = () => {
     if (!successFactors || successFactors.length === 0) return 0;
     
-    const ratedCount = Object.keys(ratings).length;
+    const ratedCount = Object.keys(localRatings).length;
     return Math.round((ratedCount / successFactors.length) * 100);
   };
   
@@ -191,7 +239,7 @@ export default function Block1Step1() {
                           </TableCell>
                           <TableCell>
                             <RadioGroup
-                              value={ratings[factor.id] || ""}
+                              value={localRatings[factor.id]?.toString() || ""}
                               onValueChange={(value) => handleRatingChange(factor.id, value)}
                               className="flex flex-col space-y-1"
                             >
