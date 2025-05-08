@@ -17,6 +17,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProgress } from "@/contexts/ProgressContext";
 import { PlanProvider, usePlan } from "@/contexts/PlanContext";
+import { useSuccessFactors } from "@/hooks/useSuccessFactors";
+import { useResonanceRatings } from "@/hooks/useResonanceRatings";
 import ProjectBanner from "@/components/ProjectBanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -162,9 +164,50 @@ export default function Block1Discover() {
     );
   }
   
+  // Use resonance ratings hook for server persistence
+  const { 
+    updateSingleEvaluation, 
+    evaluations, 
+    isSaving: isRatingsSaving 
+  } = useResonanceRatings(projectId);
+  
+  // Local state for ratings to enable batch saving
+  const [pendingRatings, setPendingRatings] = useState<Record<string, string>>({});
+  
+  // Load server ratings on mount
+  useEffect(() => {
+    if (evaluations.length > 0) {
+      // Create a map of factorId -> resonance from server evaluations
+      const serverRatings = evaluations.reduce((acc: Record<string, string>, curr) => {
+        acc[curr.factorId] = curr.resonance.toString();
+        return acc;
+      }, {});
+      
+      // Merge with existing plan ratings if needed
+      if (plan?.blocks?.block1?.successFactorRatings) {
+        saveBlock('block1', {
+          successFactorRatings: {
+            ...plan.blocks.block1.successFactorRatings,
+            ...serverRatings
+          },
+          lastUpdated: new Date().toISOString(),
+        });
+      }
+      
+      // Initialize pending ratings with server values
+      setPendingRatings(serverRatings);
+    }
+  }, [evaluations, projectId]);
+  
   // Handle success factor evaluation change
   const handleEvaluationChange = (factorId: string, evaluation: string) => {
-    // Save directly to the block
+    // Update local state
+    setPendingRatings(prev => ({
+      ...prev,
+      [factorId]: evaluation
+    }));
+    
+    // Save directly to the block for immediate UI feedback
     saveBlock('block1', {
       successFactorRatings: {
         ...plan?.blocks?.block1?.successFactorRatings,
@@ -172,6 +215,43 @@ export default function Block1Discover() {
       },
       lastUpdated: new Date().toISOString(),
     });
+  };
+  
+  // Handle saving all ratings to server
+  const handleSaveRatings = async () => {
+    try {
+      // Get ratings from the plan's block1 data
+      const currentRatings = plan?.blocks?.block1?.successFactorRatings || {};
+      
+      // Convert to array of EvaluationInput objects for server persistence
+      const promises = Object.entries(currentRatings).map(async ([factorId, resonance]) => {
+        try {
+          return await updateSingleEvaluation({
+            factorId,
+            resonance: parseInt(resonance as string),
+            notes: '' // Optional notes field
+          });
+        } catch (err) {
+          console.error(`Error saving rating for factor ${factorId}:`, err);
+          return null;
+        }
+      });
+      
+      // Wait for all updates to complete
+      await Promise.all(promises);
+      
+      toast({
+        title: "Ratings saved",
+        description: "Your factor evaluations have been saved to the server.",
+      });
+    } catch (error) {
+      console.error("Error saving ratings:", error);
+      toast({
+        title: "Failed to save ratings",
+        description: "There was an error saving your evaluations to the server.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Handle adding a new personal heuristic
@@ -480,6 +560,14 @@ export default function Block1Discover() {
                         <ArrowLeft className="mr-2 h-4 w-4" /> Back
                       </Button>
                       <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={handleSaveRatings}
+                          disabled={isRatingsSaving}
+                        >
+                          <Save className="mr-2 h-4 w-4" /> 
+                          {isRatingsSaving ? 'Saving...' : 'Save to Server'}
+                        </Button>
                         <Button
                           variant="outline"
                           onClick={() => saveMutation.mutate()}
