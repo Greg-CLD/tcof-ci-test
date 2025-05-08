@@ -74,6 +74,10 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
 router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, res) => {
   try {
     const { projectId } = req.params;
+    const userId = (req.user as any).id;
+    
+    // Diagnostic log
+    console.log('[API] projectId:', projectId, 'body:', req.body, 'userId:', userId);
     
     // Validate input
     let ratings;
