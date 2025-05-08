@@ -114,6 +114,8 @@ export default function Block1Discover() {
   // Initialize local state from plan data
   useEffect(() => {
     if (plan) {
+      console.log('🔍 Block1Discover - Plan data changed, updating local state');
+      
       // Load success criteria
       if (plan.blocks?.block1?.successCriteria) {
         setSuccessCriteria(plan.blocks.block1.successCriteria);
@@ -121,8 +123,21 @@ export default function Block1Discover() {
       
       // Load saved success factor ratings into pending ratings
       if (plan.blocks?.block1?.successFactorRatings) {
-        console.log('🔄 Block1Discover.useEffect - Loading saved ratings into pendingRatings:', plan.blocks.block1.successFactorRatings);
-        setPendingRatings(plan.blocks.block1.successFactorRatings);
+        const planRatings = plan.blocks.block1.successFactorRatings;
+        console.log('🔄 Block1Discover.useEffect - Loading saved ratings into pendingRatings:', planRatings);
+        
+        // Keep a reference to current pendingRatings to compare
+        setPendingRatings(prev => {
+          // If pendingRatings is empty or different from plan data, update it
+          if (Object.keys(prev).length === 0 || 
+              JSON.stringify(prev) !== JSON.stringify(planRatings)) {
+            console.log('🔄 Block1Discover - Updating pendingRatings with plan data');
+            return planRatings;
+          }
+          // Otherwise keep existing pendingRatings (user's current selections)
+          console.log('🔄 Block1Discover - Keeping existing pendingRatings (no change needed)');
+          return prev;
+        });
       }
     }
   }, [plan]);
@@ -170,7 +185,8 @@ export default function Block1Discover() {
   
   // Use resonance ratings hook for server persistence
   const { 
-    updateSingleEvaluation, 
+    updateSingleEvaluation,
+    updateEvaluations,
     evaluations, 
     isSaving: isRatingsSaving 
   } = useResonanceRatings(projectId);
@@ -253,63 +269,67 @@ export default function Block1Discover() {
     console.log('🔄 Block1Discover.handleSaveAll - starting combined save operation');
     
     try {
-      // First save local progress using the mutation
+      // First make sure our pendingRatings are synced to the plan
+      // This ensures what we see in the UI is what we're saving
+      const combinedRatings = {
+        ...plan?.blocks?.block1?.successFactorRatings || {},
+        ...pendingRatings
+      };
+      
+      console.log('🔄 Block1Discover.handleSaveAll - combined ratings:', combinedRatings);
+      
+      // Save combined ratings to the plan
+      await saveBlock('block1', {
+        successFactorRatings: combinedRatings,
+        lastUpdated: new Date().toISOString(),
+      });
+      
+      // Then save local progress using the mutation
       console.log('🔄 Block1Discover.handleSaveAll - saving local progress first');
       await saveMutation.mutateAsync();
-      
-      // Then save to server
-      // Get ratings from the plan's block1 data
-      const currentRatings = plan?.blocks?.block1?.successFactorRatings || {};
-      console.log('🔄 Block1Discover.handleSaveAll - current ratings from plan:', currentRatings);
       
       // Convert to array of EvaluationInput objects for server persistence
       console.log('🔄 Block1Discover.handleSaveAll - mapping ratings to API inputs');
       const evaluationInputs: Array<{factorId: string, resonance: number, notes?: string}> = [];
       
-      const promises = Object.entries(currentRatings).map(async ([factorId, resonance]) => {
-        try {
-          // Make sure we have valid data
-          if (!factorId || resonance === undefined || resonance === null) {
-            console.warn(`🔸 Block1Discover - Skipping invalid rating for factorId: ${factorId}, resonance: ${resonance}`);
-            return null;
-          }
-          
-          // Parse resonance safely
-          let resonanceNum: number;
-          try {
-            resonanceNum = typeof resonance === 'number' ? resonance : parseInt(resonance as string);
-            // Validate the number is between 1-5
-            if (isNaN(resonanceNum) || resonanceNum < 1 || resonanceNum > 5) {
-              console.warn(`🔸 Block1Discover - Invalid resonance value: ${resonance}, setting to default 3`);
-              resonanceNum = 3; // Default to middle value if invalid
-            }
-          } catch (parseErr) {
-            console.warn(`🔸 Block1Discover - Failed to parse resonance: ${resonance}, setting to default 3`, parseErr);
-            resonanceNum = 3; // Default to middle value if parsing fails
-          }
-          
-          const evaluationInput = {
-            factorId,
-            resonance: resonanceNum,
-            notes: '' // Optional notes field
-          };
-          
-          evaluationInputs.push(evaluationInput);
-          console.log(`🔄 Block1Discover - Saving rating for factor ${factorId}: ${resonanceNum}`);
-          
-          return await updateSingleEvaluation(evaluationInput);
-        } catch (err) {
-          console.error(`🔴 Block1Discover - Error saving rating for factor ${factorId}:`, err);
-          return null;
+      // Process each rating entry
+      Object.entries(combinedRatings).forEach(([factorId, resonance]) => {
+        // Skip invalid data
+        if (!factorId || resonance === undefined || resonance === null) {
+          console.warn(`🔸 Block1Discover - Skipping invalid rating for factorId: ${factorId}, resonance: ${resonance}`);
+          return;
         }
+        
+        // Parse resonance safely
+        let resonanceNum: number;
+        try {
+          resonanceNum = typeof resonance === 'number' ? resonance : parseInt(resonance as string);
+          // Validate the number is between 1-5
+          if (isNaN(resonanceNum) || resonanceNum < 1 || resonanceNum > 5) {
+            console.warn(`🔸 Block1Discover - Invalid resonance value: ${resonance}, setting to default 3`);
+            resonanceNum = 3; // Default to middle value if invalid
+          }
+        } catch (parseErr) {
+          console.warn(`🔸 Block1Discover - Failed to parse resonance: ${resonance}, setting to default 3`, parseErr);
+          resonanceNum = 3; // Default to middle value if parsing fails
+        }
+        
+        evaluationInputs.push({
+          factorId,
+          resonance: resonanceNum,
+          notes: '' // Optional notes field
+        });
       });
       
       console.log('🔄 Block1Discover - Prepared evaluation inputs:', evaluationInputs);
-      console.log('🔄 Block1Discover - Waiting for all update promises to resolve');
       
-      // Wait for all updates to complete
-      await Promise.all(promises);
-      console.log('🔄 Block1Discover - All updates completed successfully');
+      if (evaluationInputs.length > 0) {
+        // Use the batch update method instead of individual promises
+        await updateEvaluations(evaluationInputs);
+        console.log('🔄 Block1Discover - All updates completed successfully');
+      } else {
+        console.warn('⚠️ Block1Discover - No valid ratings to save');
+      }
       
       toast({
         title: "All changes saved",

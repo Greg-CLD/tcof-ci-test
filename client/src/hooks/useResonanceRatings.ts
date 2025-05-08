@@ -96,7 +96,24 @@ export function useResonanceRatings(projectId?: string | number) {
   // Helper to update multiple evaluations at once
   const updateEvaluations = async (evaluationsData: EvaluationInput[]): Promise<void> => {
     console.log('🔄 updateEvaluations called with', evaluationsData.length, 'evaluations');
-    await saveEvaluationsMutation.mutateAsync(evaluationsData);
+    
+    // Validate and filter empty or invalid evaluations
+    const validEvaluations = evaluationsData.filter(evaluation => {
+      return (
+        evaluation.factorId && 
+        typeof evaluation.resonance === 'number' && 
+        evaluation.resonance >= 1 && 
+        evaluation.resonance <= 5
+      );
+    });
+
+    if (validEvaluations.length === 0) {
+      console.warn('⚠️ No valid evaluations to save');
+      return;
+    }
+
+    console.log('🔄 updateEvaluations - saving', validEvaluations.length, 'valid evaluations');
+    await saveEvaluationsMutation.mutateAsync(validEvaluations);
     console.log('🔄 updateEvaluations completed successfully');
   };
   
