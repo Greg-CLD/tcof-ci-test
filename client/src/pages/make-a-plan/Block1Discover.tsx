@@ -216,7 +216,7 @@ export default function Block1Discover() {
   const handleEvaluationChange = (factorId: string, evaluation: string) => {
     console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'evaluation:', evaluation);
     
-    // Update local state
+    // Update local state with all previous pendingRatings intact
     setPendingRatings(prev => {
       const newState = {
         ...prev,
@@ -231,6 +231,7 @@ export default function Block1Discover() {
     console.log('🔄 Block1Discover - current plan ratings:', currentRatings);
     
     // Save directly to the block for immediate UI feedback
+    // IMPORTANT: Make sure all previous ratings are preserved by spreading the currentRatings first
     const updatedRatings = {
       ...currentRatings,
       [factorId]: evaluation
@@ -243,17 +244,22 @@ export default function Block1Discover() {
     });
   };
   
-  // Handle saving all ratings to server
-  const handleSaveRatings = async () => {
-    console.log('🔄 Block1Discover.handleSaveRatings - starting batch save operation');
+  // Combined function to save both local progress and send to server
+  const handleSaveAll = async () => {
+    console.log('🔄 Block1Discover.handleSaveAll - starting combined save operation');
     
     try {
+      // First save local progress using the mutation
+      console.log('🔄 Block1Discover.handleSaveAll - saving local progress first');
+      await saveMutation.mutateAsync();
+      
+      // Then save to server
       // Get ratings from the plan's block1 data
       const currentRatings = plan?.blocks?.block1?.successFactorRatings || {};
-      console.log('🔄 Block1Discover.handleSaveRatings - current ratings from plan:', currentRatings);
+      console.log('🔄 Block1Discover.handleSaveAll - current ratings from plan:', currentRatings);
       
       // Convert to array of EvaluationInput objects for server persistence
-      console.log('🔄 Block1Discover.handleSaveRatings - mapping ratings to API inputs');
+      console.log('🔄 Block1Discover.handleSaveAll - mapping ratings to API inputs');
       const evaluationInputs: Array<{factorId: string, resonance: number, notes?: string}> = [];
       
       const promises = Object.entries(currentRatings).map(async ([factorId, resonance]) => {
@@ -302,14 +308,18 @@ export default function Block1Discover() {
       console.log('🔄 Block1Discover - All updates completed successfully');
       
       toast({
-        title: "Ratings saved",
-        description: "Your factor evaluations have been saved to the server.",
+        title: "All changes saved",
+        description: "Your changes have been saved locally and to the server.",
       });
+      
+      // Refresh queries to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+      
     } catch (error) {
-      console.error("🔴 Block1Discover - Error saving ratings:", error);
+      console.error("🔴 Block1Discover - Error in combined save:", error);
       toast({
-        title: "Failed to save ratings",
-        description: "There was an error saving your evaluations to the server.",
+        title: "Failed to save changes",
+        description: "There was an error saving your changes. Please try again.",
         variant: "destructive",
       });
     }
@@ -629,18 +639,12 @@ export default function Block1Discover() {
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
-                          onClick={handleSaveRatings}
-                          disabled={isRatingsSaving}
+                          onClick={handleSaveAll}
+                          disabled={isRatingsSaving || saveMutation.isPending}
+                          className="flex items-center"
                         >
-                          <Save className="mr-2 h-4 w-4" /> 
-                          {isRatingsSaving ? 'Saving...' : 'Save to Server'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => saveMutation.mutate()}
-                          disabled={saveMutation.isPending}
-                        >
-                          <Save className="mr-2 h-4 w-4" /> Save Progress
+                          <Save className="mr-2 h-4 w-4" />
+                          {isRatingsSaving || saveMutation.isPending ? 'Saving...' : 'Save All Changes'}
                         </Button>
                         <Button
                           onClick={() => setActiveTab("personalHeuristics")}
