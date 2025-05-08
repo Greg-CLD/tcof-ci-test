@@ -205,6 +205,11 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
   const handleTitleChange = (value: string) => {
     setEditableFactor({ ...editableFactor, title: value });
   };
+  
+  // Handle description change in the form
+  const handleDescriptionChange = (value: string) => {
+    setEditableFactor({ ...editableFactor, description: value });
+  };
 
   // Handle task change
   const handleTaskChange = (stage: keyof FactorTask['tasks'], index: number, value: string) => {
@@ -367,8 +372,9 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
               <TableHeader>
                 <TableRow className="bg-gray-100">
                   <TableHead className="w-1/12">ID</TableHead>
-                  <TableHead className="w-3/12">Factor Title</TableHead>
-                  <TableHead className="w-6/12">Tasks</TableHead>
+                  <TableHead className="w-2/12">Factor Title</TableHead>
+                  <TableHead className="w-3/12">Description</TableHead>
+                  <TableHead className="w-4/12">Tasks</TableHead>
                   <TableHead className="w-2/12 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -377,6 +383,9 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
                   <TableRow key={factor.id}>
                     <TableCell className="font-medium align-top">{factor.id}</TableCell>
                     <TableCell className="align-top">{factor.title}</TableCell>
+                    <TableCell className="align-top text-sm">
+                      {factor.description || <span className="text-gray-400 italic">No description provided</span>}
+                    </TableCell>
                     <TableCell className="align-top">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                         {Object.entries(factor.tasks).map(([stage, tasks]) => (
@@ -417,7 +426,7 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
                 ))}
                 {factors.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8">
+                    <TableCell colSpan={5} className="text-center py-8">
                       No success factors found. Click "Add New Factor" to create one.
                     </TableCell>
                   </TableRow>
@@ -462,6 +471,17 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
                   className="mt-1"
                 />
               </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="factor-description">Description</Label>
+              <Textarea
+                id="factor-description"
+                value={editableFactor.description}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
+                placeholder="Provide a description of this success factor"
+                className="mt-1 h-24"
+              />
             </div>
             
             {/* Task sections */}
