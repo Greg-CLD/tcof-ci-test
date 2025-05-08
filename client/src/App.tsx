@@ -18,6 +18,7 @@ import AdminFactorEditor from "@/pages/AdminFactorEditor";
 import GraphExplorer from "@/pages/GraphExplorer";
 import Block1Discover from "@/pages/make-a-plan/Block1Discover";
 import Block1Step1 from "@/pages/make-a-plan/Block1Step1";
+import Block1Step2 from "@/pages/make-a-plan/Block1Step2";
 import Block2Design from "@/pages/make-a-plan/Block2Design";
 import Block3Deliver from "@/pages/make-a-plan/Block3Deliver";
 import Block3Complete from "@/pages/Block3Complete";
@@ -345,6 +346,11 @@ function Router() {
       <Route path="/make-a-plan/:projectId/block-1/step-1">
         <ProtectedRouteGuard>
           <Block1Step1 />
+        </ProtectedRouteGuard>
+      </Route>
+      <Route path="/make-a-plan/:projectId/block-1/step-2">
+        <ProtectedRouteGuard>
+          <Block1Step2 />
         </ProtectedRouteGuard>
       </Route>
       <Route path="/make-a-plan/:projectId/block-1">
