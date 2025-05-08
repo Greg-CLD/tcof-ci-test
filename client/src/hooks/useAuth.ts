@@ -23,6 +23,9 @@ export function useAuth() {
   } = useQuery<User | null, Error>({
     queryKey: ["/api/auth/user"],
     retry: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
   });
 
   // Login mutation with username and password

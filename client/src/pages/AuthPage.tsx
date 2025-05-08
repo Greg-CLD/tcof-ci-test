@@ -58,11 +58,15 @@ export default function AuthPage() {
   }
   
   // Redirect to home if already logged in
+  // We use a flag to ensure we only redirect once
+  const [hasRedirected, setHasRedirected] = useState(false);
+  
   useEffect(() => {
-    if (user) {
+    if (user && !hasRedirected) {
+      setHasRedirected(true);
       setLocation("/");
     }
-  }, [user, setLocation]);
+  }, [user, setLocation, hasRedirected]);
   
   if (isLoading) {
     return (
