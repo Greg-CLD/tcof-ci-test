@@ -1,28 +1,12 @@
 import express from 'express';
 import { db } from '@db';
-import { successFactorRatings, successFactorRatingInsertSchema } from '@shared/schema';
+import { successFactorRatings } from '@shared/schema';
+import { resonanceRatingSchema, resonanceRatingsArraySchema } from '@shared/types';
 import { eq, and } from 'drizzle-orm';
 import { isAuthenticated } from '../../../middlewares/isAuthenticated';
 import { z } from 'zod';
 
 const router = express.Router();
-
-// Define a Zod schema for validation
-const ratingSchema = z.object({
-  factorId: z.string().min(1, "Factor ID is required"),
-  resonance: z.union([
-    z.number().min(1, "Rating must be at least 1").max(5, "Rating must be at most 5"),
-    z.string().transform(val => {
-      const num = parseInt(val);
-      if (isNaN(num)) throw new Error("Rating must be a valid number");
-      return num;
-    })
-  ]),
-  notes: z.string().optional(),
-});
-
-// Type for a collection of ratings
-const ratingsArraySchema = z.array(ratingSchema);
 
 // GET /api/projects/:projectId/success-factor-ratings
 router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req, res) => {

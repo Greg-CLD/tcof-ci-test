@@ -1,0 +1,44 @@
+We’re seeing the same “selection doesn’t persist” symptom across multiple tools (Success-Factor resonance, Personal Heuristics, etc.). I need a comprehensive diagnostic plus systemic recommendations.
+
+Please do the following:
+
+────────────────────────────────  🔍  DIAGNOSTICS  🔍  ────────────────────────────────
+1. **End-to-End Flow Trace**
+   • Pick one failing action (e.g., click resonance emoji).  
+   • Trace the full flow: React → hook → mutation → API call → DB write → API response → React state hydration.  
+   • For each hop, note the exact data shape (keys / values) and any mismatches.
+
+2. **State vs. DB Comparison**
+   • After a click, log:
+     - `ratings` (or equivalent) client state.
+     - Payload sent to server.
+     - Row inserted/updated in DB (via console / PG query).
+     • Identify where the divergence starts.
+
+3. **API Contract Audit**
+   • List the Zod/Drizzle schema for each failing endpoint side-by-side with the payload the client sends.  
+   • Highlight missing / extra / renamed fields.
+
+4. **Caching & Hydration Check**
+   • Confirm if React Query invalidation/refetch actually runs.  
+   • Check timing: does the refetch overwrite local state before the mutation settles?
+
+5. **Error & Log Review**
+   • Collect any server-side logs thrown during the failing save.  
+   • Capture browser console warnings / network errors.
+
+───────────────────────────────  🛠  STRUCTURAL FIXES  🛠  ───────────────────────────
+Based on your findings, propose **3–4 systemic improvements** that would prevent this class of “client thinks it saved, server didn’t” bugs from recurring.  Examples might include:
+
+   • Single **Shared Type/Schema** package (e.g., `shared/types`) imported by both client and server.  
+   • **E2E test** (Playwright + mocked API) that clicks each UI element and asserts DB state.  
+   • **Optimistic UI pattern** with rollback on error, plus toast notifications.  
+   • Centralised **error-logging middleware** returning descriptive 4xx errors instead of silent 500s.
+
+Prioritise fixes by effort vs. impact.
+
+Return:
+• A concise table or list of mismatches / failures found.  
+• Your recommended systemic changes, with rationale and file-level pointers where we’d implement them.
+
+This will let us craft a focused Agent
