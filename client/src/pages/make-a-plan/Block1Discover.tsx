@@ -116,7 +116,7 @@ export default function Block1Discover() {
         setSuccessCriteria(plan.blocks.block1.successCriteria);
       }
       
-      // The rest of the data (success factor ratings and personal heuristics)
+      // The rest of the data (success factor evaluations and personal heuristics)
       // will be directly accessed from the plan object when rendering
     }
   }, [plan]);

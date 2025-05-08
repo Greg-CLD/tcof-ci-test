@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import ProjectBanner from "@/components/ProjectBanner";
 import { ArrowLeft, ChevronRight, Info, Save } from "lucide-react";
 import { useSuccessFactors } from "@/hooks/useSuccessFactors";
-import { useResonanceRatings, type RatingInput } from "@/hooks/useResonanceRatings";
+import { useResonanceRatings, type EvaluationInput } from "@/hooks/useResonanceRatings";
 
 export default function Block1Step1() {
   console.log('🔥 Block1Step1 v2 loaded 🔥');
@@ -118,7 +118,7 @@ export default function Block1Step1() {
   // Handle save button click
   const handleSave = async () => {
     // Format local evaluations for the API
-    const evaluationInputs: RatingInput[] = Object.entries(localEvaluations).map(([factorId, resonance]) => ({
+    const evaluationInputs: EvaluationInput[] = Object.entries(localEvaluations).map(([factorId, resonance]) => ({
       factorId,
       resonance
     }));
