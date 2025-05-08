@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import {
@@ -14,13 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, LogIn, UserPlus } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import SiteHeader from "@/components/SiteHeader";
+import { useToast } from "@/hooks/use-toast";
 
 // Login form schema
 const loginSchema = z.object({
@@ -44,17 +45,36 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [location, setLocation] = useLocation();
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, loginMutation, registerMutation, checkAccountExists } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("login");
+  const [accountCheckStatus, setAccountCheckStatus] = useState<{
+    checked: boolean;
+    exists: boolean;
+    message: string;
+    username?: string | null;
+  }>({
+    checked: false,
+    exists: false,
+    message: ""
+  });
+  const [isCheckingAccount, setIsCheckingAccount] = useState(false);
+  const { toast } = useToast();
 
   // Login form
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      username: accountCheckStatus.username || "",
       password: "",
     },
   });
+
+  // Update login form when account check finds a username
+  useEffect(() => {
+    if (accountCheckStatus.username) {
+      loginForm.setValue("username", accountCheckStatus.username);
+    }
+  }, [accountCheckStatus.username, loginForm]);
 
   // Register form
   const registerForm = useForm<RegisterFormValues>({
@@ -67,6 +87,56 @@ export default function AuthPage() {
     },
   });
 
+  // Function to check if account exists
+  const checkAccount = async (email: string) => {
+    if (!email || !email.includes('@')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address to check",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsCheckingAccount(true);
+    try {
+      const result = await checkAccountExists(email);
+      setAccountCheckStatus({
+        checked: true,
+        exists: result.exists,
+        message: result.message,
+        username: result.username
+      });
+      
+      // If account exists, switch to login tab and prefill username
+      if (result.exists && result.username) {
+        setActiveTab("login");
+        loginForm.setValue("username", result.username);
+        toast({
+          title: "Account Found",
+          description: `We found your account with username ${result.username}. Please login.`,
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.error("Error checking account:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem checking your account",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCheckingAccount(false);
+    }
+  };
+
+  // Handle email field blur to check account
+  const handleEmailBlur = async (email: string) => {
+    if (email && email.includes('@')) {
+      await checkAccount(email);
+    }
+  };
+
   // Handle login submission
   const onLoginSubmit = (data: LoginFormValues) => {
     if (loginMutation) {
@@ -78,14 +148,8 @@ export default function AuthPage() {
   const onRegisterSubmit = (data: RegisterFormValues) => {
     if (registerMutation) {
       // Omit confirmPassword as it's not needed in the API
-      // Generate a unique ID for the user (this would typically be done server-side)
-      // but we'll include it for client-side validation
       const { confirmPassword, ...registerData } = data;
-      const userData = {
-        ...registerData,
-        id: `user-${Date.now()}` // Generate a temporary ID for client-side validation
-      };
-      registerMutation.mutate(userData);
+      registerMutation.mutate(registerData);
     }
   };
 

@@ -73,6 +73,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
+  
+  // Check if an account exists by email (no auth required)
+  app.get('/api/auth/checkAccount', async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      
+      if (!email) {
+        return res.status(400).json({ 
+          exists: false, 
+          message: "Email parameter is required" 
+        });
+      }
+      
+      // Check if account exists with this email
+      const user = await storage.getUserByEmail(email);
+      
+      return res.json({
+        exists: !!user,
+        message: user ? "Account found" : "No account found with this email",
+        username: user ? user.username : null
+      });
+    } catch (error) {
+      console.error("Error checking account:", error);
+      return res.status(500).json({ 
+        exists: false,
+        message: "Failed to check account" 
+      });
+    }
+  });
 
   // Initialize the factors database
   try {

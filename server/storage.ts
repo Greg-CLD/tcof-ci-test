@@ -77,6 +77,21 @@ export const storage = {
       return null;
     }
   },
+  
+  async getUserByEmail(email: string) {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      
+      if (user) {
+        return user;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching user by email:', error);
+      return null;
+    }
+  },
 
   async createUser(userData: { username: string; password?: string; email?: string; id?: string; firstName?: string; lastName?: string; bio?: string; profileImageUrl?: string }) {
     try {
