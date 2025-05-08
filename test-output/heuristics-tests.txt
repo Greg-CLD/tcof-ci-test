@@ -1,0 +1,4 @@
+
+ RUN  v3.1.2 /home/runner/workspace
+
+ ↓ tests/user-profile.test.tsx (23 tests | 23 skipped)

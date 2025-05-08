@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import ProjectBanner from "@/components/ProjectBanner";
 import { ArrowLeft, ChevronRight, Plus, X, Save } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { PersonalHeuristic } from "@shared/types/personal-heuristics";
 
 export default function Block1Step2() {
   const [location, navigate] = useLocation();
@@ -23,12 +24,23 @@ export default function Block1Step2() {
   const [newHeuristic, setNewHeuristic] = useState("");
   
   // Local state for heuristics list
-  const [heuristics, setHeuristics] = useState<string[]>([]);
+  const [heuristics, setHeuristics] = useState<PersonalHeuristic[]>([]);
   
   // Initialize local state from plan data
   useEffect(() => {
     if (plan?.blocks?.block1?.personalHeuristics) {
-      setHeuristics(plan.blocks.block1.personalHeuristics);
+      // Ensure we have an array of PersonalHeuristic objects
+      const personalHeuristics = plan.blocks.block1.personalHeuristics.map(h => {
+        // Handle both string and object formats for backward compatibility
+        if (typeof h === 'string') {
+          return { name: h };
+        } else if (typeof h === 'object' && h !== null) {
+          return h;
+        }
+        return { name: String(h) };
+      });
+      
+      setHeuristics(personalHeuristics);
     }
   }, [plan]);
   
