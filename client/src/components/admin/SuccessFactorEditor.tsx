@@ -269,6 +269,15 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
       return;
     }
     
+    if (!editableFactor.description.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Factor description is required.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Filter out empty task entries
     const cleanedTasks = {
       Identification: editableFactor.tasks.Identification.filter(t => t.trim()),
@@ -474,13 +483,20 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
             </div>
             
             <div>
-              <Label htmlFor="factor-description">Description</Label>
+              <Label htmlFor="factor-description" className="text-base font-medium">
+                Description 
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <p className="text-gray-500 text-sm mb-2">
+                Provide a clear, concise description of this success factor and its purpose.
+              </p>
               <Textarea
                 id="factor-description"
                 value={editableFactor.description}
                 onChange={(e) => handleDescriptionChange(e.target.value)}
-                placeholder="Provide a description of this success factor"
-                className="mt-1 h-24"
+                placeholder="Describe what this success factor means and why it's important..."
+                className="mt-1 h-32 focus:border-tcof-teal focus:ring-tcof-teal"
+                required
               />
             </div>
             
