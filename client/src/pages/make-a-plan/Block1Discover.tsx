@@ -836,10 +836,12 @@ export default function Block1Discover() {
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
-                          onClick={() => saveMutation.mutate()}
-                          disabled={saveMutation.isPending}
+                          onClick={handleSaveAll}
+                          disabled={isRatingsSaving || saveMutation.isPending}
+                          className="flex items-center"
                         >
-                          <Save className="mr-2 h-4 w-4" /> Save Progress
+                          <Save className="mr-2 h-4 w-4" />
+                          {isRatingsSaving || saveMutation.isPending ? 'Saving...' : 'Save All Changes'}
                         </Button>
                         <Button
                           onClick={handleCompleteBlock}
