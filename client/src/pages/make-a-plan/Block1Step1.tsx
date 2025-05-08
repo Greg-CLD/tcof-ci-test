@@ -31,44 +31,44 @@ export default function Block1Step1() {
   // Use our new hooks
   const { successFactors, isLoading: factorsLoading } = useSuccessFactors();
   const { 
-    ratings, 
-    isLoading: ratingsLoading, 
-    updateRatings,
-    updateSingleRating,
+    ratings: evaluations, 
+    isLoading: evaluationsLoading, 
+    updateRatings: updateEvaluations,
+    updateSingleRating: updateSingleEvaluation,
     isSaving
   } = useResonanceRatings(projectId);
   
-  // Local state for ratings (merges DB ratings with local changes)
-  const [localRatings, setLocalRatings] = useState<{[key: string]: number}>({});
+  // Local state for evaluations (merges DB evaluations with local changes)
+  const [localEvaluations, setLocalEvaluations] = useState<{[key: string]: number}>({});
   
-  // Initialize local state from DB ratings
+  // Initialize local state from DB evaluations
   useEffect(() => {
-    if (ratings.length > 0) {
-      const ratingMap: {[key: string]: number} = {};
-      ratings.forEach(rating => {
-        ratingMap[rating.factorId] = rating.resonance;
+    if (evaluations.length > 0) {
+      const evaluationMap: {[key: string]: number} = {};
+      evaluations.forEach(evaluation => {
+        evaluationMap[evaluation.factorId] = evaluation.resonance;
       });
-      setLocalRatings(ratingMap);
+      setLocalEvaluations(evaluationMap);
     }
-  }, [ratings]);
+  }, [evaluations]);
   
   // Initialize from plan context as fallback
   useEffect(() => {
-    if (plan?.blocks?.block1?.successFactorRatings && Object.keys(localRatings).length === 0) {
-      const planRatings = plan.blocks.block1.successFactorRatings;
-      const convertedRatings: {[key: string]: number} = {};
+    if (plan?.blocks?.block1?.successFactorRatings && Object.keys(localEvaluations).length === 0) {
+      const planEvaluations = plan.blocks.block1.successFactorRatings;
+      const convertedEvaluations: {[key: string]: number} = {};
       
-      // Convert string ratings to numbers
-      Object.keys(planRatings).forEach(factorId => {
-        const rating = parseInt(planRatings[factorId]);
-        if (!isNaN(rating) && rating >= 1 && rating <= 5) {
-          convertedRatings[factorId] = rating;
+      // Convert string evaluations to numbers
+      Object.keys(planEvaluations).forEach(factorId => {
+        const evaluation = parseInt(planEvaluations[factorId]);
+        if (!isNaN(evaluation) && evaluation >= 1 && evaluation <= 5) {
+          convertedEvaluations[factorId] = evaluation;
         }
       });
       
-      setLocalRatings(convertedRatings);
+      setLocalEvaluations(convertedEvaluations);
     }
-  }, [plan, localRatings]);
+  }, [plan, localEvaluations]);
   
   // Guard against invalid state - no project ID available
   if (!projectId) {
@@ -83,33 +83,33 @@ export default function Block1Step1() {
     );
   }
   
-  // Handle rating change
-  const handleRatingChange = async (factorId: string, ratingValue: string) => {
-    const numericRating = parseInt(ratingValue);
+  // Handle evaluation change
+  const handleEvaluationChange = async (factorId: string, evaluationValue: string) => {
+    const numericEvaluation = parseInt(evaluationValue);
     
     // Update local state for immediate UI feedback
-    setLocalRatings(prev => ({
+    setLocalEvaluations(prev => ({
       ...prev,
-      [factorId]: numericRating
+      [factorId]: numericEvaluation
     }));
     
     // Save to PlanContext
     saveBlock('block1', {
       successFactorRatings: {
         ...plan?.blocks?.block1?.successFactorRatings,
-        [factorId]: ratingValue
+        [factorId]: evaluationValue
       },
       lastUpdated: new Date().toISOString(),
     });
     
     // Save to database
     try {
-      await updateSingleRating({
+      await updateSingleEvaluation({
         factorId,
-        resonance: numericRating
+        resonance: numericEvaluation
       });
     } catch (error) {
-      console.error("Error saving rating to database:", error);
+      console.error("Error saving evaluation to database:", error);
       // UI already updated from local state, so no need to show error toast
       // as it's saved in context
     }
@@ -117,21 +117,21 @@ export default function Block1Step1() {
   
   // Handle save button click
   const handleSave = async () => {
-    // Format local ratings for the API
-    const ratingInputs: RatingInput[] = Object.entries(localRatings).map(([factorId, resonance]) => ({
+    // Format local evaluations for the API
+    const evaluationInputs: RatingInput[] = Object.entries(localEvaluations).map(([factorId, resonance]) => ({
       factorId,
       resonance
     }));
     
     // Save to PlanContext
     saveBlock('block1', {
-      successFactorRatings: localRatings,
+      successFactorRatings: localEvaluations,
       lastUpdated: new Date().toISOString(),
     });
     
     // Save to database
     try {
-      await updateRatings(ratingInputs);
+      await updateEvaluations(evaluationInputs);
       
       toast({
         title: "Evaluations saved",
@@ -151,8 +151,8 @@ export default function Block1Step1() {
   const calculateCompletionPercentage = () => {
     if (!successFactors || successFactors.length === 0) return 0;
     
-    const ratedCount = Object.keys(localRatings).length;
-    return Math.round((ratedCount / successFactors.length) * 100);
+    const evaluatedCount = Object.keys(localEvaluations).length;
+    return Math.round((evaluatedCount / successFactors.length) * 100);
   };
   
   const completionPercentage = calculateCompletionPercentage();
@@ -245,30 +245,30 @@ export default function Block1Step1() {
                           </TableCell>
                           <TableCell>
                             <RadioGroup
-                              value={localRatings[factor.id]?.toString() || ""}
-                              onValueChange={(value) => handleRatingChange(factor.id, value)}
+                              value={localEvaluations[factor.id]?.toString() || ""}
+                              onValueChange={(value) => handleEvaluationChange(factor.id, value)}
                               className="flex flex-col space-y-1"
                             >
                               <div className="flex items-center space-x-5">
                                 <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="1" id={`rating-1-${factor.id}`} />
-                                  <Label htmlFor={`rating-1-${factor.id}`}>1</Label>
+                                  <RadioGroupItem value="1" id={`evaluation-1-${factor.id}`} />
+                                  <Label htmlFor={`evaluation-1-${factor.id}`}>1</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="2" id={`rating-2-${factor.id}`} />
-                                  <Label htmlFor={`rating-2-${factor.id}`}>2</Label>
+                                  <RadioGroupItem value="2" id={`evaluation-2-${factor.id}`} />
+                                  <Label htmlFor={`evaluation-2-${factor.id}`}>2</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="3" id={`rating-3-${factor.id}`} />
-                                  <Label htmlFor={`rating-3-${factor.id}`}>3</Label>
+                                  <RadioGroupItem value="3" id={`evaluation-3-${factor.id}`} />
+                                  <Label htmlFor={`evaluation-3-${factor.id}`}>3</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="4" id={`rating-4-${factor.id}`} />
-                                  <Label htmlFor={`rating-4-${factor.id}`}>4</Label>
+                                  <RadioGroupItem value="4" id={`evaluation-4-${factor.id}`} />
+                                  <Label htmlFor={`evaluation-4-${factor.id}`}>4</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="5" id={`rating-5-${factor.id}`} />
-                                  <Label htmlFor={`rating-5-${factor.id}`}>5</Label>
+                                  <RadioGroupItem value="5" id={`evaluation-5-${factor.id}`} />
+                                  <Label htmlFor={`evaluation-5-${factor.id}`}>5</Label>
                                 </div>
                               </div>
                               <div className="flex justify-between text-xs text-gray-500 w-full px-1 pt-1">
