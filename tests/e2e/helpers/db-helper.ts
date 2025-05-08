@@ -1,7 +1,7 @@
 import { db } from '../../../db';
 import { eq } from 'drizzle-orm';
 import { successFactorRatings } from '../../../shared/schema';
-import { Plan } from '../../../shared/types/plan-types';
+import { PlanData } from '../../../shared/types/plan-types';
 
 /**
  * Helper functions to query the database during E2E tests
@@ -24,7 +24,7 @@ export const dbHelper = {
   /**
    * Get a plan for a specific project
    */
-  async getPlan(projectId: number): Promise<Plan | null> {
+  async getPlan(projectId: number): Promise<PlanData | null> {
     try {
       const response = await fetch(`http://localhost:5000/api/plans/project/${projectId}`);
       
@@ -43,7 +43,7 @@ export const dbHelper = {
   /**
    * Get personal heuristics for a specific project from the plan
    */
-  async getPersonalHeuristics(projectId: number): Promise<string[]> {
+  async getPersonalHeuristics(projectId: number): Promise<Array<string | {id?: string, name: string, description?: string}>> {
     const plan = await this.getPlan(projectId);
     return plan?.blocks?.block1?.personalHeuristics || [];
   },
