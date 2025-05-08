@@ -32,6 +32,13 @@ export interface PlanData {
         projectSize: string;
         pathClarity: string;
       };
+      frameworkTasks?: Array<{
+        taskId: string;
+        frameworkCode: string;
+        stage: string;
+        included: boolean;
+        addedAt: string;
+      }>;
       completed: boolean;
     };
   };

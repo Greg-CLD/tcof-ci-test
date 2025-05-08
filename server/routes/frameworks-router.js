@@ -13,7 +13,7 @@ if (!fs.existsSync(FRAMEWORKS_DIR)) {
 }
 
 // Load project frameworks
-async function loadProject(projectId) {
+export async function loadProject(projectId) {
   try {
     const filePath = path.join(FRAMEWORKS_DIR, `${projectId}.json`);
     
