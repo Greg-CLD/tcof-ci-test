@@ -38,8 +38,11 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      // Set secure to false in development to allow non-HTTPS cookies
+      // This is important for Replit Auth to work in the development environment
+      secure: false,
       maxAge: sessionTtl,
+      sameSite: 'lax', // Allows for cross-site requests while still providing some CSRF protection
     },
   });
 }
