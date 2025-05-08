@@ -26,8 +26,7 @@ import {
   X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { loadPlan, savePlan } from '@/lib/plan-db';
-import { Stage, PlanRecord, TaskUpdates } from '@/types/plan';
+import { loadPlan, savePlan, Stage, PlanRecord, TaskItem } from '@/lib/plan-db';
 
 interface FinalChecklistProps {
   projectId?: string;
@@ -55,6 +54,15 @@ type StatusFilter = 'all' | 'open' | 'completed' | 'assigned' | 'unassigned';
 type SourceFilter = 'all' | 'heuristic' | 'factor' | 'custom' | 'framework' | 'policy';
 type SortOption = 'none' | 'dueDate' | 'priority' | 'status' | 'owner';
 type SortDirection = 'asc' | 'desc';
+
+interface TaskUpdates {
+  completed?: boolean;
+  notes?: string;
+  priority?: TaskPriority;
+  dueDate?: string;
+  owner?: string;
+  status?: 'To Do' | 'Working On It' | 'Done';
+}
 
 export default function FinalChecklist({ projectId: propProjectId }: FinalChecklistProps) {
   const { projectId: paramProjectId } = useParams<{ projectId: string }>();
@@ -101,7 +109,7 @@ export default function FinalChecklist({ projectId: propProjectId }: FinalCheckl
   // Handler for plan updates
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
     setPlan(updatedPlan);
-    savePlan(updatedPlan)
+    savePlan(updatedPlan.id, updatedPlan)
       .then(() => {
         toast({
           title: 'Success',
@@ -125,45 +133,45 @@ export default function FinalChecklist({ projectId: propProjectId }: FinalCheckl
     const updatedPlan = { ...plan };
     
     // Update task based on its source
-    if (source === 'heuristic' && updatedPlan.heuristicTasks) {
-      const stageTasks = updatedPlan.heuristicTasks[stage] || [];
+    if (source === 'heuristic' || source === 'factor' || source === 'custom') {
+      // These tasks are stored in stageData.tasks
+      const stageTasks = updatedPlan.stages[stage].tasks || [];
       const taskIndex = stageTasks.findIndex(task => task.id === taskId);
       
       if (taskIndex !== -1) {
-        stageTasks[taskIndex] = { ...stageTasks[taskIndex], ...updates };
-        updatedPlan.heuristicTasks[stage] = stageTasks;
+        stageTasks[taskIndex] = { 
+          ...stageTasks[taskIndex], 
+          ...updates 
+        };
+        updatedPlan.stages[stage].tasks = stageTasks;
       }
-    } else if (source === 'factor' && updatedPlan.factorTasks) {
-      const stageTasks = updatedPlan.factorTasks[stage] || [];
-      const taskIndex = stageTasks.findIndex(task => task.id === taskId);
+    } else if (source === 'policy') {
+      // Policy tasks are stored in stageData.policyTasks
+      const policyTasks = updatedPlan.stages[stage].policyTasks || [];
+      const taskIndex = policyTasks.findIndex(task => task.id === taskId);
       
       if (taskIndex !== -1) {
-        stageTasks[taskIndex] = { ...stageTasks[taskIndex], ...updates };
-        updatedPlan.factorTasks[stage] = stageTasks;
+        policyTasks[taskIndex] = { 
+          ...policyTasks[taskIndex], 
+          ...updates 
+        };
+        updatedPlan.stages[stage].policyTasks = policyTasks;
       }
-    } else if (source === 'custom' && updatedPlan.customTasks) {
-      const stageTasks = updatedPlan.customTasks[stage] || [];
-      const taskIndex = stageTasks.findIndex(task => task.id === taskId);
-      
-      if (taskIndex !== -1) {
-        stageTasks[taskIndex] = { ...stageTasks[taskIndex], ...updates };
-        updatedPlan.customTasks[stage] = stageTasks;
-      }
-    } else if (source === 'policy' && updatedPlan.policyTasks) {
-      const stageTasks = updatedPlan.policyTasks[stage] || [];
-      const taskIndex = stageTasks.findIndex(task => task.id === taskId);
-      
-      if (taskIndex !== -1) {
-        stageTasks[taskIndex] = { ...stageTasks[taskIndex], ...updates };
-        updatedPlan.policyTasks[stage] = stageTasks;
-      }
-    } else if (source === 'framework' && updatedPlan.frameworkTasks) {
-      const stageTasks = updatedPlan.frameworkTasks[stage] || [];
-      const taskIndex = stageTasks.findIndex(task => task.id === taskId);
-      
-      if (taskIndex !== -1) {
-        stageTasks[taskIndex] = { ...stageTasks[taskIndex], ...updates };
-        updatedPlan.frameworkTasks[stage] = stageTasks;
+    } else if (source === 'framework') {
+      // Framework tasks are stored in stageData.goodPractice.tasks
+      const goodPractice = updatedPlan.stages[stage].goodPractice;
+      if (goodPractice) {
+        const tasks = goodPractice.tasks || [];
+        const taskIndex = tasks.findIndex(task => task.id === taskId);
+        
+        if (taskIndex !== -1) {
+          tasks[taskIndex] = { 
+            ...tasks[taskIndex], 
+            ...updates 
+          };
+          goodPractice.tasks = tasks;
+          updatedPlan.stages[stage].goodPractice = goodPractice;
+        }
       }
     }
     
@@ -175,77 +183,67 @@ export default function FinalChecklist({ projectId: propProjectId }: FinalCheckl
     if (!plan) return [];
     
     const allTasks: UnifiedTask[] = [];
+    const stages = Object.keys(plan.stages) as Stage[];
     
-    // Collect heuristic tasks
-    if (plan.heuristicTasks) {
-      Object.entries(plan.heuristicTasks).forEach(([stage, tasks]) => {
-        tasks.forEach(task => {
+    // Process each stage
+    stages.forEach(stage => {
+      const stageData = plan.stages[stage];
+      
+      // Collect tasks (these include both heuristic and factor tasks)
+      if (stageData.tasks) {
+        stageData.tasks.forEach(task => {
           allTasks.push({
-            ...task,
-            stage: stage as Stage,
-            source: 'heuristic',
-            sourceName: 'Personal Heuristic'
+            id: task.id,
+            text: task.text,
+            completed: task.completed || false,
+            stage,
+            source: task.origin as 'heuristic' | 'factor' | 'custom' | 'framework' | 'policy',
+            sourceName: task.origin === 'heuristic' 
+              ? 'Personal Heuristic' 
+              : (task.origin === 'factor' ? 'Success Factor' : undefined),
+            notes: task.notes,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            owner: task.owner,
+            order: task.order
           });
         });
-      });
-    }
-    
-    // Collect factor tasks
-    if (plan.factorTasks) {
-      Object.entries(plan.factorTasks).forEach(([stage, tasks]) => {
-        tasks.forEach(task => {
+      }
+      
+      // Collect policy tasks
+      if (stageData.policyTasks) {
+        stageData.policyTasks.forEach(task => {
           allTasks.push({
-            ...task,
-            stage: stage as Stage,
-            source: 'factor',
-            sourceName: 'Success Factor'
-          });
-        });
-      });
-    }
-    
-    // Collect custom tasks
-    if (plan.customTasks) {
-      Object.entries(plan.customTasks).forEach(([stage, tasks]) => {
-        tasks.forEach(task => {
-          allTasks.push({
-            ...task,
-            stage: stage as Stage,
-            source: 'custom',
-            sourceName: 'Custom Task'
-          });
-        });
-      });
-    }
-    
-    // Collect policy tasks
-    if (plan.policyTasks) {
-      Object.entries(plan.policyTasks).forEach(([stage, tasks]) => {
-        tasks.forEach(task => {
-          allTasks.push({
-            ...task,
-            stage: stage as Stage,
+            id: task.id,
+            text: task.text,
+            completed: false,
+            stage,
             source: 'policy',
-            sourceName: task.sourceName || 'Policy'
+            sourceName: 'Organizational Policy'
           });
         });
-      });
-    }
-    
-    // Collect framework tasks
-    if (plan.frameworkTasks) {
-      Object.entries(plan.frameworkTasks).forEach(([stage, tasks]) => {
-        tasks.forEach(task => {
+      }
+      
+      // Collect framework tasks (from goodPractice)
+      if (stageData.goodPractice?.tasks) {
+        stageData.goodPractice.tasks.forEach(task => {
           allTasks.push({
-            ...task,
-            stage: stage as Stage,
+            id: task.id,
+            text: task.text,
+            completed: task.completed || false,
+            stage,
             source: 'framework',
-            sourceName: task.sourceName || 'Framework',
-            frameworkCode: task.frameworkCode
+            sourceName: 'Framework',
+            frameworkCode: task.frameworkCode,
+            notes: task.notes,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            owner: task.owner,
+            order: task.order
           });
         });
-      });
-    }
+      }
+    });
     
     return allTasks;
   };
