@@ -128,11 +128,12 @@ export default function Block2Design() {
       
       {/* Tabs Navigation */}
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="mb-8">
-        <TabsList className="grid grid-cols-5 w-full max-w-4xl mx-auto">
+        <TabsList className="grid grid-cols-6 w-full max-w-4xl mx-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="step1">Step 1: Create Tasks</TabsTrigger>
           <TabsTrigger value="step2">Step 2: Stakeholder Mapping</TabsTrigger>
           <TabsTrigger value="step3">Step 3: Heuristic Mapping</TabsTrigger>
+          <TabsTrigger value="step4">Step 4: Unlinked Tasks</TabsTrigger>
           <TabsTrigger value="summary">Summary & Next Steps</TabsTrigger>
         </TabsList>
         
@@ -412,6 +413,68 @@ export default function Block2Design() {
                 onClick={() => setActiveTab("step2")}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 2
+              </Button>
+              <Button 
+                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                onClick={() => setActiveTab("step4")}
+              >
+                Continue to Step 4 <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        {/* Step 4: Unlinked Heuristic Tasks Tab */}
+        <TabsContent value="step4" className="pt-6">
+          <Card className="max-w-4xl mx-auto">
+            <CardHeader>
+              <CardTitle className="text-tcof-dark">Step 4: Tasks for Unlinked Heuristics</CardTitle>
+              <CardDescription>
+                Create specific tasks for heuristics not linked to success factors
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-6 text-gray-700">
+                For each heuristic that wasn't linked to a TCOF success factor, define your 
+                own custom tasks across each of the four project stages.
+              </p>
+              
+              {/* Redirect to the dedicated tasks page */}
+              <div className="bg-gray-50 p-6 rounded-lg mb-6 text-center">
+                <p className="mb-4">
+                  This feature is available on a dedicated page for better usability.
+                </p>
+                <Button 
+                  onClick={() => navigate(`/make-a-plan/${projectId}/block-2/step-4`)}
+                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                >
+                  Open Task Creation Tool
+                </Button>
+              </div>
+              
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+                <p className="text-amber-800">
+                  <strong>Tip:</strong> You can add up to 3 tasks per stage (Identification, Definition, 
+                  Delivery, Closure) for each unlinked heuristic. Tasks save automatically as you create them.
+                </p>
+              </div>
+              
+              <div className="flex justify-end">
+                <Button 
+                  variant="outline" 
+                  className="mr-2"
+                  onClick={handleSaveBlock}
+                >
+                  Save Progress
+                </Button>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab("step3")}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 3
               </Button>
               <Button 
                 className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
