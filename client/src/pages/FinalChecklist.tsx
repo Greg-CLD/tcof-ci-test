@@ -28,7 +28,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { loadPlan, savePlan, createEmptyPlan, Stage, PlanRecord, TaskItem } from '@/lib/plan-db';
 import { storage } from '@/lib/storageAdapter';
-import { useProject } from '@/hooks/use-project';
+import { useProject, type Project } from '@/hooks/use-project';
 
 interface FinalChecklistProps {
   projectId?: string;
@@ -82,7 +82,11 @@ export default function FinalChecklist({ projectId: propProjectId }: FinalCheckl
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
 
   // Load the project data
-  const { data: project } = useQuery({
+  const { data: project } = useQuery<{
+    id: number;
+    name: string;
+    description?: string;
+  }>({
     queryKey: ['/api/projects', projectId],
     enabled: !!projectId
   });
@@ -441,7 +445,7 @@ export default function FinalChecklist({ projectId: propProjectId }: FinalCheckl
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `${project?.name || 'tasks'}_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `${(project && typeof project === 'object' && 'name' in project) ? project.name : 'tasks'}_export_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -465,7 +469,7 @@ export default function FinalChecklist({ projectId: propProjectId }: FinalCheckl
     }
     
     // Prepare email body
-    const projectName = project?.name || 'Project Tasks';
+    const projectName = (project && typeof project === 'object' && 'name' in project) ? project.name : 'Project Tasks';
     let emailBody = `# ${projectName} - Task List\n\n`;
     
     // Group by stage for better organization
@@ -636,7 +640,7 @@ export default function FinalChecklist({ projectId: propProjectId }: FinalCheckl
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">Final Task Checklist</h1>
-          {project && (
+          {project && typeof project === 'object' && 'name' in project && (
             <p className="text-gray-600">
               Project: {project.name}
             </p>
