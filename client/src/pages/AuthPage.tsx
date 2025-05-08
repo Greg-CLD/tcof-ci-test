@@ -97,10 +97,12 @@ export default function AuthPage() {
       });
       return;
     }
-
+    
     setIsCheckingAccount(true);
+    
     try {
       const result = await checkAccountExists(email);
+      
       setAccountCheckStatus({
         checked: true,
         exists: result.exists,
@@ -108,13 +110,19 @@ export default function AuthPage() {
         username: result.username
       });
       
-      // If account exists, switch to login tab and prefill username
+      // If the account exists, switch to login tab
       if (result.exists && result.username) {
         setActiveTab("login");
         loginForm.setValue("username", result.username);
         toast({
           title: "Account Found",
-          description: `We found your account with username ${result.username}. Please login.`,
+          description: `We found your account with username ${result.username}. Please log in with your password.`,
+          variant: "default"
+        });
+      } else if (!result.exists) {
+        toast({
+          title: "Email Available",
+          description: "This email is available for registration. Please complete the form.",
           variant: "default"
         });
       }
@@ -122,7 +130,7 @@ export default function AuthPage() {
       console.error("Error checking account:", error);
       toast({
         title: "Error",
-        description: "There was a problem checking your account",
+        description: "Failed to check if account exists",
         variant: "destructive"
       });
     } finally {

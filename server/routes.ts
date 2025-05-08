@@ -35,6 +35,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 // The legacy setupAuth and isAuthenticated functions are now imported from replitAuth.ts 
 // and will be used instead of these local implementations
 
+// Endpoint to check if an account exists by email
+async function checkAccountExists(email: string) {
+  try {
+    const user = await storage.getUserByEmail(email);
+    return {
+      exists: !!user,
+      username: user?.username || null,
+      message: user 
+        ? `Account found with email ${email}` 
+        : `No account found with email ${email}`
+    };
+  } catch (error) {
+    console.error('Error checking account existence:', error);
+    throw new Error('Failed to check account existence');
+  }
+}
+
 // Check if user is an admin (case-insensitive email check)
 function isAdmin(req: Request, res: Response, next: any) {
   if (req.isAuthenticated() && req.user) {
