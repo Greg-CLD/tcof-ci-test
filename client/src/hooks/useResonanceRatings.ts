@@ -23,7 +23,7 @@ export function useResonanceRatings(projectId?: string | number) {
   const queryClient = useQueryClient();
   
   // Handle null or undefined projectId
-  const projectQueryKey = projectId ? ['/api/projects', projectId, 'success-factor-ratings'] : null;
+  const projectQueryKey = projectId ? ['/api/projects', projectId, 'success-factor-ratings'] : [];
   
   // Fetch evaluations
   const {
@@ -32,7 +32,7 @@ export function useResonanceRatings(projectId?: string | number) {
     error,
     refetch
   } = useQuery<ResonanceEvaluation[]>({
-    queryKey: projectQueryKey,
+    queryKey: projectId ? projectQueryKey : ['disabled-ratings-query'],
     enabled: !!projectId, // Only run query if projectId exists
   });
   
@@ -60,10 +60,20 @@ export function useResonanceRatings(projectId?: string | number) {
         description: 'Factor evaluations saved successfully',
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      console.error('Rating save error:', error);
+      
+      // Try to extract detailed error message if available
+      let errorMessage = 'Failed to save evaluations';
+      
+      if (error.message) {
+        // Direct error message
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error saving evaluations',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -71,7 +81,7 @@ export function useResonanceRatings(projectId?: string | number) {
   
   // Helper to get an evaluation for a specific factor
   const getEvaluationForFactor = (factorId: string): ResonanceEvaluation | undefined => {
-    return evaluations?.find(evaluation => evaluation.factorId === factorId);
+    return evaluations?.find((evaluation: ResonanceEvaluation) => evaluation.factorId === factorId);
   };
   
   // Helper to update a single evaluation

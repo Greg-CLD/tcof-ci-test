@@ -10,7 +10,14 @@ const router = express.Router();
 // Define a Zod schema for validation
 const ratingSchema = z.object({
   factorId: z.string().min(1, "Factor ID is required"),
-  resonance: z.number().min(1, "Rating must be at least 1").max(5, "Rating must be at most 5"),
+  resonance: z.union([
+    z.number().min(1, "Rating must be at least 1").max(5, "Rating must be at most 5"),
+    z.string().transform(val => {
+      const num = parseInt(val);
+      if (isNaN(num)) throw new Error("Rating must be a valid number");
+      return num;
+    })
+  ]),
   notes: z.string().optional(),
 });
 
@@ -160,7 +167,12 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
     });
   } catch (error) {
     console.error('Error updating success factor ratings:', error);
-    return res.status(500).json({ message: 'Failed to update success factor ratings' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ 
+      message: 'Failed to update success factor ratings',
+      error: errorMessage,
+      details: process.env.NODE_ENV !== 'production' ? String(error) : undefined
+    });
   }
 });
 
