@@ -162,13 +162,13 @@ export default function Block1Discover() {
     );
   }
   
-  // Handle success factor rating change
-  const handleRatingChange = (factorId: string, rating: string) => {
+  // Handle success factor evaluation change
+  const handleEvaluationChange = (factorId: string, evaluation: string) => {
     // Save directly to the block
     saveBlock('block1', {
       successFactorRatings: {
         ...plan?.blocks?.block1?.successFactorRatings,
-        [factorId]: rating
+        [factorId]: evaluation
       },
       lastUpdated: new Date().toISOString(),
     });
@@ -439,7 +439,7 @@ export default function Block1Discover() {
                                   <div className="flex flex-col space-y-2">
                                     <Select
                                       value={plan?.blocks?.block1?.successFactorRatings?.[factor.id] || ""}
-                                      onValueChange={(value) => handleRatingChange(factor.id, value)}
+                                      onValueChange={(value) => handleEvaluationChange(factor.id, value)}
                                     >
                                       <SelectTrigger>
                                         <SelectValue placeholder="Select resonance level" />
