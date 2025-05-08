@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
-export interface ResonanceRating {
+export interface ResonanceEvaluation {
   id: string;
   projectId: number;
   factorId: string;
@@ -12,7 +12,7 @@ export interface ResonanceRating {
   updatedAt: string;
 }
 
-export interface RatingInput {
+export interface EvaluationInput {
   factorId: string;
   resonance: number;
   notes?: string;
@@ -25,26 +25,26 @@ export function useResonanceRatings(projectId?: string | number) {
   // Handle null or undefined projectId
   const projectQueryKey = projectId ? ['/api/projects', projectId, 'success-factor-ratings'] : null;
   
-  // Fetch ratings
+  // Fetch evaluations
   const {
-    data: ratings,
+    data: evaluations,
     isLoading,
     error,
     refetch
-  } = useQuery<ResonanceRating[]>({
+  } = useQuery<ResonanceEvaluation[]>({
     queryKey: projectQueryKey,
     enabled: !!projectId, // Only run query if projectId exists
   });
   
-  // Save ratings mutation
-  const saveRatingsMutation = useMutation({
-    mutationFn: async (ratingsData: RatingInput[]) => {
+  // Save evaluations mutation
+  const saveEvaluationsMutation = useMutation({
+    mutationFn: async (evaluationsData: EvaluationInput[]) => {
       if (!projectId) throw new Error('Project ID is required');
       
       const res = await apiRequest(
         'PUT', 
         `/api/projects/${projectId}/success-factor-ratings`,
-        ratingsData
+        evaluationsData
       );
       
       return await res.json();
@@ -57,42 +57,47 @@ export function useResonanceRatings(projectId?: string | number) {
       
       toast({
         title: 'Success',
-        description: 'Factor ratings saved successfully',
+        description: 'Factor evaluations saved successfully',
       });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error saving ratings',
+        title: 'Error saving evaluations',
         description: error.message,
         variant: 'destructive',
       });
     },
   });
   
-  // Helper to get a rating for a specific factor
-  const getRatingForFactor = (factorId: string): ResonanceRating | undefined => {
-    return ratings?.find(rating => rating.factorId === factorId);
+  // Helper to get an evaluation for a specific factor
+  const getEvaluationForFactor = (factorId: string): ResonanceEvaluation | undefined => {
+    return evaluations?.find(evaluation => evaluation.factorId === factorId);
   };
   
-  // Helper to update a single rating
-  const updateSingleRating = async (rating: RatingInput): Promise<void> => {
-    await saveRatingsMutation.mutateAsync([rating]);
+  // Helper to update a single evaluation
+  const updateSingleEvaluation = async (evaluation: EvaluationInput): Promise<void> => {
+    await saveEvaluationsMutation.mutateAsync([evaluation]);
   };
   
-  // Helper to update multiple ratings at once
-  const updateRatings = async (ratingsData: RatingInput[]): Promise<void> => {
-    await saveRatingsMutation.mutateAsync(ratingsData);
+  // Helper to update multiple evaluations at once
+  const updateEvaluations = async (evaluationsData: EvaluationInput[]): Promise<void> => {
+    await saveEvaluationsMutation.mutateAsync(evaluationsData);
   };
   
   return {
-    ratings: ratings || [],
+    ratings: evaluations || [], // Keep original key for backward compatibility
     isLoading,
     error,
-    isSaving: saveRatingsMutation.isPending,
-    saveError: saveRatingsMutation.error,
+    isSaving: saveEvaluationsMutation.isPending,
+    saveError: saveEvaluationsMutation.error,
     refetch,
-    getRatingForFactor,
-    updateSingleRating,
-    updateRatings,
+    getRatingForFactor: getEvaluationForFactor, // Keep original method for backward compatibility
+    updateSingleRating: updateSingleEvaluation, // Keep original method for backward compatibility
+    updateRatings: updateEvaluations, // Keep original method for backward compatibility
+    // Also provide new method names for forward compatibility
+    evaluations: evaluations || [],
+    getEvaluationForFactor,
+    updateSingleEvaluation,
+    updateEvaluations
   };
 }

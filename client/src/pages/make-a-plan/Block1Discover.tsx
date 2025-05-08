@@ -266,11 +266,11 @@ export default function Block1Discover() {
     let completedItems = 0;
     let totalItems = 0;
     
-    // Check success factor ratings
+    // Check success factor evaluations
     if (successFactors?.length > 0) {
       totalItems += successFactors.length;
-      const ratingsCount = Object.keys(plan?.blocks?.block1?.successFactorRatings || {}).length;
-      completedItems += ratingsCount;
+      const evaluationsCount = Object.keys(plan?.blocks?.block1?.successFactorRatings || {}).length;
+      completedItems += evaluationsCount;
     }
     
     // Check personal heuristics
