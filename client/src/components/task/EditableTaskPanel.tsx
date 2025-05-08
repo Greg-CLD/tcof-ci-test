@@ -1,15 +1,18 @@
-import React, { useState, useCallback, useRef, KeyboardEvent } from 'react';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
+import React, { useState, KeyboardEvent } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, Trash2, Loader2, Check, UserCircle2, StickyNote, ClipboardList } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Loader2, Plus, Trash2, CheckCircle, Edit, Save } from 'lucide-react';
 
 export type StageType = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 
@@ -55,209 +58,215 @@ export default function EditableTaskPanel({
   showStatusToggle = false,
   onUpdateTaskOwner,
   onUpdateTaskNotes,
-  onUpdateTaskStatus
+  onUpdateTaskStatus,
 }: EditableTaskPanelProps) {
-  const [activeTab, setActiveTab] = useState<StageType>('Identification');
-  const { toast } = useToast();
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
   
-  // Create a reference for active input fields
-  const inputRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
-  const ownerRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
-  const notesRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
+  // Handle entering edit mode
+  const handleEditClick = (task: TaskItem) => {
+    setEditingTaskId(task.id);
+    setEditText(task.text);
+  };
   
-  // Handle key press events in task inputs
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>, stage: StageType, taskId: string) => {
-    if (e.key === 'Enter') {
-      // Save on Enter key
-      const input = e.currentTarget;
-      const newText = input.value;
-      
-      onSaveTask(stage, taskId, newText);
-      
-      // Move focus to next input or blur if it's the last one
-      input.blur();
+  // Handle save on edit
+  const handleSaveEdit = (stage: StageType, taskId: string) => {
+    if (editText.trim()) {
+      onSaveTask(stage, taskId, editText);
+      setEditingTaskId(null);
     }
   };
   
-  // Handle blur events to save when user clicks away
+  // Handle key press
+  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>, stage: StageType, taskId: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEdit(stage, taskId);
+    } else if (e.key === 'Escape') {
+      setEditingTaskId(null);
+    }
+  };
+  
+  // Handle blur
   const handleBlur = (stage: StageType, taskId: string, newText: string) => {
     if (newText.trim()) {
       onSaveTask(stage, taskId, newText);
+      setEditingTaskId(null);
     }
   };
-
-  // Handle owner field changes
-  const handleOwnerBlur = (taskId: string, value: string) => {
-    if (onUpdateTaskOwner) {
-      onUpdateTaskOwner(taskId, value);
+  
+  // Task status indicator
+  const getTaskStatus = (taskId: string) => {
+    if (saveStatus.taskId === taskId) {
+      if (saveStatus.status === 'saving') {
+        return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+      } else if (saveStatus.status === 'saved') {
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      }
     }
+    return null;
   };
-
-  // Handle notes field changes
-  const handleNotesBlur = (taskId: string, value: string) => {
-    if (onUpdateTaskNotes) {
-      onUpdateTaskNotes(taskId, value);
-    }
+  
+  // Render a stage's tasks
+  const renderTasksForStage = (stage: StageType) => {
+    const stageTasks = tasks[stage] || [];
+    const maxTasksReached = stageTasks.length >= 3;
+    
+    return (
+      <div className="space-y-4">
+        {stageTasks.length > 0 ? (
+          <div className="space-y-3">
+            {stageTasks.map(task => (
+              <div key={task.id} className="border rounded-md p-3 group relative">
+                <div className="absolute right-2 top-2 flex items-center space-x-1">
+                  {getTaskStatus(task.id)}
+                </div>
+                
+                {editingTaskId === task.id ? (
+                  <div className="space-y-2">
+                    <Input
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onBlur={() => handleBlur(stage, task.id, editText)}
+                      onKeyDown={(e) => handleKeyPress(e, stage, task.id)}
+                      className="mt-1"
+                      autoFocus
+                    />
+                    <div className="flex justify-end">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleSaveEdit(stage, task.id)}
+                        disabled={!editText.trim() || isSaving}
+                      >
+                        <Save className="h-4 w-4 mr-1" /> Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-start gap-2 flex-1">
+                        {showStatusToggle && (
+                          <Checkbox 
+                            id={`status-${task.id}`}
+                            checked={task.completed}
+                            onCheckedChange={(checked) => onUpdateTaskStatus?.(task.id, checked === true)}
+                            className="mt-1"
+                          />
+                        )}
+                        <div 
+                          className={`flex-1 ${task.completed ? 'line-through text-muted-foreground' : ''}`}
+                          onClick={() => handleEditClick(task)}
+                        >
+                          {task.text || <span className="text-muted-foreground italic">Click to add task description</span>}
+                        </div>
+                      </div>
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditClick(task)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteTask(stage, task.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {showOwnerField && (
+                      <div className="pt-2">
+                        <Label htmlFor={`owner-${task.id}`} className="text-xs text-muted-foreground">Owner</Label>
+                        <Input
+                          id={`owner-${task.id}`}
+                          value={task.owner || ''}
+                          onChange={(e) => onUpdateTaskOwner?.(task.id, e.target.value)}
+                          placeholder="Task owner"
+                          className="mt-1 text-sm"
+                        />
+                      </div>
+                    )}
+                    
+                    {showNotesField && (
+                      <div className="pt-2">
+                        <Label htmlFor={`notes-${task.id}`} className="text-xs text-muted-foreground">Notes</Label>
+                        <Textarea
+                          id={`notes-${task.id}`}
+                          value={task.notes || ''}
+                          onChange={(e) => onUpdateTaskNotes?.(task.id, e.target.value)}
+                          placeholder="Add notes for this task"
+                          className="mt-1 text-sm min-h-[100px]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground border border-dashed rounded-md">
+            No tasks for this stage. Add your first task below.
+          </div>
+        )}
+        
+        {!maxTasksReached && (
+          <Button 
+            onClick={() => onAddTask(stage)} 
+            disabled={isSaving}
+            variant="outline"
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add Task
+          </Button>
+        )}
+        
+        {maxTasksReached && (
+          <div className="text-xs text-amber-600 italic">
+            Maximum of 3 tasks reached for this stage.
+          </div>
+        )}
+      </div>
+    );
   };
-
+  
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>{title}</CardTitle>
-          {isSaving && (
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </div>
-          )}
-        </div>
+        <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      
       <CardContent>
-        <Tabs 
-          defaultValue="Identification" 
-          value={activeTab} 
-          onValueChange={(value) => setActiveTab(value as StageType)}
-        >
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="Identification">Identification</TabsTrigger>
-            <TabsTrigger value="Definition">Definition</TabsTrigger>
-            <TabsTrigger value="Delivery">Delivery</TabsTrigger>
-            <TabsTrigger value="Closure">Closure</TabsTrigger>
+        <Tabs defaultValue="Identification">
+          <TabsList className="mb-4 w-full">
+            <TabsTrigger value="Identification" className="flex-1">Identification</TabsTrigger>
+            <TabsTrigger value="Definition" className="flex-1">Definition</TabsTrigger>
+            <TabsTrigger value="Delivery" className="flex-1">Delivery</TabsTrigger>
+            <TabsTrigger value="Closure" className="flex-1">Closure</TabsTrigger>
           </TabsList>
           
-          {(["Identification", "Definition", "Delivery", "Closure"] as const).map(stage => (
-            <TabsContent key={stage} value={stage}>
-              <h3 className="text-lg font-medium mb-4">{stage} Tasks</h3>
-              <div className="space-y-6">
-                {tasks[stage].length === 0 ? (
-                  <div className="text-center py-6 text-gray-500 border border-dashed rounded-md">
-                    No tasks for this stage. Add your first task below.
-                  </div>
-                ) : (
-                  tasks[stage].map((task, index) => (
-                    <div key={task.id} className="border rounded-md p-4 relative">
-                      <div className="flex flex-col space-y-3">
-                        {/* Task Description Input */}
-                        <div className="flex items-start space-x-2">
-                          <div className="flex-1 relative">
-                            <label className="text-sm font-medium text-gray-700 mb-1 block">
-                              Task #{index + 1}
-                            </label>
-                            <Input
-                              placeholder="Enter task description here..."
-                              defaultValue={task.text}
-                              onChange={(e) => {
-                                inputRefs.current[task.id]?.setAttribute('value', e.target.value);
-                              }}
-                              onBlur={(e) => handleBlur(stage, task.id, e.target.value)}
-                              onKeyDown={(e) => handleKeyPress(e, stage, task.id)}
-                              ref={(el) => inputRefs.current[task.id] = el}
-                              className="flex-1"
-                            />
-                            {saveStatus?.taskId === task.id && saveStatus.status === 'saving' && (
-                              <div className="absolute right-2 top-2 text-sm text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
-                                Saving...
-                              </div>
-                            )}
-                            {saveStatus?.taskId === task.id && saveStatus.status === 'saved' && (
-                              <div className="absolute right-2 top-2 text-sm text-tcof-teal animate-fadeOut">
-                                <Check className="h-4 w-4 inline mr-1" />
-                                Saved
-                              </div>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDeleteTask(stage, task.id)}
-                            className="mt-6"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                        
-                        {/* Optional Owner Field */}
-                        {showOwnerField && (
-                          <div className="flex items-center space-x-2">
-                            <div className="flex-1">
-                              <label className="text-sm font-medium text-gray-700 mb-1 flex items-center">
-                                <UserCircle2 className="h-4 w-4 mr-1" />
-                                Owner
-                              </label>
-                              <Input
-                                placeholder="Who will complete this task?"
-                                defaultValue={task.owner || ''}
-                                onChange={(e) => {
-                                  ownerRefs.current[task.id]?.setAttribute('value', e.target.value);
-                                }}
-                                onBlur={(e) => handleOwnerBlur(task.id, e.target.value)}
-                                ref={(el) => ownerRefs.current[task.id] = el}
-                                className="flex-1"
-                              />
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Optional Notes Field */}
-                        {showNotesField && (
-                          <div className="flex items-center space-x-2">
-                            <div className="flex-1">
-                              <label className="text-sm font-medium text-gray-700 mb-1 flex items-center">
-                                <StickyNote className="h-4 w-4 mr-1" />
-                                Notes
-                              </label>
-                              <Input
-                                placeholder="Add notes or comments about this task"
-                                defaultValue={task.notes || ''}
-                                onChange={(e) => {
-                                  notesRefs.current[task.id]?.setAttribute('value', e.target.value);
-                                }}
-                                onBlur={(e) => handleNotesBlur(task.id, e.target.value)}
-                                ref={(el) => notesRefs.current[task.id] = el}
-                                className="flex-1"
-                              />
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Optional Status Toggle */}
-                        {showStatusToggle && onUpdateTaskStatus && (
-                          <div className="flex items-center mt-2">
-                            <Button
-                              variant={task.completed ? "default" : "outline"}
-                              size="sm"
-                              className={`rounded-md ${task.completed ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                              onClick={() => onUpdateTaskStatus(task.id, !task.completed)}
-                            >
-                              <ClipboardList className="h-4 w-4 mr-2" />
-                              {task.completed ? 'Completed' : 'Mark as Complete'}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-                
-                {/* Only allow adding up to 3 tasks per stage */}
-                {tasks[stage].length < 3 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onAddTask(stage)}
-                    className="mt-2"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Task
-                  </Button>
-                )}
-              </div>
-            </TabsContent>
-          ))}
+          <TabsContent value="Identification">
+            {renderTasksForStage('Identification')}
+          </TabsContent>
+          
+          <TabsContent value="Definition">
+            {renderTasksForStage('Definition')}
+          </TabsContent>
+          
+          <TabsContent value="Delivery">
+            {renderTasksForStage('Delivery')}
+          </TabsContent>
+          
+          <TabsContent value="Closure">
+            {renderTasksForStage('Closure')}
+          </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
