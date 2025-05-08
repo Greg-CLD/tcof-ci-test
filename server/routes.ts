@@ -311,7 +311,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Goal Map API endpoints
   app.get("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      // Get user ID from Replit Auth claims (sub) or fallback to legacy id property
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       console.log('Fetching goal map for projectId:', req.query.projectId);
@@ -515,7 +516,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Saving goal map at', new Date().toISOString());
       
-      const userId = (req.user as any).id;
+      // Get user ID from Replit Auth claims (sub) or fallback to legacy id property
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const { name, data, projectId } = req.body;
       
       // Log the full request body for debugging
@@ -796,7 +798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/project-progress/goal-mapping/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
@@ -840,7 +842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Only returns the stored tool progress (simple {completed: true/false} flag)
   app.get("/api/project-progress/goal-mapping/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (!projectId || !userId) {
@@ -880,7 +882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/project-progress/cynefin-orientation/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
@@ -950,7 +952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Cynefin Orientation completion status for a project
   app.get("/api/project-progress/cynefin-orientation/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (!projectId || !userId) {
@@ -1016,7 +1018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/project-progress/tcof-journey/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
@@ -1086,7 +1088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get TCOF Journey completion status for a project
   app.get("/api/project-progress/tcof-journey/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (!projectId || !userId) {
@@ -1151,7 +1153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cynefin Selection API endpoints
   app.get("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (projectId) {
@@ -1279,7 +1281,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure user owns this selection
-      if (selection.userId !== (req.user as any).id) {
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      if (selection.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
