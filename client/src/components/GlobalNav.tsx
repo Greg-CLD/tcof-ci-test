@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, X, ChevronDown, Settings } from 'lucide-react';
 import { isAdmin } from '@/lib/auth';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/AuthContext';
 
 const GlobalNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

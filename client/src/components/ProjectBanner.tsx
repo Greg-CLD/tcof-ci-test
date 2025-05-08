@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PlusCircle, Briefcase, AlertCircle } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuthProtection } from '@/hooks/use-auth-protection';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { apiRequest } from '@/lib/queryClient';
 import { useProjectContext } from '@/contexts/ProjectContext';
 

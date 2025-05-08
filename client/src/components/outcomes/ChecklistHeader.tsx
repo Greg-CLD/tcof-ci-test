@@ -8,7 +8,7 @@ import { useOutcomes } from "@/hooks/useOutcomes";
 import { OutcomeSelectorModal } from "./OutcomeSelectorModal";
 import { OutcomeRadarChart, type OutcomeRadarChartRef } from "./OutcomeRadarChart";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { exportOutcomesToPDF } from "@/lib/pdfExport";
 import { useQuery } from "@tanstack/react-query";
