@@ -1,6 +1,6 @@
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
-import { Redirect, Route } from "wouter";
+import { Route } from "wouter";
 
 type ProtectedRouteProps = {
   path: string;
@@ -11,7 +11,7 @@ export function ProtectedRoute({
   path,
   component: Component,
 }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, loginMutation } = useAuth();
 
   return (
     <Route path={path}>
@@ -19,10 +19,11 @@ export function ProtectedRoute({
         <div className="flex items-center justify-center min-h-screen">
           <Loader2 className="h-8 w-8 animate-spin text-tcof-teal" />
         </div>
-      ) : user ? (
+      ) : isAuthenticated ? (
         <Component />
       ) : (
-        <Redirect to="/auth" />
+        // Redirect to Replit Auth login flow
+        loginMutation.mutate()
       )}
     </Route>
   );

@@ -16,83 +16,35 @@ export function useAuth() {
     retry: false,
   });
 
+  // With Replit Auth, the login mutation now redirects to Replit's login page
   const loginMutation = useMutation({
-    mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Login failed");
-      }
-      return await res.json();
-    },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${user.username}!`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
+    mutationFn: async () => {
+      // Redirect to the login endpoint which will redirect to Replit Auth
+      window.location.href = "/api/login";
+      // This function doesn't actually return anything as it redirects away
+      return {} as User; // Type coercion for TS
     },
   });
 
+  // With Replit Auth, we don't need a register mutation as Replit handles it
+  // But we keep a placeholder for compatibility with existing code
   const registerMutation = useMutation({
-    mutationFn: async (credentials: Omit<InsertUser, 'id'>) => {
-      // Add a UUID for the user ID if not provided
-      const userWithId = {
-        ...credentials,
-        id: credentials.id || `user-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`
-      };
-      
-      const res = await apiRequest("POST", "/api/register", userWithId);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Registration failed");
-      }
-      return await res.json();
-    },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
-      toast({
-        title: "Registration successful",
-        description: `Welcome, ${user.username}!`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive",
-      });
+    mutationFn: async () => {
+      // Redirect to the login endpoint which will handle registration too
+      window.location.href = "/api/login";
+      // This function doesn't actually return anything as it redirects away
+      return {} as User; // Type coercion for TS
     },
   });
 
+  // Logout mutation redirects to the logout endpoint
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/logout");
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Logout failed");
-      }
+      window.location.href = "/api/logout";
     },
     onSuccess: () => {
+      // This won't actually run due to the redirect
       queryClient.setQueryData(["/api/auth/user"], null);
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Logout failed",
-        description: error.message,
-        variant: "destructive",
-      });
     },
   });
 

@@ -11,17 +11,18 @@ import { LogIn, LogOut, User, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export function LoginButton() {
-  const [location, setLocation] = useLocation();
   const { loginMutation } = useAuth();
   
-  const navigateToAuth = () => {
-    setLocation("/auth");
+  const handleLogin = () => {
+    if (loginMutation) {
+      loginMutation.mutate();
+    }
   };
   
   return (
     <Button 
       variant="outline"
-      onClick={navigateToAuth}
+      onClick={handleLogin}
       className="flex items-center gap-2"
     >
       <LogIn className="w-4 h-4" />
