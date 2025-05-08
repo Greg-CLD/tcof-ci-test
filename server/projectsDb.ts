@@ -10,6 +10,7 @@ import { db } from '../db';
 // Path to projects data file
 const DATA_DIR = path.join(process.cwd(), 'data');
 const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json');
+const TASKS_FILE = path.join(DATA_DIR, 'project_tasks.json');
 
 // Project data type
 export interface Project {
@@ -28,6 +29,19 @@ export interface Project {
   updatedAt: string;
 }
 
+// Project task data type
+export interface ProjectTask {
+  id: string;
+  projectId: string;
+  text: string;
+  stage: 'identification' | 'definition' | 'delivery' | 'closure';
+  origin: 'heuristic' | 'factor';
+  sourceId: string;
+  completed?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Create data directory if it doesn't exist
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -37,6 +51,12 @@ if (!fs.existsSync(DATA_DIR)) {
 if (!fs.existsSync(PROJECTS_FILE)) {
   fs.writeFileSync(PROJECTS_FILE, JSON.stringify([], null, 2), 'utf8');
   console.log('Created empty projects.json file');
+}
+
+// Initialize project tasks data file if it doesn't exist
+if (!fs.existsSync(TASKS_FILE)) {
+  fs.writeFileSync(TASKS_FILE, JSON.stringify([], null, 2), 'utf8');
+  console.log('Created empty project_tasks.json file');
 }
 
 /**
@@ -61,6 +81,32 @@ function saveProjects(projects: Project[]): boolean {
     return true;
   } catch (error) {
     console.error('Error saving projects:', error);
+    return false;
+  }
+}
+
+/**
+ * Load all project tasks from the data file
+ */
+function loadProjectTasks(): ProjectTask[] {
+  try {
+    const data = fs.readFileSync(TASKS_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading project tasks:', error);
+    return [];
+  }
+}
+
+/**
+ * Save project tasks to the data file
+ */
+function saveProjectTasks(tasks: ProjectTask[]): boolean {
+  try {
+    fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving project tasks:', error);
     return false;
   }
 }
@@ -376,6 +422,156 @@ export const projectsDb = {
       return result;
     } catch (error) {
       console.error('Error deleting project:', error);
+      return false;
+    }
+  },
+  
+  /**
+   * Get all tasks for a project
+   * @param projectId Project ID
+   * @returns Array of tasks for the project
+   */
+  getProjectTasks: async (projectId: string): Promise<ProjectTask[]> => {
+    try {
+      // Load all tasks
+      const tasks = loadProjectTasks();
+      
+      // Filter tasks by project ID
+      const projectTasks = tasks.filter(t => t.projectId === projectId);
+      
+      console.log(`Found ${projectTasks.length} tasks for project ${projectId}`);
+      
+      return projectTasks;
+    } catch (error) {
+      console.error('Error getting project tasks:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Create a new task for a project
+   * @param taskData Task data
+   * @returns The created task or null if creation failed
+   */
+  createProjectTask: async (
+    taskData: {
+      projectId: string;
+      text: string;
+      stage: 'identification' | 'definition' | 'delivery' | 'closure';
+      origin: 'heuristic' | 'factor';
+      sourceId: string;
+      completed?: boolean;
+      createdAt?: string;
+      updatedAt?: string;
+    }
+  ): Promise<ProjectTask | null> => {
+    try {
+      // Create new task object
+      const task: ProjectTask = {
+        id: uuidv4(),
+        projectId: taskData.projectId,
+        text: taskData.text,
+        stage: taskData.stage,
+        origin: taskData.origin,
+        sourceId: taskData.sourceId,
+        completed: taskData.completed || false,
+        createdAt: taskData.createdAt || new Date().toISOString(),
+        updatedAt: taskData.updatedAt || new Date().toISOString(),
+      };
+      
+      // Load existing tasks
+      const tasks = loadProjectTasks();
+      
+      // Add new task
+      tasks.push(task);
+      
+      // Save updated tasks list
+      const saved = saveProjectTasks(tasks);
+      
+      if (saved) {
+        console.log(`Task saved → ${task.id}`);
+        return task;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error creating project task:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Update a project task
+   * @param taskId Task ID
+   * @param data Updated task data
+   * @returns The updated task or null if update failed
+   */
+  updateProjectTask: async (
+    taskId: string,
+    data: {
+      text?: string;
+      stage?: 'identification' | 'definition' | 'delivery' | 'closure';
+      completed?: boolean;
+    }
+  ): Promise<ProjectTask | null> => {
+    try {
+      // Load all tasks
+      const tasks = loadProjectTasks();
+      
+      // Find task index
+      const index = tasks.findIndex(t => t.id === taskId);
+      
+      if (index === -1) {
+        return null;
+      }
+      
+      // Update task
+      tasks[index] = {
+        ...tasks[index],
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Save updated tasks list
+      const saved = saveProjectTasks(tasks);
+      
+      if (saved) {
+        return tasks[index];
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error updating project task:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Delete a project task
+   * @param taskId Task ID
+   * @returns Success status
+   */
+  deleteProjectTask: async (taskId: string): Promise<boolean> => {
+    try {
+      // Load all tasks
+      const tasks = loadProjectTasks();
+      
+      // Filter out the task to delete
+      const updatedTasks = tasks.filter(t => t.id !== taskId);
+      
+      if (updatedTasks.length === tasks.length) {
+        // No task was removed
+        console.log(`No task found with ID ${taskId} to delete`);
+        return false;
+      }
+      
+      // Save updated tasks list
+      console.log(`Removing task ${taskId}, tasks count: ${tasks.length} -> ${updatedTasks.length}`);
+      const result = saveProjectTasks(updatedTasks);
+      console.log(`Task deletion result: ${result}`);
+      return result;
+    } catch (error) {
+      console.error('Error deleting project task:', error);
       return false;
     }
   }

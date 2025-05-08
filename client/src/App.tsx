@@ -365,6 +365,11 @@ function Router() {
           <Block2Step3 />
         </ProtectedRouteGuard>
       </Route>
+      <Route path="/make-a-plan/:projectId/block-2/step-4">
+        <ProtectedRouteGuard>
+          <Block2Step4 />
+        </ProtectedRouteGuard>
+      </Route>
       <Route path="/make-a-plan/:projectId/block-2">
         <ProtectedRouteGuard>
           <Block2Design />
