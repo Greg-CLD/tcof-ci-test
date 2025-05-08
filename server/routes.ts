@@ -2758,6 +2758,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid factor data. Must include id, title, and tasks.' });
       }
       
+      // Ensure description is a string (default to empty string if missing)
+      if (newFactor.description !== undefined && typeof newFactor.description !== 'string') {
+        return res.status(400).json({ message: 'Description must be a string' });
+      }
+      
+      // Set default empty string for description if not provided
+      if (newFactor.description === undefined) {
+        newFactor.description = '';
+      }
+      
       // Get existing factors
       const factors = await getFactors() || [];
       
@@ -2788,6 +2798,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the updated factor
       if (!updatedFactor.id || !updatedFactor.title || !updatedFactor.tasks) {
         return res.status(400).json({ message: 'Invalid factor data. Must include id, title, and tasks.' });
+      }
+      
+      // Ensure description is a string (default to empty string if missing)
+      if (updatedFactor.description !== undefined && typeof updatedFactor.description !== 'string') {
+        return res.status(400).json({ message: 'Description must be a string' });
+      }
+      
+      // Set default empty string for description if not provided
+      if (updatedFactor.description === undefined) {
+        updatedFactor.description = '';
       }
       
       // Get existing factors
