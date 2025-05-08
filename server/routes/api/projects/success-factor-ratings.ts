@@ -72,7 +72,7 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
     console.log(`✅ [API:GET] Found ${ratings.length} ratings for project ${projectId}`);
     return res.status(200).json(ratings);
   } catch (error) {
-    console.error('Error fetching success factor ratings:', error);
+    console.error('❌ [API:GET] Error fetching success factor ratings:', error);
     return res.status(500).json({ message: 'Failed to fetch success factor ratings' });
   }
 });
@@ -146,7 +146,7 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
       });
       
       if (existingRating) {
-        console.log(`[API:PUT] Updating existing rating for factorId: ${rating.factorId}`);
+        console.log(`🔄 [API:PUT] Updating existing rating for factorId: ${rating.factorId}`);
         // Update existing rating
         const [updated] = await db
           .update(successFactorRatings)
@@ -165,7 +165,7 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
         
         results.push(updated);
       } else {
-        console.log(`[API:PUT] Inserting new rating for factorId: ${rating.factorId}`);
+        console.log(`➕ [API:PUT] Inserting new rating for factorId: ${rating.factorId}`);
         // Insert new rating
         const [inserted] = await db
           .insert(successFactorRatings)
@@ -181,13 +181,13 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
       }
     }
     
-    console.log(`[API:PUT] Successfully updated ${results.length} ratings for project ${projectId}`);
+    console.log(`✅ [API:PUT] Successfully updated ${results.length} ratings for project ${projectId}`);
     return res.status(200).json({
       message: 'Success factor ratings updated successfully',
       ratings: results
     });
   } catch (error) {
-    console.error('[API:PUT] Error updating success factor ratings:', error);
+    console.error('❌ [API:PUT] Error updating success factor ratings:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ 
       message: 'Failed to update success factor ratings',
