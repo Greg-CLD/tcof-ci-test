@@ -260,11 +260,11 @@ export default function Block1Discover() {
     }
   }, [evaluations, projectId, saveBlock]);
   
-  // Handle success factor evaluation change (now only updates local state)
+  // Handle success factor evaluation change - updates only the specified factor
   const handleEvaluationChange = (factorId: string, value: number) => {
     console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'value:', value);
     
-    // Update local state with the new rating
+    // Update local state with the new rating for only the specified factor
     setRatings(prev => {
       const newState = {
         ...prev,
@@ -273,14 +273,31 @@ export default function Block1Discover() {
       console.log('🔄 Block1Discover.ratings - before:', prev, 'after:', newState);
       return newState;
     });
+    
+    // Live preview update message
+    toast({
+      title: "Rating updated", 
+      description: `Changed rating for factor: ${factorId}`,
+      duration: 1500
+    });
   };
   
-  // Function to save resonance ratings to server with preview
+  // Function to save resonance ratings to server with preview feedback
   const handleConfirmAndSave = async () => {
     console.log('🔄 Block1Discover.handleConfirmAndSave - Starting save operation');
     
     try {
-      // First save ratings to local plan 
+      // Validation: Ensure we have ratings to save
+      if (Object.keys(ratings).length === 0) {
+        toast({
+          title: "No ratings to save",
+          description: "Please rate at least one success factor first.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // First save ratings to local plan for persistence
       saveBlock('block1', {
         successFactorRatings: ratings,
         lastUpdated: new Date().toISOString(),
@@ -293,6 +310,13 @@ export default function Block1Discover() {
       }));
       
       console.log('🔄 Block1Discover.handleConfirmAndSave - Mapped payload:', payload);
+      console.log('🔄 Block1Discover.handleConfirmAndSave - Sending ratings for project:', projectId);
+      
+      // Show a pending toast while saving
+      toast({
+        title: "Saving ratings...",
+        description: `Saving ${payload.length} factor evaluations to the server.`,
+      });
       
       // Send the ratings to the server
       await updateEvaluations(payload);
@@ -304,6 +328,7 @@ export default function Block1Discover() {
       });
       
       // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'success-factor-ratings'] });
       queryClient.invalidateQueries({ queryKey: ['resonanceRatings', projectId] });
       
       console.log('🔄 Block1Discover.handleConfirmAndSave - Save completed successfully');
