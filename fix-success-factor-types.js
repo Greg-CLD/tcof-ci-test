@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import glob from 'glob';
+import { globby } from 'globby';
 
 // Get the directory name of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +20,7 @@ async function updateFactorTypesInServer() {
     console.log('Scanning server files for missing success factor descriptions...');
     
     // Find all JavaScript and TypeScript files in the server directory
-    const files = glob.sync('server/**/*.@(js|ts)', { cwd: __dirname });
+    const files = await globby(['server/**/*.js', 'server/**/*.ts'], { cwd: __dirname });
     
     let totalUpdates = 0;
     
