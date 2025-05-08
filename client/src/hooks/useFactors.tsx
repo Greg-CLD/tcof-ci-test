@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 export interface FactorTask {
   id: string;
   title: string;
+  description: string;
   tasks: {
     Identification: string[];
     Definition: string[];

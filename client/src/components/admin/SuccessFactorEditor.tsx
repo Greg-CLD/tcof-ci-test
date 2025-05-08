@@ -38,6 +38,7 @@ import { apiRequest } from '@/lib/queryClient';
 interface FactorTask {
   id: string;
   title: string;
+  description: string;
   tasks: {
     Identification: string[];
     Definition: string[];
@@ -65,6 +66,7 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
   const [editableFactor, setEditableFactor] = useState<FactorTask>({
     id: '',
     title: '',
+    description: '',
     tasks: {
       Identification: [''],
       Definition: [''],
@@ -132,6 +134,7 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
     const newFactor: FactorTask = {
       id: `1.${maxId + 1}`, // Default to category 1, but user can change it
       title: 'New Success Factor',
+      description: 'Provide a description of this success factor.',
       tasks: {
         Identification: [''],
         Definition: [''],
