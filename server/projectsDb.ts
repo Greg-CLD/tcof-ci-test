@@ -35,9 +35,18 @@ export interface ProjectTask {
   projectId: string;
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
-  origin: 'heuristic' | 'factor';
+  origin: 'heuristic' | 'factor' | 'policy';
   sourceId: string;
   completed?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Project policy data type
+export interface ProjectPolicy {
+  id: string;
+  projectId: string;
+  name: string;
   createdAt: string;
   updatedAt: string;
 }

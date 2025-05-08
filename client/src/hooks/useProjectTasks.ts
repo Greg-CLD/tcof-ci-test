@@ -6,7 +6,7 @@ interface ProjectTask {
   projectId: string;
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
-  origin: 'heuristic' | 'factor';
+  origin: 'heuristic' | 'factor' | 'policy';
   sourceId: string;
   completed?: boolean;
   assignedTo?: string;
@@ -19,7 +19,7 @@ interface CreateTaskParams {
   projectId: string;
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
-  origin: 'heuristic' | 'factor';
+  origin: 'heuristic' | 'factor' | 'policy';
   sourceId: string;
   assignedTo?: string;
   dueDate?: string;
