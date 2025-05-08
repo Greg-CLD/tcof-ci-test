@@ -6,12 +6,10 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
-import { db } from "./db";
-import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
-  console.warn("Environment variable REPLIT_DOMAINS not provided, authentication may not work correctly");
+  throw new Error("Environment variable REPLIT_DOMAINS not provided");
 }
 
 const getOidcConfig = memoize(
@@ -26,28 +24,21 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  
-  if (!process.env.SESSION_SECRET) {
-    process.env.SESSION_SECRET = "tcof-dev-secret-key-change-in-production";
-    console.warn("SESSION_SECRET not set, using default value. Set this in production!");
-  }
-
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
+    createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",
   });
-  
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || 'tcof-secure-session-secret',
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       maxAge: sessionTtl,
     },
   });
@@ -63,50 +54,16 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(
-  claims: any,
-) {
-  try {
-    // Check if user exists
-    const existingUser = await db.select().from(users).where(eq(users.id, claims["sub"])).limit(1);
-    
-    const userData = {
-      id: claims["sub"],
-      username: claims["username"],
-      email: claims["email"],
-      firstName: claims["first_name"],
-      lastName: claims["last_name"],
-      bio: claims["bio"],
-      profileImageUrl: claims["profile_image_url"],
-    };
-    
-    if (existingUser && existingUser.length > 0) {
-      // Update existing user
-      const [updatedUser] = await db
-        .update(users)
-        .set({
-          ...userData,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, claims["sub"]))
-        .returning();
-      return updatedUser;
-    } else {
-      // Insert new user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          ...userData,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
-      return newUser;
-    }
-  } catch (error) {
-    console.error("Error upserting user:", error);
-    throw error;
-  }
+async function upsertUser(claims: any) {
+  await storage.createUser({
+    id: claims["sub"],
+    username: claims["username"],
+    email: claims["email"],
+    firstName: claims["first_name"],
+    lastName: claims["last_name"],
+    bio: claims["bio"],
+    profileImageUrl: claims["profile_image_url"],
+  });
 }
 
 export async function setupAuth(app: Express) {
@@ -114,11 +71,6 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
-
-  if (!process.env.REPLIT_DOMAINS || !process.env.REPL_ID) {
-    console.warn("Replit Auth requires REPLIT_DOMAINS and REPL_ID environment variables");
-    return;
-  }
 
   const config = await getOidcConfig();
 
@@ -132,7 +84,7 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env.REPLIT_DOMAINS.split(",")) {
+  for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
     const strategy = new Strategy(
       {
         name: `replitauth:${domain}`,
@@ -172,29 +124,13 @@ export async function setupAuth(app: Express) {
       );
     });
   });
-  
-  // Endpoint to get current user
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
-      if (user) {
-        res.json(user);
-      } else {
-        res.status(404).json({ message: "User not found" });
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user?.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: "Authentication required" });
   }
 
   const now = Math.floor(Date.now() / 1000);
