@@ -289,7 +289,7 @@ export const storage = {
     return goalMap;
   },
   
-  async createGoalMap(userId: number, payload: any) {
+  async createGoalMap(userId: string, payload: any) {
     console.log(`STORAGE: Creating goal map for user ${userId} at ${new Date().toISOString()}`);
     
     try {
@@ -363,7 +363,7 @@ export const storage = {
         // Also include a flattened goals array for easier access
         goals: data.goals || []
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating goal map:', error);
       throw new Error(`Failed to create goal map: ${error.message}`);
     }
@@ -440,16 +440,16 @@ export const storage = {
       return {
         ...updatedMap,
         // Always include flattened goals for easier access
-        goals: updatedMap.data?.goals || [],
+        goals: updatedMap.data && 'goals' in updatedMap.data ? updatedMap.data.goals : [],
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('STORAGE: Error updating goal map:', error);
       throw new Error(`Failed to update goal map: ${error.message}`);
     }
   },
 
   // Cynefin Selection methods
-  async getCynefinSelections(userId: number) {
+  async getCynefinSelections(userId: string) {
     return await db.query.cynefinSelections.findMany({
       where: eq(cynefinSelections.userId, userId),
       orderBy: desc(cynefinSelections.lastUpdated)
@@ -462,7 +462,7 @@ export const storage = {
     });
   },
 
-  async saveCynefinSelection(userId: number, name: string, data: any) {
+  async saveCynefinSelection(userId: string, name: string, data: any) {
     const [selection] = await db.insert(cynefinSelections)
       .values({
         userId,
@@ -495,7 +495,7 @@ export const storage = {
   },
 
   // TCOF Journey methods
-  async getTCOFJourneys(userId: number) {
+  async getTCOFJourneys(userId: string) {
     return await db.query.tcofJourneys.findMany({
       where: eq(tcofJourneys.userId, userId),
       orderBy: desc(tcofJourneys.lastUpdated)
@@ -508,7 +508,7 @@ export const storage = {
     });
   },
 
-  async saveTCOFJourney(userId: number, name: string, data: any) {
+  async saveTCOFJourney(userId: string, name: string, data: any) {
     const [journey] = await db.insert(tcofJourneys)
       .values({
         userId,
@@ -541,7 +541,7 @@ export const storage = {
   },
 
   // Project methods
-  async getProjects(userId: number) {
+  async getProjects(userId: string) {
     return await db.query.projects.findMany({
       where: eq(projects.userId, userId),
       orderBy: desc(projects.lastUpdated)
@@ -560,7 +560,7 @@ export const storage = {
   },
 
   async createProject(
-    userId: number, 
+    userId: string, 
     name: string, 
     description: string | null, 
     goalMapId: number | null, 
@@ -614,7 +614,7 @@ export const storage = {
   },
   
   // Tool progress tracking methods
-  async storeToolProgress(userId: number, projectId: string, toolName: string, progressData: any) {
+  async storeToolProgress(userId: string, projectId: string, toolName: string, progressData: any) {
     try {
       // Store in a local file for now - in production this would go in a database table
       const fs = require('fs');
@@ -630,7 +630,7 @@ export const storage = {
       const progressFile = path.join(dataDir, 'tool-progress.json');
       
       // Read existing progress data if available
-      let progress = {};
+      let progress: Record<string, Record<string, Record<string, any>>> = {};
       if (fs.existsSync(progressFile)) {
         try {
           const data = fs.readFileSync(progressFile, 'utf8');
@@ -661,7 +661,7 @@ export const storage = {
     }
   },
   
-  async getToolProgress(userId: number, projectId: string, toolName: string) {
+  async getToolProgress(userId: string, projectId: string, toolName: string) {
     try {
       const fs = require('fs');
       const path = require('path');
@@ -697,18 +697,18 @@ export const storage = {
     }
   },
   
-  async markCynefinOrientationComplete(userId: number, projectId: string) {
+  async markCynefinOrientationComplete(userId: string, projectId: string) {
     return this.storeToolProgress(userId, projectId, "cynefinOrientation", {
       completed: true,
       lastUpdated: new Date().toISOString()
     });
   },
   
-  async getCynefinOrientationStatus(userId: number, projectId: string) {
+  async getCynefinOrientationStatus(userId: string, projectId: string) {
     return this.getToolProgress(userId, projectId, "cynefinOrientation");
   },
   
-  async markGoalMappingComplete(userId: number, projectId: string) {
+  async markGoalMappingComplete(userId: string, projectId: string) {
     // ONLY write {completed: true} to tool-progress
     // No goal map modifications or relations are touched
     return this.storeToolProgress(userId, projectId, "goalMapping", {
@@ -717,12 +717,12 @@ export const storage = {
     });
   },
   
-  async getGoalMappingStatus(userId: number, projectId: string) {
+  async getGoalMappingStatus(userId: string, projectId: string) {
     // Get the tool progress which should contain just {completed: true}
     return this.getToolProgress(userId, projectId, "goalMapping");
   },
   
-  async markTCOFJourneyComplete(userId: number, projectId: string) {
+  async markTCOFJourneyComplete(userId: string, projectId: string) {
     return this.storeToolProgress(userId, projectId, "tcofJourney", {
       completed: true,
       lastUpdated: new Date().toISOString()

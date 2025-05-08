@@ -92,7 +92,7 @@ export const organisationHeuristics = pgTable("organisation_heuristics", {
 // Project table - main entity for storing project metadata
 // Important: This schema reflects the actual database columns
 export const projects = pgTable("projects", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   userId: text("user_id").references(() => users.id),
