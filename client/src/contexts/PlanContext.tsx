@@ -27,6 +27,11 @@ export interface PlanData {
       timeline: any;
       deliveryApproach: string;
       deliveryNotes: string;
+      frameworks?: {
+        selectedFrameworkCodes: string[];
+        projectSize: string;
+        pathClarity: string;
+      };
       completed: boolean;
     };
   };

@@ -270,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register frameworks routes
   try {
-    const frameworksRoutes = await import('./routes/frameworks.js');
+    const frameworksRoutes = await import('./routes/frameworks-router.js');
     app.use('/api/projects', frameworksRoutes.default);
     console.log('Frameworks routes registered successfully');
   } catch (error) {

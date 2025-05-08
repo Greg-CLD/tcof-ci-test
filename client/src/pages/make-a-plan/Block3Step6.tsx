@@ -135,7 +135,13 @@ export default function Block3Step6() {
       const res = await apiRequest(
         "POST", 
         `/api/projects/${projectId}/frameworks`,
-        { selectedFrameworkCodes: frameworks }
+        { 
+          projectSize,
+          pathClarity,
+          selectedFrameworks: frameworks,
+          customFrameworkName: '',
+          customFrameworkDescription: '',
+        }
       );
       
       if (!res.ok) {
@@ -163,8 +169,8 @@ export default function Block3Step6() {
   // Load existing data
   useEffect(() => {
     if (projectFrameworks) {
-      if (projectFrameworks.selectedFrameworkCodes) {
-        setSelectedFrameworks(projectFrameworks.selectedFrameworkCodes);
+      if (projectFrameworks.selectedFrameworks) {
+        setSelectedFrameworks(projectFrameworks.selectedFrameworks);
       }
       if (projectFrameworks.projectSize) {
         setProjectSize(projectFrameworks.projectSize);
@@ -178,8 +184,8 @@ export default function Block3Step6() {
   // Initialize from plan context as backup
   useEffect(() => {
     if (plan?.blocks?.block3?.frameworks) {
-      if (!selectedFrameworks.length) {
-        setSelectedFrameworks(plan.blocks.block3.frameworks.selectedFrameworkCodes || []);
+      if (!selectedFrameworks.length && plan.blocks.block3.frameworks.selectedFrameworkCodes) {
+        setSelectedFrameworks(plan.blocks.block3.frameworks.selectedFrameworkCodes);
       }
       if (plan.blocks.block3.frameworks.projectSize) {
         setProjectSize(plan.blocks.block3.frameworks.projectSize);
