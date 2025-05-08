@@ -11,14 +11,27 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePlan } from "@/contexts/PlanContext";
 import { useToast } from "@/hooks/use-toast";
 import ProjectBanner from "@/components/ProjectBanner";
 import { ArrowLeft, ChevronRight, Info, Save } from "lucide-react";
 import { useSuccessFactors } from "@/hooks/useSuccessFactors";
 import { useResonanceRatings, type EvaluationInput } from "@/hooks/useResonanceRatings";
+
+// Define the success factor resonance options
+const RESONANCE_OPTIONS = [
+  { value: "1", symbol: '❌', label: "Doesn't land", desc: "I don't feel this…" },
+  { value: "2", symbol: '🤔', label: "Unfamiliar", desc: "I've never seen it in action." },
+  { value: "3", symbol: '🟡', label: "Seems true", desc: "I believe it's useful." },
+  { value: "4", symbol: '✅', label: "Proven", desc: "I've used this and it worked." },
+  { value: "5", symbol: '🔥', label: "Hard-won truth", desc: "It's burned into how I work." },
+];
 
 export default function Block1Step1() {
   console.log('🔥 Block1Step1 v2 loaded 🔥');
@@ -278,38 +291,39 @@ export default function Block1Step1() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <RadioGroup
-                              value={localEvaluations[factor.id]?.toString() || ""}
-                              onValueChange={(value) => handleEvaluationChange(factor.id, value)}
-                              className="flex flex-col space-y-1"
-                            >
-                              <div className="flex items-center space-x-5">
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="1" id={`evaluation-1-${factor.id}`} />
-                                  <Label htmlFor={`evaluation-1-${factor.id}`}>1</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="2" id={`evaluation-2-${factor.id}`} />
-                                  <Label htmlFor={`evaluation-2-${factor.id}`}>2</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="3" id={`evaluation-3-${factor.id}`} />
-                                  <Label htmlFor={`evaluation-3-${factor.id}`}>3</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="4" id={`evaluation-4-${factor.id}`} />
-                                  <Label htmlFor={`evaluation-4-${factor.id}`}>4</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="5" id={`evaluation-5-${factor.id}`} />
-                                  <Label htmlFor={`evaluation-5-${factor.id}`}>5</Label>
-                                </div>
+                            <div className="flex flex-col space-y-2">
+                              <div className="flex space-x-2">
+                                {RESONANCE_OPTIONS.map((option) => {
+                                  const isSelected = localEvaluations[factor.id]?.toString() === option.value;
+                                  return (
+                                    <TooltipProvider key={option.value}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleEvaluationChange(factor.id, option.value)}
+                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                              isSelected 
+                                                ? 'bg-tcof-teal text-white ring-2 ring-tcof-dark shadow-md transform scale-110' 
+                                                : 'bg-gray-100 hover:bg-gray-200 hover:shadow'
+                                            }`}
+                                          >
+                                            <span className="text-lg">{option.symbol}</span>
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="font-medium">
+                                          <p><strong>{option.label}</strong>: {option.desc}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })}
                               </div>
-                              <div className="flex justify-between text-xs text-gray-500 w-full px-1 pt-1">
+                              <div className="flex justify-between text-xs text-gray-500 w-full px-1">
                                 <span>Doesn't resonate</span>
                                 <span>Strongly resonates</span>
                               </div>
-                            </RadioGroup>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
