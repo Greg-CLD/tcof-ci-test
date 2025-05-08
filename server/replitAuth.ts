@@ -14,10 +14,16 @@ if (!process.env.REPLIT_DOMAINS) {
 
 const getOidcConfig = memoize(
   async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
+    console.log("Discovering OpenID configuration with REPL_ID:", process.env.REPL_ID);
+    try {
+      return await client.discovery(
+        new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
+        process.env.REPL_ID!
+      );
+    } catch (error) {
+      console.error("Error discovering OpenID configuration:", error);
+      throw error;
+    }
   },
   { maxAge: 3600 * 1000 }
 );
@@ -88,9 +94,13 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env
-    .REPLIT_DOMAINS!.split(",")) {
-    const strategy = new Strategy(
+  // Get all possible domains from environment variable
+  const domains = process.env.REPLIT_DOMAINS!.split(",");
+  console.log("Configuring auth strategies for domains:", domains);
+  
+  for (const domain of domains) {
+    // Create standard HTTPS strategy
+    const httpsStrategy = new Strategy(
       {
         name: `replitauth:${domain}`,
         config,
@@ -99,24 +109,56 @@ export async function setupAuth(app: Express) {
       },
       verify,
     );
-    passport.use(strategy);
+    passport.use(httpsStrategy);
+    console.log(`Registered HTTPS strategy for domain: ${domain}`);
+    
+    // For development, create an HTTP strategy
+    if (process.env.NODE_ENV !== 'production') {
+      const httpDomain = domain.replace('https://', 'http://');
+      const httpStrategy = new Strategy(
+        {
+          name: `replitauth:${httpDomain}`,
+          config,
+          scope: "openid email profile offline_access",
+          callbackURL: `http://${httpDomain}/api/callback`,
+        },
+        verify,
+      );
+      passport.use(httpStrategy);
+      console.log(`Registered HTTP strategy for domain: ${httpDomain}`);
+    }
   }
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    console.log("Login request from hostname:", req.hostname);
+    console.log("REPLIT_DOMAINS set to:", process.env.REPLIT_DOMAINS);
+    
+    // Use hostname directly from the request
+    const strategy = `replitauth:${req.hostname}`;
+    console.log("Using auth strategy:", strategy);
+    
+    passport.authenticate(strategy, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
+    console.log("Auth callback received", req.query);
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
-    })(req, res, next);
+      failWithError: true
+    })(req, res, (err) => {
+      if (err) {
+        console.error("Authentication error:", err);
+        return res.redirect("/api/login");
+      }
+      next();
+    });
   });
 
   app.get("/api/logout", (req, res) => {
