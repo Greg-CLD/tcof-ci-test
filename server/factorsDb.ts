@@ -7,6 +7,7 @@
 export interface FactorTask {
   id: string;
   title: string;
+  description: string;
   tasks: {
     Identification: string[];
     Definition: string[];
@@ -21,6 +22,7 @@ function normalizeFactorTask(factor: FactorTask): FactorTask {
   return {
     id: factor.id,
     title: factor.title,
+    description: factor.description || '', // Include description with default empty string
     tasks: {
       Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
       Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],

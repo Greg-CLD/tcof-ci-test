@@ -5,20 +5,23 @@
 
 import { factorsDb, FactorTask } from './factorsDb';
 
-// The canonical list of TCOF success factors
+/**
+ * The canonical list of TCOF success factors with descriptions
+ * Updated to include description field that will be stored in the database
+ */
 const CANONICAL_FACTORS = [
-  { id: 'sf-1', title: '1.1 Ask Why' },
-  { id: 'sf-2', title: '1.2 Get a Masterbuilder' },
-  { id: 'sf-3', title: '1.3 Get Your People on the Bus' },
-  { id: 'sf-4', title: '1.4 Make Friends and Keep them Friendly' },
-  { id: 'sf-5', title: '2.1 Recognise that your project is not unique' },
-  { id: 'sf-6', title: '2.2 Look for Tried & Tested Options' },
-  { id: 'sf-7', title: '3.1 Think Big, Start Small' },
-  { id: 'sf-8', title: '3.2 Learn by Experimenting' },
-  { id: 'sf-9', title: '3.3 Keep on top of risks' },
-  { id: 'sf-10', title: '4.1 Adjust for optimism' },
-  { id: 'sf-11', title: '4.2 Measure What Matters, Be Ready to Step Away' },
-  { id: 'sf-12', title: '4.3 Be Ready to Adapt' }
+  { id: 'sf-1', title: '1.1 Ask Why', description: 'Define clear, achievable goals that solve known problems.' },
+  { id: 'sf-2', title: '1.2 Get a Masterbuilder', description: 'Find a capable leader with relevant experience who can guide the project.' },
+  { id: 'sf-3', title: '1.3 Get Your People on the Bus', description: 'Build a cohesive team and identify champions to drive the change.' },
+  { id: 'sf-4', title: '1.4 Make Friends and Keep them Friendly', description: 'Engage stakeholders early and maintain their support throughout the project.' },
+  { id: 'sf-5', title: '2.1 Recognise that your project is not unique', description: 'Learn from similar past projects to avoid repeating mistakes.' },
+  { id: 'sf-6', title: '2.2 Look for Tried & Tested Options', description: 'Use proven solutions instead of reinventing the wheel.' },
+  { id: 'sf-7', title: '3.1 Think Big, Start Small', description: 'Break solutions into manageable modules that can be built incrementally.' },
+  { id: 'sf-8', title: '3.2 Learn by Experimenting', description: 'Test ideas with small experiments and adjust based on feedback.' },
+  { id: 'sf-9', title: '3.3 Keep on top of risks', description: 'Identify and mitigate risks continuously throughout the project.' },
+  { id: 'sf-10', title: '4.1 Adjust for optimism', description: 'Account for typical optimism bias in estimates and forecasts.' },
+  { id: 'sf-11', title: '4.2 Measure What Matters, Be Ready to Step Away', description: 'Focus on measurable outcomes and be prepared to pivot if goals are not being met.' },
+  { id: 'sf-12', title: '4.3 Be Ready to Adapt', description: 'Maintain flexibility to adapt to changing requirements and circumstances.' }
 ];
 
 export async function ensureCanonicalFactors(): Promise<boolean> {
@@ -90,10 +93,11 @@ export async function ensureCanonicalFactors(): Promise<boolean> {
           Closure: []
         };
         
-        // Create a new factor with the canonical ID and title
+        // Create a new factor with the canonical ID, title, and description
         const factor: FactorTask = {
           id: cf.id,
           title: cf.title,
+          description: cf.description || '', // Include description from canonical factors
           tasks: {
             Identification: tasks.Identification || [],
             Definition: tasks.Definition || [],
