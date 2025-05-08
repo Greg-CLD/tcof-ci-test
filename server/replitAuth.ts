@@ -27,6 +27,7 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
+    // Don't create the table - we're already creating it with our schema
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",
@@ -38,7 +39,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production', // Only use secure in production
       maxAge: sessionTtl,
     },
   });
@@ -55,7 +56,7 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
-  await storage.createUser({
+  await storage.upsertUser({
     id: claims["sub"],
     username: claims["username"],
     email: claims["email"],

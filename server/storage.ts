@@ -78,7 +78,7 @@ export const storage = {
     }
   },
 
-  async createUser(userData: { username: string; password?: string; email?: string; id?: string }) {
+  async createUser(userData: { username: string; password?: string; email?: string; id?: string; firstName?: string; lastName?: string; bio?: string; profileImageUrl?: string }) {
     try {
       // Hash the password if provided
       const hashedPassword = userData.password ? await hashPassword(userData.password) : null;
@@ -88,6 +88,10 @@ export const storage = {
         username: userData.username,
         password: hashedPassword,
         email: userData.email || null,
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
+        bio: userData.bio || null,
+        profileImageUrl: userData.profileImageUrl || null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -97,6 +101,38 @@ export const storage = {
       return user;
     } catch (error) {
       console.error('Error creating user:', error);
+      throw error;
+    }
+  },
+  
+  async upsertUser(userData: { id: string; username: string; email?: string; firstName?: string; lastName?: string; bio?: string; profileImageUrl?: string }) {
+    try {
+      // Check if user already exists
+      const existingUser = await this.getUser(userData.id);
+      
+      if (existingUser) {
+        // Update existing user
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            username: userData.username,
+            email: userData.email || existingUser.email,
+            firstName: userData.firstName || existingUser.firstName,
+            lastName: userData.lastName || existingUser.lastName,
+            bio: userData.bio || existingUser.bio,
+            profileImageUrl: userData.profileImageUrl || existingUser.profileImageUrl,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, userData.id))
+          .returning();
+        
+        return updatedUser;
+      } else {
+        // Create new user
+        return await this.createUser(userData);
+      }
+    } catch (error) {
+      console.error('Error upserting user:', error);
       throw error;
     }
   },
