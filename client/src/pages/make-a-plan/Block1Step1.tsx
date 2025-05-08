@@ -66,6 +66,8 @@ export default function Block1Step1() {
   const { plan, saveBlock } = usePlan();
   const { toast } = useToast();
   
+  console.log('🧩 Block1Step1 component - projectId:', projectId, 'planState:', plan?.blocks?.block1 ? 'present' : 'missing');
+  
   // Use our new hooks
   const { successFactors, isLoading: factorsLoading } = useSuccessFactors();
   const { 
@@ -75,6 +77,8 @@ export default function Block1Step1() {
     updateSingleRating: updateSingleEvaluation,
     isSaving
   } = useResonanceRatings(projectId);
+  
+  console.log('🧩 Hook state - success factors:', successFactors?.length, 'evaluations:', evaluations?.length, 'loading:', factorsLoading, evaluationsLoading);
   
   // Local state for evaluations (merges DB evaluations with local changes)
   const [localEvaluations, setLocalEvaluations] = useState<{[key: string]: number}>({});
@@ -127,29 +131,42 @@ export default function Block1Step1() {
   const handleEvaluationChange = async (factorId: string, evaluationValue: string) => {
     const numericEvaluation = parseInt(evaluationValue);
     
+    console.log(`🧪 handleEvaluationChange - factorId: ${factorId}, value: ${evaluationValue}, numeric: ${numericEvaluation}`);
+    
     // Update local state for immediate UI feedback
-    setLocalEvaluations(prev => ({
-      ...prev,
-      [factorId]: numericEvaluation
-    }));
+    setLocalEvaluations(prev => {
+      const newState = {
+        ...prev,
+        [factorId]: numericEvaluation
+      };
+      console.log('🧪 localEvaluations update - before:', prev, 'after:', newState);
+      return newState;
+    });
     
     // Save to PlanContext
+    const updatedRatings = {
+      ...plan?.blocks?.block1?.successFactorRatings,
+      [factorId]: evaluationValue
+    };
+    console.log('🧪 saveBlock updatedRatings:', updatedRatings);
+    
     saveBlock('block1', {
-      successFactorRatings: {
-        ...plan?.blocks?.block1?.successFactorRatings,
-        [factorId]: evaluationValue
-      },
+      successFactorRatings: updatedRatings,
       lastUpdated: new Date().toISOString(),
     });
     
     // Save to database
     try {
+      console.log('🧪 Calling updateSingleEvaluation API with:', { factorId, resonance: numericEvaluation });
+      
       await updateSingleEvaluation({
         factorId,
         resonance: numericEvaluation
       });
+      
+      console.log('🧪 updateSingleEvaluation API call successful');
     } catch (error) {
-      console.error("Error saving evaluation to database:", error);
+      console.error("🔴 Error saving evaluation to database:", error);
       // UI already updated from local state, so no need to show error toast
       // as it's saved in context
     }
@@ -157,18 +174,21 @@ export default function Block1Step1() {
   
   // Handle save button click
   const handleSave = async () => {
+    console.log('🧪 handleSave - starting batch save operation');
+    console.log('🧪 localEvaluations raw state:', localEvaluations);
+
     // Format local evaluations for the API, filtering out any invalid values
     const evaluationInputs: EvaluationInput[] = Object.entries(localEvaluations)
       .filter(([factorId, resonance]) => {
         // Filter out entries with missing factorId or undefined/invalid resonance
         if (!factorId || resonance === undefined || resonance === null) {
-          console.warn(`Skipping invalid evaluation: factorId=${factorId}, resonance=${resonance}`);
+          console.warn(`🔸 Skipping invalid evaluation: factorId=${factorId}, resonance=${resonance}`);
           return false;
         }
         // Ensure resonance is a valid number between 1-5
         const resonanceNum = typeof resonance === 'number' ? resonance : parseInt(resonance as unknown as string);
         if (isNaN(resonanceNum) || resonanceNum < 1 || resonanceNum > 5) {
-          console.warn(`Skipping out-of-range resonance value: ${resonance}`);
+          console.warn(`🔸 Skipping out-of-range resonance value: ${resonance}`);
           return false;
         }
         return true;
@@ -177,6 +197,8 @@ export default function Block1Step1() {
         factorId,
         resonance
       }));
+    
+    console.log('🧪 evaluationInputs prepared for API:', evaluationInputs);
     
     // Save to PlanContext (only valid evaluations)
     const validEvaluations = Object.fromEntries(
@@ -187,6 +209,8 @@ export default function Block1Step1() {
       )
     );
     
+    console.log('🧪 validEvaluations for PlanContext:', validEvaluations);
+    
     saveBlock('block1', {
       successFactorRatings: validEvaluations,
       lastUpdated: new Date().toISOString(),
@@ -195,6 +219,7 @@ export default function Block1Step1() {
     // Save to database
     try {
       if (evaluationInputs.length === 0) {
+        console.warn('🔶 No valid evaluations to save');
         toast({
           title: "No evaluations to save",
           description: "There are no valid evaluations to save to the server.",
@@ -203,14 +228,16 @@ export default function Block1Step1() {
         return;
       }
       
+      console.log('🧪 Calling updateEvaluations API with:', evaluationInputs);
       await updateEvaluations(evaluationInputs);
+      console.log('🧪 updateEvaluations API call successful');
       
       toast({
         title: "Evaluations saved",
         description: "Your success factor evaluations have been saved successfully."
       });
     } catch (error) {
-      console.error("Error saving evaluations to database:", error);
+      console.error("🔴 Error saving evaluations to database:", error);
       toast({
         title: "Error saving evaluations",
         description: "There was an error saving your evaluations to the database. Your changes have been saved locally.",

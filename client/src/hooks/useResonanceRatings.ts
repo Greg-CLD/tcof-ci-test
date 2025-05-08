@@ -41,16 +41,22 @@ export function useResonanceRatings(projectId?: string | number) {
     mutationFn: async (evaluationsData: EvaluationInput[]) => {
       if (!projectId) throw new Error('Project ID is required');
       
+      console.log('🔄 useResonanceRatings - saving evaluations for projectId:', projectId);
+      console.log('🔄 useResonanceRatings - evaluationsData:', JSON.stringify(evaluationsData));
+      
       const res = await apiRequest(
         'PUT', 
         `/api/projects/${projectId}/success-factor-ratings`,
         evaluationsData
       );
       
-      return await res.json();
+      const jsonResponse = await res.json();
+      console.log('🔄 useResonanceRatings - server response:', jsonResponse);
+      return jsonResponse;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate and refetch
+      console.log('🔄 useResonanceRatings - mutation success, invalidating query cache');
       if (projectQueryKey) {
         queryClient.invalidateQueries({ queryKey: projectQueryKey });
       }
@@ -61,7 +67,7 @@ export function useResonanceRatings(projectId?: string | number) {
       });
     },
     onError: (error: any) => {
-      console.error('Rating save error:', error);
+      console.error('🔴 useResonanceRatings - save error:', error);
       
       // Try to extract detailed error message if available
       let errorMessage = 'Failed to save evaluations';
@@ -69,6 +75,17 @@ export function useResonanceRatings(projectId?: string | number) {
       if (error.message) {
         // Direct error message
         errorMessage = error.message;
+        console.error('🔴 useResonanceRatings - error.message:', error.message);
+      }
+      
+      if (error.response) {
+        try {
+          const responseData = error.response.json();
+          console.error('🔴 useResonanceRatings - error.response:', responseData);
+          if (responseData.error) errorMessage = responseData.error;
+        } catch (e) {
+          console.error('🔴 useResonanceRatings - error parsing response JSON');
+        }
       }
       
       toast({
@@ -86,12 +103,16 @@ export function useResonanceRatings(projectId?: string | number) {
   
   // Helper to update a single evaluation
   const updateSingleEvaluation = async (evaluation: EvaluationInput): Promise<void> => {
+    console.log('🔄 updateSingleEvaluation called with:', evaluation);
     await saveEvaluationsMutation.mutateAsync([evaluation]);
+    console.log('🔄 updateSingleEvaluation completed successfully');
   };
   
   // Helper to update multiple evaluations at once
   const updateEvaluations = async (evaluationsData: EvaluationInput[]): Promise<void> => {
+    console.log('🔄 updateEvaluations called with', evaluationsData.length, 'evaluations');
     await saveEvaluationsMutation.mutateAsync(evaluationsData);
+    console.log('🔄 updateEvaluations completed successfully');
   };
   
   return {
