@@ -6,16 +6,15 @@ export function useAuth() {
     data: user, 
     isLoading, 
     error 
-  } = useQuery<User>({
+  } = useQuery<User | null, Error>({
     queryKey: ["/api/auth/user"],
     retry: false,
-    refetchOnWindowFocus: false,
   });
 
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
-    error
+    error,
   };
 }

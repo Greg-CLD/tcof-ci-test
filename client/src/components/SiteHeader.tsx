@@ -28,7 +28,8 @@ import {
   Briefcase
 } from "lucide-react";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserMenu, LoginButton } from "@/components/auth-buttons";
 import ProjectBanner from "@/components/ProjectBanner";
 import logoImage from "../assets/logo.png";
 
@@ -38,7 +39,7 @@ const instanceCounter = {count: 0};
 export default function SiteHeader() {
   const [location, navigate] = useLocation();
   const { isAuthenticated, clearAuth } = useAuthProtection();
-  const { user, logoutMutation } = useAuth();
+  const { user, isAuthenticated: isAuthenticatedWithReplit } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Log mount/unmount to debug duplicate headers
@@ -54,7 +55,7 @@ export default function SiteHeader() {
   
   // Check if user is authenticated using either method
   const isLoggedInWithPassword = isAuthenticated('starter-access') || isAuthenticated('pro-tools');
-  const isLoggedIn = !!user || isLoggedInWithPassword;
+  const isLoggedIn = isAuthenticatedWithReplit || isLoggedInWithPassword;
   
   // Handle sign out for password-based auth
   const handlePasswordSignOut = () => {
@@ -62,16 +63,8 @@ export default function SiteHeader() {
     clearAuth('pro-tools');
   };
   
-  // Handle sign out for database auth
-  const handleDatabaseSignOut = () => {
-    logoutMutation.mutate();
-  };
-  
-  // Combined sign out
+  // Combined sign out (only password auth for now as Replit auth has its own button)
   const handleSignOut = () => {
-    if (user) {
-      handleDatabaseSignOut();
-    }
     if (isLoggedInWithPassword) {
       handlePasswordSignOut();
     }
@@ -153,67 +146,10 @@ export default function SiteHeader() {
           {/* Desktop User Profile / Auth Buttons */}
           <div className="hidden md:block">
             {isLoggedIn ? (
-              <div className="flex items-center gap-2">
-                {/* Desktop User Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="border-tcof-teal text-tcof-teal hover:bg-tcof-light flex gap-2 items-center">
-                      <User className="h-4 w-4" />
-                      <span className="hidden sm:inline">{user ? user.username : "Account"}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
-                      Account
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                      <BarChartIcon className="mr-2 h-4 w-4" />
-                      <span>Dashboard</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/profile")}>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>My Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/history")}>
-                      <History className="mr-2 h-4 w-4" />
-                      <span>View History</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/pricing")}>
-                      <Key className="mr-2 h-4 w-4" />
-                      <span>Upgrade Plan</span>
-                    </DropdownMenuItem>
-                    {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => navigate("/make-a-plan/admin/factors")}>
-                          <Filter className="mr-2 h-4 w-4" />
-                          <span>Admin - Factors</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate("/make-a-plan/admin")}>
-                          <Filter className="mr-2 h-4 w-4" />
-                          <span>Admin - Presets</span>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Sign Out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <UserMenu />
             ) : (
               <div className="flex items-center gap-2">
-                <Link href="/auth">
-                  <Button 
-                    variant="outline" 
-                    className="border-tcof-teal text-tcof-teal hover:bg-tcof-light"
-                  >
-                    Sign In
-                  </Button>
-                </Link>
+                <LoginButton />
                 <Link href="/auth" className="hidden sm:block">
                   <Button className="bg-tcof-teal hover:bg-tcof-teal/90 text-white">
                     Register
@@ -357,15 +293,9 @@ export default function SiteHeader() {
               
               {!isLoggedIn && (
                 <div className="border-t border-gray-100 pt-2 flex flex-col gap-2">
-                  <Link href="/auth">
-                    <Button 
-                      variant="outline" 
-                      className="border-tcof-teal text-tcof-teal hover:bg-tcof-light w-full"
-                      onClick={handleNavigation}
-                    >
-                      Sign In
-                    </Button>
-                  </Link>
+                  <div className="w-full">
+                    <LoginButton />
+                  </div>
                   <Link href="/auth">
                     <Button 
                       className="bg-tcof-teal hover:bg-tcof-teal/90 text-white w-full mt-2"
