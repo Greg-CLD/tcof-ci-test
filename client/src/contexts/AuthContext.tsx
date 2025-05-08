@@ -15,6 +15,11 @@ type AuthContextType = {
   loginMutation?: UseMutationResult<User, Error, LoginData>;
   logoutMutation?: UseMutationResult<void, Error, void>;
   registerMutation?: UseMutationResult<User, Error, InsertUser>;
+  checkAccountExists: (email: string) => Promise<{
+    exists: boolean;
+    message: string;
+    username?: string | null;
+  }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

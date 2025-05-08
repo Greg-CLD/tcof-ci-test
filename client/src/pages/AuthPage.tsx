@@ -149,6 +149,7 @@ export default function AuthPage() {
     if (registerMutation) {
       // Omit confirmPassword as it's not needed in the API
       const { confirmPassword, ...registerData } = data;
+      // ID will be generated in the registerMutation
       registerMutation.mutate(registerData);
     }
   };
@@ -290,13 +291,61 @@ export default function AuthPage() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                  <Input type="email" placeholder="Enter your email" {...field} />
-                                </FormControl>
+                                <div className="flex space-x-2">
+                                  <FormControl>
+                                    <Input 
+                                      type="email" 
+                                      placeholder="Enter your email" 
+                                      {...field} 
+                                      onBlur={() => handleEmailBlur(field.value)}
+                                    />
+                                  </FormControl>
+                                  {field.value && field.value.includes('@') && (
+                                    <Button 
+                                      type="button"
+                                      variant="outline"
+                                      className="shrink-0"
+                                      onClick={() => checkAccount(field.value)}
+                                      disabled={isCheckingAccount}
+                                    >
+                                      {isCheckingAccount ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        'Check'
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                          
+                          {/* Account check status alerts */}
+                          {accountCheckStatus.checked && (
+                            <Alert className={accountCheckStatus.exists ? 
+                              "bg-amber-50 border-amber-500" : 
+                              "bg-green-50 border-green-500"
+                            }>
+                              {accountCheckStatus.exists ? (
+                                <>
+                                  <AlertCircle className="h-4 w-4 text-amber-500" />
+                                  <AlertTitle className="text-amber-800">Account Already Exists</AlertTitle>
+                                  <AlertDescription className="text-amber-700">
+                                    An account with this email already exists. We've switched to the login tab with your username. Please enter your password to continue.
+                                  </AlertDescription>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  <AlertTitle className="text-green-800">Email Available</AlertTitle>
+                                  <AlertDescription className="text-green-700">
+                                    This email is available for registration. Please complete the form to create your account.
+                                  </AlertDescription>
+                                </>
+                              )}
+                            </Alert>
+                          )}
                           <FormField
                             control={registerForm.control}
                             name="password"

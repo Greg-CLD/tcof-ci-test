@@ -42,8 +42,14 @@ export function useAuth() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertUser) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
+    mutationFn: async (credentials: Omit<InsertUser, 'id'>) => {
+      // Add a UUID for the user ID if not provided
+      const userWithId = {
+        ...credentials,
+        id: credentials.id || `user-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`
+      };
+      
+      const res = await apiRequest("POST", "/api/register", userWithId);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Registration failed");
