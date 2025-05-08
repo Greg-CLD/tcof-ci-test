@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { successFactorRatingInsertSchema, successFactorRatingSelectSchema } from '@shared/schema';
+import { successFactorRatingInsertSchema, successFactorRatingSelectSchema } from '../schema';
 
 /**
  * Validation schema for resonance rating input

@@ -74,7 +74,7 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req, re
     // Validate input
     let ratings;
     try {
-      ratings = ratingsArraySchema.parse(req.body);
+      ratings = resonanceRatingsArraySchema.parse(req.body);
       console.log('✅ [API:PUT] Validation succeeded - Ratings:', JSON.stringify(ratings));
     } catch (error) {
       if (error instanceof z.ZodError) {

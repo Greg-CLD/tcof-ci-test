@@ -1,22 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-
-export interface ResonanceEvaluation {
-  id: string;
-  projectId: number;
-  factorId: string;
-  resonance: number;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface EvaluationInput {
-  factorId: string;
-  resonance: number;
-  notes?: string;
-}
+import { ResonanceEvaluation, EvaluationInput } from '@shared/types';
 
 export function useResonanceRatings(projectId?: string | number) {
   const { toast } = useToast();
