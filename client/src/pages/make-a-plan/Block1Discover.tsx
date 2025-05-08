@@ -48,16 +48,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// Define the success factor resonance options
+// Define the success factor resonance options with numeric values
 const RESONANCE_OPTIONS = [
-  { value: "1", symbol: '❌', label: "Doesn't land", desc: "I don't feel this…" },
-  { value: "2", symbol: '🤔', label: "Unfamiliar", desc: "I've never seen it in action." },
-  { value: "3", symbol: '🟡', label: "Seems true", desc: "I believe it's useful." },
-  { value: "4", symbol: '✅', label: "Proven", desc: "I've used this and it worked." },
-  { value: "5", symbol: '🔥', label: "Hard-won truth", desc: "It's burned into how I work." },
+  { value: 1, symbol: '❌', label: "Doesn't land", desc: "I don't feel this…" },
+  { value: 2, symbol: '🤔', label: "Unfamiliar", desc: "I've never seen it in action." },
+  { value: 3, symbol: '🟡', label: "Seems true", desc: "I believe it's useful." },
+  { value: 4, symbol: '✅', label: "Proven", desc: "I've used this and it worked." },
+  { value: 5, symbol: '🔥', label: "Hard-won truth", desc: "It's burned into how I work." },
 ];
-
-console.log('🔧 Block1Discover updated with Resonance');
 
 export default function Block1Discover() {
   const [location, navigate] = useLocation();
@@ -75,6 +73,9 @@ export default function Block1Discover() {
   
   // State for success criteria
   const [successCriteria, setSuccessCriteria] = useState("");
+
+  // Local state for ratings - using number types for values
+  const [ratings, setRatings] = useState<Record<string, number>>({});
   
   // Fetch project details if projectId is provided
   const { 
@@ -121,23 +122,20 @@ export default function Block1Discover() {
         setSuccessCriteria(plan.blocks.block1.successCriteria);
       }
       
-      // Load saved success factor ratings into pending ratings
+      // Load saved success factor ratings into ratings
       if (plan.blocks?.block1?.successFactorRatings) {
         const planRatings = plan.blocks.block1.successFactorRatings;
-        console.log('🔄 Block1Discover.useEffect - Loading saved ratings into pendingRatings:', planRatings);
+        console.log('🔄 Block1Discover.useEffect - Loading saved ratings:', planRatings);
         
-        // Keep a reference to current pendingRatings to compare
-        setPendingRatings(prev => {
-          // If pendingRatings is empty or different from plan data, update it
-          if (Object.keys(prev).length === 0 || 
-              JSON.stringify(prev) !== JSON.stringify(planRatings)) {
-            console.log('🔄 Block1Discover - Updating pendingRatings with plan data');
-            return planRatings;
-          }
-          // Otherwise keep existing pendingRatings (user's current selections)
-          console.log('🔄 Block1Discover - Keeping existing pendingRatings (no change needed)');
-          return prev;
+        // Convert string values to numbers if needed
+        const numericalRatings: Record<string, number> = {};
+        Object.entries(planRatings).forEach(([factorId, value]) => {
+          numericalRatings[factorId] = typeof value === 'number' 
+            ? value 
+            : parseInt(String(value), 10);
         });
+        
+        setRatings(numericalRatings);
       }
     }
   }, [plan]);
@@ -227,14 +225,10 @@ export default function Block1Discover() {
   
   // Use resonance ratings hook for server persistence
   const { 
-    updateSingleEvaluation,
     updateEvaluations,
     evaluations, 
     isSaving: isRatingsSaving 
   } = useResonanceRatings(projectId);
-  
-  // Local state for ratings - using number types for values
-  const [ratings, setRatings] = useState<Record<string, number>>({});
   
   // Load server ratings on mount
   useEffect(() => {
@@ -247,7 +241,7 @@ export default function Block1Discover() {
           // Parse the resonance value to a number
           acc[curr.factorId] = typeof curr.resonance === 'number' 
             ? curr.resonance 
-            : parseInt(curr.resonance.toString(), 10);
+            : parseInt(String(curr.resonance), 10);
         }
         return acc;
       }, {});
@@ -264,7 +258,7 @@ export default function Block1Discover() {
         lastUpdated: new Date().toISOString(),
       });
     }
-  }, [evaluations, projectId]);
+  }, [evaluations, projectId, saveBlock]);
   
   // Handle success factor evaluation change (now only updates local state)
   const handleEvaluationChange = (factorId: string, value: number) => {
@@ -281,7 +275,7 @@ export default function Block1Discover() {
     });
   };
   
-  // Simplified function to save resonance ratings
+  // Function to save resonance ratings to server with preview
   const handleConfirmAndSave = async () => {
     console.log('🔄 Block1Discover.handleConfirmAndSave - Starting save operation');
     
@@ -591,7 +585,7 @@ export default function Block1Discover() {
     // Check success factor evaluations
     if (successFactors?.length > 0) {
       totalItems += successFactors.length;
-      const evaluationsCount = Object.keys(plan?.blocks?.block1?.successFactorRatings || {}).length;
+      const evaluationsCount = Object.keys(ratings || {}).length;
       completedItems += evaluationsCount;
     }
     
@@ -611,6 +605,11 @@ export default function Block1Discover() {
   };
   
   const completionPercentage = calculateCompletionPercentage();
+  
+  // Helper function to get emoji option details by value
+  const getOptionByValue = (value: number) => {
+    return RESONANCE_OPTIONS.find(opt => opt.value === value) || null;
+  };
   
   return (
     <PlanProvider>
@@ -659,165 +658,91 @@ export default function Block1Discover() {
                 <TabsTrigger value="summary">Summary & Next Steps</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="overview" className="pt-6">
+              {/* Overview tab content */}
+              <TabsContent value="overview" className="mt-6">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">Welcome to Block 1: Discover</h2>
+                    <h2 className="text-2xl font-semibold mb-4">Block 1: Discover & Define</h2>
                     <p className="mb-4">
-                      In this first block, you'll define what success looks like for your project by:
+                      The first block of the Make a Plan tool helps you discover what makes a technology project successful 
+                      and define what success means for your specific project.
                     </p>
-                    <ol className="list-decimal list-inside space-y-3 mb-6">
-                      <li className="pl-2">
-                        <span className="font-medium">Evaluating TCOF Success Factors</span>
-                        <p className="text-sm text-gray-600 mt-1 ml-7">
-                          Indicate how each of the 12 standard success factors resonates with you 
-                          based on your experience and project context.
-                        </p>
-                      </li>
-                      <li className="pl-2">
-                        <span className="font-medium">Adding Personal Heuristics</span>
-                        <p className="text-sm text-gray-600 mt-1 ml-7">
-                          Define any additional success criteria or "rules of thumb" that are 
-                          important for your specific organizational context.
-                        </p>
-                      </li>
-                      <li className="pl-2">
-                        <span className="font-medium">Defining Success Criteria</span>
-                        <p className="text-sm text-gray-600 mt-1 ml-7">
-                          Articulate how you'll measure success at the end of your project.
-                        </p>
-                      </li>
-                    </ol>
                     
-                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 my-6">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <Info className="h-5 w-5 text-blue-400" />
+                    <div className="space-y-6 mt-8">
+                      <div className="flex items-start">
+                        <div className="bg-tcof-light rounded-full w-10 h-10 flex items-center justify-center mr-4 shrink-0">
+                          <span className="text-tcof-teal font-bold">1</span>
                         </div>
-                        <div className="ml-3">
-                          <p className="text-sm text-blue-700">
-                            Your progress is automatically saved as you work through each section.
-                            You can always come back later to finish or make changes.
+                        <div>
+                          <h3 className="font-semibold text-lg mb-1">Evaluate TCOF Success Factors</h3>
+                          <p className="text-gray-600">
+                            Rate how much each of the 12 TCOF success factors resonates with your project 
+                            and experience. This helps identify which factors are most relevant.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <div className="bg-tcof-light rounded-full w-10 h-10 flex items-center justify-center mr-4 shrink-0">
+                          <span className="text-tcof-teal font-bold">2</span>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg mb-1">Add Personal Heuristics</h3>
+                          <p className="text-gray-600">
+                            Include your own personal success criteria or "rules of thumb" that aren't 
+                            covered by the TCOF factors but are important for your specific project context.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <div className="bg-tcof-light rounded-full w-10 h-10 flex items-center justify-center mr-4 shrink-0">
+                          <span className="text-tcof-teal font-bold">3</span>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg mb-1">Define Success Criteria</h3>
+                          <p className="text-gray-600">
+                            Summarize what success will look like for your project, incorporating both TCOF
+                            factors and your personal heuristics to create a comprehensive success definition.
                           </p>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex justify-end mt-6">
+                    <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-end">
                       <Button
+                        variant="outline"
                         onClick={() => setActiveTab("successFactors")}
-                        className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        className="flex items-center"
                       >
-                        Begin with Success Factors <ChevronRight className="ml-2 h-4 w-4" />
+                        Start with Success Factors <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
               
-              <TabsContent value="successFactors" className="pt-6">
+              {/* Success Factors tab content */}
+              <TabsContent value="successFactors" className="mt-6">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-2">Evaluate TCOF Success Factors</h2>
-                    <p className="text-gray-600 mb-6">
-                      For each success factor, indicate how it resonates with your experience and project context. 
-                      This will help prioritize tasks in your plan.
-                    </p>
-                    
-                    {factorsLoading ? (
-                      <div className="flex justify-center py-8">
-                        <div className="w-8 h-8 border-4 border-tcof-teal border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    ) : (
-                      <div className="overflow-auto">
-                        <Table>
-                          <TableCaption>TCOF success factors resonance evaluation</TableCaption>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[300px]">Factor</TableHead>
-                              <TableHead>Description</TableHead>
-                              <TableHead className="w-[300px]">Resonance</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {successFactors?.map((factor: { id: string; factor: string; description: string }) => (
-                              <TableRow key={factor.id}>
-                                <TableCell className="font-medium">
-                                  {factor.factor}
-                                </TableCell>
-                                <TableCell>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="cursor-help">{factor.description.substring(0, 100)}...</div>
-                                      </TooltipTrigger>
-                                      <TooltipContent className="max-w-md">
-                                        <p>{factor.description}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex flex-col space-y-2">
-                                    <div className="flex space-x-2">
-                                      {RESONANCE_OPTIONS.map((option) => {
-                                        // Check both pending ratings (unsaved) and plan ratings (saved to server)
-                                        const isSelected = pendingRatings?.[factor.id] === option.value;
-                                        
-                                        return (
-                                          <button
-                                            key={option.value}
-                                            type="button"
-                                            onClick={() => handleEvaluationChange(factor.id, option.value)}
-                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 
-                                              ${isSelected 
-                                                ? 'bg-tcof-teal text-white ring-2 ring-tcof-dark scale-110 shadow-md transform' 
-                                                : 'bg-gray-100 hover:bg-gray-200 hover:shadow hover:scale-105'
-                                              }
-                                              focus:outline-none focus:ring-2 focus:ring-tcof-teal focus:ring-opacity-50
-                                              active:scale-95 active:transform
-                                            `}
-                                            title={`${option.label} – ${option.desc}`}
-                                            aria-label={`Rate as ${option.label}: ${option.desc}`}
-                                          >
-                                            <span className="text-lg">{option.symbol}</span>
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                    
-                                    {pendingRatings?.[factor.id] && (
-                                      <div className="text-sm mt-2 font-medium text-tcof-dark bg-tcof-light/30 p-2 rounded-md">
-                                        <span className="font-bold">Selected: </span>
-                                        {RESONANCE_OPTIONS.find(opt => opt.value === pendingRatings?.[factor.id])?.label} — 
-                                        {RESONANCE_OPTIONS.find(opt => opt.value === pendingRatings?.[factor.id])?.desc}
-                                      </div>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-between mt-8">
+                    <div className="flex items-center mb-6">
                       <Button
                         variant="outline"
                         onClick={() => setActiveTab("overview")}
+                        className="mr-auto"
                       >
                         <ArrowLeft className="mr-2 h-4 w-4" /> Back
                       </Button>
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
-                          onClick={handleSave}
+                          onClick={handleConfirmAndSave}
                           disabled={isRatingsSaving}
                           className="flex items-center"
                         >
                           <Save className="mr-2 h-4 w-4" />
-                          {isRatingsSaving ? 'Saving...' : 'Save Progress'}
+                          {isRatingsSaving ? 'Saving...' : 'Confirm & Save'}
                         </Button>
                         <Button
                           onClick={() => setActiveTab("personalHeuristics")}
@@ -827,16 +752,188 @@ export default function Block1Discover() {
                         </Button>
                       </div>
                     </div>
+                    
+                    <h2 className="text-2xl font-semibold mb-4">Evaluate Success Factors</h2>
+                    <p className="mb-6">
+                      Rate how much each of the 12 TCOF success factors resonates with your experience. 
+                      This will help identify which factors are most relevant to your project's context.
+                    </p>
+                    
+                    {factorsLoading ? (
+                      <div className="flex items-center justify-center h-64">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tcof-teal"></div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Success factors table */}
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-1/3">Success Factor</TableHead>
+                                <TableHead className="w-1/3">Description</TableHead>
+                                <TableHead className="text-center">Resonance</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {successFactors?.map((factor: any) => (
+                                <TableRow key={factor.factorId}>
+                                  <TableCell className="font-medium">
+                                    {factor.title}
+                                  </TableCell>
+                                  <TableCell>
+                                    {factor.description}
+                                  </TableCell>
+                                  <TableCell className="px-3 py-2 text-center">
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                      {RESONANCE_OPTIONS.map((option) => (
+                                        <TooltipProvider key={option.value}>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
+                                                  ${ratings[factor.factorId] === option.value
+                                                    ? 'bg-tcof-teal text-white ring-2 ring-offset-2 ring-tcof-teal'
+                                                    : 'bg-gray-100 hover:bg-gray-200'
+                                                  }`}
+                                                onClick={() => handleEvaluationChange(factor.factorId, option.value)}
+                                              >
+                                                {option.symbol}
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p><strong>{option.label}</strong>: {option.desc}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      ))}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        
+                        {/* Ratings Preview Panel */}
+                        <div className="mt-8 p-4 bg-gray-50 border rounded-md">
+                          <h3 className="text-lg font-semibold mb-3">Preview Your Ratings</h3>
+                          {Object.keys(ratings).length > 0 ? (
+                            <ul className="space-y-2">
+                              {successFactors?.map((factor: any) => {
+                                const ratingValue = ratings[factor.factorId];
+                                const option = getOptionByValue(ratingValue);
+                                
+                                if (!ratingValue || !option) return null;
+                                
+                                return (
+                                  <li key={factor.factorId} className="flex items-start">
+                                    <span className="text-lg mr-2">{option.symbol}</span>
+                                    <span className="font-medium">{factor.title}:</span>
+                                    <span className="ml-2 text-gray-600">{option.label}</span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ) : (
+                            <p className="text-gray-500 italic">No ratings selected yet. Click the emoji buttons above to rate each factor.</p>
+                          )}
+                        </div>
+                        
+                        <div className="mt-8 flex justify-end gap-4">
+                          <Button
+                            variant="outline"
+                            onClick={handleConfirmAndSave}
+                            disabled={isRatingsSaving}
+                            className="flex items-center"
+                          >
+                            <Save className="mr-2 h-4 w-4" />
+                            {isRatingsSaving ? 'Saving...' : 'Confirm & Save'}
+                          </Button>
+                          <Button
+                            onClick={() => setActiveTab("personalHeuristics")}
+                            className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                          >
+                            Next: Personal Heuristics <ChevronRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
               
-              <TabsContent value="personalHeuristics" className="pt-6">
+              {/* Personal Heuristics tab content */}
+              <TabsContent value="personalHeuristics" className="mt-6">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-2">Add Personal Heuristics</h2>
-                    <p className="text-gray-600 mb-6">
-                      Personal heuristics are your organization's "rules of thumb" for project success. 
+                    <div className="flex items-center mb-6">
+                      <Button
+                        variant="outline"
+                        onClick={() => setActiveTab("successFactors")}
+                        className="mr-auto"
+                      >
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                      </Button>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={handleSaveAll}
+                          disabled={saveMutation.isPending}
+                          className="flex items-center"
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          {saveMutation.isPending ? 'Saving...' : 'Save Progress'}
+                        </Button>
+                        <Button
+                          onClick={() => setActiveTab("summary")}
+                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        >
+                          Next: Summary <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <h2 className="text-2xl font-semibold mb-4">Personal Heuristics</h2>
+                    <p className="mb-6">
+                      Add your own personal success criteria or "rules of thumb" that aren't covered by the TCOF factors 
+                      but are important for your specific project context.
+                    </p>
+                    
+                    <div className="mb-8">
+                      <h3 className="text-lg font-medium mb-3">Add a New Heuristic</h3>
+                      <div className="grid grid-cols-1 gap-4 mb-4">
+                        <div>
+                          <Label htmlFor="heuristicName">Heuristic Name</Label>
+                          <Input
+                            id="heuristicName"
+                            placeholder="e.g., Engagement before features"
+                            value={newHeuristic.name}
+                            onChange={(e) => setNewHeuristic(prev => ({ ...prev, name: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="heuristicDescription">Description</Label>
+                          <Textarea
+                            id="heuristicDescription"
+                            placeholder="e.g., Always prioritize user engagement over new features"
+                            value={newHeuristic.description}
+                            onChange={(e) => setNewHeuristic(prev => ({ ...prev, description: e.target.value }))}
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleAddHeuristic}
+                        className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        disabled={addHeuristicMutation.isPending}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {addHeuristicMutation.isPending ? 'Adding...' : 'Add Heuristic'}
+                      </Button>
+                    </div>
+                    
+                    <p className="text-gray-600 mb-4">
                       Add any specific success criteria that aren't covered by the standard TCOF factors.
                     </p>
                     
@@ -858,7 +955,7 @@ export default function Block1Discover() {
                                 variant="ghost" 
                                 size="sm"
                                 onClick={() => handleRemoveHeuristic(heuristic.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -867,190 +964,156 @@ export default function Block1Discover() {
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-md p-6 text-center mb-8">
-                        <p className="text-gray-500">
-                          No personal heuristics added yet. Use the form below to add your first one.
+                      <div className="bg-tcof-light/30 border border-dashed border-tcof-teal/30 rounded-md p-6 text-center mb-8">
+                        <Info className="h-8 w-8 text-tcof-teal mx-auto mb-3" />
+                        <h3 className="text-lg font-medium mb-1">No Personal Heuristics Added Yet</h3>
+                        <p className="text-gray-600 mb-3">
+                          Add your own success criteria that are specific to your project.
                         </p>
                       </div>
                     )}
                     
-                    {/* Add new personal heuristic form */}
-                    <div className="bg-gray-50 rounded-md p-4 mb-6">
-                      <h3 className="text-lg font-medium mb-3">Add New Heuristic</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="heuristicName">Name</Label>
-                          <Input
-                            id="heuristicName"
-                            placeholder="e.g., Regular stakeholder check-ins"
-                            value={newHeuristic.name}
-                            onChange={(e) => setNewHeuristic({...newHeuristic, name: e.target.value})}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="heuristicDescription">Description</Label>
-                          <Textarea
-                            id="heuristicDescription"
-                            placeholder="Describe this heuristic and why it's important..."
-                            value={newHeuristic.description}
-                            onChange={(e) => setNewHeuristic({...newHeuristic, description: e.target.value})}
-                            rows={3}
-                          />
-                        </div>
-                        <Button
-                          onClick={handleAddHeuristic}
-                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                        >
-                          <Plus className="mr-2 h-4 w-4" /> Add Heuristic
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between mt-8">
+                    <div className="flex justify-end gap-4">
                       <Button
                         variant="outline"
-                        onClick={() => setActiveTab("successFactors")}
+                        onClick={handleSaveAll}
+                        disabled={saveMutation.isPending}
+                        className="flex items-center"
                       >
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                        <Save className="mr-2 h-4 w-4" />
+                        {saveMutation.isPending ? 'Saving...' : 'Save Progress'}
                       </Button>
-                      <div className="flex gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={handleSave}
-                          disabled={isRatingsSaving}
-                          className="flex items-center"
-                        >
-                          <Save className="mr-2 h-4 w-4" />
-                          {isRatingsSaving ? 'Saving...' : 'Save Progress'}
-                        </Button>
-                        <Button
-                          onClick={() => setActiveTab("summary")}
-                          className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                        >
-                          Next: Summary & Success Criteria <ChevronRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </div>
+                      <Button
+                        onClick={() => setActiveTab("summary")}
+                        className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                      >
+                        Next: Summary <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
               
-              <TabsContent value="summary" className="pt-6">
+              {/* Summary tab content */}
+              <TabsContent value="summary" className="mt-6">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold mb-2">Summary & Success Criteria</h2>
-                    <p className="text-gray-600 mb-6">
-                      Review your work so far and define the overall success criteria for your project.
-                    </p>
-                    
-                    {/* Success Criteria */}
-                    <div className="mb-8">
-                      <h3 className="text-lg font-medium mb-3">Define Success Criteria</h3>
-                      <p className="text-gray-600 mb-4">
-                        How will you know if this project is successful? Define clear, measurable success criteria.
-                      </p>
-                      <Textarea
-                        placeholder="Describe what success looks like for this project..."
-                        value={successCriteria}
-                        onChange={(e) => handleSuccessCriteriaChange(e.target.value)}
-                        rows={6}
-                        className="w-full mb-2"
-                      />
-                      <p className="text-sm text-gray-500">
-                        Think about both objective metrics and subjective indicators of success.
-                      </p>
-                    </div>
-                    
-                    {/* Summary */}
-                    <div className="bg-gray-50 rounded-md p-6 mb-6">
-                      <h3 className="text-lg font-medium mb-3">Block 1 Summary</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium">Success Factors Evaluated:</h4>
-                          <p className="text-sm text-gray-600">
-                            {Object.keys(plan?.blocks?.block1?.successFactorRatings || {}).length} of {successFactors?.length || 0} factors evaluated for resonance
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Personal Heuristics Added:</h4>
-                          <p className="text-sm text-gray-600">
-                            {plan?.blocks?.block1?.personalHeuristics?.length || 0} heuristics
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Success Criteria:</h4>
-                          <p className="text-sm text-gray-600">
-                            {successCriteria ? 'Defined' : 'Not yet defined'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <Info className="h-5 w-5 text-blue-400" />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm text-blue-700">
-                            In Block 2, you'll build on this foundation to create tasks and map stakeholders.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between mt-8">
+                    <div className="flex items-center mb-6">
                       <Button
                         variant="outline"
                         onClick={() => setActiveTab("personalHeuristics")}
+                        className="mr-auto"
                       >
                         <ArrowLeft className="mr-2 h-4 w-4" /> Back
                       </Button>
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
-                          onClick={handleSave}
+                          onClick={handleConfirmAndSave}
                           disabled={isRatingsSaving}
                           className="flex items-center"
                         >
                           <Save className="mr-2 h-4 w-4" />
-                          {isRatingsSaving ? 'Saving...' : 'Save Progress'}
+                          {isRatingsSaving ? 'Saving...' : 'Confirm & Save'}
                         </Button>
                         <Button
                           onClick={handleCompleteBlock}
                           className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
                           disabled={completionPercentage < 60}
                         >
-                          {completionPercentage < 60 ? (
-                            "Complete more sections before proceeding"
-                          ) : (
-                            <>Complete and Continue to Block 2 <ChevronRight className="ml-2 h-4 w-4" /></>
-                          )}
+                          Complete Block 1 <FastForward className="ml-2 h-4 w-4" />
                         </Button>
                       </div>
+                    </div>
+                    
+                    <h2 className="text-2xl font-semibold mb-4">Summary & Next Steps</h2>
+                    <p className="mb-6">
+                      Now that you've evaluated success factors and added personal heuristics, define your overall
+                      success criteria and complete this block to move forward in your planning process.
+                    </p>
+                    
+                    {/* Success Criteria */}
+                    <div className="mb-8">
+                      <Label htmlFor="successCriteria" className="text-lg font-medium">
+                        Define Your Success Criteria
+                      </Label>
+                      <p className="text-gray-600 mt-1 mb-3">
+                        Based on the success factors and heuristics you've identified, write a brief summary of
+                        what success will look like for your project.
+                      </p>
+                      <Textarea
+                        id="successCriteria"
+                        value={successCriteria}
+                        onChange={(e) => handleSuccessCriteriaChange(e.target.value)}
+                        rows={6}
+                        className="mb-2"
+                        placeholder="e.g., Our project will be successful when users can easily access and use our service, we've delivered on time and on budget, and we've established a sustainable operating model."
+                      />
+                    </div>
+                    
+                    {/* Block completion progress */}
+                    <div className="bg-tcof-light p-4 rounded-md mb-8">
+                      <h3 className="font-medium text-lg mb-2">Block 1 Completion: {completionPercentage}%</h3>
+                      <div className="w-full bg-gray-200 rounded-full h-4 mb-3">
+                        <div 
+                          className="bg-tcof-teal h-4 rounded-full"
+                          style={{ width: `${completionPercentage}%` }}
+                        ></div>
+                      </div>
+                      
+                      <ul className="space-y-2">
+                        <li className="flex items-center">
+                          {Object.keys(ratings).length > 0 ? (
+                            <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                          ) : (
+                            <div className="h-5 w-5 border border-gray-400 rounded-full mr-2"></div>
+                          )}
+                          <span>Evaluate Success Factors</span>
+                        </li>
+                        <li className="flex items-center">
+                          {(plan?.blocks?.block1?.personalHeuristics?.length || 0) > 0 ? (
+                            <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                          ) : (
+                            <div className="h-5 w-5 border border-gray-400 rounded-full mr-2"></div>
+                          )}
+                          <span>Add Personal Heuristics</span>
+                        </li>
+                        <li className="flex items-center">
+                          {successCriteria?.trim() ? (
+                            <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                          ) : (
+                            <div className="h-5 w-5 border border-gray-400 rounded-full mr-2"></div>
+                          )}
+                          <span>Define Success Criteria</span>
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <div className="flex justify-between gap-4">
+                      <Button
+                        variant="outline"
+                        onClick={handleSaveAll}
+                        disabled={saveMutation.isPending}
+                        className="flex items-center"
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {saveMutation.isPending ? 'Saving...' : 'Save Progress'}
+                      </Button>
+                      <Button
+                        onClick={handleCompleteBlock}
+                        className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                        disabled={completionPercentage < 60}
+                      >
+                        {completionPercentage < 60 
+                          ? 'Complete more items to proceed' 
+                          : 'Complete Block 1'} 
+                        <FastForward className="ml-2 h-4 w-4" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
             </Tabs>
-            
-            {/* Action buttons */}
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/make-a-plan/${projectId}/full`)}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" /> View Full Journey
-              </Button>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/make-a-plan/${projectId}/block-2`)}
-                >
-                  Skip to Block 2 <FastForward className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
