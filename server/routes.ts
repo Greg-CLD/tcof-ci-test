@@ -298,6 +298,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register plans routes
   try {
     app.use('/', plansRouter);
+    
+    // Register the improved plans API endpoints
+    const plansApiRouter = await import('./routes/api/plans/index.js');
+    app.use('/api', plansApiRouter.default);
+    
     console.log('Plans routes registered successfully');
   } catch (error) {
     console.error('Error registering plans routes:', error);
