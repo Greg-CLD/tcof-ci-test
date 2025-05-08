@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { db } from '@db';
 import { successFactorRatings } from '@shared/schema';
 import { resonanceRatingSchema, resonanceRatingsArraySchema } from '@shared/types';
