@@ -1750,7 +1750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Outcome Progress API endpoints
   app.get("/api/projects/:projectId/outcomes/progress", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.params.projectId;
       
       // Get the project to verify existence
@@ -1792,7 +1792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create outcome progress entry
   app.post("/api/projects/:projectId/outcomes/:outcomeId/progress", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const { projectId, outcomeId } = req.params;
       const { value } = req.body;
       
@@ -1843,7 +1843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update outcome progress (PATCH endpoint for updating a specific outcome's progress)
   app.patch("/api/projects/:projectId/outcomes/:outcomeId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const { projectId, outcomeId } = req.params;
       const { value } = req.body;
       
@@ -1899,7 +1899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.params.id;
       const project = await projectsDb.getProject(projectId);
       
@@ -1937,7 +1937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Project selection endpoint for tracking current project relationships
   app.post("/api/projects/select", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const { projectId } = req.body;
       
       if (!projectId) {
@@ -1988,7 +1988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const { 
         name, 
         description, 
@@ -2086,7 +2086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.params.id;
       const { 
         name, 
@@ -2183,7 +2183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE project endpoint
   app.delete("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.params.id;
       
       // Get the project to verify existence
