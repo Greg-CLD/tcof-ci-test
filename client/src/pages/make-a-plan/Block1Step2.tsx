@@ -81,7 +81,10 @@ export default function Block1Step2() {
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
       
       // Create new heuristic object
-      const newHeuristicObj: PersonalHeuristic = { name: newHeuristicText };
+      const newHeuristicObj: PersonalHeuristic = { 
+        name: newHeuristicText,
+        description: ""
+      };
       
       // Optimistically update to the new value
       queryClient.setQueryData(['plan', projectId], (old: any) => {
@@ -89,8 +92,8 @@ export default function Block1Step2() {
         
         const currentHeuristics = old.blocks?.block1?.personalHeuristics || [];
         // Ensure all existing heuristics are objects
-        const currentHeuristicsAsObjects = currentHeuristics.map(h => 
-          typeof h === 'string' ? { name: h } : h
+        const currentHeuristicsAsObjects = currentHeuristics.map((h: string | PersonalHeuristic) => 
+          typeof h === 'string' ? { name: h, description: "" } : h
         );
         const updatedHeuristics = [...currentHeuristicsAsObjects, newHeuristicObj];
         
@@ -136,8 +139,9 @@ export default function Block1Step2() {
         queryClient.setQueryData(['plan', projectId], context.previousPlan);
         
         // Also reset local state from the plan
-        if (context.previousPlan?.blocks?.block1?.personalHeuristics) {
-          setHeuristics(context.previousPlan.blocks.block1.personalHeuristics);
+        const prevPlan = context.previousPlan as any;
+        if (prevPlan?.blocks?.block1?.personalHeuristics) {
+          setHeuristics(prevPlan.blocks.block1.personalHeuristics);
         }
       }
       
