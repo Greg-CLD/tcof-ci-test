@@ -19,6 +19,7 @@ export function useBlockSave() {
 
       console.info(`[SAVE] useBlockSave.mutationFn - Saving ${blockId} for project ${projectId}`);
       console.info(`[SAVE] useBlockSave.mutationFn - Data:`, blockData);
+      console.log('PATCH payload →', JSON.stringify(blockData, null, 2));
 
       // Log the JSON payload to be sent in the PATCH request
       console.log('Payload for PATCH /api/plans/project/:projectId/block/:blockId:', JSON.stringify(blockData, null, 2));
