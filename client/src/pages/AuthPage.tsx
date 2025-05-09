@@ -8,12 +8,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Import the consolidated auth hook directly from context
-import { useAuth } from "@/contexts/AuthContext";
+// Import the unified auth hook
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
-  const { user, isLoading, loginMutation, registerMutation, authError } = useAuth();
+  const { 
+    user, 
+    isLoading, 
+    isAuthenticated,
+    login,
+    register,
+    loginMutation,
+    registerMutation,
+    authError 
+  } = useAuth();
   
   // Form states - shared across both forms
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
@@ -21,22 +30,31 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   // If already logged in, redirect to home
-  if (user && !isLoading) {
+  // Make sure this comes after the hook calls to avoid violating rules of hooks
+  if (isAuthenticated && !isLoading) {
     return <Redirect to="/" />;
   }
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     
     // Basic validation
-    if (!username.trim() || !password.trim()) {
+    if (!username.trim()) {
+      setFormError("Username is required");
       return;
     }
     
-    // Use the mutation from our consolidated auth hook
-    loginMutation.mutate({ 
+    if (!password.trim()) {
+      setFormError("Password is required");
+      return;
+    }
+    
+    // Use the simplified login function from our hook
+    login({ 
       username, 
       password 
     }, {
@@ -48,18 +66,31 @@ export default function AuthPage() {
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     
-    // Basic validation
-    if (!username.trim() || !password.trim()) {
+    // Enhanced validation
+    if (!username.trim()) {
+      setFormError("Username is required");
+      return;
+    }
+    
+    if (!password.trim()) {
+      setFormError("Password is required");
       return;
     }
     
     if (password !== confirmPassword) {
+      setFormError("Passwords do not match");
       return;
     }
     
-    // Use the mutation from our consolidated auth hook
-    registerMutation.mutate({ 
+    if (password.length < 6) {
+      setFormError("Password must be at least 6 characters");
+      return;
+    }
+    
+    // Use the simplified register function from our hook
+    register({ 
       username, 
       email, 
       password 
@@ -125,7 +156,18 @@ export default function AuthPage() {
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                {formError && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{formError}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={loginMutation.isPending}
+                >
                   {loginMutation.isPending ? (
                     <>
                       <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
@@ -189,7 +231,18 @@ export default function AuthPage() {
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                {formError && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{formError}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={registerMutation.isPending}
+                >
                   {registerMutation.isPending ? (
                     <>
                       <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>

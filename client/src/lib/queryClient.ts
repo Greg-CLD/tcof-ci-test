@@ -1,133 +1,111 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
-  }
-}
-
+// HTTP request function for mutations
 export async function apiRequest(
-  method: string,
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   url: string,
-  data?: unknown | undefined,
+  data?: any
 ): Promise<Response> {
-  // Add cache-busting for development mode
-  const isDev = import.meta.env.DEV;
-  let requestUrl = url;
-  
-  if (isDev) {
-    // Add cache-busting query param for GET requests in dev mode
-    if (method.toUpperCase() === 'GET') {
-      const separator = url.includes('?') ? '&' : '?';
-      requestUrl = `${url}${separator}_t=${Date.now()}`;
-    }
-    console.log(`🔄 ${method} request to ${requestUrl} (dev mode, cache-busting enabled)`);
-  }
-  
-  const headers: Record<string, string> = {
-    ...(data ? { "Content-Type": "application/json" } : {})
-  };
-  
-  // Add cache control headers in development mode
-  if (isDev) {
-    headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-    headers["Pragma"] = "no-cache";
-    headers["Expires"] = "0";
-  }
-  
-  const res = await fetch(requestUrl, {
+  const options: RequestInit = {
     method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-    // Add cache: 'no-store' in development mode
-    ...(isDev ? { cache: 'no-store' } : {})
-  });
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include", // Important for cookies/sessions
+  };
 
-  await throwIfResNotOk(res);
-  return res;
+  if (data) {
+    options.body = JSON.stringify(data);
+  }
+
+  return fetch(url, options);
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const isDev = import.meta.env.DEV;
-    const baseUrl = queryKey[0] as string;
-    
-    // Add cache-busting for GET requests in development mode
-    let url = baseUrl;
-    if (isDev) {
-      const separator = url.includes('?') ? '&' : '?';
-      url = `${url}${separator}_t=${Date.now()}`;
-    }
-    
-    const fetchOptions: RequestInit = {
-      credentials: "include",
-      // Add cache: 'no-store' in development mode to prevent caching
-      ...(isDev ? { 
-        cache: 'no-store',
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0"
-        } 
-      } : {})
-    };
-    
-    if (isDev) {
-      console.log(`🔍 Fetching data from: ${url} (cache-busting enabled)`);
-    }
-    
-    const res = await fetch(url, fetchOptions);
+// Default query function that uses apiRequest
+export const defaultQueryFn = async ({ queryKey }: { queryKey: string[] }) => {
+  const [url] = queryKey;
+  const res = await apiRequest("GET", url);
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      if (isDev) console.log(`🔒 Unauthorized request to ${url}, returning null as configured`);
-      return null;
+  // Handle 404 and other error responses
+  if (!res.ok) {
+    if (res.status === 401) {
+      // Authentication errors
+      throw new Error("Unauthorized - Please log in");
+    } else if (res.status === 404) {
+      // Not found errors
+      throw new Error("Resource not found");
+    } else {
+      // General server errors
+      const errorText = await res.text();
+      throw new Error(
+        `Server error (${res.status}): ${
+          errorText || "Unknown error occurred"
+        }`
+      );
     }
+  }
 
-    await throwIfResNotOk(res);
-    const data = await res.json();
-    
-    // In dev mode, log the first few items of data to help with debugging
-    if (isDev) {
-      const preview = typeof data === 'object' && data !== null
-        ? (Array.isArray(data) 
-            ? `Array[${data.length}]` 
-            : `Object with keys: ${Object.keys(data).join(', ').substring(0, 100)}`)
-        : String(data);
-      console.log(`✅ Data received from ${baseUrl}: ${preview}`);
-    }
-    
-    return data;
-  };
+  return res.json();
+};
 
-// Configure different Query Client options for development vs production
-const isDev = import.meta.env.DEV;
-
+// Query client with defaults - makes API calls & manages cache
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: isDev ? 30000 : false, // In dev mode, refetch every 30 seconds to ensure fresh data
-      refetchOnWindowFocus: isDev, // In dev mode, refetch on window focus for latest data
-      staleTime: isDev ? 10000 : Infinity, // In dev mode, data becomes stale after 10 seconds
-      retry: false,
-      gcTime: isDev ? 60000 : 5 * 60 * 1000, // Garbage collection time - shorter in dev mode
+      queryFn: defaultQueryFn,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
     },
     mutations: {
-      retry: false,
+      retry: 1,
     },
   },
-  // Enable dev tools in development mode for better debugging
-  ...(isDev ? { 
-    logger: {
-      log: (...args: unknown[]) => console.log('[React Query]', ...args),
-      warn: (...args: unknown[]) => console.warn('[React Query]', ...args),
-      error: (...args: unknown[]) => console.error('[React Query]', ...args),
-    }
-  } : {})
 });
+
+// Query function factory that can customize for different scenarios
+type QueryFnOpts = {
+  on401?: "throw" | "returnNull"; // What to do on 401 unauthorized
+  on404?: "throw" | "returnNull"; // What to do on 404 not found
+};
+
+export function getQueryFn(options: QueryFnOpts = {}) {
+  const { on401 = "throw", on404 = "throw" } = options;
+
+  return async ({ queryKey }: { queryKey: string[] }) => {
+    const [url] = queryKey;
+    try {
+      const res = await apiRequest("GET", url);
+
+      if (!res.ok) {
+        if (res.status === 401 && on401 === "returnNull") {
+          return null;
+        }
+        if (res.status === 404 && on404 === "returnNull") {
+          return null;
+        }
+
+        const errorText = await res.text();
+        let errorMessage = `Server error (${res.status})`;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.message) {
+            errorMessage = errorJson.message;
+          }
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      return await res.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("An unknown error occurred");
+    }
+  };
+}
