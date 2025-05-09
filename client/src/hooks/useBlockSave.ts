@@ -38,6 +38,7 @@ export function useBlockSave() {
 
       // Log the JSON response from the PATCH request
       const result = await response.json();
+      console.log('PATCH response ←', JSON.stringify(result, null, 2));
       console.log('Response from PATCH /api/plans/project/:projectId/block/:blockId:', JSON.stringify(result, null, 2));
 
       return result;
