@@ -62,6 +62,9 @@ export default function Block3Deliver() {
     enabled: !!projectId,
   });
   
+  // State for personal heuristics from Block 1
+  const [personalHeuristics, setPersonalHeuristics] = useState<any[]>([]);
+  
   // Initialize with data from the plan context
   useEffect(() => {
     if (plan?.blocks?.block3) {
@@ -71,6 +74,13 @@ export default function Block3Deliver() {
       if (plan.blocks.block3.deliveryNotes) {
         setDeliveryNotes(plan.blocks.block3.deliveryNotes);
       }
+    }
+    
+    // Load personal heuristics from Block 1
+    if (plan?.blocks?.block1?.personalHeuristics) {
+      console.log('📋 Loading personal heuristics from Block 1 into Block 3:', 
+        plan.blocks.block1.personalHeuristics.length);
+      setPersonalHeuristics(plan.blocks.block1.personalHeuristics);
     }
   }, [plan]);
   
@@ -91,11 +101,13 @@ export default function Block3Deliver() {
   // Handler to save the current block data
   const handleSaveBlock = async () => {
     try {
-      // Save data with our useBlockSave hook
+      // Save data with our useBlockSave hook and include personal heuristics references
       await saveBlock({
         deliveryApproach,
         deliveryNotes,
-        timeline: null // Placeholder for future timeline implementation
+        timeline: null, // Placeholder for future timeline implementation
+        // Include reference to personal heuristics from Block 1
+        heuristicLinks: personalHeuristics.map(h => h.id)
       });
       toast({
         title: "Success",
@@ -119,7 +131,9 @@ export default function Block3Deliver() {
       await markBlockComplete({
         deliveryApproach,
         deliveryNotes,
-        timeline: null
+        timeline: null,
+        // Include reference to personal heuristics from Block 1
+        heuristicLinks: personalHeuristics.map(h => h.id)
       });
       navigate(`/make-a-plan/${projectId}`);
     } catch (error) {

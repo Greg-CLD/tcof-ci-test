@@ -114,10 +114,13 @@ export default function Block2Design() {
   // Handler to save the current block data
   const handleSaveBlock = async () => {
     try {
-      // Save data with our useBlockSave hook
+      // Save data with our useBlockSave hook, including heuristic mappings
       await saveBlock({
         tasks,
         stakeholders,
+        mappings,
+        // Include reference to personal heuristics from Block 1
+        heuristicLinks: personalHeuristics.map(h => h.id)
       });
       toast({
         title: "Success",
@@ -141,6 +144,9 @@ export default function Block2Design() {
       await markBlockComplete({
         tasks,
         stakeholders,
+        mappings,
+        // Include reference to personal heuristics from Block 1
+        heuristicLinks: personalHeuristics.map(h => h.id)
       });
       navigate(`/make-a-plan/${projectId}/block-3`);
     } catch (error) {
@@ -428,13 +434,95 @@ export default function Block2Design() {
                 TCOF Success Factors to ensure comprehensive coverage.
               </p>
               
-              {/* This section will have a heuristic mapping interface */}
-              <div className="bg-gray-50 p-6 rounded-lg mb-6 text-center">
-                <h3 className="text-lg font-medium text-tcof-dark mb-4">Heuristic Mapping</h3>
-                <p className="text-gray-500">
-                  Coming soon: Heuristic mapping interface.
-                </p>
-              </div>
+              {personalHeuristics.length > 0 ? (
+                <div className="space-y-6">
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h3 className="text-lg font-medium text-tcof-dark mb-4">Your Personal Heuristics</h3>
+                    
+                    <div className="space-y-3">
+                      {personalHeuristics.map((heuristic, index) => (
+                        <div 
+                          key={heuristic.id || index} 
+                          className={`p-4 border rounded-lg ${heuristic.favorite ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-medium text-tcof-dark flex items-center">
+                                {heuristic.text}
+                                {heuristic.favorite && (
+                                  <span className="ml-2 text-amber-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                      <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </h4>
+                              {heuristic.description && (
+                                <p className="text-sm text-gray-600 mt-1">{heuristic.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {tasks.length > 0 && (
+                    <div className="bg-gray-50 p-6 rounded-lg mt-6">
+                      <h3 className="text-lg font-medium text-tcof-dark mb-4">Map Heuristics to Tasks</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Consider how your personal heuristics map to the tasks you've created.
+                        This mapping helps ensure your tasks align with your project priorities.
+                      </p>
+                      
+                      <div className="space-y-4">
+                        {tasks.map((task, index) => (
+                          <div 
+                            key={task.id || index} 
+                            className="p-4 border rounded-lg bg-white hover:border-tcof-teal transition-colors"
+                          >
+                            <h4 className="font-medium text-tcof-dark">{task.title}</h4>
+                            <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                            
+                            <div className="mt-3 pt-3 border-t">
+                              <p className="text-sm font-medium text-gray-700 mb-2">Relevant Heuristics:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {personalHeuristics.map((heuristic) => (
+                                  <div 
+                                    key={heuristic.id} 
+                                    className="bg-gray-100 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-gray-200"
+                                    onClick={() => {
+                                      console.log(`Selected heuristic ${heuristic.id} for task ${task.id}`);
+                                      // Here we'd implement the mapping logic
+                                    }}
+                                  >
+                                    {heuristic.text.substring(0, 30)}{heuristic.text.length > 30 ? '...' : ''}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-amber-50 border-l-4 border-amber-400 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-amber-800">
+                        No personal heuristics found from Block 1. Please return to Block 1 and add some personal heuristics before continuing to this step.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div className="flex justify-end">
                 <Button 
