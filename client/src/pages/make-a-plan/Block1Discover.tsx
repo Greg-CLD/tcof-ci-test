@@ -244,6 +244,9 @@ export default function Block1Discover() {
         lastUpdated: new Date().toISOString(),
       };
       
+      // Log the PATCH payload
+      console.log('PATCH payload →', blockData);
+
       // Log the FULL block data being passed to the save function
       console.log(`%c[SAVE] BLOCK1 SAVE - Complete block data being saved:`, 'color: #a855f7; font-weight: bold;');
       console.log(JSON.stringify(blockData, null, 2));
