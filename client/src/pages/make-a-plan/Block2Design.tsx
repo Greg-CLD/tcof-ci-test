@@ -70,8 +70,13 @@ export default function Block2Design() {
     enabled: !!projectId,
   });
   
+  // State for personal heuristics from Block 1
+  const [personalHeuristics, setPersonalHeuristics] = useState<any[]>([]);
+  const [mappings, setMappings] = useState<any[]>([]);
+  
   // Initialize with data from the plan context
   useEffect(() => {
+    // Load Block 2 data
     if (plan?.blocks?.block2) {
       if (plan.blocks.block2.tasks) {
         setTasks(plan.blocks.block2.tasks);
@@ -79,6 +84,16 @@ export default function Block2Design() {
       if (plan.blocks.block2.stakeholders) {
         setStakeholders(plan.blocks.block2.stakeholders);
       }
+      if (plan.blocks.block2.mappings) {
+        setMappings(plan.blocks.block2.mappings);
+      }
+    }
+    
+    // Load personal heuristics from Block 1
+    if (plan?.blocks?.block1?.personalHeuristics) {
+      console.log('📋 Loading personal heuristics from Block 1:', 
+        plan.blocks.block1.personalHeuristics.length);
+      setPersonalHeuristics(plan.blocks.block1.personalHeuristics);
     }
   }, [plan]);
   
