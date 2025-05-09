@@ -3,19 +3,19 @@ import { useLocation, Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Import the consolidated auth hook
+// Import the consolidated auth hook directly from context
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
   const { user, isLoading, loginMutation, registerMutation, authError } = useAuth();
   
-  // Form states
+  // Form states - shared across both forms
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,10 +30,12 @@ export default function AuthPage() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Basic validation
     if (!username.trim() || !password.trim()) {
-      return; // Form validation happens in the mutation
+      return;
     }
     
+    // Use the mutation from our consolidated auth hook
     loginMutation.mutate({ 
       username, 
       password 
@@ -47,15 +49,16 @@ export default function AuthPage() {
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
+    // Basic validation
     if (!username.trim() || !password.trim()) {
-      return; // Form validation happens in the mutation
+      return;
     }
     
     if (password !== confirmPassword) {
-      return; // Password mismatch validation in the UI
+      return;
     }
     
+    // Use the mutation from our consolidated auth hook
     registerMutation.mutate({ 
       username, 
       email, 
