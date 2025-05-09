@@ -50,11 +50,14 @@ router.patch('/plans/project/:projectId/block/:blockId', async (req, res) => {
     // Save the updated plan
     await projectsDb.saveProjectPlan(projectId, plan);
     
+    // Return the saved block data like Goal-Mapping does, not just metadata
     return res.status(200).json({
       message: 'Block saved successfully',
       blockId,
       projectId,
-      lastUpdated: plan.lastUpdated
+      lastUpdated: plan.lastUpdated,
+      // Include the actual block data that was saved
+      blockData: plan.blocks[blockId]
     });
   } catch (error) {
     console.error('Error saving project block:', error);

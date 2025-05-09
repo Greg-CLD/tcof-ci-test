@@ -106,6 +106,9 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
           JSON.stringify(data.personalHeuristics, null, 2));
       }
       
+      // Log the queryKey being used for cache invalidation
+      console.log(`🔑 Using query key for invalidation: ["project-block", "${projectId}", "${blockId}"]`);
+      
       const response = await apiRequest("PATCH", `/api/plans/project/${projectId}/block/${blockId}`, data);
       
       if (!response.ok) {
@@ -129,7 +132,11 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
     onSuccess: (data) => {
       console.log(`🔶 SAVE BLOCK ${blockId} - Successfully saved block data`);
       
-      // Invalidate relevant queries to refresh data
+      // Invalidate relevant queries to refresh data using a consistent query key pattern
+      // Main specific block query key for this block
+      queryClient.invalidateQueries({ queryKey: ["project-block", projectId, blockId] });
+      
+      // Legacy path-based query keys for backward compatibility
       queryClient.invalidateQueries({ queryKey: [`/api/plans/project/${projectId}/block/${blockId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/plans/project/${projectId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/plans`] });
