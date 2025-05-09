@@ -101,6 +101,24 @@ export const PlanProvider: React.FC<{children: ReactNode}> = ({children}) => {
         const planData = await res.json();
         console.info(`[PLAN] PlanContext - Received plan with ID: ${planData.id || 'null'}`);
         
+        // Log the full raw network response with all its details
+        console.log(`%c[NETWORK RESPONSE] FULL PLAN DATA FROM SERVER:`, 'color: #a855f7; font-weight: bold;');
+        console.log(JSON.stringify(planData, null, 2));
+        
+        // Log the block1 data specifically if it exists
+        if (planData?.blocks?.block1) {
+          console.log(`%c[NETWORK RESPONSE] BLOCK1 DATA FROM SERVER:`, 'color: #2563eb; font-weight: bold;');
+          console.log(JSON.stringify(planData.blocks.block1, null, 2));
+          
+          // Log personal heuristics specifically
+          if (planData.blocks.block1.personalHeuristics) {
+            console.log(`%c[NETWORK RESPONSE] PERSONAL HEURISTICS (${planData.blocks.block1.personalHeuristics.length}):`, 'color: #059669; font-weight: bold;');
+            console.log(JSON.stringify(planData.blocks.block1.personalHeuristics, null, 2));
+          } else {
+            console.log(`%c[NETWORK RESPONSE] NO PERSONAL HEURISTICS IN RESPONSE`, 'color: #dc2626; font-weight: bold;');
+          }
+        }
+        
         // If the plan doesn't have an ID, we need to create one
         if (!planData.id) {
           console.info(`[PLAN] PlanContext - Plan has no ID, will create one`);

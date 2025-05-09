@@ -149,6 +149,10 @@ export default function Block1Discover() {
         console.log('🔄 Block1Discover.useEffect - Personal heuristics found in plan:', 
           plan.blocks.block1.personalHeuristics.length);
           
+        // Log the raw data that's going to be passed to the state setter
+        console.log(`%c[STATE UPDATE] Raw personal heuristics from plan (BEFORE formatting):`, 'color: #0ea5e9; font-weight: bold;');
+        console.log(JSON.stringify(plan.blocks.block1.personalHeuristics, null, 2));
+          
         // Now actually load the personal heuristics from the plan
         const heuristics = plan.blocks.block1.personalHeuristics;
         
@@ -229,12 +233,22 @@ export default function Block1Discover() {
       // Include success criteria, ratings, AND personal heuristics in the save
       console.info(`[SAVE] Block1Discover.saveMutation - Including ${personalHeuristics.length} heuristics in save`);
       
-      return saveBlockFromContext('block1', {
+      // Log the exact personal heuristics that will be saved
+      console.log(`%c[SAVE] BLOCK1 SAVE - Personal heuristics being saved (${personalHeuristics.length}):`, 'color: #0ea5e9; font-weight: bold;');
+      console.log(JSON.stringify(personalHeuristics, null, 2));
+      
+      const blockData = {
         successCriteria,
         successFactorRatings: ratings,
         personalHeuristics: personalHeuristics, // Add personal heuristics to every save
         lastUpdated: new Date().toISOString(),
-      });
+      };
+      
+      // Log the FULL block data being passed to the save function
+      console.log(`%c[SAVE] BLOCK1 SAVE - Complete block data being saved:`, 'color: #a855f7; font-weight: bold;');
+      console.log(JSON.stringify(blockData, null, 2));
+      
+      return saveBlockFromContext('block1', blockData);
     },
     onMutate: (newData) => {
       // Cancel any outgoing refetches so they don't overwrite our optimistic update
