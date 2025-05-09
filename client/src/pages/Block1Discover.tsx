@@ -56,22 +56,33 @@ export default function Block1Discover() {
   ];
   
   // Use React Query for data fetching with localStorage fallback
+  // Using the same consistent "project-block" query key pattern used in useBlockSave.ts
   const { data: blockData, isLoading: isBlockLoading, error: blockError } = useQuery({
-    queryKey: projectId ? [`/api/plans/project/${projectId}/block/block1`] : [],
+    queryKey: projectId ? ["project-block", projectId, "block1"] : [],
     queryFn: async () => {
       if (!projectId) throw new Error("No project ID available");
       
       try {
         console.log('🔄 Fetching block1 data for project:', projectId);
-        // Update API path to match server route structure
+        console.log('🔑 Using query key: ["project-block", "' + projectId + '", "block1"]');
+        
+        // Match the API path from the server route structure
         const response = await fetch(`/api/plans/project/${projectId}/block/block1`);
         
         if (!response.ok) {
+          console.error(`⚠️ API returned status ${response.status} when loading block data`);
           throw new Error(`Failed to fetch block1 data: ${response.status}`);
         }
         
         const data = await response.json();
         console.log('✅ Block1 data loaded from API:', data);
+        
+        // Save to localStorage as a backup
+        if (data) {
+          saveLocalStorageBlock("block1", projectId, data);
+          console.log('💾 Block1 data saved to localStorage for backup');
+        }
+        
         return data;
       } catch (error) {
         console.warn('⚠️ Could not load block1 data from API:', error);
