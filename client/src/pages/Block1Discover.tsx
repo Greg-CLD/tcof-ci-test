@@ -63,8 +63,8 @@ export default function Block1Discover() {
       if (!projectId) throw new Error("No project ID available");
       
       try {
-        console.log('🔄 [LOAD] Fetching block1 data for project:', projectId);
-        console.log('🔑 [LOAD] Using query key: ["project-block", "' + projectId + '", "block1"]');
+        console.info('🔄 [LOAD] Fetching block1 data for project:', projectId);
+        console.info('🔑 [LOAD] Using query key: ["project-block", "' + projectId + '", "block1"]');
         
         // Match the API path from the server route structure
         const response = await fetch(`/api/plans/project/${projectId}/block/block1`);
@@ -75,25 +75,23 @@ export default function Block1Discover() {
         }
         
         const data = await response.json();
-        console.log('✅ [LOAD] Block1 data loaded from API:', data);
-        console.table({
-          'API Response': 'FULL RESPONSE DATA',
-          'personalHeuristics': data.personalHeuristics ? 
-            `Found ${data.personalHeuristics.length} heuristics` : 'MISSING',
-          'successFactorRatings': data.successFactorRatings ? 
-            `Found ${Object.keys(data.successFactorRatings).length} ratings` : 'MISSING' 
-        });
+        console.info('✅ [LOAD] Block1 data loaded from API:', data);
+        console.info('📋 [LOAD-TABLE] API Response: FULL RESPONSE DATA');
+        console.info('📋 [LOAD-TABLE] personalHeuristics: ', data.personalHeuristics ? 
+          `Found ${data.personalHeuristics.length} heuristics` : 'MISSING');
+        console.info('📋 [LOAD-TABLE] successFactorRatings: ', data.successFactorRatings ? 
+          `Found ${Object.keys(data.successFactorRatings).length} ratings` : 'MISSING');
         
         if (data.personalHeuristics) {
-          console.log('📊 [LOAD] Personal heuristics detail:', JSON.stringify(data.personalHeuristics, null, 2));
+          console.info('📊 [LOAD] Personal heuristics detail:', JSON.stringify(data.personalHeuristics, null, 2));
         }
         
         // Save to localStorage as a backup
         if (data) {
           saveLocalStorageBlock("block1", projectId, data);
           const localBackup = getLocalStorageBlock("block1", projectId);
-          console.log('💾 [LOAD] Block1 data saved to localStorage for backup');
-          console.log('💾 [LOAD] localStorage backup verification:', 
+          console.info('💾 [LOAD] Block1 data saved to localStorage for backup');
+          console.info('💾 [LOAD] localStorage backup verification:', 
             localBackup?.personalHeuristics ? 
               `Contains ${localBackup.personalHeuristics.length} heuristics` : 
               'No heuristics in backup');
@@ -105,16 +103,16 @@ export default function Block1Discover() {
         // Try to get from localStorage as fallback
         const localData = getLocalStorageBlock("block1", projectId);
         
-        console.log('🔍 [LOAD] Checking localStorage fallback:', 
+        console.info('🔍 [LOAD] Checking localStorage fallback:', 
           localData ? 'Data found' : 'No data',
           localData?.personalHeuristics ? 
             `(${localData.personalHeuristics.length} heuristics)` : 
             '(No heuristics)');
         
         if (localData) {
-          console.log('✅ [LOAD] Block1 data loaded from localStorage fallback');
+          console.info('✅ [LOAD] Block1 data loaded from localStorage fallback');
           if (localData.personalHeuristics) {
-            console.log('📊 [LOAD] Personal heuristics from localStorage:', 
+            console.info('📊 [LOAD] Personal heuristics from localStorage:', 
               JSON.stringify(localData.personalHeuristics, null, 2));
           }
           return localData;
@@ -137,21 +135,23 @@ export default function Block1Discover() {
   // Use the block data to set our local state
   useEffect(() => {
     if (blockData) {
-      console.log('🔄 Updating state from loaded block data');
+      console.info('🔄 [LOAD-EFFECT] Updating state from loaded block data');
       
       // Extract success factor ratings
       if (blockData.successFactorRatings) {
-        console.log('🔄 Setting success factor ratings:', 
+        console.info('🔄 [LOAD-EFFECT] Setting success factor ratings:', 
           Object.keys(blockData.successFactorRatings).length, 'ratings');
         setSuccessFactorRatings(blockData.successFactorRatings);
       }
       
       // Extract personal heuristics
       if (blockData.personalHeuristics) {
-        console.log('🔄 Setting personal heuristics:', 
+        console.info('🔄 [LOAD-EFFECT] Setting personal heuristics:', 
           blockData.personalHeuristics.length, 'heuristics');
-        console.log('Heuristics data:', JSON.stringify(blockData.personalHeuristics));
+        console.info('📊 [LOAD-EFFECT] Heuristics data:', JSON.stringify(blockData.personalHeuristics));
         setPersonalHeuristics(blockData.personalHeuristics);
+      } else {
+        console.warn('⚠️ [LOAD-EFFECT] No personal heuristics found in loaded block data!');
       }
     }
   }, [blockData]);
@@ -296,13 +296,11 @@ export default function Block1Discover() {
   
   // Handle personal heuristics change
   const handlePersonalHeuristicsChange = async (heuristics: PersonalHeuristic[]) => {
-    console.log('🔄 [SAVE] handlePersonalHeuristicsChange called with:', JSON.stringify(heuristics));
-    console.table({
-      'Operation': 'SAVE HEURISTICS',
-      'Trigger': 'User modified heuristics',
-      'Heuristics Count': heuristics.length,
-      'ProjectId': projectId || 'MISSING'
-    });
+    console.info('🔄 [SAVE] handlePersonalHeuristicsChange called with:', JSON.stringify(heuristics));
+    console.info('📋 [SAVE-TABLE] Operation: SAVE HEURISTICS');
+    console.info('📋 [SAVE-TABLE] Trigger: User modified heuristics');
+    console.info('📋 [SAVE-TABLE] Heuristics Count:', heuristics.length);
+    console.info('📋 [SAVE-TABLE] ProjectId:', projectId || 'MISSING');
     
     // Store a deep clone of the heuristics to avoid reference issues
     const clonedHeuristics = JSON.parse(JSON.stringify(heuristics));
@@ -312,7 +310,7 @@ export default function Block1Discover() {
     // Auto-saves aren't sufficient for this critical data
     if (projectId) {
       try {
-        console.log('🔄 [SAVE] Saving personal heuristics to backend:', JSON.stringify(clonedHeuristics, null, 2));
+        console.info('🔄 [SAVE] Saving personal heuristics to backend:', JSON.stringify(clonedHeuristics, null, 2));
         
         // Show a toast that we're saving
         toast({
@@ -327,26 +325,26 @@ export default function Block1Discover() {
         };
         
         // Log the exact payload we're sending
-        console.log('📤 [SAVE] Payload being sent to server:', JSON.stringify(blockData, null, 2));
+        console.info('📤 [SAVE] Payload being sent to server:', JSON.stringify(blockData, null, 2));
         
         // We explicitly save here and wait for the result
-        console.log('🔄 [SAVE] Calling saveBlock with data...');
+        console.info('🔄 [SAVE] Calling saveBlock with data...');
         const saved = await saveBlock(blockData);
         
         // Check localStorage after save attempt to see if our backup worked
         const localBackup = getLocalStorageBlock("block1", projectId);
-        console.log('💾 [SAVE] After save, localStorage contains:', 
+        console.info('💾 [SAVE] After save, localStorage contains:', 
           localBackup?.personalHeuristics ? 
             `${localBackup.personalHeuristics.length} heuristics` : 
             'No heuristics');
         
         if (localBackup?.personalHeuristics) {
-          console.log('📊 [SAVE] localStorage heuristics detail:', 
+          console.info('📊 [SAVE] localStorage heuristics detail:', 
             JSON.stringify(localBackup.personalHeuristics, null, 2));
         }
         
         if (saved) {
-          console.log('✅ [SAVE] Successfully saved personal heuristics');
+          console.info('✅ [SAVE] Successfully saved personal heuristics');
           toast({
             title: "Heuristics saved",
             description: "Your personal heuristics have been saved",
