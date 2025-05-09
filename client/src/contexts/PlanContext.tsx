@@ -44,6 +44,8 @@ export interface PlanData {
   };
   createdAt?: string;
   updatedAt?: string;
+  source?: string; // Source of the plan (used for debugging)
+  lastUpdated?: number; // Last updated timestamp
 }
 
 // Define the context type
@@ -175,27 +177,58 @@ export const PlanProvider: React.FC<{children: ReactNode}> = ({children}) => {
   const saveBlock = async (blockId: string, blockData: any) => {
     if (!plan) return;
     
+    // Use proper logging to trace the data flow
+    console.info(`[SAVE] PlanContext.saveBlock - Saving ${blockId} for project ${projectId}`);
+    
+    if (blockData.personalHeuristics) {
+      console.info(`[SAVE] PlanContext.saveBlock - Saving ${blockData.personalHeuristics.length} personal heuristics`);
+    }
+    
     if (plan.id) {
       // If the plan already exists, use the PATCH endpoint for the specific block
+      console.info(`[SAVE] PlanContext.saveBlock - Plan exists with ID ${plan.id}, using PATCH endpoint`);
       await saveBlockMutation.mutateAsync({
         planId: plan.id,
         blockId,
         blockData
       });
     } else {
-      // If the plan doesn't exist yet, update the whole plan
-      const updatedPlan = {
-        ...plan,
-        blocks: {
-          ...plan.blocks,
-          [blockId]: {
-            ...plan.blocks[blockId as keyof typeof plan.blocks],
-            ...blockData
-          }
-        }
-      };
+      // If the plan doesn't exist yet, use the project-block endpoint which handles both create and update
+      console.info(`[SAVE] PlanContext.saveBlock - Plan doesn't exist yet (no ID), using project-block endpoint`);
       
-      await savePlan(updatedPlan);
+      try {
+        // This endpoint creates the plan if needed
+        const response = await apiRequest(
+          "PATCH", 
+          `/api/plans/project/${projectId}/block/${blockId}`,
+          blockData
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[SAVE] Error saving block via project-block endpoint: ${errorText}`);
+          throw new Error(`Failed to save ${blockId}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.info(`[SAVE] Block saved via project-block endpoint, received ID: ${result.id || 'null'}`);
+        
+        // Invalidate queries to refresh the plan data
+        queryClient.invalidateQueries({queryKey: ["plan", projectId]});
+        
+        toast({
+          title: "Block saved",
+          description: "Your changes have been saved successfully",
+        });
+      } catch (error) {
+        console.error(`[SAVE] Error in saveBlock:`, error);
+        toast({
+          title: "Error saving block",
+          description: (error as Error).message,
+          variant: "destructive",
+        });
+        throw error;
+      }
     }
   };
   
