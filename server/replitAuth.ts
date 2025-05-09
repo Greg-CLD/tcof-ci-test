@@ -117,15 +117,38 @@ export async function setupAuth(app: Express) {
   const forceReset = process.env.TEST_USER_RESET === 'true';
   await createTestUser(forceReset);
   
-  // Add route to force recreate the test user (admin only)
+  // Add route to force recreate the test user with the correct ID format
   app.post("/api/admin/reset-test-user", async (req, res) => {
     try {
-      const user = await createTestUser(true);
-      // If we get here, we know user is defined due to our createTestUser implementation
-      if (!user) {
-        throw new Error("Failed to reset test user - no user returned");
-      }
-      res.status(200).json({ message: "Test user reset successfully", username: user.username });
+      console.log("Forcing a complete reset of the admin user...");
+      
+      // Import the users table from shared schema
+      const { users } = await import("@shared/schema");
+      
+      // First delete ALL admin users to clean up potential duplicates
+      // Using Drizzle's proper delete syntax
+      await db.delete(users).where(eq(users.username, "admin"));
+      console.log("Deleted all existing admin users");
+      
+      // Now create a fresh admin user with the correct ID type
+      const hashedPassword = await hashPassword("admin123");
+      
+      const newUser = await storage.createUser({
+        id: "admin", // Text ID as expected by the new code
+        username: "admin",
+        email: "admin@example.com", 
+        password: hashedPassword
+        // Role is handled separately in database
+      });
+      
+      console.log(`Test user recreated successfully: ${newUser.username} with ID ${newUser.id} (type: ${typeof newUser.id})`);
+      
+      res.status(200).json({ 
+        message: "Test user reset successfully", 
+        username: newUser.username,
+        id: newUser.id,
+        idType: typeof newUser.id
+      });
     } catch (error: any) {
       console.error("Error resetting test user:", error);
       res.status(500).json({ error: "Failed to reset test user", message: error?.message || "Unknown error" });
