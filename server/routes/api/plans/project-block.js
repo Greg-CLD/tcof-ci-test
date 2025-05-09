@@ -31,54 +31,139 @@ router.patch('/plans/project/:projectId/block/:blockId', async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access to project' });
     }
     
+    console.info(`[SERVER] PATCH request for projectId=${projectId}, blockId=${blockId} at ${new Date().toISOString()}`);
+    
     // Load the existing plan or create a new one
     let plan = await projectsDb.getProjectPlan(projectId);
+    let isNewPlan = false;
     
     if (!plan) {
+      console.info(`[SERVER] No existing plan found for projectId=${projectId}, creating a new one`);
+      isNewPlan = true;
       plan = {
+        id: Math.floor(Date.now() / 1000), // Give the plan a non-null ID
         projectId,
         blocks: {},
         lastUpdated: Date.now()
       };
+    } else {
+      console.info(`[SERVER] Found existing plan for projectId=${projectId}, id=${plan.id || 'null'}`);
     }
     
-    // Update the specific block
+    // Ensure blocks object exists and is properly initialized
     plan.blocks = plan.blocks || {};
+    
+    // Ensure the block exists with a real ID
+    if (!plan.blocks[blockId] || !plan.blocks[blockId].id) {
+      console.info(`[SERVER] Creating new block record for blockId=${blockId}`);
+      plan.blocks[blockId] = {
+        ...(plan.blocks[blockId] || {}),
+        id: Math.floor(Date.now() / 1000), // Give the block a non-null ID
+        createdAt: Date.now()
+      };
+    } else {
+      console.info(`[SERVER] Found existing block record for blockId=${blockId}, id=${plan.blocks[blockId].id}`);
+    }
     
     // Debug logging for personal heuristics specifically
     if (blockData.personalHeuristics) {
-      console.log(`[SERVER] Received ${blockData.personalHeuristics.length} personal heuristics for block ${blockId}, project ${projectId}`);
+      console.info(`[SERVER] Received ${blockData.personalHeuristics.length} personal heuristics for block ${blockId}, project ${projectId}`);
       if (blockData.personalHeuristics.length > 0) {
-        console.log('[SERVER] First heuristic sample:', JSON.stringify(blockData.personalHeuristics[0]));
+        console.info('[SERVER] First heuristic sample:', JSON.stringify(blockData.personalHeuristics[0]));
       }
     } else {
-      console.log(`[SERVER] Warning: No personal heuristics found in request for block ${blockId}`);
+      console.warn(`[SERVER] Warning: No personal heuristics found in request for block ${blockId}`);
     }
     
-    plan.blocks[blockId] = blockData;
+    // Update block data while preserving the id and other metadata
+    plan.blocks[blockId] = {
+      ...plan.blocks[blockId],
+      ...blockData,
+      id: plan.blocks[blockId].id, // Ensure ID is preserved
+      updatedAt: Date.now()
+    };
+    
     plan.lastUpdated = Date.now();
     
-    // Save the updated plan
+    // Save the updated plan - this will create a new plan if it doesn't exist
     await projectsDb.saveProjectPlan(projectId, plan);
+    console.info(`[SERVER] Plan ${isNewPlan ? 'created' : 'updated'} for projectId=${projectId}`);
     
     // Verify the data was correctly stored before sending response
     const savedPlan = await projectsDb.getProjectPlan(projectId);
-    const savedBlockData = savedPlan?.blocks?.[blockId];
     
-    if (savedBlockData?.personalHeuristics) {
-      console.log(`[SERVER] Verified ${savedBlockData.personalHeuristics.length} heuristics were saved to database`);
-    } else {
-      console.log(`[SERVER] Warning: No personal heuristics found in saved data for block ${blockId}`);
+    if (!savedPlan) {
+      console.error(`[SERVER] Failed to retrieve saved plan for projectId=${projectId}`);
+      return res.status(500).json({ 
+        message: 'Failed to save project block: plan not found after save',
+      });
     }
+    
+    const savedBlockData = savedPlan.blocks?.[blockId];
+    
+    if (!savedBlockData) {
+      console.error(`[SERVER] Failed to retrieve saved block data for blockId=${blockId}`);
+      return res.status(500).json({ 
+        message: 'Failed to save project block: block not found after save',
+      });
+    }
+    
+    // Log verification of saved data
+    if (savedBlockData.personalHeuristics) {
+      console.info(`[SERVER] Verified ${savedBlockData.personalHeuristics.length} heuristics were saved to database`);
+      
+      // Detailed verification of personal heuristics consistency
+      if (savedBlockData.personalHeuristics.length > 0) {
+        console.info('[SERVER] First saved heuristic sample:', JSON.stringify(savedBlockData.personalHeuristics[0]));
+        
+        // Compare with original data (integrity check)
+        if (blockData.personalHeuristics && blockData.personalHeuristics.length > 0) {
+          const originalCount = blockData.personalHeuristics.length;
+          const savedCount = savedBlockData.personalHeuristics.length;
+          
+          if (originalCount !== savedCount) {
+            console.warn(`[SERVER] Heuristic count mismatch! Original: ${originalCount}, Saved: ${savedCount}`);
+          } else {
+            console.info(`[SERVER] Heuristic counts match: ${originalCount}`);
+            
+            // Check first item for field integrity
+            const originalFirst = blockData.personalHeuristics[0];
+            const savedFirst = savedBlockData.personalHeuristics[0];
+            
+            if (originalFirst && savedFirst) {
+              // Compare text fields
+              if (originalFirst.text !== savedFirst.text) {
+                console.warn(`[SERVER] Heuristic text mismatch! Original: "${originalFirst.text}", Saved: "${savedFirst.text}"`);
+              }
+              
+              // Compare IDs if present
+              if (originalFirst.id && savedFirst.id && originalFirst.id !== savedFirst.id) {
+                console.warn(`[SERVER] Heuristic ID mismatch! Original: ${originalFirst.id}, Saved: ${savedFirst.id}`);
+              }
+            }
+          }
+        }
+      }
+    } else {
+      console.warn(`[SERVER] Warning: No personal heuristics found in saved data for block ${blockId}`);
+      
+      // Check if personal heuristics were in the original data but lost in saving
+      if (blockData.personalHeuristics && blockData.personalHeuristics.length > 0) {
+        console.error(`[SERVER] DATA LOSS DETECTED: ${blockData.personalHeuristics.length} personal heuristics in original data were lost during save!`);
+      }
+    }
+    
+    console.info(`[SERVER] Saved block has id=${savedBlockData.id || 'null'}`);
     
     // Return the saved block data like Goal-Mapping does, not just metadata
     return res.status(200).json({
       message: 'Block saved successfully',
       blockId,
       projectId,
-      lastUpdated: plan.lastUpdated,
+      id: savedPlan.id,
+      lastUpdated: savedPlan.lastUpdated,
       // Include the actual block data that was saved
-      blockData: savedBlockData || plan.blocks[blockId]
+      blockData: savedBlockData
     });
   } catch (error) {
     console.error('Error saving project block:', error);
@@ -115,29 +200,93 @@ router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access to project' });
     }
     
+    console.info(`[SERVER] GET block request for projectId=${projectId}, blockId=${blockId} at ${new Date().toISOString()}`);
+    
     // Load the plan
     const plan = await projectsDb.getProjectPlan(projectId);
     
+    // Create a default block with proper ID if not found
     if (!plan || !plan.blocks || !plan.blocks[blockId]) {
-      console.log(`[SERVER] Block not found: blockId=${blockId}, projectId=${projectId}`);
-      return res.status(404).json({ 
-        message: 'Block not found',
-        details: `Block "${blockId}" not found for project "${projectId}"`
-      });
+      console.info(`[SERVER] Block not found: blockId=${blockId}, projectId=${projectId}, creating default structure`);
+      
+      // Create appropriate default structure based on the requested block
+      // Using blockType to avoid variable shadowing with blockId
+      const blockType = req.params.blockId;
+      const generatedId = Math.floor(Date.now() / 1000);
+      let defaultBlockData;
+      
+      if (blockType === 'block1') {
+        defaultBlockData = {
+          id: generatedId,
+          successFactors: [],
+          personalHeuristics: [],
+          completed: false,
+          createdAt: Date.now()
+        };
+      } else if (blockType === 'block2') {
+        defaultBlockData = {
+          id: generatedId,
+          tasks: [],
+          stakeholders: [],
+          completed: false,
+          createdAt: Date.now()
+        };
+      } else if (blockType === 'block3') {
+        defaultBlockData = {
+          id: generatedId,
+          timeline: null,
+          deliveryApproach: "",
+          deliveryNotes: "",
+          completed: false,
+          createdAt: Date.now()
+        };
+      } else {
+        // Generic empty block for non-standard block IDs
+        defaultBlockData = {
+          id: generatedId,
+          createdAt: Date.now()
+        };
+      }
+      
+      console.info(`[SERVER] Returning default block data with id=${generatedId}`);
+      return res.status(200).json(defaultBlockData);
     }
     
     // Debug logging for personal heuristics specifically
     const blockData = plan.blocks[blockId];
     
-    if (blockData.personalHeuristics) {
-      console.log(`[SERVER] GET request: Found ${blockData.personalHeuristics.length} personal heuristics for block ${blockId}, project ${projectId}`);
-      if (blockData.personalHeuristics.length > 0) {
-        console.log('[SERVER] GET request: First heuristic sample:', JSON.stringify(blockData.personalHeuristics[0]));
-      }
-    } else {
-      console.log(`[SERVER] GET request: Warning: No personal heuristics found in block ${blockId} for project ${projectId}`);
+    // Ensure block has an ID - this is crucial for persistence
+    if (!blockData.id) {
+      console.info(`[SERVER] Adding missing ID to existing block ${blockId}`);
+      blockData.id = Math.floor(Date.now() / 1000);
     }
     
+    // Add specific default fields based on the block type if they're missing
+    if (blockId === 'block1') {
+      blockData.successFactors = blockData.successFactors || [];
+      blockData.personalHeuristics = blockData.personalHeuristics || [];
+    } else if (blockId === 'block2') {
+      blockData.tasks = blockData.tasks || [];
+      blockData.stakeholders = blockData.stakeholders || [];
+    } else if (blockId === 'block3') {
+      blockData.timeline = blockData.timeline || null;
+      blockData.deliveryApproach = blockData.deliveryApproach || "";
+      blockData.deliveryNotes = blockData.deliveryNotes || "";
+    }
+    
+    blockData.completed = !!blockData.completed;
+    
+    // Debug logging for personal heuristics specifically
+    if (blockData.personalHeuristics) {
+      console.info(`[SERVER] GET request: Found ${blockData.personalHeuristics.length} personal heuristics for block ${blockId}, project ${projectId}`);
+      if (blockData.personalHeuristics.length > 0) {
+        console.info('[SERVER] GET request: First heuristic sample:', JSON.stringify(blockData.personalHeuristics[0]));
+      }
+    } else {
+      console.warn(`[SERVER] GET request: Warning: No personal heuristics found in block ${blockId} for project ${projectId}`);
+    }
+    
+    console.info(`[SERVER] Returning block data with id=${blockData.id || 'null'}`);
     return res.status(200).json(blockData);
   } catch (error) {
     console.error('Error retrieving project block:', error);
@@ -174,11 +323,88 @@ router.get('/plans/project/:projectId', async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access to project' });
     }
     
+    console.info(`[SERVER] GET plan request for projectId=${projectId} at ${new Date().toISOString()}`);
+    
     // Load the plan
-    const plan = await projectsDb.getProjectPlan(projectId);
+    let plan = await projectsDb.getProjectPlan(projectId);
     
     if (!plan) {
-      return res.status(404).json({ message: 'Plan not found' });
+      console.info(`[SERVER] No plan found for projectId=${projectId}, creating a default structure`);
+      
+      // Instead of 404, return a default plan structure with non-null IDs
+      // This helps the UI initialize properly with non-null IDs
+      const planId = Math.floor(Date.now() / 1000);
+      const block1Id = planId + 1;
+      const block2Id = planId + 2;
+      const block3Id = planId + 3;
+      
+      plan = {
+        id: planId,
+        projectId,
+        blocks: {
+          block1: {
+            id: block1Id,
+            successFactors: [],
+            personalHeuristics: [],
+            completed: false,
+            createdAt: Date.now()
+          },
+          block2: {
+            id: block2Id,
+            tasks: [],
+            stakeholders: [],
+            completed: false,
+            createdAt: Date.now()
+          },
+          block3: {
+            id: block3Id,
+            timeline: null,
+            deliveryApproach: "",
+            deliveryNotes: "",
+            completed: false,
+            createdAt: Date.now()
+          }
+        },
+        lastUpdated: Date.now()
+      };
+      
+      // Note: We're not saving this plan to the database yet
+      // It will be saved when the first PATCH request comes in
+      console.info(`[SERVER] Returning default plan structure with id=${planId}`);
+    } else {
+      console.info(`[SERVER] Found existing plan with id=${plan.id || 'null'}`);
+      
+      // Ensure each block has an ID - this is crucial for persistence
+      const blocks = plan.blocks || {};
+      ['block1', 'block2', 'block3'].forEach(blockId => {
+        if (!blocks[blockId]) {
+          console.info(`[SERVER] Creating missing block structure for ${blockId}`);
+          blocks[blockId] = {
+            id: Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 1000),
+            createdAt: Date.now()
+          };
+        } else if (!blocks[blockId].id) {
+          console.info(`[SERVER] Adding missing ID to existing block ${blockId}`);
+          blocks[blockId].id = Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 1000);
+        }
+        
+        // Add specific default fields based on the block type
+        if (blockId === 'block1') {
+          blocks[blockId].successFactors = blocks[blockId].successFactors || [];
+          blocks[blockId].personalHeuristics = blocks[blockId].personalHeuristics || [];
+        } else if (blockId === 'block2') {
+          blocks[blockId].tasks = blocks[blockId].tasks || [];
+          blocks[blockId].stakeholders = blocks[blockId].stakeholders || [];
+        } else if (blockId === 'block3') {
+          blocks[blockId].timeline = blocks[blockId].timeline || null;
+          blocks[blockId].deliveryApproach = blocks[blockId].deliveryApproach || "";
+          blocks[blockId].deliveryNotes = blocks[blockId].deliveryNotes || "";
+        }
+        
+        blocks[blockId].completed = !!blocks[blockId].completed;
+      });
+      
+      plan.blocks = blocks;
     }
     
     return res.status(200).json(plan);
