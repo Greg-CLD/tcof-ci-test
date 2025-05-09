@@ -26,14 +26,14 @@ const scryptAsync = promisify(scrypt);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const PostgresSessionStore = connectPg(session);
 
-// Password utilities
-async function hashPassword(password: string) {
+// Password utilities - exported directly to be used by authentication system
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function comparePasswords(supplied: string, stored: string) {
+export async function comparePasswords(supplied: string, stored: string) {
   const [hashed, salt] = stored.split(".");
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
@@ -108,43 +108,23 @@ export const storage = {
       // Hash the password if provided
       const hashedPassword = userData.password ? await hashPassword(userData.password) : null;
       
-      // Convert or generate user ID as number
-      let userId: number;
-      if (userData.id) {
-        // Convert string ID to number if needed
-        if (typeof userData.id === 'string') {
-          userId = parseInt(userData.id, 10);
-          if (isNaN(userId)) {
-            userId = Date.now(); // Fallback if conversion fails
-          }
-        } else {
-          userId = userData.id as number;
-        }
-      } else {
-        userId = Date.now();
-      }
+      // Generate user ID as string
+      const userId = userData.id?.toString() || Date.now().toString();
       
       console.log(`Using userId: ${userId} (type: ${typeof userId})`);
       
-      // Use raw SQL to insert user to avoid type issues with Drizzle
-      const result = await db.execute(
-        sql`INSERT INTO users (id, username, password, email, avatar_url) 
-            VALUES (${userId}, ${userData.username}, ${hashedPassword}, ${userData.email || null}, ${userData.avatarUrl || null})
-            RETURNING *`
-      );
+      // Use Drizzle to insert user with text ID
+      const [user] = await db.insert(users).values({
+        id: userId,
+        username: userData.username,
+        password: hashedPassword,
+        email: userData.email || null,
+        avatarUrl: userData.avatarUrl || null
+      }).returning();
       
-      if (result.rows && result.rows.length > 0) {
-        const user = result.rows[0];
+      if (user) {
         console.log("User created successfully:", user.id);
-        
-        return {
-          id: user.id,
-          username: user.username,
-          password: user.password,
-          email: user.email,
-          avatarUrl: user.avatar_url,
-          createdAt: user.created_at
-        };
+        return user;
       }
       
       throw new Error('Failed to create user: No user returned from insert operation');
@@ -158,17 +138,8 @@ export const storage = {
     try {
       console.log("storage.upsertUser called with:", JSON.stringify(userData, null, 2));
       
-      // Convert ID to number for database operations
-      let userId: number;
-      if (typeof userData.id === 'string') {
-        userId = parseInt(userData.id, 10);
-        if (isNaN(userId)) {
-          userId = Date.now(); // Fallback if conversion fails
-          console.log(`Invalid user ID: ${userData.id}, using fallback: ${userId}`);
-        }
-      } else {
-        userId = userData.id as number;
-      }
+      // Convert ID to string for database operations
+      const userId = userData.id.toString();
       
       console.log(`Using userId for upsert: ${userId} (type: ${typeof userId})`);
       
@@ -178,53 +149,38 @@ export const storage = {
       if (existingUser) {
         console.log("Updating existing user:", userId);
         
-        // Use raw SQL to update user to avoid type issues with Drizzle
-        const result = await db.execute(
-          sql`UPDATE users 
-              SET username = ${userData.username}, 
-                  email = ${userData.email || existingUser.email}, 
-                  avatar_url = ${userData.avatarUrl || existingUser.avatar_url}
-              WHERE id = ${userId}
-              RETURNING *`
-        );
+        // Use Drizzle to update user
+        const [updatedUser] = await db.update(users)
+          .set({
+            username: userData.username,
+            email: userData.email || existingUser.email,
+            avatarUrl: userData.avatarUrl || existingUser.avatarUrl
+          })
+          .where(eq(users.id, userId))
+          .returning();
         
-        if (result.rows && result.rows.length > 0) {
-          const user = result.rows[0];
-          console.log("User updated successfully:", user.id);
-          
-          return {
-            id: user.id,
-            username: user.username,
-            password: user.password,
-            email: user.email,
-            avatarUrl: user.avatar_url,
-            createdAt: user.created_at
-          };
+        if (updatedUser) {
+          console.log("User updated successfully:", updatedUser.id);
+          return updatedUser;
         }
         
         throw new Error('Failed to update user: No user returned from update operation');
       } else {
         console.log("Creating new user:", userId);
         
-        // Use raw SQL to insert user to avoid type issues with Drizzle
-        const result = await db.execute(
-          sql`INSERT INTO users (id, username, email, avatar_url) 
-              VALUES (${userId}, ${userData.username}, ${userData.email || null}, ${userData.avatarUrl || null})
-              RETURNING *`
-        );
+        // Use Drizzle to insert user
+        const [newUser] = await db.insert(users)
+          .values({
+            id: userId,
+            username: userData.username,
+            email: userData.email || null,
+            avatarUrl: userData.avatarUrl || null
+          })
+          .returning();
         
-        if (result.rows && result.rows.length > 0) {
-          const user = result.rows[0];
-          console.log("New user created successfully:", user.id);
-          
-          return {
-            id: user.id,
-            username: user.username,
-            password: user.password,
-            email: user.email,
-            avatarUrl: user.avatar_url,
-            createdAt: user.created_at
-          };
+        if (newUser) {
+          console.log("New user created successfully:", newUser.id);
+          return newUser;
         }
         
         throw new Error('Failed to create user: No user returned from insert operation');

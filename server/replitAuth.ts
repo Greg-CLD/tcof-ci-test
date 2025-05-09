@@ -33,26 +33,20 @@ export function getSession() {
   });
 }
 
-// Helper function to hash passwords
+// Import password hash/verify functions directly from storage to ensure consistent behavior
+import { comparePasswords } from "./storage";
+
+// Helper function to hash passwords - use the same function from storage
+// but wrap it for local use
 async function hashPassword(password: string) {
-  const salt = crypto.randomBytes(16).toString("hex");
-  return new Promise<string>((resolve, reject) => {
-    crypto.pbkdf2(password, salt, 1000, 64, "sha512", (err, derivedKey) => {
-      if (err) return reject(err);
-      resolve(`${derivedKey.toString("hex")}.${salt}`);
-    });
-  });
+  // Import the same function dynamically to avoid circular dependencies
+  const { hashPassword: storageHashPassword } = await import('./storage');
+  return storageHashPassword(password);
 }
 
-// Helper function to verify passwords
+// Use the storage comparePasswords function for verification
 async function verifyPassword(candidatePassword: string, hashedPassword: string) {
-  const [hash, salt] = hashedPassword.split('.');
-  return new Promise<boolean>((resolve, reject) => {
-    crypto.pbkdf2(candidatePassword, salt, 1000, 64, "sha512", (err, derivedKey) => {
-      if (err) return reject(err);
-      resolve(derivedKey.toString("hex") === hash);
-    });
-  });
+  return comparePasswords(candidatePassword, hashedPassword);
 }
 
 // Function to create a new test user if it doesn't exist
@@ -66,12 +60,11 @@ async function createTestUser() {
       const hashedPassword = await hashPassword("admin123");
       
       const newUser = await storage.createUser({
-        // Generate a random ID for the user (note: DB schema uses integer IDs, not varchar)
-        id: Math.floor(Date.now() / 1000).toString(), // Unix timestamp as string ID
+        // Use 'admin' as the user ID - simple and static
+        id: "admin",
         username: "admin",
-        email: "admin@example.com",
+        email: "admin@example.com", 
         password: hashedPassword,
-        // Match only the columns that exist in the actual database
         avatarUrl: "https://ui-avatars.com/api/?name=Admin&background=random",
       });
       
