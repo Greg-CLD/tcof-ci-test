@@ -401,25 +401,37 @@ export default function Block1Discover() {
       description: string;
       favourite: boolean;
     }) => {
-      // Ensure we have a properly formatted heuristic that's compatible with the HeuristicList component
+      console.log('🔄 addHeuristicMutation - Starting with data:', JSON.stringify(newHeuristicData));
+      
+      // Make sure the ID is always defined
+      const heuristicId = newHeuristicData.id || `h-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
+      // Ensure we have a properly formatted heuristic with ALL field variants for maximum compatibility
+      // This helps with both the UI rendering and server persistence
       const heuristicToSave = {
-        id: newHeuristicData.id,
-        text: newHeuristicData.text || newHeuristicData.name, // Support either property
-        notes: newHeuristicData.notes || newHeuristicData.description, // Support either property
+        id: heuristicId,
+        // Include both naming conventions to ensure compatibility with all components
+        text: newHeuristicData.text || newHeuristicData.name || '',
+        notes: newHeuristicData.notes || newHeuristicData.description || '',
+        name: newHeuristicData.name || newHeuristicData.text || '',
+        description: newHeuristicData.description || newHeuristicData.notes || '',
         favourite: !!newHeuristicData.favourite
       };
       
-      console.log('🔄 addHeuristicMutation - Formatted heuristic to save:', heuristicToSave);
+      console.log('🔄 addHeuristicMutation - Formatted heuristic to save:', JSON.stringify(heuristicToSave));
       
       // Get existing heuristics or empty array if none
       const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
-      console.log('🔄 addHeuristicMutation - Existing heuristics:', existingHeuristics.length);
+      console.log('🔄 addHeuristicMutation - Existing heuristics array:', 
+                 Array.isArray(existingHeuristics) ? existingHeuristics.length : 'not an array',
+                 JSON.stringify(existingHeuristics));
       
-      // Create updated list
-      const updatedHeuristics = [...existingHeuristics, heuristicToSave];
-      console.log('🔄 addHeuristicMutation - New heuristics count:', updatedHeuristics.length);
+      // Create updated list with deep clone to avoid reference issues
+      const updatedHeuristics = [...JSON.parse(JSON.stringify(existingHeuristics)), heuristicToSave];
+      console.log('🔄 addHeuristicMutation - New heuristics array (count: ' + updatedHeuristics.length + '):', 
+                 JSON.stringify(updatedHeuristics));
       
-      // Save to block1
+      // Save to block1 with both field formats for maximum compatibility
       return saveBlock('block1', {
         personalHeuristics: updatedHeuristics,
         lastUpdated: new Date().toISOString(),
@@ -493,8 +505,27 @@ export default function Block1Discover() {
   // Heuristic remove mutation with optimistic UI
   const removeHeuristicMutation = useMutation({
     mutationFn: async (heuristicId: string) => {
-      const updatedHeuristics = (plan?.blocks?.block1?.personalHeuristics || [])
-        .filter((h: { id: string }) => h.id !== heuristicId);
+      console.log('🔄 removeHeuristicMutation - Removing heuristic with ID:', heuristicId);
+      
+      // Get existing heuristics safely
+      const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
+      console.log('🔄 removeHeuristicMutation - Current heuristics count:', 
+                 Array.isArray(existingHeuristics) ? existingHeuristics.length : 'not an array');
+      
+      // Deep clone to avoid reference issues
+      const clonedHeuristics = JSON.parse(JSON.stringify(existingHeuristics));
+      
+      // Filter out the one to remove
+      const updatedHeuristics = clonedHeuristics
+        .filter((h: { id: string }) => {
+          const matches = h.id !== heuristicId;
+          if (!matches) {
+            console.log('🔄 removeHeuristicMutation - Found and removing heuristic:', JSON.stringify(h));
+          }
+          return matches;
+        });
+      
+      console.log('🔄 removeHeuristicMutation - Updated heuristics count:', updatedHeuristics.length);
       
       // Save to block1
       return saveBlock('block1', {
@@ -708,25 +739,62 @@ export default function Block1Discover() {
           </Button>
           
           {/* Debug panel - only visible during development to track persistence issues */}
+          {/* Expand this panel on DEV for better debugging - it provides critical information for troubleshooting */}
           {import.meta.env.DEV && (
             <div className="bg-gray-100 p-3 mb-4 text-xs rounded">
-              <div><strong>DEBUG</strong> - Current plan status</div>
-              <div>Plan ID: {plan?.id || 'null'}</div>
-              <div>Ratings count: {Object.keys(ratings).length}</div>
-              <div>Last saved: {plan?.blocks?.block1?.lastUpdated || 'Never'}</div>
-              <div>Personal heuristics: {plan?.blocks?.block1?.personalHeuristics?.length || 0}</div>
-              <details>
-                <summary>Ratings data</summary>
-                <pre className="text-xs max-h-20 overflow-auto">
-                  {JSON.stringify(ratings, null, 2)}
-                </pre>
-              </details>
-              <details>
-                <summary>Personal heuristics</summary>
-                <pre className="text-xs max-h-20 overflow-auto">
-                  {JSON.stringify(plan?.blocks?.block1?.personalHeuristics || [], null, 2)}
-                </pre>
-              </details>
+              <div className="mb-2 border-b pb-1 text-sm font-semibold flex justify-between items-center">
+                <span>📊 PERSISTENCE DEBUG PANEL</span>
+                <span className={plan?.id ? "bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs" : 
+                                          "bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs"}>
+                  {plan?.id ? "✓ PLAN ID OK" : "⚠️ NO PLAN ID"}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>Project ID: <span className="font-mono">{projectId}</span></div>
+                <div>Plan ID: <span className="font-mono">{plan?.id || 'null'}</span></div>
+                <div>Ratings count: <span className="font-mono">{Object.keys(ratings).length}</span></div>
+                <div>Last saved: <span className="font-mono">{plan?.blocks?.block1?.lastUpdated ? 
+                  new Date(plan.blocks.block1.lastUpdated).toLocaleTimeString() : 'Never'}</span></div>
+                <div>Heuristics count: <span className="font-mono">{plan?.blocks?.block1?.personalHeuristics?.length || 0}</span></div>
+                <div>Plan source: <span className="font-mono">{plan?.source || 'unknown'}</span></div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <details className="overflow-hidden">
+                  <summary className="cursor-pointer hover:bg-gray-200 p-1 rounded">
+                    Success Factor Ratings
+                  </summary>
+                  <pre className="text-xs max-h-32 overflow-auto bg-gray-50 p-1 rounded mt-1">
+                    {JSON.stringify(ratings, null, 2)}
+                  </pre>
+                </details>
+                
+                <details className="overflow-hidden">
+                  <summary className="cursor-pointer hover:bg-gray-200 p-1 rounded">
+                    Personal Heuristics Data ({plan?.blocks?.block1?.personalHeuristics?.length || 0})
+                  </summary>
+                  <pre className="text-xs max-h-32 overflow-auto bg-gray-50 p-1 rounded mt-1">
+                    {JSON.stringify(plan?.blocks?.block1?.personalHeuristics || [], null, 2)}
+                  </pre>
+                </details>
+              </div>
+              
+              <div className="mt-2 pt-1 border-t text-xs text-gray-500">
+                <div className="flex items-center">
+                  <span className={ratings && Object.keys(ratings).length > 0 ? "text-green-600" : "text-red-600"}>
+                    {ratings && Object.keys(ratings).length > 0 ? "✓" : "✗"} Step 1: Factor Ratings
+                  </span>
+                  <span className="mx-2">•</span>
+                  <span className={plan?.blocks?.block1?.personalHeuristics?.length ? "text-green-600" : "text-red-600"}>
+                    {plan?.blocks?.block1?.personalHeuristics?.length ? "✓" : "✗"} Step 2: Heuristics
+                  </span>
+                  <span className="mx-2">•</span>
+                  <span className={successCriteria ? "text-green-600" : "text-red-600"}>
+                    {successCriteria ? "✓" : "✗"} Step 3: Success Criteria
+                  </span>
+                </div>
+              </div>
             </div>
           )}
           
