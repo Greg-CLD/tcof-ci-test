@@ -71,6 +71,8 @@ export default function Block1Discover() {
   
   // State for personal heuristics
   const [newHeuristic, setNewHeuristic] = useState({ name: "", description: "" });
+  // Get the saved personal heuristics
+  const [personalHeuristics, setPersonalHeuristics] = useState<any[]>([]);
   
   // State for success criteria
   const [successCriteria, setSuccessCriteria] = useState("");
@@ -147,10 +149,39 @@ export default function Block1Discover() {
         console.log('🔄 Block1Discover.useEffect - Personal heuristics found in plan:', 
           plan.blocks.block1.personalHeuristics.length);
           
-        // No need to set state manually as the PlanContext will handle this data
-        // We're just logging for debugging purposes
+        // Now actually load the personal heuristics from the plan
+        const heuristics = plan.blocks.block1.personalHeuristics;
+        
+        // Ensure each personal heuristic has a consistent structure
+        const formattedHeuristics = heuristics.map(h => {
+          // Handle string or object format for backward compatibility
+          if (typeof h === 'string') {
+            return { 
+              id: `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+              text: h,
+              name: h,
+              notes: '',
+              description: '',
+              favourite: false
+            };
+          } else {
+            // Ensure all fields exist for consistency
+            return {
+              id: h.id || `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+              text: h.text || h.name || '',
+              name: h.name || h.text || '',
+              notes: h.notes || h.description || '',
+              description: h.description || h.notes || '',
+              favourite: !!h.favourite
+            };
+          }
+        });
+        
+        console.log('🔄 Block1Discover.useEffect - Setting personal heuristics:', formattedHeuristics);
+        setPersonalHeuristics(formattedHeuristics);
       } else {
         console.log('🔄 Block1Discover.useEffect - No personal heuristics found in plan');
+        setPersonalHeuristics([]); // Reset to empty array if none in plan
       }
     }
   }, [plan]);
