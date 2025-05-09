@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Star, StarOff, Trash, Plus } from 'lucide-react';
 import { Input } from "@/components/ui/input";
@@ -19,18 +19,43 @@ export default function HeuristicList({
   onChange,
   totalFavourites = 0 
 }: HeuristicListProps) {
-  const [isAddingHeuristic, setIsAddingHeuristic] = useState(false);
   const [newHeuristicText, setNewHeuristicText] = useState('');
   const [newHeuristicNotes, setNewHeuristicNotes] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   
   // Log initial heuristics value to help with debugging
   React.useEffect(() => {
-    console.log('HeuristicList mounted or updated with heuristics:', heuristics);
+    console.log('🔄 HeuristicList mounted or updated with heuristics:', 
+      Array.isArray(heuristics) ? heuristics.length : 'not an array', 
+      JSON.stringify(heuristics));
   }, [heuristics]);
   
+  // Ensure heuristics is always an array
+  const safeHeuristics = Array.isArray(heuristics) ? heuristics : [];
+  
+  // Safely process heuristic changes with reliable data structure
+  const processHeuristicChange = useCallback((updatedHeuristics: PersonalHeuristic[]) => {
+    // Ensure each heuristic has all required properties
+    const validatedHeuristics = updatedHeuristics.map(h => ({
+      id: h.id || uuidv4(),
+      text: typeof h.text === 'string' ? h.text : '',
+      notes: typeof h.notes === 'string' ? h.notes : '',
+      favourite: Boolean(h.favourite)
+    }));
+    
+    // Log the validated data
+    console.log('🔄 Validating heuristics before change:', 
+      validatedHeuristics.length, 'heuristics');
+    
+    // Deep clone one more time for safety
+    const safeData = JSON.parse(JSON.stringify(validatedHeuristics));
+    
+    // Call the parent change handler with validated data
+    onChange(safeData);
+  }, [onChange]);
+  
   // Handle adding a new heuristic
-  const handleAddHeuristic = () => {
+  const handleAddHeuristic = useCallback(() => {
     if (!newHeuristicText.trim()) return;
     
     // Create new heuristic
@@ -41,71 +66,69 @@ export default function HeuristicList({
       favourite: false
     };
     
+    console.log('🔄 Adding new heuristic:', JSON.stringify(newHeuristic));
+    
     // Deep clone to avoid any reference issues
-    const existingHeuristics = JSON.parse(JSON.stringify(heuristics || []));
+    const existingHeuristics = JSON.parse(JSON.stringify(safeHeuristics));
     
     // Create a new array by concatenating rather than modifying the existing one
     const updatedHeuristics = [...existingHeuristics, newHeuristic];
     
-    // Log the addition to help with debugging
-    console.log('Adding heuristic:', newHeuristic);
-    console.log('Updated heuristic list:', updatedHeuristics);
-    
-    // Call the change handler
-    onChange(updatedHeuristics);
+    // Process the change with validation
+    processHeuristicChange(updatedHeuristics);
     
     // Reset form
     setNewHeuristicText('');
     setNewHeuristicNotes('');
     setIsOpen(false);
-  };
+  }, [newHeuristicText, newHeuristicNotes, safeHeuristics, processHeuristicChange]);
   
   // Handle removing a heuristic
-  const handleRemoveHeuristic = (id: string) => {
-    console.log('Removing heuristic with ID:', id);
+  const handleRemoveHeuristic = useCallback((id: string) => {
+    console.log('🔄 Removing heuristic with ID:', id);
     
     // Deep clone to avoid any reference issues
-    const existingHeuristics = JSON.parse(JSON.stringify(heuristics || []));
-    const updatedHeuristics = existingHeuristics.filter(h => h.id !== id);
+    const existingHeuristics = JSON.parse(JSON.stringify(safeHeuristics));
+    const updatedHeuristics = existingHeuristics.filter((h: PersonalHeuristic) => h.id !== id);
     
-    console.log('After removal, heuristics:', updatedHeuristics);
-    onChange(updatedHeuristics);
-  };
+    console.log('🔄 After removal, heuristics count:', updatedHeuristics.length);
+    processHeuristicChange(updatedHeuristics);
+  }, [safeHeuristics, processHeuristicChange]);
   
   // Handle toggling favourite for a heuristic
-  const handleToggleFavourite = (id: string) => {
-    console.log('Toggling favourite for heuristic ID:', id);
+  const handleToggleFavourite = useCallback((id: string) => {
+    console.log('🔄 Toggling favourite for heuristic ID:', id);
     
     // Deep clone to avoid any reference issues
-    const existingHeuristics = JSON.parse(JSON.stringify(heuristics || []));
-    const heuristic = existingHeuristics.find(h => h.id === id);
+    const existingHeuristics = JSON.parse(JSON.stringify(safeHeuristics));
+    const heuristic = existingHeuristics.find((h: PersonalHeuristic) => h.id === id);
     
     if (!heuristic) {
-      console.warn('Could not find heuristic with ID:', id);
+      console.warn('⚠️ Could not find heuristic with ID:', id);
       return;
     }
     
     // If already favourited, we can always unfavourite
     if (heuristic.favourite) {
-      const updatedHeuristics = existingHeuristics.map(h => 
+      const updatedHeuristics = existingHeuristics.map((h: PersonalHeuristic) => 
         h.id === id ? { ...h, favourite: false } : h
       );
-      console.log('Unfavourited heuristic, updated list:', updatedHeuristics);
-      onChange(updatedHeuristics);
+      console.log('🔄 Unfavourited heuristic, updated list count:', updatedHeuristics.length);
+      processHeuristicChange(updatedHeuristics);
       return;
     }
     
     // Otherwise, check if we've reached the limit
     if (totalFavourites < 3) {
-      const updatedHeuristics = existingHeuristics.map(h => 
+      const updatedHeuristics = existingHeuristics.map((h: PersonalHeuristic) => 
         h.id === id ? { ...h, favourite: true } : h
       );
-      console.log('Favourited heuristic, updated list:', updatedHeuristics);
-      onChange(updatedHeuristics);
+      console.log('🔄 Favourited heuristic, updated list count:', updatedHeuristics.length);
+      processHeuristicChange(updatedHeuristics);
     } else {
-      console.warn('Cannot favourite more than 3 heuristics');
+      console.warn('⚠️ Cannot favourite more than 3 heuristics');
     }
-  };
+  }, [safeHeuristics, totalFavourites, processHeuristicChange]);
 
   return (
     <div className="mb-8">
