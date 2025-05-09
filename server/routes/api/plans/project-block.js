@@ -1,9 +1,33 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 // Correct path to projectsDb.js (using .ts instead of .js)
 import { projectsDb } from '../../../projectsDb.ts';
-// Import functions for direct file operations when needed
-import { loadProjectPlans, saveProjectPlans } from '../../../projectsDb.ts';
+
+// Path to plans data file - need to redefine since we can't import the functions directly
+const PLANS_FILE = path.join(process.cwd(), 'data', 'project_plans.json');
+
+// Define local versions of the required functions
+function loadProjectPlans() {
+  try {
+    const data = fs.readFileSync(PLANS_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading project plans:', error);
+    return [];
+  }
+}
+
+function saveProjectPlans(plans) {
+  try {
+    fs.writeFileSync(PLANS_FILE, JSON.stringify(plans, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving project plans:', error);
+    return false;
+  }
+}
 
 const router = Router();
 
