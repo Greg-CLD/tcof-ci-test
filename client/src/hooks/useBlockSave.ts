@@ -26,17 +26,8 @@ export interface BlockData {
 // Local storage helpers for fallback persistence
 const LOCAL_STORAGE_KEY_PREFIX = "tcof_block_";
 
-function saveLocalStorageBlock(blockId: BlockId, projectId: string, data: BlockData): void {
-  const key = `${LOCAL_STORAGE_KEY_PREFIX}${projectId}_${blockId}`;
-  localStorage.setItem(key, JSON.stringify({
-    blockId,
-    projectId,
-    data,
-    timestamp: Date.now()
-  }));
-}
-
-function getLocalStorageBlock(blockId: BlockId, projectId: string): BlockData | null {
+// Export these functions for external use
+export function getLocalStorageBlock(blockId: BlockId, projectId: string): BlockData | null {
   const key = `${LOCAL_STORAGE_KEY_PREFIX}${projectId}_${blockId}`;
   const item = localStorage.getItem(key);
   if (!item) return null;
@@ -48,6 +39,16 @@ function getLocalStorageBlock(blockId: BlockId, projectId: string): BlockData | 
     console.error(`Error parsing block data from localStorage for ${blockId}:`, error);
     return null;
   }
+}
+
+export function saveLocalStorageBlock(blockId: BlockId, projectId: string, data: BlockData): void {
+  const key = `${LOCAL_STORAGE_KEY_PREFIX}${projectId}_${blockId}`;
+  localStorage.setItem(key, JSON.stringify({
+    blockId,
+    projectId,
+    data,
+    timestamp: Date.now()
+  }));
 }
 
 /**

@@ -3,7 +3,8 @@ import { useLocation, useParams } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { getLatestPlanId, quickStartPlan } from '@/lib/planHelpers';
 import { loadPlan, savePlan, SuccessFactorRating, PersonalHeuristic, PlanRecord } from '@/lib/plan-db';
-import { useBlockSave, BlockData, getLocalStorageBlock } from '@/hooks/useBlockSave';
+import { useBlockSave, BlockData, getLocalStorageBlock, saveLocalStorageBlock } from '@/hooks/useBlockSave';
+import { useQuery } from "@tanstack/react-query";
 import IntroAccordion from '@/components/plan/IntroAccordion';
 import SuccessFactorTable from '@/components/plan/SuccessFactorTable';
 import HeuristicList from '@/components/plan/HeuristicList';
@@ -54,69 +55,75 @@ export default function Block1Discover() {
     { id: 'block-3', label: 'Block 3: Deliver', completed: false },
   ];
   
-  // Load the plan when component mounts
-  useEffect(() => {
-    async function loadPlanData() {
+  // Use React Query for data fetching with localStorage fallback
+  const { data: blockData, isLoading: isBlockLoading, error: blockError } = useQuery({
+    queryKey: projectId ? [`/api/plans/${projectId}/block/block1`] : [],
+    queryFn: async () => {
+      if (!projectId) throw new Error("No project ID available");
+      
       try {
-        console.log('🔄 Loading plan data for project:', projectId);
+        console.log('🔄 Fetching block1 data for project:', projectId);
+        const response = await fetch(`/api/plans/${projectId}/block/block1`);
         
-        // First check for data in the block storage using our reliable hook
-        if (projectId) {
-          const blockData = await fetch(`/api/plans/project/${projectId}/block/block1`)
-            .then(res => {
-              if (!res.ok) {
-                throw new Error(`Failed to fetch block1 data: ${res.status}`);
-              }
-              return res.json();
-            })
-            .catch(err => {
-              console.warn('⚠️ Could not load block1 data from API:', err.message);
-              console.log('⚠️ Falling back to localStorage');
-              return null;
-            });
-          
-          if (blockData) {
-            console.log('✅ Block1 data loaded from API:', blockData);
-            
-            // Extract success factor ratings and personal heuristics
-            if (blockData.successFactorRatings) {
-              console.log('🔄 Setting success factor ratings from API data');
-              setSuccessFactorRatings(blockData.successFactorRatings);
-            }
-            
-            if (blockData.personalHeuristics) {
-              console.log('🔄 Setting personal heuristics from API data:',
-                JSON.stringify(blockData.personalHeuristics));
-              setPersonalHeuristics(blockData.personalHeuristics);
-            }
-            
-            setIsLoading(false);
-            return;
-          }
-          
-          // Try to get block data from localStorage as a fallback
-          const localBlockData = getLocalStorageBlock("block1", projectId);
-          if (localBlockData) {
-            console.log('✅ Block1 data loaded from localStorage:', localBlockData);
-            
-            // Extract data from localStorage
-            if (localBlockData.successFactorRatings) {
-              console.log('🔄 Setting success factor ratings from localStorage');
-              setSuccessFactorRatings(localBlockData.successFactorRatings);
-            }
-            
-            if (localBlockData.personalHeuristics) {
-              console.log('🔄 Setting personal heuristics from localStorage:',
-                JSON.stringify(localBlockData.personalHeuristics));
-              setPersonalHeuristics(localBlockData.personalHeuristics);
-            }
-            
-            setIsLoading(false);
-            return;
-          }
+        if (!response.ok) {
+          throw new Error(`Failed to fetch block1 data: ${response.status}`);
         }
         
-        // Fallback to the legacy plan loading mechanism
+        const data = await response.json();
+        console.log('✅ Block1 data loaded from API:', data);
+        return data;
+      } catch (error) {
+        console.warn('⚠️ Could not load block1 data from API:', error);
+        // Try to get from localStorage as fallback
+        const localData = getLocalStorageBlock("block1", projectId);
+        
+        if (localData) {
+          console.log('✅ Block1 data loaded from localStorage fallback');
+          return localData;
+        }
+        
+        // If we don't have local data either, throw the original error
+        throw error;
+      }
+    },
+    // Only run the query if we have a projectId
+    enabled: !!projectId,
+    // If we get an error, retry once
+    retry: 1,
+    // Handle stale data
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    // Always refetch on window focus
+    refetchOnWindowFocus: true
+  });
+  
+  // Use the block data to set our local state
+  useEffect(() => {
+    if (blockData) {
+      console.log('🔄 Updating state from loaded block data');
+      
+      // Extract success factor ratings
+      if (blockData.successFactorRatings) {
+        console.log('🔄 Setting success factor ratings:', 
+          Object.keys(blockData.successFactorRatings).length, 'ratings');
+        setSuccessFactorRatings(blockData.successFactorRatings);
+      }
+      
+      // Extract personal heuristics
+      if (blockData.personalHeuristics) {
+        console.log('🔄 Setting personal heuristics:', 
+          blockData.personalHeuristics.length, 'heuristics');
+        console.log('Heuristics data:', JSON.stringify(blockData.personalHeuristics));
+        setPersonalHeuristics(blockData.personalHeuristics);
+      }
+    }
+  }, [blockData]);
+  
+  // If we have no block data, fall back to legacy plan loading
+  useEffect(() => {
+    async function loadLegacyPlan() {
+      if (!projectId || blockData || isBlockLoading) return;
+      
+      try {
         console.log('ℹ️ No block data found, falling back to legacy plan loading');
         
         // Get the plan ID if it exists, or create a new one if not
@@ -178,7 +185,7 @@ export default function Block1Discover() {
           setPersonalHeuristics(loadedPlan.stages.Identification.personalHeuristics);
         }
       } catch (error) {
-        console.error('❌ Error loading plan:', error);
+        console.error('❌ Error loading legacy plan:', error);
         toast({
           title: "Error Loading Plan",
           description: "There was a problem loading your plan. Please try again.",
@@ -189,8 +196,8 @@ export default function Block1Discover() {
       }
     }
     
-    loadPlanData();
-  }, [projectId, setLocation, toast]);
+    loadLegacyPlan();
+  }, [projectId, blockData, isBlockLoading, setLocation, toast]);
   
   // Create a debounced save function
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -397,10 +404,32 @@ export default function Block1Discover() {
     }
   };
   
-  if (isLoading) {
+  // Show loading state while either the block data or legacy plan is loading
+  if (isLoading || isBlockLoading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <p>Loading your plan...</p>
+        {isBlockLoading && <p className="text-sm text-gray-500 mt-2">Fetching your saved data...</p>}
+      </div>
+    );
+  }
+  
+  // Show error state if we have one
+  if (blockError && !blockData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 p-4 rounded-md border border-red-200 mb-4">
+          <h3 className="text-red-800 font-semibold mb-2">Error Loading Data</h3>
+          <p className="text-red-700">{(blockError as Error).message}</p>
+          <p className="mt-2">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="text-red-700 underline"
+            >
+              Refresh the page
+            </button> to try again.
+          </p>
+        </div>
       </div>
     );
   }
