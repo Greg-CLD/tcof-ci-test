@@ -66,8 +66,26 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
       
       setIsSaving(true);
       
-      // Always save to localStorage as fallback
+      // Special handling for personal heuristics to ensure they're properly saved
+      if (data.personalHeuristics) {
+        // Deep clone them for safety
+        data = {
+          ...data,
+          personalHeuristics: JSON.parse(JSON.stringify(data.personalHeuristics))
+        };
+        
+        // Verify they have the correct structure
+        console.log(`🔍 HEURISTICS CHECK: Found ${data.personalHeuristics.length} personal heuristics to save`);
+        if (data.personalHeuristics.length > 0) {
+          const sample = data.personalHeuristics[0];
+          console.log(`🔍 HEURISTICS STRUCTURE CHECK: First heuristic has properties:`, 
+            Object.keys(sample).join(', '));
+        }
+      }
+      
+      // Always save to localStorage as fallback first
       saveLocalStorageBlock(blockId, projectId, data);
+      console.log(`🔶 SAVE BLOCK ${blockId} - Saved to localStorage as fallback`);
       
       // Prepare the API payload
       const payload = {
@@ -79,6 +97,14 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
       console.log(`🔶 SAVE BLOCK ${blockId} - Sending payload:`, JSON.stringify(payload, null, 2));
       
       // Send the data to the server
+      console.log(`🔶 SAVE BLOCK ${blockId} - Sending PATCH request to /api/plans/project/${projectId}/block/${blockId}`);
+      
+      // Debug pre-save - especially for personal heuristics
+      if (data.personalHeuristics) {
+        console.log(`🔍 Debug: Personal heuristics before save:`, 
+          JSON.stringify(data.personalHeuristics, null, 2));
+      }
+      
       const response = await apiRequest("PATCH", `/api/plans/${projectId}/block/${blockId}`, data);
       
       if (!response.ok) {
@@ -89,6 +115,14 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
       
       const result = await response.json();
       console.log(`🔶 SAVE BLOCK ${blockId} - Success. Response:`, JSON.stringify(result, null, 2));
+      
+      // Double check the localStorage save occurred
+      const storedData = getLocalStorageBlock(blockId, projectId);
+      console.log(`🔶 SAVE BLOCK ${blockId} - LocalStorage data after save:`, 
+        storedData ? 'Data found' : 'NO DATA FOUND', 
+        storedData?.personalHeuristics ? 
+          `(${storedData.personalHeuristics.length} heuristics)` : '');
+          
       return result;
     },
     onSuccess: (data) => {

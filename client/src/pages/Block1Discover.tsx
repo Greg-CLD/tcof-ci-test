@@ -3,7 +3,7 @@ import { useLocation, useParams } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { getLatestPlanId, quickStartPlan } from '@/lib/planHelpers';
 import { loadPlan, savePlan, SuccessFactorRating, PersonalHeuristic, PlanRecord } from '@/lib/plan-db';
-import { useBlockSave } from '@/hooks/useBlockSave';
+import { useBlockSave, BlockData, getLocalStorageBlock } from '@/hooks/useBlockSave';
 import IntroAccordion from '@/components/plan/IntroAccordion';
 import SuccessFactorTable from '@/components/plan/SuccessFactorTable';
 import HeuristicList from '@/components/plan/HeuristicList';
@@ -58,6 +58,67 @@ export default function Block1Discover() {
   useEffect(() => {
     async function loadPlanData() {
       try {
+        console.log('🔄 Loading plan data for project:', projectId);
+        
+        // First check for data in the block storage using our reliable hook
+        if (projectId) {
+          const blockData = await fetch(`/api/plans/project/${projectId}/block/block1`)
+            .then(res => {
+              if (!res.ok) {
+                throw new Error(`Failed to fetch block1 data: ${res.status}`);
+              }
+              return res.json();
+            })
+            .catch(err => {
+              console.warn('⚠️ Could not load block1 data from API:', err.message);
+              console.log('⚠️ Falling back to localStorage');
+              return null;
+            });
+          
+          if (blockData) {
+            console.log('✅ Block1 data loaded from API:', blockData);
+            
+            // Extract success factor ratings and personal heuristics
+            if (blockData.successFactorRatings) {
+              console.log('🔄 Setting success factor ratings from API data');
+              setSuccessFactorRatings(blockData.successFactorRatings);
+            }
+            
+            if (blockData.personalHeuristics) {
+              console.log('🔄 Setting personal heuristics from API data:',
+                JSON.stringify(blockData.personalHeuristics));
+              setPersonalHeuristics(blockData.personalHeuristics);
+            }
+            
+            setIsLoading(false);
+            return;
+          }
+          
+          // Try to get block data from localStorage as a fallback
+          const localBlockData = getLocalStorageBlock("block1", projectId);
+          if (localBlockData) {
+            console.log('✅ Block1 data loaded from localStorage:', localBlockData);
+            
+            // Extract data from localStorage
+            if (localBlockData.successFactorRatings) {
+              console.log('🔄 Setting success factor ratings from localStorage');
+              setSuccessFactorRatings(localBlockData.successFactorRatings);
+            }
+            
+            if (localBlockData.personalHeuristics) {
+              console.log('🔄 Setting personal heuristics from localStorage:',
+                JSON.stringify(localBlockData.personalHeuristics));
+              setPersonalHeuristics(localBlockData.personalHeuristics);
+            }
+            
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        // Fallback to the legacy plan loading mechanism
+        console.log('ℹ️ No block data found, falling back to legacy plan loading');
+        
         // Get the plan ID if it exists, or create a new one if not
         let id = getLatestPlanId();
         
@@ -107,14 +168,17 @@ export default function Block1Discover() {
         
         // Extract success factor ratings and personal heuristics
         if (loadedPlan.stages.Identification.successFactorRatings) {
+          console.log('🔄 Setting success factor ratings from legacy plan');
           setSuccessFactorRatings(loadedPlan.stages.Identification.successFactorRatings);
         }
         
         if (loadedPlan.stages.Identification.personalHeuristics) {
+          console.log('🔄 Setting personal heuristics from legacy plan:',
+            JSON.stringify(loadedPlan.stages.Identification.personalHeuristics));
           setPersonalHeuristics(loadedPlan.stages.Identification.personalHeuristics);
         }
       } catch (error) {
-        console.error('Error loading plan:', error);
+        console.error('❌ Error loading plan:', error);
         toast({
           title: "Error Loading Plan",
           description: "There was a problem loading your plan. Please try again.",
@@ -126,7 +190,7 @@ export default function Block1Discover() {
     }
     
     loadPlanData();
-  }, [setLocation, toast]);
+  }, [projectId, setLocation, toast]);
   
   // Create a debounced save function
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -187,29 +251,63 @@ export default function Block1Discover() {
   
   // Handle personal heuristics change
   const handlePersonalHeuristicsChange = async (heuristics: PersonalHeuristic[]) => {
-    setPersonalHeuristics(heuristics);
+    console.log('🔄 handlePersonalHeuristicsChange called with:', JSON.stringify(heuristics));
+    
+    // Store a deep clone of the heuristics to avoid reference issues
+    const clonedHeuristics = JSON.parse(JSON.stringify(heuristics));
+    setPersonalHeuristics(clonedHeuristics);
     
     // We'll explicitly save with a full saveBlock call to ensure reliability
     // Auto-saves aren't sufficient for this critical data
     if (projectId) {
       try {
-        console.log('Saving personal heuristics:', heuristics);
+        console.log('🔄 Saving personal heuristics to backend:', clonedHeuristics);
+        
+        // Show a toast that we're saving
+        toast({
+          title: "Saving heuristics...",
+          description: "Updating your personal heuristics",
+        });
         
         // Prepare block data with current ratings and updated heuristics
         const blockData = {
           successFactorRatings,
-          personalHeuristics: heuristics
+          personalHeuristics: clonedHeuristics
         };
         
         // We explicitly save here and wait for the result
+        console.log('🔄 Calling saveBlock with data:', JSON.stringify(blockData));
         const saved = await saveBlock(blockData);
         
-        if (!saved) {
-          console.warn('Failed to save personal heuristics, check saveBlock implementation');
+        if (saved) {
+          console.log('✅ Successfully saved personal heuristics');
+          toast({
+            title: "Heuristics saved",
+            description: "Your personal heuristics have been saved",
+          });
+        } else {
+          console.warn('⚠️ Failed to save personal heuristics, check saveBlock implementation');
+          toast({
+            title: "Save failed",
+            description: "Could not save your heuristics. Please try again.",
+            variant: "destructive"
+          });
         }
       } catch (err) {
-        console.error('Error saving heuristics:', err);
+        console.error('❌ Error saving heuristics:', err);
+        toast({
+          title: "Error",
+          description: "Failed to save heuristics: " + (err as Error).message,
+          variant: "destructive"
+        });
       }
+    } else {
+      console.warn('⚠️ No projectId available, cannot save heuristics');
+      toast({
+        title: "Cannot save",
+        description: "No project selected for saving heuristics",
+        variant: "destructive"
+      });
     }
   };
   
