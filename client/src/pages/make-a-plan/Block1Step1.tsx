@@ -18,11 +18,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePlan } from "@/contexts/PlanContext";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ProjectBanner from "@/components/ProjectBanner";
 import { ArrowLeft, ChevronRight, Info, Save } from "lucide-react";
 import { useSuccessFactors } from "@/hooks/useSuccessFactors";
-import { useResonanceRatings, type EvaluationInput } from "@/hooks/useResonanceRatings";
+import { useResonanceRatings } from "@/hooks/useResonanceRatings";
+
+// Define the EvaluationInput interface locally if it's not exported from the hook
+interface EvaluationInput {
+  factorId: string;
+  resonance: number;
+  notes?: string;
+}
 
 // Define the success factor resonance options with improved descriptions
 const RESONANCE_OPTIONS = [
@@ -104,7 +112,8 @@ export default function Block1Step1() {
       
       // Convert string evaluations to numbers
       Object.keys(planEvaluations).forEach(factorId => {
-        const evaluation = parseInt(planEvaluations[factorId]);
+        const value = planEvaluations[factorId];
+        const evaluation = typeof value === 'string' ? parseInt(value) : value;
         if (!isNaN(evaluation) && evaluation >= 1 && evaluation <= 5) {
           convertedEvaluations[factorId] = evaluation;
         }
