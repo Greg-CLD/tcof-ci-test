@@ -163,6 +163,37 @@ export default function Block1Discover() {
       console.info(`[SAVE] Block1Discover.saveMutation - Success criteria length: ${successCriteria?.length || 0}`);
       console.info(`[SAVE] Block1Discover.saveMutation - Rating keys: ${Object.keys(ratings).join(', ')}`);
       
+      // If no plan ID exists, this may be our first save
+      if (!plan?.id) {
+        console.info(`[SAVE] Block1Discover.saveMutation - No plan ID detected, ensuring plan exists`);
+        
+        try {
+          // Create a minimal plan to ensure we have an ID
+          const response = await apiRequest(
+            "POST", 
+            "/api/plans", 
+            { 
+              projectId, 
+              blocks: {
+                block1: {
+                  successCriteria,
+                  successFactorRatings: ratings
+                }
+              }
+            }
+          );
+          
+          if (!response.ok) {
+            console.error(`[SAVE] Block1Discover.saveMutation - Failed to create plan: ${response.status} ${response.statusText}`);
+          } else {
+            const result = await response.json();
+            console.info(`[SAVE] Block1Discover.saveMutation - Created new plan with ID: ${result.id}`);
+          }
+        } catch (error) {
+          console.error(`[SAVE] Block1Discover.saveMutation - Error creating plan:`, error);
+        }
+      }
+      
       // Include both success criteria and ratings in the save
       return saveBlockWithHook({
         blockId: 'block1',
@@ -415,7 +446,40 @@ export default function Block1Discover() {
       favourite: boolean;
     }) => {
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Adding new heuristic for project ${projectId}`);
+      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Current plan ID: ${plan?.id || 'null'}`);
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Data:`, newHeuristicData);
+      
+      // If no plan ID exists, this may be our first save
+      if (!plan?.id) {
+        console.info(`[SAVE] Block1Discover.addHeuristicMutation - No plan ID detected, ensuring plan exists`);
+        
+        try {
+          // Create a minimal plan to ensure we have an ID
+          const response = await apiRequest(
+            "POST", 
+            "/api/plans", 
+            { 
+              projectId, 
+              blocks: {
+                block1: {
+                  personalHeuristics: []
+                }
+              }
+            }
+          );
+          
+          if (!response.ok) {
+            console.error(`[SAVE] Block1Discover.addHeuristicMutation - Failed to create plan: ${response.status} ${response.statusText}`);
+          } else {
+            const result = await response.json();
+            console.info(`[SAVE] Block1Discover.addHeuristicMutation - Created new plan with ID: ${result.id}`);
+            // Invalidate queries to ensure we have the new plan ID
+            queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+          }
+        } catch (error) {
+          console.error(`[SAVE] Block1Discover.addHeuristicMutation - Error creating plan:`, error);
+        }
+      }
       
       // Get existing heuristics or empty array if none
       const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
@@ -522,6 +586,38 @@ export default function Block1Discover() {
     mutationFn: async (heuristicId: string) => {
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Removing heuristic ${heuristicId} for project ${projectId}`);
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Current plan ID: ${plan?.id || 'null'}`);
+      
+      // If no plan ID exists, this may be our first save
+      if (!plan?.id) {
+        console.info(`[SAVE] Block1Discover.removeHeuristicMutation - No plan ID detected, ensuring plan exists`);
+        
+        try {
+          // Create a minimal plan to ensure we have an ID
+          const response = await apiRequest(
+            "POST", 
+            "/api/plans", 
+            { 
+              projectId, 
+              blocks: {
+                block1: {
+                  personalHeuristics: []
+                }
+              }
+            }
+          );
+          
+          if (!response.ok) {
+            console.error(`[SAVE] Block1Discover.removeHeuristicMutation - Failed to create plan: ${response.status} ${response.statusText}`);
+          } else {
+            const result = await response.json();
+            console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Created new plan with ID: ${result.id}`);
+            // Invalidate queries to ensure we have the new plan ID
+            queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+          }
+        } catch (error) {
+          console.error(`[SAVE] Block1Discover.removeHeuristicMutation - Error creating plan:`, error);
+        }
+      }
       
       // Get existing heuristics safely
       const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];

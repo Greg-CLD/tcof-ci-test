@@ -82,6 +82,8 @@ export const PlanProvider: React.FC<{children: ReactNode}> = ({children}) => {
       if (!projectId) return null;
       
       try {
+        console.info(`[PLAN] PlanContext - Fetching plan for project ${projectId}`);
+        
         const res = await apiRequest("GET", `/api/plans/project/${projectId}`);
         if (!res.ok) {
           if (res.status === 401) {
@@ -96,7 +98,37 @@ export const PlanProvider: React.FC<{children: ReactNode}> = ({children}) => {
           return null;
         }
         
-        return await res.json();
+        const planData = await res.json();
+        console.info(`[PLAN] PlanContext - Received plan with ID: ${planData.id || 'null'}`);
+        
+        // If the plan doesn't have an ID, we need to create one
+        if (!planData.id) {
+          console.info(`[PLAN] PlanContext - Plan has no ID, will create one`);
+          // This will force a plan creation on the server
+          try {
+            // Create a minimal plan with just the project ID
+            const createResponse = await apiRequest(
+              "POST",
+              "/api/plans",
+              { projectId, blocks: planData.blocks || {} }
+            );
+            
+            if (!createResponse.ok) {
+              console.error(`[PLAN] PlanContext - Failed to create plan: ${createResponse.status} ${createResponse.statusText}`);
+              // Return original plan data even though it has no ID
+              return planData;
+            }
+            
+            const newPlan = await createResponse.json();
+            console.info(`[PLAN] PlanContext - Created new plan with ID: ${newPlan.id}`);
+            return newPlan;
+          } catch (createErr) {
+            console.error("[PLAN] PlanContext - Error creating plan:", createErr);
+            return planData;
+          }
+        }
+        
+        return planData;
       } catch (err) {
         console.error("Error fetching plan:", err);
         return null;
