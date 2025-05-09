@@ -303,8 +303,9 @@ export default function Block2Design() {
                   variant="outline" 
                   className="mr-2"
                   onClick={handleSaveBlock}
+                  disabled={isSaving}
                 >
-                  Save Progress
+                  {isSaving ? "Saving..." : "Save Progress"}
                 </Button>
               </div>
             </CardContent>
@@ -374,8 +375,9 @@ export default function Block2Design() {
                   variant="outline" 
                   className="mr-2"
                   onClick={handleSaveBlock}
+                  disabled={isSaving}
                 >
-                  Save Progress
+                  {isSaving ? "Saving..." : "Save Progress"}
                 </Button>
               </div>
             </CardContent>
@@ -407,27 +409,15 @@ export default function Block2Design() {
             </CardHeader>
             <CardContent>
               <p className="mb-6 text-gray-700">
-                Link each of your custom heuristics from Block 1 to the most relevant TCOF Success Factor.
-                This ensures your personal guiding principles align with established best practices.
+                Link each of your custom heuristics from Block 1 to the relevant 
+                TCOF Success Factors to ensure comprehensive coverage.
               </p>
               
-              {/* Redirect to the dedicated mapping page */}
+              {/* This section will have a heuristic mapping interface */}
               <div className="bg-gray-50 p-6 rounded-lg mb-6 text-center">
-                <p className="mb-4">
-                  The Heuristic Mapping feature is available on a dedicated page for better usability.
-                </p>
-                <Button 
-                  onClick={() => navigate(`/make-a-plan/${projectId}/block-2/step-3`)}
-                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                >
-                  Open Heuristic Mapping Tool
-                </Button>
-              </div>
-              
-              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
-                <p className="text-amber-800">
-                  <strong>Tip:</strong> Mapping your heuristics to success factors ensures your custom
-                  principles inherit the proven tasks and practices associated with each factor.
+                <h3 className="text-lg font-medium text-tcof-dark mb-4">Heuristic Mapping</h3>
+                <p className="text-gray-500">
+                  Coming soon: Heuristic mapping interface.
                 </p>
               </div>
               
@@ -436,8 +426,9 @@ export default function Block2Design() {
                   variant="outline" 
                   className="mr-2"
                   onClick={handleSaveBlock}
+                  disabled={isSaving}
                 >
-                  Save Progress
+                  {isSaving ? "Saving..." : "Save Progress"}
                 </Button>
               </div>
             </CardContent>
@@ -458,38 +449,26 @@ export default function Block2Design() {
           </Card>
         </TabsContent>
         
-        {/* Step 4: Unlinked Heuristic Tasks Tab */}
+        {/* Step 4: Unlinked Tasks Tab */}
         <TabsContent value="step4" className="pt-6">
           <Card className="max-w-4xl mx-auto">
             <CardHeader>
-              <CardTitle className="text-tcof-dark">Step 4: Tasks for Unlinked Heuristics</CardTitle>
+              <CardTitle className="text-tcof-dark">Step 4: Unlinked Tasks</CardTitle>
               <CardDescription>
-                Create specific tasks for heuristics not linked to success factors
+                Identify any tasks that aren't linked to success factors
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="mb-6 text-gray-700">
-                For each heuristic that wasn't linked to a TCOF success factor, define your 
-                own custom tasks across each of the four project stages.
+                Review any tasks in your project that aren't directly linked to
+                success factors and determine if they should remain or be revised.
               </p>
               
-              {/* Redirect to the dedicated tasks page */}
+              {/* This section will have an unlinked tasks review interface */}
               <div className="bg-gray-50 p-6 rounded-lg mb-6 text-center">
-                <p className="mb-4">
-                  This feature is available on a dedicated page for better usability.
-                </p>
-                <Button 
-                  onClick={() => navigate(`/make-a-plan/${projectId}/block-2/step-4`)}
-                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                >
-                  Open Task Creation Tool
-                </Button>
-              </div>
-              
-              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
-                <p className="text-amber-800">
-                  <strong>Tip:</strong> You can add up to 3 tasks per stage (Identification, Definition, 
-                  Delivery, Closure) for each unlinked heuristic. Tasks save automatically as you create them.
+                <h3 className="text-lg font-medium text-tcof-dark mb-4">Unlinked Tasks</h3>
+                <p className="text-gray-500">
+                  Coming soon: Unlinked tasks interface.
                 </p>
               </div>
               
@@ -498,8 +477,9 @@ export default function Block2Design() {
                   variant="outline" 
                   className="mr-2"
                   onClick={handleSaveBlock}
+                  disabled={isSaving}
                 >
-                  Save Progress
+                  {isSaving ? "Saving..." : "Save Progress"}
                 </Button>
               </div>
             </CardContent>
@@ -520,80 +500,83 @@ export default function Block2Design() {
           </Card>
         </TabsContent>
         
-        {/* Summary Tab */}
+        {/* Summary & Next Steps */}
         <TabsContent value="summary" className="pt-6">
           <Card className="max-w-4xl mx-auto">
             <CardHeader>
-              <CardTitle className="text-tcof-dark">Block 2 Summary</CardTitle>
+              <CardTitle className="text-tcof-dark">Block 2 Summary & Next Steps</CardTitle>
               <CardDescription>
-                Review your progress and prepare for Block 3
+                Review your design work and prepare for delivery
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-green-50 rounded-lg p-6 mb-6 flex items-center">
-                <Check className="h-10 w-10 text-green-500 mr-4" />
-                <div>
-                  <h3 className="text-lg font-medium text-green-800 mb-1">Block 2 Ready for Completion</h3>
-                  <p className="text-green-700">
-                    You've identified tasks and stakeholders for your project.
-                  </p>
+              <p className="mb-6 text-gray-700">
+                Review the work you've done in Block 2 and prepare to move to Block 3,
+                where you'll develop a delivery approach for your project.
+              </p>
+              
+              <div className="bg-gray-50 p-6 rounded-lg mb-6">
+                <h3 className="text-lg font-medium text-tcof-dark mb-4">Block 2 Summary</h3>
+                
+                <div className="space-y-4">
+                  <div className="p-4 border rounded-lg bg-white">
+                    <h4 className="font-medium text-tcof-dark flex items-center">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
+                      Tasks Created
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {tasks.length > 0 
+                        ? `${tasks.length} task(s) created based on success factors`
+                        : "No tasks created yet"}
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 border rounded-lg bg-white">
+                    <h4 className="font-medium text-tcof-dark flex items-center">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
+                      Stakeholder Mapping
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {stakeholders.length > 0 
+                        ? `${stakeholders.length} stakeholder(s) identified and analyzed`
+                        : "No stakeholders identified yet"}
+                    </p>
+                  </div>
                 </div>
               </div>
               
-              <h3 className="text-lg font-medium text-tcof-dark mb-4">Summary of Key Elements</h3>
-              
-              <div className="mb-6">
-                <h4 className="font-medium text-tcof-dark mb-2">Tasks:</h4>
-                {tasks.length > 0 ? (
-                  <ul className="list-disc pl-6 space-y-1">
-                    {tasks.map((task, index) => (
-                      <li key={task.id || index} className="text-gray-700">
-                        {task.title} <span className="text-tcof-teal text-sm">
-                          (Priority: {task.priority}/5)
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No tasks created yet</p>
-                )}
-              </div>
-              
-              <div className="mb-6">
-                <h4 className="font-medium text-tcof-dark mb-2">Stakeholders:</h4>
-                {stakeholders.length > 0 ? (
-                  <ul className="list-disc pl-6 space-y-1">
-                    {stakeholders.map((stakeholder, index) => (
-                      <li key={stakeholder.id || index} className="text-gray-700">
-                        {stakeholder.name} <span className="text-tcof-teal text-sm">
-                          (Role: {stakeholder.role})
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No stakeholders identified yet</p>
-                )}
-              </div>
-              
-              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8">
                 <p className="text-amber-800">
-                  <strong>What's Next:</strong> In Block 3, you'll develop a timeline and finalize your delivery approach.
+                  <strong>Next:</strong> In Block 3, you'll develop a delivery approach that 
+                  addresses your project challenges and establishes clear owner accountability.
                 </p>
+              </div>
+              
+              <div className="flex justify-end space-x-4">
+                <Button 
+                  variant="outline" 
+                  className="mr-2"
+                  onClick={handleSaveBlock}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save Progress"}
+                </Button>
+                
+                <Button 
+                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                  onClick={handleCompleteBlock}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Complete Block 2 & Continue"} <Check className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button 
                 variant="outline" 
-                onClick={() => setActiveTab("step3")}
+                onClick={() => setActiveTab("step4")}
               >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 3
-              </Button>
-              <Button 
-                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                onClick={handleCompleteBlock}
-              >
-                Complete Block 2 & Proceed <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 4
               </Button>
             </CardFooter>
           </Card>
