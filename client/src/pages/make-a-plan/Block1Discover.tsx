@@ -365,25 +365,28 @@ export default function Block1Discover() {
   }, [evaluations, projectId, saveBlockFromContext]);
 
   // Handle success factor evaluation change - updates only the specified factor
-  const handleEvaluationChange = (factorId: string, value: number) => {
+  const handleEvaluationChange = async (factorId: string, value: number) => {
     console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'value:', value);
 
-    // Update local state with the new rating for only the specified factor
-    setRatings(prev => {
-      const newState = {
-        ...prev,
-        [factorId]: value
-      };
-      console.log('🔄 Block1Discover.ratings - before:', prev, 'after:', newState);
-      return newState;
+    setRatings(prev => ({ ...prev, [factorId]: value }));
+
+    toast({ 
+      title: "Rating updated", 
+      description: `Changed rating for factor: ${factorId}`, 
+      duration: 1500 
     });
 
-    // Live preview update message
-    toast({
-      title: "Rating updated", 
-      description: `Changed rating for factor: ${factorId}`,
-      duration: 1500
-    });
+    try {
+      await updateEvaluations([{ factorId, resonance: value }]);
+      console.log('🔄 Single rating PATCH succeeded');
+    } catch (err) {
+      console.error('🔴 Single rating PATCH failed', err);
+      toast({
+        title: "Save failed",
+        description: "Could not save rating to server.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Function to save resonance ratings to server with preview feedback
@@ -854,8 +857,7 @@ export default function Block1Discover() {
     const blockData = {
       successCriteria: value,
       personalHeuristics: personalHeuristics,
-      successFactorRatings: ratings || {},
-      lastUpdated: new Date().toISOString()
+      successFactorRatings: ratings || {},      lastUpdated: new Date().toISOString()
     };
 
     // Log the block data that includes personal heuristics
