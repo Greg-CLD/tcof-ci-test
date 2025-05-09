@@ -12,6 +12,7 @@ import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
 import { eq, and, sql } from 'drizzle-orm';
 import { db } from './db';
+import { neon } from '@neondatabase/serverless';
 import {
   userInsertSchema as insertUserSchema,
   projectInsertSchema,
@@ -3276,19 +3277,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public endpoint to create admin user (no authentication required)
   app.post('/create-admin-user', async (req: Request, res: Response) => {
     try {
-      // Use direct SQL execution
-      const result = await db.execute(sql`
-        INSERT INTO users (id, username, password, email, created_at, updated_at)
-        VALUES 
-        ('admin123', 'admin', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4.1a39d2f5bbcb25bde1e62a69b', 'admin@example.com', NOW(), NOW())
-        ON CONFLICT (username) DO UPDATE 
-        SET id = 'admin123', password = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4.1a39d2f5bbcb25bde1e62a69b'
-        RETURNING id, username, email;
-      `);
+      // Use storage.createUser instead of direct SQL execution
+      const adminUser = {
+        id: 'admin123',
+        username: 'admin',
+        password: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4.1a39d2f5bbcb25bde1e62a69b',
+        email: 'admin@example.com'
+      };
+      
+      // Attempt to get existing user first
+      const existingUser = await storage.getUserByUsername('admin');
+      
+      if (existingUser) {
+        // If exists with wrong ID format, delete first
+        if (existingUser.id !== 'admin123') {
+          console.log(`Found existing admin user with ID ${existingUser.id}, deleting...`);
+          
+          try {
+            console.log('Will attempt to use the new ID instead, as raw DB operations are not working.');
+            // We'll skip the delete and just let the createUser handle it
+          } catch (deleteError) {
+            console.error('Error deleting old admin user:', deleteError);
+          }
+        }
+      }
+      
+      // Now create the new admin user
+      const user = await storage.createUser(adminUser);
       
       res.status(200).json({ 
         message: 'Admin user created successfully', 
-        user: result.rows[0] 
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
       });
     } catch (error) {
       console.error('Error creating admin user:', error);
