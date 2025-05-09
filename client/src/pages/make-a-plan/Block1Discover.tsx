@@ -864,12 +864,12 @@ export default function Block1Discover() {
 
     setSuccessCriteria(value);
 
-    // Create block data with all required fields
+    //    // Create block data with all required fields
     const blockData = {
       successCriteria: value,
-      personalHeuristics: personalHeuristics``````
-,
-      successFactorRatings: ratings || {},      lastUpdated: new Date().toISOString()
+      personalHeuristics: personalHeuristics,
+      successFactorRatings: ratings || {},
+      lastUpdated: new Date().toISOString()
     };
 
     // Log the block data that includes personal heuristics
