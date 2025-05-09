@@ -19,6 +19,7 @@ import { useProgress } from "@/contexts/ProgressContext";
 import { PlanProvider, usePlan } from "@/contexts/PlanContext";
 import { useSuccessFactors } from "@/hooks/useSuccessFactors";
 import { useResonanceRatings } from "@/hooks/useResonanceRatings";
+import { useBlockSave } from "@/hooks/useBlockSave";
 import ProjectBanner from "@/components/ProjectBanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,7 @@ export default function Block1Discover() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { progress, refreshProgress } = useProgress();
-  const { plan, savePlan, saveBlock } = usePlan();
+  const { plan, savePlan, saveBlock: saveBlockFromContext } = usePlan();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -163,10 +164,13 @@ export default function Block1Discover() {
       console.info(`[SAVE] Block1Discover.saveMutation - Rating keys: ${Object.keys(ratings).join(', ')}`);
       
       // Include both success criteria and ratings in the save
-      return saveBlock('block1', {
-        successCriteria,
-        successFactorRatings: ratings,
-        lastUpdated: new Date().toISOString(),
+      return saveBlockWithHook({
+        blockId: 'block1',
+        blockData: {
+          successCriteria,
+          successFactorRatings: ratings,
+          lastUpdated: new Date().toISOString(),
+        }
       });
     },
     onMutate: (newData) => {
@@ -273,12 +277,12 @@ export default function Block1Discover() {
       console.log('🔄 Block1Discover - Updated ratings state:', serverRatings);
       
       // Also save to the plan for persistence
-      saveBlock('block1', {
+      saveBlockFromContext('block1', {
         successFactorRatings: serverRatings,
         lastUpdated: new Date().toISOString(),
       });
     }
-  }, [evaluations, projectId, saveBlock]);
+  }, [evaluations, projectId, saveBlockFromContext]);
   
   // Handle success factor evaluation change - updates only the specified factor
   const handleEvaluationChange = (factorId: string, value: number) => {
@@ -321,7 +325,7 @@ export default function Block1Discover() {
       console.log('🔄 Block1Discover.handleConfirmAndSave - Saving ratings to local plan:', ratings);
       const now = new Date().toISOString();
       setLastRatingsSaveTime(now);
-      await saveBlock('block1', {
+      await saveBlockFromContext('block1', {
         successFactorRatings: ratings,
         lastUpdated: now,
       });
@@ -397,6 +401,9 @@ export default function Block1Discover() {
     }
   };
   
+  // Get the block save hook to use consistent API pattern
+  const { saveBlock: saveBlockWithHook, isLoading: isSavingBlock } = useBlockSave();
+  
   // Heuristic add mutation with optimistic UI
   const addHeuristicMutation = useMutation({
     mutationFn: async (newHeuristicData: { 
@@ -408,7 +415,11 @@ export default function Block1Discover() {
       favourite: boolean;
     }) => {
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Adding new heuristic for project ${projectId}`);
-      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Data: ${JSON.stringify(newHeuristicData)}`);
+      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Data:`, newHeuristicData);
+      
+      // Get existing heuristics or empty array if none
+      const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
+      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Current heuristics count: ${existingHeuristics.length}`);
       
       // Make sure the ID is always defined
       const heuristicId = newHeuristicData.id || `h-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -425,33 +436,21 @@ export default function Block1Discover() {
         favourite: !!newHeuristicData.favourite
       };
       
-      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Formatted heuristic: ${JSON.stringify(heuristicToSave)}`);
-      
-      // Get existing heuristics or empty array if none
-      const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
-      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Current heuristics count: ${existingHeuristics.length}`);
-      
       // Create updated list with deep clone to avoid reference issues
       const updatedHeuristics = [...JSON.parse(JSON.stringify(existingHeuristics)), heuristicToSave];
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - New heuristics count: ${updatedHeuristics.length}`);
       
-      // Save to block1 with both field formats for maximum compatibility
-      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Saving to block1 for project ${projectId}`);
-      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Current plan ID: ${plan?.id || 'null'}`);
-      
-      // Save directly using the project-block endpoint to ensure persistence
-      try {
-        const result = await saveBlock('block1', {
+      // Use our new useBlockSave hook to ensure consistent API usage
+      const result = await saveBlockWithHook({ 
+        blockId: 'block1', 
+        blockData: {
           personalHeuristics: updatedHeuristics,
           lastUpdated: new Date().toISOString(),
-        });
-        
-        console.info(`[SAVE] Block1Discover.addHeuristicMutation - Save successful, result:`, result);
-        return result;
-      } catch (error) {
-        console.error(`[SAVE] Block1Discover.addHeuristicMutation - Save failed:`, error);
-        throw error;
-      }
+        }
+      });
+      
+      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Save successful, result:`, result);
+      return result;
     },
     onMutate: async (newHeuristicData) => {
       // Cancel any outgoing refetches
@@ -543,20 +542,18 @@ export default function Block1Discover() {
       
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - New heuristics count: ${updatedHeuristics.length}`);
       
-      // Save directly using the project-block endpoint to ensure persistence
-      try {
-        console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Saving to block1 for project ${projectId}`);
-        const result = await saveBlock('block1', {
+      // Save using our consistent block save hook
+      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Saving to block1 for project ${projectId}`);
+      const result = await saveBlockWithHook({ 
+        blockId: 'block1', 
+        blockData: {
           personalHeuristics: updatedHeuristics,
           lastUpdated: new Date().toISOString(),
-        });
-        
-        console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Save successful, result:`, result);
-        return result;
-      } catch (error) {
-        console.error(`[SAVE] Block1Discover.removeHeuristicMutation - Save failed:`, error);
-        throw error;
-      }
+        }
+      });
+      
+      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Save successful, result:`, result);
+      return result;
     },
     onMutate: async (heuristicId) => {
       // Cancel any outgoing refetches

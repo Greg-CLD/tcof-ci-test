@@ -1,277 +1,181 @@
-/**
- * Custom hook for reliable block data persistence in Make-a-Plan
- * Implements the same robust save pattern used in Goal-Mapping
- */
-import { useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-
-// Type for the data structure received from API
-export interface BlockSaveResponse {
-  id: string;
-  blocks: Record<string, any>;
-  logs?: any;
-  [key: string]: any;
-}
-
-// Define supported block IDs
-export type BlockId = "block1" | "block2" | "block3";
-
-// Interface for block data to be saved
-export interface BlockData {
-  [key: string]: any;
-}
-
-// Local storage helpers for fallback persistence
-const LOCAL_STORAGE_KEY_PREFIX = "tcof_block_";
-
-// Export these functions for external use
-export function getLocalStorageBlock(blockId: BlockId, projectId: string): BlockData | null {
-  const key = `${LOCAL_STORAGE_KEY_PREFIX}${projectId}_${blockId}`;
-  const item = localStorage.getItem(key);
-  if (!item) return null;
-  
-  try {
-    const parsed = JSON.parse(item);
-    return parsed.data;
-  } catch (error) {
-    console.error(`Error parsing block data from localStorage for ${blockId}:`, error);
-    return null;
-  }
-}
-
-export function saveLocalStorageBlock(blockId: BlockId, projectId: string, data: BlockData): void {
-  const key = `${LOCAL_STORAGE_KEY_PREFIX}${projectId}_${blockId}`;
-  localStorage.setItem(key, JSON.stringify({
-    blockId,
-    projectId,
-    data,
-    timestamp: Date.now()
-  }));
-}
+import { useMutation } from '@tanstack/react-query';
+import { useParams } from 'wouter';
+import { queryClient, apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 /**
- * Hook for reliably saving block data with proper error handling and fallback
+ * Hook to save block data for a specific project
+ * This handles optimistic updates, API calls, and error handling
  */
-export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
+export function useBlockSave() {
+  const { projectId } = useParams<{ projectId?: string }>();
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
   
-  // Mutation for saving block data
-  const saveBlockMutation = useMutation({
-    mutationFn: async (data: BlockData) => {
+  const mutation = useMutation({
+    mutationFn: async ({ blockId, blockData }: { blockId: string, blockData: any }) => {
       if (!projectId) {
-        throw new Error("Project ID is required");
+        throw new Error('Project ID is required');
       }
       
-      setIsSaving(true);
+      console.info(`[SAVE] useBlockSave.mutationFn - Saving ${blockId} for project ${projectId}`);
+      console.info(`[SAVE] useBlockSave.mutationFn - Data:`, blockData);
       
-      // Special handling for personal heuristics to ensure they're properly saved
-      if (data.personalHeuristics) {
-        // Deep clone them for safety
-        data = {
-          ...data,
-          personalHeuristics: JSON.parse(JSON.stringify(data.personalHeuristics))
-        };
+      // If saving personal heuristics, ensure each one has proper id/fields
+      if (blockData.personalHeuristics && Array.isArray(blockData.personalHeuristics)) {
+        console.info(`[SAVE] useBlockSave.mutationFn - Processing ${blockData.personalHeuristics.length} heuristics`);
         
-        // Verify they have the correct structure
-        console.info(`🔍 [SAVE-HOOK] HEURISTICS CHECK: Found ${data.personalHeuristics.length} personal heuristics to save`);
-        console.info(`📋 [SAVE-HOOK] Operation: VERIFY HEURISTICS`);
-        console.info(`📋 [SAVE-HOOK] Count: ${data.personalHeuristics.length}`);
-        console.info(`📋 [SAVE-HOOK] Array Type: ${Array.isArray(data.personalHeuristics) ? 'Valid Array' : 'NOT AN ARRAY!'}`);
-        console.info(`📋 [SAVE-HOOK] BlockId: ${blockId}`);
-        console.info(`📋 [SAVE-HOOK] ProjectId: ${projectId}`);
+        // Deep clone to avoid reference issues
+        const clonedHeuristics = JSON.parse(JSON.stringify(blockData.personalHeuristics));
         
-        if (data.personalHeuristics.length > 0) {
-          const sample = data.personalHeuristics[0];
-          console.info(`🔍 [SAVE-HOOK] HEURISTICS STRUCTURE CHECK: First heuristic:`, JSON.stringify(sample, null, 2));
-          console.info(`🔍 [SAVE-HOOK] First heuristic has properties:`, Object.keys(sample).join(', '));
+        // Ensure every heuristic has an ID and all required fields
+        blockData.personalHeuristics = clonedHeuristics.map((h: any, index: number) => {
+          const id = h.id || `h-${Date.now()}-${index}`;
+          return {
+            id,
+            name: h.name || h.text || `Heuristic ${index + 1}`,
+            description: h.description || h.notes || '',
+            text: h.text || h.name || `Heuristic ${index + 1}`,
+            notes: h.notes || h.description || '',
+            favourite: !!h.favourite,
+          };
+        });
+        
+        console.info(`[SAVE] useBlockSave.mutationFn - Processed heuristics:`, blockData.personalHeuristics);
+      }
+      
+      // If saving success factor ratings, ensure no undefined keys
+      if (blockData.successFactorRatings && typeof blockData.successFactorRatings === 'object') {
+        const cleanedRatings: Record<string, number> = {};
+        let invalidKeysFound = false;
+        
+        for (const [key, value] of Object.entries(blockData.successFactorRatings)) {
+          if (key && key !== 'undefined' && key !== 'null') {
+            cleanedRatings[key] = Number(value);
+          } else {
+            invalidKeysFound = true;
+            console.warn(`[SAVE] useBlockSave.mutationFn - Removing invalid rating key: "${key}"`);
+          }
         }
-      } else {
-        console.warn(`⚠️ [SAVE-HOOK] No personalHeuristics found in save data!`);
+        
+        if (invalidKeysFound) {
+          console.info(`[SAVE] useBlockSave.mutationFn - Cleaned success factor ratings`);
+          blockData.successFactorRatings = cleanedRatings;
+        }
       }
       
-      // Always save to localStorage as fallback first
-      saveLocalStorageBlock(blockId, projectId, data);
-      console.info(`🔶 [SAVE-HOOK] Saved to localStorage as fallback`);
-      
-      // Verify localStorage backup worked
-      const localBackup = getLocalStorageBlock(blockId, projectId);
-      if (localBackup?.personalHeuristics) {
-        console.info(`✅ [SAVE-HOOK] Verified localStorage backup contains ${localBackup.personalHeuristics.length} heuristics`);
-      } else {
-        console.warn(`⚠️ [SAVE-HOOK] LocalStorage backup may have failed - no heuristics found!`);
-      }
-      
-      // Prepare the API payload
-      const payload = {
-        projectId,
-        blockId,
-        blockData: data,
-      };
-      
-      console.info(`🔶 [SAVE-HOOK] Sending payload to server:`, JSON.stringify(payload, null, 2));
-      
-      // Send the data to the server
-      console.info(`🔶 [SAVE-HOOK] Sending PATCH request to /api/plans/project/${projectId}/block/${blockId}`);
-      
-      // Debug pre-save - especially for personal heuristics
-      if (data.personalHeuristics) {
-        console.info(`🔍 [SAVE-HOOK] Personal heuristics API payload:`, 
-          JSON.stringify(data.personalHeuristics, null, 2));
-      }
-      
-      // Log the queryKey being used for cache invalidation
-      console.info(`🔑 [SAVE-HOOK] Using query key for invalidation: ["project-block", "${projectId}", "${blockId}"]`);
-      
-      const response = await apiRequest("PATCH", `/api/plans/project/${projectId}/block/${blockId}`, data);
+      const response = await apiRequest(
+        'PATCH',
+        `/api/plans/project/${projectId}/block/${blockId}`,
+        blockData
+      );
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ [SAVE-HOOK] API request failed with status ${response.status}: ${errorText}`);
-        throw new Error(`Failed to save ${blockId}: ${errorText}`);
+        console.error(`[SAVE] useBlockSave.mutationFn - Error: ${errorText}`);
+        throw new Error(`Failed to save block: ${response.statusText}`);
       }
       
+      // Parse the response
       const result = await response.json();
-      console.info(`✅ [SAVE-HOOK] API request succeeded with response:`, JSON.stringify(result, null, 2));
+      console.info(`[SAVE] useBlockSave.mutationFn - Success:`, result);
       
-      // Check if server returned the expected data structure
-      if (result.blockData) {
-        console.info(`✅ [SAVE-HOOK] Server returned blockData in response`);
-        if (result.blockData.personalHeuristics) {
-          console.info(`✅ [SAVE-HOOK] Server returned ${result.blockData.personalHeuristics.length} heuristics in response`);
-          console.info(`📊 [SAVE-HOOK] First server-returned heuristic:`, 
-            result.blockData.personalHeuristics.length > 0 ? 
-              JSON.stringify(result.blockData.personalHeuristics[0], null, 2) : 'none');
-        } else {
-          console.warn(`⚠️ [SAVE-HOOK] Server response missing personalHeuristics!`);
-        }
-      } else {
-        console.warn(`⚠️ [SAVE-HOOK] Server did not return blockData in response!`);
-      }
-      
-      // Double check the localStorage save occurred
-      const storedData = getLocalStorageBlock(blockId, projectId);
-      console.info(`🔍 [SAVE-HOOK] LocalStorage verification after API save:`, 
-        storedData ? 'Data found' : 'NO DATA FOUND', 
-        storedData?.personalHeuristics ? 
-          `(${storedData.personalHeuristics.length} heuristics)` : 'No heuristics found');
-          
+      // Return the full response which includes blockData
       return result;
     },
+    onMutate: ({ blockId, blockData }) => {
+      console.info(`[SAVE] useBlockSave.onMutate - Optimistically updating UI for ${blockId}`);
+      
+      // Cancel outgoing refetches
+      queryClient.cancelQueries({ queryKey: ['plan', projectId] });
+      
+      // Snapshot current value
+      const previousPlan = queryClient.getQueryData(['plan', projectId]);
+      
+      // Optimistically update
+      queryClient.setQueryData(['plan', projectId], (old: any) => {
+        if (!old) return old;
+        
+        // Create a deep clone of the updated blocks to avoid reference issues
+        const updatedBlocks = {
+          ...old.blocks,
+          [blockId]: {
+            ...old.blocks?.[blockId],
+            ...JSON.parse(JSON.stringify(blockData)),
+            lastUpdated: new Date().toISOString()
+          }
+        };
+        
+        return {
+          ...old,
+          blocks: updatedBlocks
+        };
+      });
+      
+      // Show pending toast for immediate feedback
+      toast({
+        title: 'Saving changes...',
+        description: 'Your changes are being saved.',
+      });
+      
+      return { previousPlan };
+    },
     onSuccess: (data) => {
-      console.info(`✅ [SAVE-HOOK] Successfully saved block data (onSuccess callback)`);
-      console.info(`📋 [SAVE-HOOK] Operation: SAVE SUCCESS`);
-      console.info(`📋 [SAVE-HOOK] BlockId: ${blockId}`);
-      console.info(`📋 [SAVE-HOOK] ProjectId: ${projectId}`);
-      console.info(`📋 [SAVE-HOOK] Response: ${data ? 'Data returned' : 'No data returned'}`);
-      console.info(`📋 [SAVE-HOOK] Next: Invalidating queries`);
+      console.info(`[SAVE] useBlockSave.onSuccess - Save completed`);
       
-      // Invalidate relevant queries to refresh data using a consistent query key pattern
-      // Main specific block query key for this block
-      console.info(`🔄 [SAVE-HOOK] Invalidating primary query: ["project-block", "${projectId}", "${blockId}"]`);
-      queryClient.invalidateQueries({ queryKey: ["project-block", projectId, blockId] });
-      
-      // Legacy path-based query keys for backward compatibility
-      console.info(`🔄 [SAVE-HOOK] Invalidating legacy query paths for compatibility`);
-      queryClient.invalidateQueries({ queryKey: [`/api/plans/project/${projectId}/block/${blockId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/plans/project/${projectId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/plans`] });
-      
-      // Verify the block data in React Query cache was refreshed
-      const cachedData = queryClient.getQueryData(["project-block", projectId, blockId]);
-      console.info(`🔍 [SAVE-HOOK] Query cache after invalidation:`, 
-        cachedData ? 'Cached data exists' : 'No cached data yet');
-      
-      if (cachedData && (cachedData as any).personalHeuristics) {
-        console.info(`✅ [SAVE-HOOK] Cache contains ${(cachedData as any).personalHeuristics.length} heuristics`);
+      // If we have a blockData field in the response, update the cache with it
+      if (data.blockData) {
+        const { blockId } = data;
+        
+        console.info(`[SAVE] useBlockSave.onSuccess - Updating cache with server data for ${blockId}`);
+        
+        // Update the cache with the actual data from the server
+        queryClient.setQueryData(['plan', projectId], (old: any) => {
+          if (!old) return old;
+          
+          return {
+            ...old,
+            id: data.id, // Ensure plan ID is updated
+            blocks: {
+              ...old.blocks,
+              [blockId]: data.blockData
+            },
+            lastUpdated: data.lastUpdated
+          };
+        });
       }
       
       toast({
-        title: "Progress saved",
-        description: `${blockId.replace("block", "Block ")} has been saved successfully.`,
+        title: 'Success',
+        description: 'Your changes have been saved.',
       });
     },
-    onError: (error: Error) => {
-      console.error(`❌ [SAVE-HOOK] Error in save operation:`, error);
-      console.info(`📋 [SAVE-HOOK] Operation: SAVE ERROR`);
-      console.info(`📋 [SAVE-HOOK] BlockId: ${blockId}`);
-      console.info(`📋 [SAVE-HOOK] ProjectId: ${projectId}`);
-      console.info(`📋 [SAVE-HOOK] Error: ${error.message}`);
-      console.info(`📋 [SAVE-HOOK] Next: Checking localStorage fallback`);
-      
-      // Check if we have a local fallback saved
-      const localData = getLocalStorageBlock(blockId, projectId || "");
-      if (localData) {
-        console.info(`🛟 [SAVE-HOOK] Fallback data available in localStorage`);
-        if (localData.personalHeuristics) {
-          console.info(`🛟 [SAVE-HOOK] Fallback contains ${localData.personalHeuristics.length} heuristics`);
-        }
-      } else {
-        console.warn(`⚠️ [SAVE-HOOK] No fallback data available in localStorage!`);
+    onError: (error, variables, context) => {
+      // Roll back on error
+      if (context?.previousPlan) {
+        console.info(`[SAVE] useBlockSave.onError - Rolling back changes`);
+        queryClient.setQueryData(['plan', projectId], context.previousPlan);
       }
       
+      console.error('[SAVE] useBlockSave.onError - Error saving block:', error);
       toast({
-        title: "Error saving progress",
-        description: error.message,
-        variant: "destructive",
+        title: 'Error',
+        description: `Failed to save changes: ${error.message}`,
+        variant: 'destructive',
       });
     },
     onSettled: () => {
-      setIsSaving(false);
+      // Invalidate query to ensure data is fresh
+      console.info(`[SAVE] useBlockSave.onSettled - Refreshing data`);
+      queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     }
   });
   
-  /**
-   * Save block data with proper error handling
-   */
-  const saveBlock = async (data: BlockData) => {
-    if (!projectId) {
-      toast({
-        title: "Error",
-        description: "No project selected",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    try {
-      await saveBlockMutation.mutateAsync(data);
-      return true;
-    } catch (error) {
-      // Error is already handled in onError
-      return false;
-    }
-  };
-  
-  /**
-   * Mark block as complete
-   */
-  const markBlockComplete = async (data: BlockData) => {
-    // Add the completed flag
-    const updatedData = {
-      ...data,
-      completed: true
-    };
-    
-    return await saveBlock(updatedData);
-  };
-  
-  /**
-   * Load block data with fallback to localStorage
-   */
-  const loadBlockData = (): BlockData | null => {
-    if (!projectId) return null;
-    
-    // Try to get from localStorage
-    return getLocalStorageBlock(blockId, projectId);
-  };
-  
   return {
-    saveBlock,
-    markBlockComplete,
-    loadBlockData,
-    isSaving
+    saveBlock: ({ blockId, blockData }: { blockId: string, blockData: any }) => {
+      console.info(`[SAVE] useBlockSave.saveBlock - Called for ${blockId}`);
+      return mutation.mutateAsync({ blockId, blockData });
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error
   };
 }
