@@ -391,51 +391,80 @@ router.get('/plans/project/:projectId', async (req, res) => {
       // Create the plan in the database FIRST
       const createdPlan = await projectsDb.createProjectPlan(projectId);
       
-      // Use the DB-created plan ID if available, otherwise use our generated UUID
-      const finalPlanId = createdPlan?.id || planId;
-      console.info(`[SERVER] Using plan ID: ${finalPlanId}`);
-      
-      // Create a new plan with proper structure
-      plan = {
-        id: finalPlanId, // Use the plan ID we determined
-        projectId,
-        blocks: {
-          block1: {
-            id: `${finalPlanId}_block1`, // Use composite ID to ensure uniqueness
-            successFactorRatings: {}, // Initialize as empty object, not array
-            personalHeuristics: [],
-            completed: false,
-            createdAt: Date.now()
+      // Check if the plan was created successfully
+      if (createdPlan) {
+        // Use the ID from the created plan
+        console.info(`[SERVER] Plan created successfully with id=${createdPlan.id}`);
+        plan = createdPlan;
+      } else {
+        // Create the plan with the generated UUID if DB creation failed
+        console.info(`[SERVER] Creating plan manually with id=${planId}`);
+        
+        // Create a new plan with proper structure
+        plan = {
+          id: planId, // Use our generated UUID
+          projectId,
+          blocks: {
+            block1: {
+              id: `${planId}_block1`, // Use composite ID to ensure uniqueness
+              successFactorRatings: {}, // Initialize as empty object, not array
+              personalHeuristics: [],
+              completed: false,
+              createdAt: Date.now()
+            },
+            block2: {
+              id: `${planId}_block2`,
+              tasks: [],
+              stakeholders: [],
+              completed: false,
+              createdAt: Date.now()
+            },
+            block3: {
+              id: `${planId}_block3`,
+              timeline: null,
+              deliveryApproach: "",
+              deliveryNotes: "",
+              completed: false,
+              createdAt: Date.now()
+            }
           },
-          block2: {
-            id: `${finalPlanId}_block2`,
-            tasks: [],
-            stakeholders: [],
-            completed: false,
-            createdAt: Date.now()
-          },
-          block3: {
-            id: `${finalPlanId}_block3`,
-            timeline: null,
-            deliveryApproach: "",
-            deliveryNotes: "",
-            completed: false,
-            createdAt: Date.now()
-          }
-        },
-        lastUpdated: Date.now()
-      };
-      
-      // If we failed to create it in the DB, save it locally
-      if (!createdPlan) {
-        console.info(`[SERVER] Failed to create plan in database, saving locally with id=${finalPlanId}`);
-        // We'll save it ourselves to ensure it persists
+          lastUpdated: Date.now()
+        };
+        
+        // Save the plan manually
+        console.info(`[SERVER] Saving plan manually with id=${planId}`);
         const plans = loadProjectPlans();
         plans.push(plan);
         saveProjectPlans(plans);
       }
+      
+      // Log plan ID for verification
+      console.info(`[SERVER] Final plan id=${plan.id}, type=${typeof plan.id}`);
+      
+      // Verify plan has a valid ID  
+      if (!plan.id) {
+        console.error(`[SERVER] ERROR: Plan still has null/undefined ID after creation. Assigning emergency UUID.`);
+        plan.id = uuidv4();
+      }
     } else {
       console.info(`[SERVER] Found existing plan with id=${plan.id || 'null'}`);
+      
+      // Fix plan ID if it's null (legacy data)
+      if (!plan.id) {
+        console.warn(`[SERVER] Fixing null plan ID for existing plan`);
+        plan.id = uuidv4();
+        
+        // Save the updated plan with a proper ID
+        const plans = loadProjectPlans();
+        const planIndex = plans.findIndex(p => p.projectId === projectId);
+        if (planIndex !== -1) {
+          plans[planIndex] = plan;
+          saveProjectPlans(plans);
+          console.info(`[SERVER] Saved plan with new ID: ${plan.id}`);
+        } else {
+          console.warn(`[SERVER] Couldn't find plan in loaded plans array to update ID`);
+        }
+      }
       
       // Ensure each block has an ID - this is crucial for persistence
       const blocks = plan.blocks || {};
