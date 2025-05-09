@@ -360,6 +360,38 @@ export default function Block3Deliver() {
                 </div>
               </div>
               
+              {/* Display Personal Heuristics from Block 1 */}
+              {personalHeuristics.length > 0 && (
+                <div className="mt-6 border-t pt-6">
+                  <h3 className="text-lg font-medium text-tcof-dark mb-4">Your Personal Heuristics</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    These are the personal heuristics you defined in Block 1. Consider how your delivery
+                    approach supports these key factors for your project's success.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 gap-3 bg-gray-50 p-4 rounded-lg">
+                    {personalHeuristics.map((heuristic, index) => (
+                      <div key={heuristic.id} className="flex items-start bg-white p-3 rounded border">
+                        <div className="bg-tcof-teal text-white w-6 h-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-tcof-dark">{heuristic.text}</h4>
+                          {heuristic.description && (
+                            <p className="text-sm text-gray-600 mt-1">{heuristic.description}</p>
+                          )}
+                          {heuristic.favourite && (
+                            <span className="inline-flex items-center mt-2 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">
+                              <CheckCircle2 className="h-3 w-3 mr-1" /> Favorite
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div className="flex justify-end mt-6">
                 <Button 
                   variant="outline" 
@@ -481,6 +513,28 @@ export default function Block3Deliver() {
                       </p>
                     )}
                   </div>
+                  
+                  {/* Display Personal Heuristics summary */}
+                  {personalHeuristics.length > 0 && (
+                    <div className="p-4 border rounded-lg bg-white">
+                      <h4 className="font-medium text-tcof-dark flex items-center">
+                        <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
+                        Personal Heuristics
+                      </h4>
+                      <p className="text-sm text-gray-600 mt-1">
+                        You defined {personalHeuristics.length} personal heuristic{personalHeuristics.length !== 1 ? 's' : ''} in Block 1
+                      </p>
+                      <div className="mt-2">
+                        {personalHeuristics.map((h, i) => (
+                          <div key={h.id} className="text-xs bg-gray-50 p-2 rounded mb-1 flex items-start">
+                            <span className="text-tcof-teal font-medium mr-1">{i+1}.</span>
+                            <span>{h.text}</span>
+                            {h.favourite && <span className="ml-1 text-amber-600">(★)</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
