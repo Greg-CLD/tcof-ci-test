@@ -388,27 +388,34 @@ router.get('/plans/project/:projectId', async (req, res) => {
       const planId = uuidv4();
       console.info(`[SERVER] Generated new UUID for plan: ${planId}`);
       
+      // Create the plan in the database FIRST
+      const createdPlan = await projectsDb.createProjectPlan(projectId);
+      
+      // Use the DB-created plan ID if available, otherwise use our generated UUID
+      const finalPlanId = createdPlan?.id || planId;
+      console.info(`[SERVER] Using plan ID: ${finalPlanId}`);
+      
       // Create a new plan with proper structure
       plan = {
-        id: planId, // Use UUID for reliable ID
+        id: finalPlanId, // Use the plan ID we determined
         projectId,
         blocks: {
           block1: {
-            id: `${planId}_block1`, // Use composite ID to ensure uniqueness
+            id: `${finalPlanId}_block1`, // Use composite ID to ensure uniqueness
             successFactorRatings: {}, // Initialize as empty object, not array
             personalHeuristics: [],
             completed: false,
             createdAt: Date.now()
           },
           block2: {
-            id: `${planId}_block2`,
+            id: `${finalPlanId}_block2`,
             tasks: [],
             stakeholders: [],
             completed: false,
             createdAt: Date.now()
           },
           block3: {
-            id: `${planId}_block3`,
+            id: `${finalPlanId}_block3`,
             timeline: null,
             deliveryApproach: "",
             deliveryNotes: "",
@@ -419,15 +426,10 @@ router.get('/plans/project/:projectId', async (req, res) => {
         lastUpdated: Date.now()
       };
       
-      // Create the plan in the database
-      const createdPlan = await projectsDb.createProjectPlan(projectId);
-      if (createdPlan) {
-        console.info(`[SERVER] Created new plan in database for projectId=${projectId} with id=${createdPlan.id}`);
-        // Important: Use the plan we already constructed but with the DB-generated ID
-        plan.id = createdPlan.id;
-      } else {
-        console.info(`[SERVER] Failed to create plan in database, using generated plan with id=${planId}`);
-        // We'll try to save it ourselves to ensure it persists
+      // If we failed to create it in the DB, save it locally
+      if (!createdPlan) {
+        console.info(`[SERVER] Failed to create plan in database, saving locally with id=${finalPlanId}`);
+        // We'll save it ourselves to ensure it persists
         const plans = loadProjectPlans();
         plans.push(plan);
         saveProjectPlans(plans);
