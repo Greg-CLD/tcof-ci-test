@@ -177,7 +177,8 @@ export default function Block1Discover() {
           }
         });
         
-        console.log('🔄 Block1Discover.useEffect - Setting personal heuristics:', formattedHeuristics);
+        console.log('🔄 Block1Discover.useEffect - Setting personal heuristics:', JSON.stringify(formattedHeuristics, null, 2));
+        console.log('🔄 Block1Discover.useEffect - COMPLETE BLOCK DATA BEING LOADED:', JSON.stringify(plan.blocks.block1, null, 2));
         setPersonalHeuristics(formattedHeuristics);
       } else {
         console.log('🔄 Block1Discover.useEffect - No personal heuristics found in plan');
