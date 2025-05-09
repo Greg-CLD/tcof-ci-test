@@ -4,6 +4,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
+import { db as directDb, query } from "./direct-db"; // Import direct DB connection
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
@@ -63,10 +64,9 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        // Find user by username
-        const user = await db.query.users.findFirst({
-          where: eq(users.username, username)
-        });
+        // Find user by username using direct DB connection
+        const result = await query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result?.[0];
 
         // User not found or password doesn't match
         if (!user || !user.password || !comparePasswords(password, user.password)) {
@@ -89,9 +89,9 @@ export function setupAuth(app: Express) {
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, id)
-      });
+      // Use direct DB connection
+      const result = await query('SELECT * FROM users WHERE id = $1', [id]);
+      const user = result?.[0];
       
       if (!user) {
         return done(new Error(`User with ID ${id} not found`));
@@ -154,25 +154,28 @@ export function setupAuth(app: Express) {
     try {
       const { username, email, password } = req.body;
       
-      // Check if username already exists
-      const existingUser = await db.query.users.findFirst({
-        where: eq(users.username, username)
-      });
+      // Check if username already exists using direct DB connection
+      const existingUsers = await query('SELECT * FROM users WHERE username = $1', [username]);
       
-      if (existingUser) {
+      if (existingUsers?.length > 0) {
         return res.status(409).json({ message: "Username already taken" });
       }
       
       // Hash the password
       const hashedPassword = hashPassword(password);
       
-      // Create user
-      const [user] = await db.insert(users).values({
-        username,
-        email,
-        password: hashedPassword,
-        createdAt: new Date()
-      }).returning();
+      // Insert user with direct DB connection
+      const now = new Date();
+      const result = await query(
+        'INSERT INTO users (username, email, password, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
+        [username, email, hashedPassword, now]
+      );
+      
+      const user = result?.[0];
+      
+      if (!user) {
+        throw new Error('Failed to create user');
+      }
       
       // Log the user in
       req.login(user, (err) => {
