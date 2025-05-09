@@ -28,19 +28,52 @@ export default function Block1Step2() {
   
   // Initialize local state from plan data
   useEffect(() => {
+    console.log(`%c[HEURISTICS INIT] Plan data received for block1:`, 'color: #0ea5e9; font-weight: bold;');
+    console.log(plan?.blocks?.block1);
+    
     if (plan?.blocks?.block1?.personalHeuristics) {
-      // Ensure we have an array of PersonalHeuristic objects
-      const personalHeuristics = plan.blocks.block1.personalHeuristics.map(h => {
-        // Handle both string and object formats for backward compatibility
+      const rawHeuristics = plan.blocks.block1.personalHeuristics;
+      console.log(`%c[HEURISTICS INIT] Raw personal heuristics (${rawHeuristics.length}):`, 'color: #059669; font-weight: bold;');
+      console.log(JSON.stringify(rawHeuristics, null, 2));
+      
+      // Ensure we have an array of normalized PersonalHeuristic objects with consistent fields
+      const normalizedHeuristics = rawHeuristics.map(h => {
+        // Base object with default values
+        const normalizedH: PersonalHeuristic = {
+          id: '', 
+          name: '',
+          description: '',
+          // Include any other required fields with default values
+        };
+        
+        // Handle various input formats
         if (typeof h === 'string') {
-          return { name: h };
+          // Simple string format
+          normalizedH.name = h;
+          normalizedH.id = `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         } else if (typeof h === 'object' && h !== null) {
-          return h;
+          // Object format - prioritize standard field names but fall back to alternates
+          normalizedH.id = h.id || `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          
+          // Handle name field (might be 'text' in some implementations)
+          normalizedH.name = h.name || h.text || '';
+          
+          // Handle description field (might be 'notes' in some implementations)
+          normalizedH.description = h.description || h.notes || '';
+          
+          // Copy any other fields
+          Object.assign(normalizedH, h);
         }
-        return { name: String(h) };
+        
+        return normalizedH;
       });
       
-      setHeuristics(personalHeuristics);
+      console.log(`%c[HEURISTICS INIT] Normalized heuristics (${normalizedHeuristics.length}):`, 'color: #059669; font-weight: bold;');
+      console.log(JSON.stringify(normalizedHeuristics, null, 2));
+      
+      setHeuristics(normalizedHeuristics);
+    } else {
+      console.log(`%c[HEURISTICS INIT] No personal heuristics found in plan data`, 'color: #dc2626; font-weight: bold;');
     }
   }, [plan]);
   
@@ -60,14 +93,28 @@ export default function Block1Step2() {
   // Add heuristic mutation with optimistic UI
   const addHeuristicMutation = useMutation({
     mutationFn: async (newHeuristicText: string) => {
-      // Create new heuristic object
+      // Create new heuristic object with an ID
+      const heuristicId = `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      
+      // Create properly structured heuristic object
       const newHeuristicObj: PersonalHeuristic = { 
+        id: heuristicId,
         name: newHeuristicText,
-        description: ""
+        description: "",
+        // Also include text/notes fields for compatibility with HeuristicList component
+        text: newHeuristicText,
+        notes: ""
       };
+      
+      console.log(`%c[ADD HEURISTIC] Creating new heuristic with ID ${heuristicId}:`, 'color: #059669; font-weight: bold;');
+      console.log(JSON.stringify(newHeuristicObj, null, 2));
+      
       const updatedHeuristics = [...heuristics, newHeuristicObj];
       
-      // Save to block1
+      console.log(`%c[ADD HEURISTIC] Saving ${updatedHeuristics.length} heuristics:`, 'color: #0ea5e9; font-weight: bold;');
+      console.log(JSON.stringify(updatedHeuristics, null, 2));
+      
+      // Save to block1, including both name/description and text/notes field formats
       return saveBlock('block1', {
         personalHeuristics: updatedHeuristics,
         lastUpdated: new Date().toISOString(),
@@ -80,10 +127,17 @@ export default function Block1Step2() {
       // Snapshot the previous value
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
       
-      // Create new heuristic object
+      // Create new heuristic object with an ID
+      const heuristicId = `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      
+      // Create properly structured heuristic object
       const newHeuristicObj: PersonalHeuristic = { 
+        id: heuristicId,
         name: newHeuristicText,
-        description: ""
+        description: "",
+        // Also include text/notes fields for compatibility with HeuristicList component
+        text: newHeuristicText,
+        notes: ""
       };
       
       // Optimistically update to the new value
@@ -91,11 +145,38 @@ export default function Block1Step2() {
         if (!old) return old;
         
         const currentHeuristics = old.blocks?.block1?.personalHeuristics || [];
-        // Ensure all existing heuristics are objects
-        const currentHeuristicsAsObjects = currentHeuristics.map((h: string | PersonalHeuristic) => 
-          typeof h === 'string' ? { name: h, description: "" } : h
-        );
-        const updatedHeuristics = [...currentHeuristicsAsObjects, newHeuristicObj];
+        
+        // Ensure all existing heuristics are properly formatted objects
+        const normalizedHeuristics = currentHeuristics.map((h: any) => {
+          if (typeof h === 'string') {
+            return { 
+              id: `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+              name: h, 
+              description: "",
+              text: h,
+              notes: ""
+            };
+          } else if (h && typeof h === 'object') {
+            // Create a normalized object with all required fields
+            return {
+              id: h.id || `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+              name: h.name || h.text || "",
+              description: h.description || h.notes || "",
+              text: h.text || h.name || "",
+              notes: h.notes || h.description || ""
+            };
+          }
+          // Fallback for unknown formats
+          return { 
+            id: `h-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            name: String(h), 
+            description: "",
+            text: String(h),
+            notes: ""
+          };
+        });
+        
+        const updatedHeuristics = [...normalizedHeuristics, newHeuristicObj];
         
         return {
           ...old,
