@@ -368,14 +368,17 @@ export default function Block1Discover() {
   const handleEvaluationChange = async (factorId: string, value: number) => {
     console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'value:', value);
 
+    // Optimistic update
     setRatings(prev => ({ ...prev, [factorId]: value }));
 
-    toast({ 
-      title: "Rating updated", 
-      description: `Changed rating for factor: ${factorId}`, 
-      duration: 1500 
+    // User feedback
+    toast({
+      title: "Rating updated",
+      description: `Changed rating for factor: ${factorId}`,
+      duration: 1500,
     });
 
+    // Persist to server
     try {
       await updateEvaluations([{ factorId, resonance: value }]);
       console.log('🔄 Single rating PATCH succeeded');
@@ -384,7 +387,7 @@ export default function Block1Discover() {
       toast({
         title: "Save failed",
         description: "Could not save rating to server.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -856,7 +859,8 @@ export default function Block1Discover() {
     // Create block data with all required fields
     const blockData = {
       successCriteria: value,
-      personalHeuristics: personalHeuristics,
+      personalHeuristics: personalHeuristics``````
+,
       successFactorRatings: ratings || {},      lastUpdated: new Date().toISOString()
     };
 
