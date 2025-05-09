@@ -106,7 +106,7 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
           JSON.stringify(data.personalHeuristics, null, 2));
       }
       
-      const response = await apiRequest("PATCH", `/api/plans/${projectId}/block/${blockId}`, data);
+      const response = await apiRequest("PATCH", `/api/plans/project/${projectId}/block/${blockId}`, data);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -130,8 +130,8 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
       console.log(`🔶 SAVE BLOCK ${blockId} - Successfully saved block data`);
       
       // Invalidate relevant queries to refresh data
-      queryClient.invalidateQueries({ queryKey: [`/api/plans/${projectId}/block/${blockId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/plans/${projectId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/plans/project/${projectId}/block/${blockId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/plans/project/${projectId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/plans`] });
       
       toast({

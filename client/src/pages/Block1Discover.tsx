@@ -57,13 +57,14 @@ export default function Block1Discover() {
   
   // Use React Query for data fetching with localStorage fallback
   const { data: blockData, isLoading: isBlockLoading, error: blockError } = useQuery({
-    queryKey: projectId ? [`/api/plans/${projectId}/block/block1`] : [],
+    queryKey: projectId ? [`/api/plans/project/${projectId}/block/block1`] : [],
     queryFn: async () => {
       if (!projectId) throw new Error("No project ID available");
       
       try {
         console.log('🔄 Fetching block1 data for project:', projectId);
-        const response = await fetch(`/api/plans/${projectId}/block/block1`);
+        // Update API path to match server route structure
+        const response = await fetch(`/api/plans/project/${projectId}/block/block1`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch block1 data: ${response.status}`);
