@@ -1,14 +1,11 @@
-import { createContext, ReactNode, useContext } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { createContext, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
-  logout: () => Promise<void>;
   isAuthenticated: boolean;
 };
 
@@ -17,14 +14,11 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 // Provider component to wrap the application
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { toast } = useToast();
-  
   // Fetch the current user
   const {
     data: user,
     error,
-    isLoading,
-    refetch
+    isLoading
   } = useQuery<User | null, Error>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
@@ -51,33 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: true
   });
   
-  // Logout mutation
-  const logout = async () => {
-    try {
-      const response = await apiRequest("POST", "/api/logout");
-      
-      if (response.ok) {
-        queryClient.setQueryData(["/api/auth/user"], null);
-        // Force refresh to clear all state
-        window.location.href = "/auth";
-      } else {
-        console.error("Logout failed:", response.statusText);
-        toast({
-          title: "Logout Failed",
-          description: "There was a problem logging you out",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Logout Error",
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      });
-    }
-  };
-  
   // Provide the auth context to the children
   return (
     <AuthContext.Provider
@@ -85,7 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: user || null, 
         isLoading, 
         error, 
-        logout,
         isAuthenticated: Boolean(user)
       }}
     >

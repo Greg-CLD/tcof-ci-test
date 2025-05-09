@@ -33,9 +33,7 @@ export function LogoutButton() {
   const { logoutMutation } = useAuth();
   
   const handleLogout = () => {
-    if (logoutMutation) {
-      logoutMutation.mutate();
-    }
+    logoutMutation.mutate();
   };
   
   return (
@@ -43,9 +41,10 @@ export function LogoutButton() {
       variant="outline" 
       className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200 flex items-center gap-2"
       onClick={handleLogout}
+      disabled={logoutMutation.isPending}
     >
       <LogOut className="w-4 h-4" />
-      <span>Log Out</span>
+      <span>{logoutMutation.isPending ? "Logging out..." : "Log Out"}</span>
     </Button>
   );
 }
@@ -63,9 +62,7 @@ export function UserMenu() {
     "U";
     
   const handleLogout = () => {
-    if (logoutMutation) {
-      logoutMutation.mutate();
-    }
+    logoutMutation.mutate();
   };
 
   return (

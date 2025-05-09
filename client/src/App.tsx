@@ -198,7 +198,7 @@ const TCOFJourneyPage = () => {
 
 function Router() {
   const { isAuthenticated } = useAuthProtection();
-  const { user, isAuthenticated: isAuthenticatedWithReplit } = useAuth();
+  const { user, isAuthenticated: isUserAuthenticated } = useAuth();
   const [location, navigate] = useLocation();
   const hasRedirectedRef = useRef(false);
   
@@ -206,10 +206,10 @@ function Router() {
   // Instead we'll use more granular control with direct conditional rendering
   
   // Log current location on each render for debugging
-  console.log("Current location in Router:", location, { user, isAuthenticated: isAuthenticatedWithReplit, hasRedirected: hasRedirectedRef.current });
+  console.log("Current location in Router:", location, { user, isAuthenticated: isUserAuthenticated, hasRedirected: hasRedirectedRef.current });
   
   // Hard-Stop Redirect Rule: Run once per mount, with a ref to prevent multiple redirects
-  if ((user || isAuthenticatedWithReplit) && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
+  if ((user) && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
     console.log("NAVIGATE FROM", location, "TO /all-projects (ONE-TIME REDIRECT)");
     hasRedirectedRef.current = true;
     navigate('/all-projects');
@@ -235,7 +235,7 @@ function Router() {
   }
   
   // For organization routes, if not logged in, redirect to home
-  if ((!user && !isAuthenticatedWithReplit) && (location === '/organisations' || location.startsWith('/organisations/'))) {
+  if (!user && (location === '/organisations' || location.startsWith('/organisations/'))) {
     return (
       <Redirect to="/" />
     );
@@ -249,7 +249,7 @@ function Router() {
 
       {/* All Projects route - authenticated users only */}
       <Route path="/all-projects">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <AllProjects />
           </ProtectedRouteGuard>
@@ -260,7 +260,7 @@ function Router() {
       
       {/* Organizations management - authenticated users only */}
       <Route path="/organisations">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <OrganisationListPage />
           </ProtectedRouteGuard>
@@ -271,7 +271,7 @@ function Router() {
       
       {/* Organisation Dashboard - authenticated users only */}
       <Route path="/organisations/:orgId">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <OrganisationDashboardPage />
           </ProtectedRouteGuard>
@@ -282,7 +282,7 @@ function Router() {
       
       {/* Organisation Heuristics - authenticated users only */}
       <Route path="/organisations/:orgId/heuristics">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <OrganisationHeuristicsPage />
           </ProtectedRouteGuard>
@@ -299,7 +299,7 @@ function Router() {
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/settings">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <UserProfileSettings />
           </ProtectedRouteGuard>
@@ -344,7 +344,7 @@ function Router() {
         </ProtectedRouteGuard>
       </Route>
       <Route path="/make-a-plan/:projectId/landing">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <MakeAPlanLanding />
           </ProtectedRouteGuard>
@@ -353,7 +353,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1/step-1">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Block1Step1 />
           </ProtectedRouteGuard>
@@ -362,7 +362,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1/step-2">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Block1Step2 />
           </ProtectedRouteGuard>
@@ -371,7 +371,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Block1Discover />
           </ProtectedRouteGuard>
@@ -380,7 +380,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-3">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Block2Step3 />
           </ProtectedRouteGuard>
@@ -389,7 +389,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-4">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Block2Step4 />
           </ProtectedRouteGuard>
@@ -398,7 +398,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-5">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Block2Step5 />
           </ProtectedRouteGuard>
@@ -407,7 +407,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Block2Design />
           </ProtectedRouteGuard>
@@ -416,7 +416,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-3">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Block3Deliver />
           </ProtectedRouteGuard>
@@ -425,7 +425,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/full">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <MakeAPlanFull />
           </ProtectedRouteGuard>
@@ -434,7 +434,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <MakeAPlan />
           </ProtectedRouteGuard>
@@ -443,7 +443,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <MakeAPlan />
           </ProtectedRouteGuard>
@@ -452,7 +452,7 @@ function Router() {
         )}
       </Route>
       <Route path="/checklist">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Checklist />
           </ProtectedRouteGuard>
@@ -462,7 +462,7 @@ function Router() {
       </Route>
       
       <Route path="/final-checklist">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <FinalChecklist />
           </ProtectedRouteGuard>
@@ -472,7 +472,7 @@ function Router() {
       </Route>
       
       <Route path="/factor-checklist">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <FactorChecklist />
           </ProtectedRouteGuard>
@@ -482,7 +482,7 @@ function Router() {
       </Route>
       
       <Route path="/projects/:projectId/outcomes">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <OutcomeManagement />
           </ProtectedRouteGuard>
@@ -493,7 +493,7 @@ function Router() {
       
       {/* Project Setup Page (for editing project profile) */}
       <Route path="/projects/:projectId/setup">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -505,7 +505,7 @@ function Router() {
       {/* NEW SIMPLIFIED EDIT ROUTES */}
       {/* Basic Project Edit Page - direct route */}
       <Route path="/projects/:projectId/edit-basic">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <BasicProjectEditPage />
           </ProtectedRouteGuard>
@@ -516,7 +516,7 @@ function Router() {
       
       {/* Basic Project Edit Page with Organization context */}
       <Route path="/organisations/:orgId/projects/:projectId/edit-basic">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <BasicProjectEditPage />
           </ProtectedRouteGuard>
@@ -527,7 +527,7 @@ function Router() {
       
       {/* Project Profile Edit Page - OLD PATH */}
       <Route path="/projects/:projectId/profile/edit">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -538,7 +538,7 @@ function Router() {
       
       {/* Project Detail Page - OLD PATH */}
       <Route path="/projects/:projectId">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <ProjectPage />
           </ProtectedRouteGuard>
@@ -550,7 +550,7 @@ function Router() {
       {/* NEW ROUTES WITH ORGANIZATION CONTEXT */}
       {/* Project Profile Edit Page with Organization */}
       <Route path="/organisations/:orgId/projects/:projectId/profile/edit">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -561,7 +561,7 @@ function Router() {
       
       {/* Project Detail Page with Organization */}
       <Route path="/organisations/:orgId/projects/:projectId">
-        {user || isAuthenticatedWithReplit ? (
+        {user ? (
           <ProtectedRouteGuard>
             <ProjectPage />
           </ProtectedRouteGuard>
@@ -572,7 +572,7 @@ function Router() {
       
       {/* Dashboard route - protected like other tools */}
       <Route path="/dashboard">
-        {isAuthenticated('starter-access') || user ? (
+        {user ? (
           <ProtectedRouteGuard>
             <Dashboard />
           </ProtectedRouteGuard>
@@ -588,13 +588,13 @@ function Router() {
       
       {/* Goal mapping with project ID */}
       <Route path="/tools/goal-mapping/:projectId">
-        {isAuthenticated('starter-access') || user ? (
+        {user ? (
           <ProtectedRouteGuard>
             <GoalMappingPage />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired 
-            message="You need to purchase a license or sign in to access this tool." 
+            message="You need to sign in to access this tool." 
             showPasswordOption={true} 
           />
         )}
@@ -602,13 +602,13 @@ function Router() {
       
       {/* Cynefin orientation with project ID */}
       <Route path="/tools/cynefin-orientation/:projectId">
-        {isAuthenticated('starter-access') || user ? (
+        {user ? (
           <ProtectedRouteGuard>
             <CynefinOrientationPage />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired 
-            message="You need to purchase a license or sign in to access this tool." 
+            message="You need to sign in to access this tool." 
             showPasswordOption={true} 
           />
         )}
@@ -616,13 +616,13 @@ function Router() {
       
       {/* TCOF journey with project ID */}
       <Route path="/tools/tcof-journey/:projectId">
-        {isAuthenticated('starter-access') || user ? (
+        {user ? (
           <ProtectedRouteGuard>
             <TCOFJourneyPage />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired 
-            message="You need to purchase a license or sign in to access this tool." 
+            message="You need to sign in to access this tool." 
             showPasswordOption={true} 
           />
         )}
@@ -630,39 +630,39 @@ function Router() {
       
       {/* Base routes without project IDs */}
       <Route path="/tools/goal-mapping">
-        {isAuthenticated('starter-access') || user ? (
+        {user ? (
           <ProtectedRouteGuard>
             <GoalMappingPage />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired 
-            message="You need to purchase a license or sign in to access this tool." 
+            message="You need to sign in to access this tool." 
             showPasswordOption={true} 
           />
         )}
       </Route>
       
       <Route path="/tools/cynefin-orientation">
-        {isAuthenticated('starter-access') || user ? (
+        {user ? (
           <ProtectedRouteGuard>
             <CynefinOrientationPage />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired 
-            message="You need to purchase a license or sign in to access this tool." 
+            message="You need to sign in to access this tool." 
             showPasswordOption={true} 
           />
         )}
       </Route>
       
       <Route path="/tools/tcof-journey">
-        {isAuthenticated('starter-access') || user ? (
+        {user ? (
           <ProtectedRouteGuard>
             <TCOFJourneyPage />
           </ProtectedRouteGuard>
         ) : (
           <AuthRequired 
-            message="You need to purchase a license or sign in to access this tool." 
+            message="You need to sign in to access this tool." 
             showPasswordOption={true} 
           />
         )}

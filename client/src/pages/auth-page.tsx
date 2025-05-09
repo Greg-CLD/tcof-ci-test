@@ -10,7 +10,7 @@ import { AlertCircle, LogIn } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AuthPage() {
-  const { user, isLoading, loginMutation, authError } = useAuth();
+  const { user, isLoading, loginMutation, registerMutation, authError } = useAuth();
   
   const [formType, setFormType] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
@@ -29,8 +29,7 @@ export default function AuthPage() {
   
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    // We'll handle registration separately
-    console.log("Register with:", username, email, password);
+    registerMutation.mutate({ username, email, password });
   };
   
   return (
@@ -104,6 +103,13 @@ export default function AuthPage() {
                   <CardDescription>Fill in the information to create your account</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {authError && (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{authError}</AlertDescription>
+                    </Alert>
+                  )}
+                  
                   <form onSubmit={handleRegister} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="reg-username">Username</Label>
@@ -113,6 +119,7 @@ export default function AuthPage() {
                         value={username} 
                         onChange={(e) => setUsername(e.target.value)}
                         required
+                        disabled={registerMutation.isPending}
                       />
                     </div>
                     <div className="space-y-2">
@@ -124,6 +131,7 @@ export default function AuthPage() {
                         value={email} 
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        disabled={registerMutation.isPending}
                       />
                     </div>
                     <div className="space-y-2">
@@ -135,9 +143,16 @@ export default function AuthPage() {
                         value={password} 
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        disabled={registerMutation.isPending}
                       />
                     </div>
-                    <Button type="submit" className="w-full">Register</Button>
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={registerMutation.isPending}
+                    >
+                      {registerMutation.isPending ? "Creating account..." : "Register"}
+                    </Button>
                   </form>
                 </CardContent>
               </Card>

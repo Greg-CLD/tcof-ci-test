@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { User, UpdateUser, PasswordChange } from '@shared/schema';
 import { checkPasswordStrength } from '@/utils/password-strength';
+import { useAuth } from '@/hooks/use-auth';
 
 import {
   Card,
@@ -88,13 +89,8 @@ type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 const UserProfileSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, isLoading, logoutMutation } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
-
-  // Fetch the current user profile data
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-    retry: false,
-  });
 
   // Create profile form
   const profileForm = useForm<ProfileFormValues>({
@@ -272,8 +268,8 @@ const UserProfileSettings = () => {
           throw new Error(errorData.message || 'Failed to delete account');
         }
         
-        // Then explicitly log out for clean session termination
-        await apiRequest('POST', '/api/logout');
+        // Use our logoutMutation to handle session termination
+        logoutMutation.mutate();
         
         return await res.json();
       } catch (error) {
