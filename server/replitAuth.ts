@@ -8,7 +8,7 @@ import crypto from "crypto";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 
 // TEMPORARY SOLUTION: Using a local strategy with hardcoded credentials 
 // since we're having issues with OpenID Connect
@@ -122,12 +122,8 @@ export async function setupAuth(app: Express) {
     try {
       console.log("Forcing a complete reset of the admin user...");
       
-      // Import the users table from shared schema
-      const { users } = await import("@shared/schema");
-      
-      // First delete ALL admin users to clean up potential duplicates
-      // Using Drizzle's proper delete syntax
-      await db.delete(users).where(eq(users.username, "admin"));
+      // Use direct SQL for deletion which we know works
+      await db.execute(sql`DELETE FROM users WHERE username = 'admin'`);
       console.log("Deleted all existing admin users");
       
       // Now create a fresh admin user with the correct ID type
