@@ -4,9 +4,15 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
-// Define login credentials type
+// Define credential types
 type LoginCredentials = {
   username: string;
+  password: string;
+};
+
+type RegisterCredentials = {
+  username: string;
+  email: string;
   password: string;
 };
 
@@ -14,7 +20,7 @@ export function useAuth() {
   const { toast } = useToast();
   const [authError, setAuthError] = useState<string | null>(null);
   
-  // Main auth query - gets current user if logged in
+  // Direct query to get the current user
   const { 
     data: user, 
     isLoading, 
@@ -25,7 +31,7 @@ export function useAuth() {
     retry: false,
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: false,
-    refetchInterval: false,
+    refetchInterval: false
   });
 
   // Login mutation with username and password
@@ -89,6 +95,39 @@ export function useAuth() {
     },
   });
 
+  // Register mutation
+  const registerMutation = useMutation({
+    mutationFn: async (credentials: RegisterCredentials) => {
+      setAuthError(null);
+      const response = await apiRequest("POST", "/api/register", credentials);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Registration failed");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (userData) => {
+      // Update user data in cache
+      queryClient.setQueryData(["/api/auth/user"], userData);
+      
+      toast({
+        title: "Registration successful",
+        description: `Welcome, ${userData.username}!`,
+      });
+    },
+    onError: (error: Error) => {
+      setAuthError(error.message);
+      
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Manually refresh auth status
   const refreshAuth = () => {
     console.log("Refreshing auth status");
@@ -103,6 +142,7 @@ export function useAuth() {
     authError,
     loginMutation,
     logoutMutation,
+    registerMutation,
     refreshAuth
   };
 }

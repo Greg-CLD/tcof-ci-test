@@ -1,4 +1,4 @@
-import { createContext, ReactNode } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
@@ -11,6 +11,15 @@ type AuthContextType = {
 
 // Create the auth context
 export const AuthContext = createContext<AuthContextType | null>(null);
+
+// Helper hook to use auth context directly
+export function useAuthContext() {
+  const context = useContext(AuthContext);
+  if (context === null) {
+    throw new Error("useAuthContext must be used within an AuthProvider");
+  }
+  return context;
+}
 
 // Provider component to wrap the application
 export function AuthProvider({ children }: { children: ReactNode }) {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,10 +16,15 @@ import { Loader2, MapPin, Calendar, Clock, ArrowLeft, User, FileDown, Edit, Tras
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/pdf-utils";
 import { 
-  GoalMap, 
-  CynefinSelection as CynefinSelectionType, 
-  TcofJourney 
+  goalMaps, 
+  cynefinSelections as cynefinSelectionsSchema, 
+  tcofJourneys 
 } from "@shared/schema";
+
+// Define types based on the schemas
+type GoalMap = typeof goalMaps.$inferSelect;
+type CynefinSelectionType = typeof cynefinSelectionsSchema.$inferSelect;
+type TcofJourney = typeof tcofJourneys.$inferSelect;
 
 export default function UserHistory() {
   const [location, setLocation] = useLocation();
@@ -165,7 +170,7 @@ export default function UserHistory() {
                                       </h3>
                                       <div className="flex items-center text-sm text-gray-500 mb-2">
                                         <Clock className="h-4 w-4 mr-1" />
-                                        <span>Created: {formatDate(new Date(map.createdAt))}</span>
+                                        <span>Created: {formatDate(new Date(map.lastUpdated))}</span>
                                       </div>
                                       <div className="flex items-center text-sm text-gray-500">
                                         <Calendar className="h-4 w-4 mr-1" />
@@ -240,7 +245,7 @@ export default function UserHistory() {
                                       </h3>
                                       <div className="flex items-center text-sm text-gray-500 mb-2">
                                         <Clock className="h-4 w-4 mr-1" />
-                                        <span>Created: {formatDate(new Date(selection.createdAt))}</span>
+                                        <span>Created: {formatDate(new Date(selection.lastUpdated))}</span>
                                       </div>
                                       <div className="flex items-center text-sm text-gray-500">
                                         <Calendar className="h-4 w-4 mr-1" />
@@ -315,7 +320,7 @@ export default function UserHistory() {
                                       </h3>
                                       <div className="flex items-center text-sm text-gray-500 mb-2">
                                         <Clock className="h-4 w-4 mr-1" />
-                                        <span>Created: {formatDate(new Date(journey.createdAt))}</span>
+                                        <span>Created: {formatDate(new Date(journey.lastUpdated))}</span>
                                       </div>
                                       <div className="flex items-center text-sm text-gray-500">
                                         <Calendar className="h-4 w-4 mr-1" />

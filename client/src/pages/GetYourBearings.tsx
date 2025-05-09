@@ -3,7 +3,7 @@ import { useLocation, useParams, Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { useProjects } from "@/hooks/useProjects";
 import { useProgress } from "@/contexts/ProgressContext";
 import { Compass, Map, GitBranch, PlusCircle, Briefcase, ArrowLeft } from "lucide-react";

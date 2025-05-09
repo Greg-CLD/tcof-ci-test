@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { User, UpdateUser, PasswordChange } from '@shared/schema';
 import { checkPasswordStrength } from '@/utils/password-strength';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/useAuth';
 
 import {
   Card,
