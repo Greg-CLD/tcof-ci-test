@@ -22,6 +22,8 @@ import { useProgress } from "@/contexts/ProgressContext";
 import { usePlan } from "@/contexts/PlanContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useBlockSave } from "@/hooks/useBlockSave";
 
 interface Task {
   id: string;
@@ -44,10 +46,14 @@ export default function Block2Design() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { progress } = useProgress();
-  const { plan, saveBlock, markBlockComplete } = usePlan();
+  const { plan } = usePlan();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
+  
+  // Use our new reliable save hook
+  const { saveBlock, markBlockComplete, isSaving } = useBlockSave("block2", projectId);
   
   // Verify that Block 1 is completed
   const block1Completed = plan?.blocks?.block1?.completed;
@@ -92,16 +98,44 @@ export default function Block2Design() {
   
   // Handler to save the current block data
   const handleSaveBlock = async () => {
-    await saveBlock('block2', {
-      tasks,
-      stakeholders,
-    });
+    try {
+      // Save data with our useBlockSave hook
+      await saveBlock({
+        tasks,
+        stakeholders,
+      });
+      toast({
+        title: "Success",
+        description: "Your progress has been saved",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error saving block data:", error);
+      toast({
+        title: "Save failed",
+        description: "There was a problem saving your progress. Your changes are stored locally.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Handler to mark this block as complete and proceed to next block
   const handleCompleteBlock = async () => {
-    await markBlockComplete('block2');
-    navigate(`/make-a-plan/${projectId}/block-3`);
+    try {
+      // Mark block as complete and advance to next block
+      await markBlockComplete({
+        tasks,
+        stakeholders,
+      });
+      navigate(`/make-a-plan/${projectId}/block-3`);
+    } catch (error) {
+      console.error("Error marking block as complete:", error);
+      toast({
+        title: "Action failed",
+        description: "There was a problem completing this block. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
