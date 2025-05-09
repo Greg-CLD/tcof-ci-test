@@ -305,6 +305,7 @@ export const userInsertSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, "Username must be at least 3 characters"),
   email: (schema) => schema.email("Must provide a valid email").optional().nullable(),
   avatarUrl: (schema) => schema.url().optional().nullable(),
+  password: (schema) => schema.min(8, "Password must be at least 8 characters").optional(),
 });
 
 // Custom update schema for user profile - matches actual database schema

@@ -9,7 +9,7 @@ export function ProtectedRoute({
   path: string;
   component: React.ComponentType;
 }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return (
@@ -21,7 +21,7 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return (
       <Route path={path}>
         <Redirect to="/auth" />
