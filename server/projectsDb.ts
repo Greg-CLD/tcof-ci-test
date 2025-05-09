@@ -183,6 +183,32 @@ function saveProjectPolicies(policies: ProjectPolicy[]): boolean {
 }
 
 /**
+ * Load all project plans from the data file
+ */
+function loadProjectPlans(): ProjectPlan[] {
+  try {
+    const data = fs.readFileSync(PLANS_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading project plans:', error);
+    return [];
+  }
+}
+
+/**
+ * Save project plans to the data file
+ */
+function saveProjectPlans(plans: ProjectPlan[]): boolean {
+  try {
+    fs.writeFileSync(PLANS_FILE, JSON.stringify(plans, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving project plans:', error);
+    return false;
+  }
+}
+
+/**
  * Project database operations
  */
 export const projectsDb = {
@@ -666,6 +692,215 @@ export const projectsDb = {
     } catch (error) {
       console.error('Error getting project policies:', error);
       return [];
+    }
+  },
+  
+  /**
+   * Get a project plan by project ID
+   * @param projectId Project ID
+   * @returns The project plan or null if not found
+   */
+  getProjectPlan: async (projectId: string): Promise<ProjectPlan | null> => {
+    try {
+      // Load all plans
+      const plans = loadProjectPlans();
+      
+      // Find plan by project ID
+      const plan = plans.find(p => p.projectId === projectId);
+      
+      console.log(`[LOAD] getProjectPlan for project ${projectId}: ${plan ? 'Found' : 'Not found'}`);
+      
+      return plan || null;
+    } catch (error) {
+      console.error('Error getting project plan:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Create a new project plan
+   * @param projectId Project ID
+   * @returns The created plan or null if creation failed
+   */
+  createProjectPlan: async (projectId: string): Promise<ProjectPlan | null> => {
+    try {
+      // Check if a plan already exists for this project
+      const existingPlan = await projectsDb.getProjectPlan(projectId);
+      
+      if (existingPlan) {
+        console.log(`Plan already exists for project ${projectId}`);
+        return existingPlan;
+      }
+      
+      // Create a new plan
+      const plan: ProjectPlan = {
+        id: uuidv4(),
+        projectId,
+        blocks: {},
+        lastUpdated: Date.now()
+      };
+      
+      // Load all plans
+      const plans = loadProjectPlans();
+      
+      // Add new plan
+      plans.push(plan);
+      
+      // Save updated plans list
+      const saved = saveProjectPlans(plans);
+      
+      if (saved) {
+        console.log(`[SAVE] Created new plan for project ${projectId}`);
+        return plan;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error creating project plan:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Update a project plan block
+   * @param projectId Project ID
+   * @param blockId Block ID to update
+   * @param blockData Block data
+   * @returns The updated plan or null if update failed
+   */
+  updateProjectPlanBlock: async (
+    projectId: string,
+    blockId: string,
+    blockData: any
+  ): Promise<ProjectPlan | null> => {
+    try {
+      console.log(`[SAVE] Updating block ${blockId} for project ${projectId}`);
+      console.log(`Block data:`, JSON.stringify(blockData, null, 2));
+      
+      // Load all plans
+      const plans = loadProjectPlans();
+      
+      // Find plan index
+      let planIndex = plans.findIndex(p => p.projectId === projectId);
+      
+      let plan: ProjectPlan;
+      
+      // If plan doesn't exist, create it
+      if (planIndex === -1) {
+        console.log(`[SAVE] Plan not found for project ${projectId}, creating new plan`);
+        
+        // Create a new plan
+        plan = {
+          id: uuidv4(),
+          projectId,
+          blocks: {
+            [blockId]: {
+              ...blockData,
+              id: blockId,
+              createdAt: Date.now(),
+              updatedAt: Date.now()
+            }
+          },
+          lastUpdated: Date.now()
+        };
+        
+        // Add to plans array
+        plans.push(plan);
+        planIndex = plans.length - 1;
+      } else {
+        // Update existing plan
+        plan = plans[planIndex];
+        
+        // If the block doesn't exist, create it
+        if (!plan.blocks[blockId]) {
+          console.log(`[SAVE] Block ${blockId} not found, creating new block`);
+        }
+        
+        // Update the block
+        plan.blocks[blockId] = {
+          ...(plan.blocks[blockId] || {}),
+          ...blockData,
+          id: blockId,
+          updatedAt: Date.now()
+        };
+        
+        if (!plan.blocks[blockId].createdAt) {
+          plan.blocks[blockId].createdAt = Date.now();
+        }
+        
+        // Update the plan
+        plan.lastUpdated = Date.now();
+        plans[planIndex] = plan;
+      }
+      
+      // Save updated plans list
+      const saved = saveProjectPlans(plans);
+      
+      if (saved) {
+        console.log(`[SAVE] Successfully updated block ${blockId} for project ${projectId}`);
+        return plan;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error updating project plan block:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Get a project plan block
+   * @param projectId Project ID
+   * @param blockId Block ID
+   * @returns The block data or null if not found
+   */
+  getProjectPlanBlock: async (projectId: string, blockId: string): Promise<any | null> => {
+    try {
+      // Get the plan
+      const plan = await projectsDb.getProjectPlan(projectId);
+      
+      if (!plan) {
+        console.log(`[LOAD] No plan found for project ${projectId}`);
+        return null;
+      }
+      
+      // Get the block
+      const block = plan.blocks[blockId];
+      
+      console.log(`[LOAD] Block ${blockId} for project ${projectId}: ${block ? 'Found' : 'Not found'}`);
+      
+      return block || null;
+    } catch (error) {
+      console.error('Error getting project plan block:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Delete a project plan
+   * @param projectId Project ID
+   * @returns Success status
+   */
+  deleteProjectPlan: async (projectId: string): Promise<boolean> => {
+    try {
+      // Load all plans
+      const plans = loadProjectPlans();
+      
+      // Filter out the plan to delete
+      const updatedPlans = plans.filter(p => p.projectId !== projectId);
+      
+      if (updatedPlans.length === plans.length) {
+        // No plan was removed
+        console.log(`No plan found for project ${projectId} to delete`);
+        return false;
+      }
+      
+      // Save updated plans list
+      console.log(`Removing plan for project ${projectId}`);
+      return saveProjectPlans(updatedPlans);
+    } catch (error) {
+      console.error('Error deleting project plan:', error);
+      return false;
     }
   },
   

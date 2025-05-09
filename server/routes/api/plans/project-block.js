@@ -1,6 +1,6 @@
 import { Router } from 'express';
-// Correct path to projectsDb.js
-import { projectsDb } from '../../../projectsDb.js';
+// Correct path to projectsDb.js (using .ts instead of .js)
+import { projectsDb } from '../../../projectsDb.ts';
 
 const router = Router();
 
@@ -86,7 +86,16 @@ router.patch('/plans/project/:projectId/block/:blockId', async (req, res) => {
     plan.lastUpdated = Date.now();
     
     // Save the updated plan - this will create a new plan if it doesn't exist
-    await projectsDb.saveProjectPlan(projectId, plan);
+    // Use the new updateProjectPlanBlock function which handles upserts
+    const updatedPlan = await projectsDb.updateProjectPlanBlock(projectId, blockId, plan.blocks[blockId]);
+    
+    if (!updatedPlan) {
+      console.error(`[SERVER] Failed to update block ${blockId} for project ${projectId}`);
+      return res.status(500).json({ 
+        message: 'Failed to save project block: update returned null',
+      });
+    }
+    
     console.info(`[SERVER] Plan ${isNewPlan ? 'created' : 'updated'} for projectId=${projectId}`);
     
     // Verify the data was correctly stored before sending response
@@ -202,21 +211,19 @@ router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
     
     console.info(`[SERVER] GET block request for projectId=${projectId}, blockId=${blockId} at ${new Date().toISOString()}`);
     
-    // Load the plan
-    const plan = await projectsDb.getProjectPlan(projectId);
+    // Load the block directly using getProjectPlanBlock
+    let block = await projectsDb.getProjectPlanBlock(projectId, blockId);
     
     // Create a default block with proper ID if not found
-    if (!plan || !plan.blocks || !plan.blocks[blockId]) {
+    if (!block) {
       console.info(`[SERVER] Block not found: blockId=${blockId}, projectId=${projectId}, creating default structure`);
       
       // Create appropriate default structure based on the requested block
-      // Using blockType to avoid variable shadowing with blockId
       const blockType = req.params.blockId;
       const generatedId = Math.floor(Date.now() / 1000);
-      let defaultBlockData;
       
       if (blockType === 'block1') {
-        defaultBlockData = {
+        block = {
           id: generatedId,
           successFactors: [],
           personalHeuristics: [],
@@ -224,7 +231,7 @@ router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
           createdAt: Date.now()
         };
       } else if (blockType === 'block2') {
-        defaultBlockData = {
+        block = {
           id: generatedId,
           tasks: [],
           stakeholders: [],
@@ -232,7 +239,7 @@ router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
           createdAt: Date.now()
         };
       } else if (blockType === 'block3') {
-        defaultBlockData = {
+        block = {
           id: generatedId,
           timeline: null,
           deliveryApproach: "",
@@ -242,52 +249,49 @@ router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
         };
       } else {
         // Generic empty block for non-standard block IDs
-        defaultBlockData = {
+        block = {
           id: generatedId,
           createdAt: Date.now()
         };
       }
       
       console.info(`[SERVER] Returning default block data with id=${generatedId}`);
-      return res.status(200).json(defaultBlockData);
+      return res.status(200).json(block);
     }
     
-    // Debug logging for personal heuristics specifically
-    const blockData = plan.blocks[blockId];
-    
     // Ensure block has an ID - this is crucial for persistence
-    if (!blockData.id) {
+    if (!block.id) {
       console.info(`[SERVER] Adding missing ID to existing block ${blockId}`);
-      blockData.id = Math.floor(Date.now() / 1000);
+      block.id = Math.floor(Date.now() / 1000);
     }
     
     // Add specific default fields based on the block type if they're missing
     if (blockId === 'block1') {
-      blockData.successFactors = blockData.successFactors || [];
-      blockData.personalHeuristics = blockData.personalHeuristics || [];
+      block.successFactors = block.successFactors || [];
+      block.personalHeuristics = block.personalHeuristics || [];
     } else if (blockId === 'block2') {
-      blockData.tasks = blockData.tasks || [];
-      blockData.stakeholders = blockData.stakeholders || [];
+      block.tasks = block.tasks || [];
+      block.stakeholders = block.stakeholders || [];
     } else if (blockId === 'block3') {
-      blockData.timeline = blockData.timeline || null;
-      blockData.deliveryApproach = blockData.deliveryApproach || "";
-      blockData.deliveryNotes = blockData.deliveryNotes || "";
+      block.timeline = block.timeline || null;
+      block.deliveryApproach = block.deliveryApproach || "";
+      block.deliveryNotes = block.deliveryNotes || "";
     }
     
-    blockData.completed = !!blockData.completed;
+    block.completed = !!block.completed;
     
     // Debug logging for personal heuristics specifically
-    if (blockData.personalHeuristics) {
-      console.info(`[SERVER] GET request: Found ${blockData.personalHeuristics.length} personal heuristics for block ${blockId}, project ${projectId}`);
-      if (blockData.personalHeuristics.length > 0) {
-        console.info('[SERVER] GET request: First heuristic sample:', JSON.stringify(blockData.personalHeuristics[0]));
+    if (block.personalHeuristics) {
+      console.info(`[SERVER] GET request: Found ${block.personalHeuristics.length} personal heuristics for block ${blockId}, project ${projectId}`);
+      if (block.personalHeuristics.length > 0) {
+        console.info('[SERVER] GET request: First heuristic sample:', JSON.stringify(block.personalHeuristics[0]));
       }
     } else {
       console.warn(`[SERVER] GET request: Warning: No personal heuristics found in block ${blockId} for project ${projectId}`);
     }
     
-    console.info(`[SERVER] Returning block data with id=${blockData.id || 'null'}`);
-    return res.status(200).json(blockData);
+    console.info(`[SERVER] Returning block data with id=${block.id || 'null'}`);
+    return res.status(200).json(block);
   } catch (error) {
     console.error('Error retrieving project block:', error);
     return res.status(500).json({ 
@@ -368,9 +372,14 @@ router.get('/plans/project/:projectId', async (req, res) => {
         lastUpdated: Date.now()
       };
       
-      // Note: We're not saving this plan to the database yet
-      // It will be saved when the first PATCH request comes in
-      console.info(`[SERVER] Returning default plan structure with id=${planId}`);
+      // Create the plan in the database
+      const createdPlan = await projectsDb.createProjectPlan(projectId);
+      if (createdPlan) {
+        console.info(`[SERVER] Created new plan in database for projectId=${projectId} with id=${createdPlan.id}`);
+        plan = createdPlan;
+      } else {
+        console.info(`[SERVER] Failed to create plan in database, returning temporary plan structure with id=${planId}`);
+      }
     } else {
       console.info(`[SERVER] Found existing plan with id=${plan.id || 'null'}`);
       
