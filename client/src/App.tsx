@@ -416,7 +416,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-3">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Block3Deliver />
           </ProtectedRouteGuard>
@@ -425,7 +425,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/full">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <MakeAPlanFull />
           </ProtectedRouteGuard>
@@ -434,7 +434,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <MakeAPlan />
           </ProtectedRouteGuard>
@@ -443,7 +443,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <MakeAPlan />
           </ProtectedRouteGuard>
@@ -452,7 +452,7 @@ function Router() {
         )}
       </Route>
       <Route path="/checklist">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Checklist />
           </ProtectedRouteGuard>
@@ -462,7 +462,7 @@ function Router() {
       </Route>
       
       <Route path="/final-checklist">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <FinalChecklist />
           </ProtectedRouteGuard>
@@ -472,7 +472,7 @@ function Router() {
       </Route>
       
       <Route path="/factor-checklist">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <FactorChecklist />
           </ProtectedRouteGuard>
@@ -482,7 +482,7 @@ function Router() {
       </Route>
       
       <Route path="/projects/:projectId/outcomes">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <OutcomeManagement />
           </ProtectedRouteGuard>
@@ -493,7 +493,7 @@ function Router() {
       
       {/* Project Setup Page (for editing project profile) */}
       <Route path="/projects/:projectId/setup">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -505,7 +505,7 @@ function Router() {
       {/* NEW SIMPLIFIED EDIT ROUTES */}
       {/* Basic Project Edit Page - direct route */}
       <Route path="/projects/:projectId/edit-basic">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <BasicProjectEditPage />
           </ProtectedRouteGuard>
@@ -516,7 +516,7 @@ function Router() {
       
       {/* Basic Project Edit Page with Organization context */}
       <Route path="/organisations/:orgId/projects/:projectId/edit-basic">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <BasicProjectEditPage />
           </ProtectedRouteGuard>
@@ -527,7 +527,7 @@ function Router() {
       
       {/* Project Profile Edit Page - OLD PATH */}
       <Route path="/projects/:projectId/profile/edit">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -538,7 +538,7 @@ function Router() {
       
       {/* Project Detail Page - OLD PATH */}
       <Route path="/projects/:projectId">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <ProjectPage />
           </ProtectedRouteGuard>
@@ -550,7 +550,7 @@ function Router() {
       {/* NEW ROUTES WITH ORGANIZATION CONTEXT */}
       {/* Project Profile Edit Page with Organization */}
       <Route path="/organisations/:orgId/projects/:projectId/profile/edit">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <ProjectProfile editMode={true} />
           </ProtectedRouteGuard>
@@ -561,7 +561,7 @@ function Router() {
       
       {/* Project Detail Page with Organization */}
       <Route path="/organisations/:orgId/projects/:projectId">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <ProjectPage />
           </ProtectedRouteGuard>
@@ -572,7 +572,7 @@ function Router() {
       
       {/* Dashboard route - protected like other tools */}
       <Route path="/dashboard">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Dashboard />
           </ProtectedRouteGuard>
@@ -588,7 +588,7 @@ function Router() {
       
       {/* Goal mapping with project ID */}
       <Route path="/tools/goal-mapping/:projectId">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <GoalMappingPage />
           </ProtectedRouteGuard>
@@ -602,7 +602,7 @@ function Router() {
       
       {/* Cynefin orientation with project ID */}
       <Route path="/tools/cynefin-orientation/:projectId">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <CynefinOrientationPage />
           </ProtectedRouteGuard>
@@ -616,7 +616,7 @@ function Router() {
       
       {/* TCOF journey with project ID */}
       <Route path="/tools/tcof-journey/:projectId">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <TCOFJourneyPage />
           </ProtectedRouteGuard>
@@ -630,7 +630,7 @@ function Router() {
       
       {/* Base routes without project IDs */}
       <Route path="/tools/goal-mapping">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <GoalMappingPage />
           </ProtectedRouteGuard>
@@ -643,7 +643,7 @@ function Router() {
       </Route>
       
       <Route path="/tools/cynefin-orientation">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <CynefinOrientationPage />
           </ProtectedRouteGuard>
@@ -656,7 +656,7 @@ function Router() {
       </Route>
       
       <Route path="/tools/tcof-journey">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <TCOFJourneyPage />
           </ProtectedRouteGuard>
