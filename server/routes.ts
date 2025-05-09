@@ -3274,50 +3274,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public endpoint to create admin user (no authentication required)
+  // Public endpoint to create admin user with NUMERIC ID to match schema
+  // This is a temporary solution until we can migrate the schema
   app.post('/create-admin-user', async (req: Request, res: Response) => {
     try {
-      // Use storage.createUser instead of direct SQL execution
+      // We now know the database expects an integer ID
       const adminUser = {
-        id: 'admin123',
+        id: 999999, // Using a numeric ID that should work with current schema
         username: 'admin',
         password: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4.1a39d2f5bbcb25bde1e62a69b',
         email: 'admin@example.com'
       };
       
-      // Attempt to get existing user first
-      const existingUser = await storage.getUserByUsername('admin');
+      // Direct database query to create admin user with numeric ID
+      // Use the actual DB instead of storage interface to avoid type conversions
+      const result = await db.execute(sql`
+        INSERT INTO users (id, username, password, email, created_at)
+        VALUES (${adminUser.id}, ${adminUser.username}, ${adminUser.password}, ${adminUser.email}, NOW())
+        ON CONFLICT (id) 
+        DO UPDATE SET username = ${adminUser.username}, password = ${adminUser.password}
+        RETURNING id, username, email
+      `);
       
-      if (existingUser) {
-        // If exists with wrong ID format, delete first
-        if (existingUser.id !== 'admin123') {
-          console.log(`Found existing admin user with ID ${existingUser.id}, deleting...`);
-          
-          try {
-            console.log('Will attempt to use the new ID instead, as raw DB operations are not working.');
-            // We'll skip the delete and just let the createUser handle it
-          } catch (deleteError) {
-            console.error('Error deleting old admin user:', deleteError);
-          }
-        }
-      }
-      
-      // Now create the new admin user
-      const user = await storage.createUser(adminUser);
+      console.log('Admin user created or updated successfully:', result);
       
       res.status(200).json({ 
         message: 'Admin user created successfully', 
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email
-        }
+        user: result.length > 0 ? result[0] : adminUser
       });
     } catch (error) {
       console.error('Error creating admin user:', error);
       res.status(500).json({ 
         error: 'Failed to create admin user', 
         message: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
+  // Show schema detail for debugging purposes (public endpoint, no auth required)
+  app.get('/debug/schema', async (req: Request, res: Response) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT table_name, column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'users'
+      `);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Error getting schema:', error);
+      res.status(500).json({ 
+        error: 'Failed to get schema', 
+        message: error instanceof Error ? error.message : String(error)
       });
     }
   });
