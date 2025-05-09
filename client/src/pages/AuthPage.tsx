@@ -1,233 +1,313 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
-import { useForm } from "react-hook-form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState } from "react";
+import { useNavigate, useLocation } from "wouter";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Loader2, LogIn, Key } from "lucide-react";
-import SiteHeader from "@/components/SiteHeader";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-// Create a schema for form validation
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
+// Create simple auth context to check if user is logged in
+import { useAuth } from "@/hooks/use-auth";
 
-type LoginFormValues = z.infer<typeof loginSchema>;
-
-/**
- * Auth page with username and password login
- */
 export default function AuthPage() {
-  const [location, setLocation] = useLocation();
-  const { user, isLoading, authError, loginMutation } = useAuth();
+  const [, navigate] = useLocation();
+  const { user, isLoading } = useAuth();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   
-  // Set up form with react-hook-form
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
+  // Form states
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [registerUsername, setRegisterUsername] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   
-  // Handle login form submission
-  function onSubmit(values: LoginFormValues) {
-    loginMutation.mutate(values);
-  }
-  
-  // Redirect to home if already logged in
-  // We use a flag to ensure we only redirect once
-  const [hasRedirected, setHasRedirected] = useState(false);
-  
+  // Loading states
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
+
+  // Redirect if already logged in
   useEffect(() => {
-    if (user && !hasRedirected) {
-      setHasRedirected(true);
-      setLocation("/");
+    if (user && !isLoading) {
+      navigate("/");
     }
-  }, [user, setLocation, hasRedirected]);
-  
+  }, [user, isLoading, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!loginUsername.trim() || !loginPassword.trim()) {
+      toast({
+        title: "Invalid login",
+        description: "Please enter both username and password",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLoginLoading(true);
+    
+    try {
+      const response = await apiRequest("POST", "/api/login", {
+        username: loginUsername,
+        password: loginPassword,
+      });
+      
+      if (response.ok) {
+        // Login successful, refresh the page to update auth state
+        window.location.href = "/";
+      } else {
+        const data = await response.json();
+        toast({
+          title: "Login failed",
+          description: data.message || "Invalid username or password",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoginLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form
+    if (!registerUsername.trim() || !registerPassword.trim()) {
+      toast({
+        title: "Invalid registration",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (registerPassword !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please ensure your passwords match",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsRegisterLoading(true);
+    
+    try {
+      const response = await apiRequest("POST", "/api/register", {
+        username: registerUsername,
+        email: registerEmail,
+        password: registerPassword,
+      });
+      
+      if (response.ok) {
+        // Registration successful, navigate to home page
+        window.location.href = "/";
+      } else {
+        const data = await response.json();
+        toast({
+          title: "Registration failed",
+          description: data.message || "Failed to create account",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegisterLoading(false);
+    }
+  };
+
+  // If still checking auth status, show loading
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
-        <Loader2 className="h-12 w-12 animate-spin text-tcof-teal" />
-        <p className="mt-4 text-gray-600">Checking authentication status...</p>
-      </div>
-    );
-  }
-  
-  if (user) {
-    return null; // Will redirect in useEffect
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
+    </div>;
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <SiteHeader />
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
+      {/* Left side - Auth form */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Card className="w-full max-w-md p-8 shadow-lg">
+          <h1 className="text-3xl font-bold text-center mb-8">TCOF Toolkit</h1>
+          
+          <Tabs defaultValue={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="login-username">Username</Label>
+                  <Input 
+                    id="login-username"
+                    type="text"
+                    placeholder="Username"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    disabled={isLoginLoading}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <Input 
+                    id="login-password"
+                    type="password"
+                    placeholder="Password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    disabled={isLoginLoading}
+                    required
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={isLoginLoading}>
+                  {isLoginLoading ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+                      Logging in...
+                    </>
+                  ) : "Login"}
+                </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="register">
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="register-username">Username</Label>
+                  <Input 
+                    id="register-username"
+                    type="text"
+                    placeholder="Username"
+                    value={registerUsername}
+                    onChange={(e) => setRegisterUsername(e.target.value)}
+                    disabled={isRegisterLoading}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="register-email">Email</Label>
+                  <Input 
+                    id="register-email"
+                    type="email"
+                    placeholder="Email (optional)"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    disabled={isRegisterLoading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="register-password">Password</Label>
+                  <Input 
+                    id="register-password"
+                    type="password"
+                    placeholder="Password"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    disabled={isRegisterLoading}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input 
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isRegisterLoading}
+                    required
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={isRegisterLoading}>
+                  {isRegisterLoading ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+                      Creating Account...
+                    </>
+                  ) : "Create Account"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </Card>
+      </div>
       
-      <main className="flex-grow container mx-auto px-4 py-12">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-            {/* Form Section */}
-            <div>
-              <h1 className="text-3xl font-bold text-tcof-dark mb-6">Welcome to TCOF</h1>
-              <p className="text-gray-600 mb-8">
-                Log in to access your strategic planning tools and saved projects.
-              </p>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sign In</CardTitle>
-                  <CardDescription>
-                    Enter your credentials to access the application
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {authError && (
-                    <Alert variant="destructive" className="mb-4">
-                      <AlertCircle className="h-4 w-4 mr-2" />
-                      <AlertDescription>{authError}</AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Username</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your username" 
-                                {...field} 
-                                autoComplete="username"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="Enter your password" 
-                                {...field} 
-                                autoComplete="current-password"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                            <FormDescription>
-                              Demo credentials: "admin" / "admin123"
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <Button 
-                        type="submit"
-                        className="w-full bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                        disabled={loginMutation.isPending}
-                      >
-                        {loginMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Signing in...
-                          </>
-                        ) : (
-                          <>
-                            <Key className="mr-2 h-4 w-4" />
-                            Sign In
-                          </>
-                        )}
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
+      {/* Right side - Hero content */}
+      <div className="flex-1 bg-gradient-to-br from-tcof-primary to-tcof-secondary p-6 text-white flex flex-col justify-center md:p-12">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-4xl font-bold mb-6">Welcome to TCOF Toolkit</h2>
+          <p className="text-lg mb-8">
+            The Connected Outcomes Framework Toolkit helps you navigate complex projects
+            with strategic planning tools, success factor analysis, and project management workflows.
+          </p>
+          
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="bg-white/20 rounded-full p-2 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-xl">Strategic Planning</h3>
+                <p className="text-white/80">Map your goals and outcomes with interactive planning tools</p>
+              </div>
             </div>
-
-            {/* Hero Section */}
-            <div className="bg-gradient-to-br from-tcof-light to-tcof-light/50 p-8 rounded-lg shadow-sm order-first md:order-last">
-              <h2 className="text-2xl font-bold text-tcof-dark mb-6">
-                TCOF Strategic Planning Toolkit
-              </h2>
-              <p className="text-gray-700 mb-6">
-                The Connected Outcomes Framework helps teams navigate complex technology projects by providing:
-              </p>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-start">
-                  <div className="bg-tcof-teal/20 p-2 rounded-full mr-3 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-tcof-teal">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-tcof-dark">Strategic Goal Mapping</h3>
-                    <p className="text-gray-600">Visualize and connect your strategic objectives</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <div className="bg-tcof-teal/20 p-2 rounded-full mr-3 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-tcof-teal">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-tcof-dark">Complexity Analysis</h3>
-                    <p className="text-gray-600">Identify your domain's complexity level</p>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <div className="bg-tcof-teal/20 p-2 rounded-full mr-3 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-tcof-teal">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-tcof-dark">Success Factor Checklists</h3>
-                    <p className="text-gray-600">Build action plans based on proven success factors</p>
-                  </div>
-                </li>
-              </ul>
-
-              <Alert className="bg-tcof-teal/10 border-tcof-teal">
-                <AlertDescription>
-                  Sign in to save your strategic planning tools and track progress across multiple projects.
-                </AlertDescription>
-              </Alert>
+            
+            <div className="flex items-start space-x-3">
+              <div className="bg-white/20 rounded-full p-2 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-xl">Context-Aware Planning</h3>
+                <p className="text-white/80">Tailor your approach based on your project's complexity</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-3">
+              <div className="bg-white/20 rounded-full p-2 mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-xl">Team Collaboration</h3>
+                <p className="text-white/80">Share plans and track progress with your entire team</p>
+              </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
