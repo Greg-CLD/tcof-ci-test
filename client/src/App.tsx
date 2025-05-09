@@ -197,8 +197,8 @@ const TCOFJourneyPage = () => {
 };
 
 function Router() {
-  const { isAuthenticated } = useAuthProtection();
-  const { user, isAuthenticated: isUserAuthenticated } = useAuth();
+  const authProtection = useAuthProtection();
+  const { user, isAuthenticated } = useAuth();
   const [location, navigate] = useLocation();
   const hasRedirectedRef = useRef(false);
   
@@ -206,10 +206,10 @@ function Router() {
   // Instead we'll use more granular control with direct conditional rendering
   
   // Log current location on each render for debugging
-  console.log("Current location in Router:", location, { user, isAuthenticated: isUserAuthenticated, hasRedirected: hasRedirectedRef.current });
+  console.log("Current location in Router:", location, { user, isAuthenticated, hasRedirected: hasRedirectedRef.current });
   
   // Hard-Stop Redirect Rule: Run once per mount, with a ref to prevent multiple redirects
-  if ((user) && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
+  if (isAuthenticated && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
     console.log("NAVIGATE FROM", location, "TO /all-projects (ONE-TIME REDIRECT)");
     hasRedirectedRef.current = true;
     navigate('/all-projects');
@@ -225,7 +225,7 @@ function Router() {
   }
   
   // Don't allow users to directly access tool pages without selecting a project
-  if (user && location === '/make-a-plan' && !localStorage.getItem('selectedProjectId')) {
+  if (isAuthenticated && location === '/make-a-plan' && !localStorage.getItem('selectedProjectId')) {
     console.log("Missing projectId, redirecting to /organisations");
     if (!hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
@@ -235,7 +235,7 @@ function Router() {
   }
   
   // For organization routes, if not logged in, redirect to home
-  if (!user && (location === '/organisations' || location.startsWith('/organisations/'))) {
+  if (!isAuthenticated && (location === '/organisations' || location.startsWith('/organisations/'))) {
     return (
       <Redirect to="/" />
     );
@@ -249,7 +249,7 @@ function Router() {
 
       {/* All Projects route - authenticated users only */}
       <Route path="/all-projects">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <AllProjects />
           </ProtectedRouteGuard>
@@ -260,7 +260,7 @@ function Router() {
       
       {/* Organizations management - authenticated users only */}
       <Route path="/organisations">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <OrganisationListPage />
           </ProtectedRouteGuard>
@@ -271,7 +271,7 @@ function Router() {
       
       {/* Organisation Dashboard - authenticated users only */}
       <Route path="/organisations/:orgId">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <OrganisationDashboardPage />
           </ProtectedRouteGuard>
@@ -282,7 +282,7 @@ function Router() {
       
       {/* Organisation Heuristics - authenticated users only */}
       <Route path="/organisations/:orgId/heuristics">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <OrganisationHeuristicsPage />
           </ProtectedRouteGuard>
@@ -299,7 +299,7 @@ function Router() {
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/settings">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <UserProfileSettings />
           </ProtectedRouteGuard>
