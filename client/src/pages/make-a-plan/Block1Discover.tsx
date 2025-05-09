@@ -65,24 +65,24 @@ export default function Block1Discover() {
   const { plan, savePlan, saveBlock: saveBlockFromContext } = usePlan();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Active tab state
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   // State for personal heuristics
   const [newHeuristic, setNewHeuristic] = useState({ name: "", description: "" });
   // Get the saved personal heuristics
   const [personalHeuristics, setPersonalHeuristics] = useState<any[]>([]);
-  
+
   // State for success criteria
   const [successCriteria, setSuccessCriteria] = useState("");
 
   // Local state for ratings - using number types for values
   const [ratings, setRatings] = useState<Record<string, number>>({});
-  
+
   // Debug flag for tracking ratings state
   const [lastRatingsSaveTime, setLastRatingsSaveTime] = useState<string | null>(null);
-  
+
   // Fetch project details if projectId is provided
   const { 
     data: project, 
@@ -91,7 +91,7 @@ export default function Block1Discover() {
     queryKey: ['project', projectId],
     queryFn: async () => {
       if (!projectId) return null;
-      
+
       console.log(`Fetching project details for: ${projectId}`);
       const res = await apiRequest("GET", `/api/projects-detail/${projectId}`);
       if (!res.ok) {
@@ -102,7 +102,7 @@ export default function Block1Discover() {
     },
     enabled: !!projectId
   });
-  
+
   // Fetch success factors data
   const {
     data: successFactors,
@@ -117,22 +117,22 @@ export default function Block1Discover() {
       return res.json();
     }
   });
-  
+
   // Initialize local state from plan data
   useEffect(() => {
     if (plan) {
       console.log('🔍 Block1Discover - Plan data changed, updating local state');
-      
+
       // Load success criteria
       if (plan.blocks?.block1?.successCriteria) {
         setSuccessCriteria(plan.blocks.block1.successCriteria);
       }
-      
+
       // Load saved success factor ratings into ratings
       if (plan.blocks?.block1?.successFactorRatings) {
         const planRatings = plan.blocks.block1.successFactorRatings;
         console.log('🔄 Block1Discover.useEffect - Loading saved ratings:', planRatings);
-        
+
         // Convert string values to numbers if needed
         const numericalRatings: Record<string, number> = {};
         Object.entries(planRatings).forEach(([factorId, value]) => {
@@ -140,22 +140,22 @@ export default function Block1Discover() {
             ? value 
             : parseInt(String(value), 10);
         });
-        
+
         setRatings(numericalRatings);
       }
-      
+
       // Load personal heuristics if available
       if (plan.blocks?.block1?.personalHeuristics) {
         console.log('🔄 Block1Discover.useEffect - Personal heuristics found in plan:', 
           plan.blocks.block1.personalHeuristics.length);
-          
+
         // Log the raw data that's going to be passed to the state setter
         console.log(`%c[STATE UPDATE] Raw personal heuristics from plan (BEFORE formatting):`, 'color: #0ea5e9; font-weight: bold;');
         console.log(JSON.stringify(plan.blocks.block1.personalHeuristics, null, 2));
-          
+
         // Now actually load the personal heuristics from the plan
         const heuristics = plan.blocks.block1.personalHeuristics;
-        
+
         // Ensure each personal heuristic has a consistent structure
         const formattedHeuristics = heuristics.map(h => {
           // Handle string or object format for backward compatibility
@@ -180,7 +180,7 @@ export default function Block1Discover() {
             };
           }
         });
-        
+
         console.log('🔄 Block1Discover.useEffect - Setting personal heuristics:', JSON.stringify(formattedHeuristics, null, 2));
         console.log('🔄 Block1Discover.useEffect - COMPLETE BLOCK DATA BEING LOADED:', JSON.stringify(plan.blocks.block1, null, 2));
         setPersonalHeuristics(formattedHeuristics);
@@ -190,7 +190,7 @@ export default function Block1Discover() {
       }
     }
   }, [plan]);
-  
+
   // Save progress mutation with optimistic updates
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -198,11 +198,11 @@ export default function Block1Discover() {
       console.info(`[SAVE] Block1Discover.saveMutation - Current plan ID: ${plan?.id || 'null'}`);
       console.info(`[SAVE] Block1Discover.saveMutation - Success criteria length: ${successCriteria?.length || 0}`);
       console.info(`[SAVE] Block1Discover.saveMutation - Rating keys: ${Object.keys(ratings).join(', ')}`);
-      
+
       // If no plan ID exists, this may be our first save
       if (!plan?.id) {
         console.info(`[SAVE] Block1Discover.saveMutation - No plan ID detected, ensuring plan exists`);
-        
+
         try {
           // Create a minimal plan to ensure we have an ID
           const response = await apiRequest(
@@ -218,7 +218,7 @@ export default function Block1Discover() {
               }
             }
           );
-          
+
           if (!response.ok) {
             console.error(`[SAVE] Block1Discover.saveMutation - Failed to create plan: ${response.status} ${response.statusText}`);
           } else {
@@ -229,41 +229,41 @@ export default function Block1Discover() {
           console.error(`[SAVE] Block1Discover.saveMutation - Error creating plan:`, error);
         }
       }
-      
+
       // Include success criteria, ratings, AND personal heuristics in the save
       console.info(`[SAVE] Block1Discover.saveMutation - Including ${personalHeuristics.length} heuristics in save`);
-      
+
       // Log the exact personal heuristics that will be saved
       console.log(`%c[SAVE] BLOCK1 SAVE - Personal heuristics being saved (${personalHeuristics.length}):`, 'color: #0ea5e9; font-weight: bold;');
       console.log(JSON.stringify(personalHeuristics, null, 2));
-      
+
       const blockData = {
         successCriteria,
         successFactorRatings: ratings,
         personalHeuristics: personalHeuristics, // Add personal heuristics to every save
         lastUpdated: new Date().toISOString(),
       };
-      
+
       // Log the PATCH payload
       console.log('PATCH payload →', blockData);
 
       // Log the FULL block data being passed to the save function
       console.log(`%c[SAVE] BLOCK1 SAVE - Complete block data being saved:`, 'color: #a855f7; font-weight: bold;');
       console.log(JSON.stringify(blockData, null, 2));
-      
+
       return saveBlockFromContext('block1', blockData);
     },
     onMutate: (newData) => {
       // Cancel any outgoing refetches so they don't overwrite our optimistic update
       queryClient.cancelQueries({ queryKey: ['plan', projectId] });
-      
+
       // Snapshot the previous value
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
-      
+
       // Optimistically update to the new value
       queryClient.setQueryData(['plan', projectId], (old: any) => {
         if (!old) return old;
-        
+
         return {
           ...old,
           blocks: {
@@ -276,13 +276,13 @@ export default function Block1Discover() {
           }
         };
       });
-      
+
       // Display toast immediately to provide instant feedback
       toast({
         title: "Saving progress...",
         description: "Your changes are being saved.",
       });
-      
+
       // Return a context object with the previous plan
       return { previousPlan };
     },
@@ -291,7 +291,7 @@ export default function Block1Discover() {
         title: "Progress saved",
         description: "Your changes have been saved successfully.",
       });
-      
+
       // Refresh plan data to ensure it's in sync with the server
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     },
@@ -300,7 +300,7 @@ export default function Block1Discover() {
       if (context?.previousPlan) {
         queryClient.setQueryData(['plan', projectId], context.previousPlan);
       }
-      
+
       toast({
         title: "Failed to save progress",
         description: "There was an error saving your changes. Your changes have been reverted.",
@@ -313,7 +313,7 @@ export default function Block1Discover() {
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     }
   });
-  
+
   // Guard against invalid state - no project ID available
   if (!projectId) {
     return (
@@ -326,14 +326,14 @@ export default function Block1Discover() {
       </div>
     );
   }
-  
+
   // Use resonance ratings hook for server persistence
   const { 
     updateEvaluations,
     evaluations, 
     isSaving: isRatingsSaving 
   } = useResonanceRatings(projectId);
-  
+
   // Load server ratings on mount
   useEffect(() => {
     console.log('🔍 Block1Discover - useEffect for evaluations triggered, count:', evaluations?.length);
@@ -349,13 +349,13 @@ export default function Block1Discover() {
         }
         return acc;
       }, {});
-      
+
       console.log('🔄 Block1Discover - Server ratings loaded:', serverRatings);
-      
+
       // Set our local state with server values
       setRatings(serverRatings);
       console.log('🔄 Block1Discover - Updated ratings state:', serverRatings);
-      
+
       // Also save to the plan for persistence
       saveBlockFromContext('block1', {
         successFactorRatings: serverRatings,
@@ -363,11 +363,11 @@ export default function Block1Discover() {
       });
     }
   }, [evaluations, projectId, saveBlockFromContext]);
-  
+
   // Handle success factor evaluation change - updates only the specified factor
   const handleEvaluationChange = (factorId: string, value: number) => {
     console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'value:', value);
-    
+
     // Update local state with the new rating for only the specified factor
     setRatings(prev => {
       const newState = {
@@ -377,7 +377,7 @@ export default function Block1Discover() {
       console.log('🔄 Block1Discover.ratings - before:', prev, 'after:', newState);
       return newState;
     });
-    
+
     // Live preview update message
     toast({
       title: "Rating updated", 
@@ -385,11 +385,11 @@ export default function Block1Discover() {
       duration: 1500
     });
   };
-  
+
   // Function to save resonance ratings to server with preview feedback
   const handleConfirmAndSave = async () => {
     console.log('🔄 Block1Discover.handleConfirmAndSave - Starting save operation');
-    
+
     try {
       // Validation: Ensure we have ratings to save
       if (Object.keys(ratings).length === 0) {
@@ -400,7 +400,7 @@ export default function Block1Discover() {
         });
         return;
       }
-      
+
       // First save ratings to local plan for persistence
       console.log('🔄 Block1Discover.handleConfirmAndSave - Saving ratings to local plan:', ratings);
       const now = new Date().toISOString();
@@ -409,7 +409,7 @@ export default function Block1Discover() {
         successFactorRatings: ratings,
         lastUpdated: now,
       });
-      
+
       // Map ratings to the payload format expected by the API and filter out undefined factorIds
       const payload = Object.entries(ratings)
         .filter(([factorId, value]) => factorId && factorId !== 'undefined')
@@ -417,29 +417,29 @@ export default function Block1Discover() {
           factorId, 
           resonance: typeof value === 'number' ? value : parseInt(String(value), 10)
         }));
-      
+
       console.log('🔄 Block1Discover.handleConfirmAndSave - Mapped payload:', payload);
       console.log('🔄 Block1Discover.handleConfirmAndSave - Sending ratings for project:', projectId);
-      
+
       // Show a pending toast while saving
       toast({
         title: "Saving ratings...",
         description: `Saving ${payload.length} factor evaluations to the server.`,
       });
-      
+
       // Send the ratings to the server
       await updateEvaluations(payload);
-      
+
       // Show success message
       toast({
         title: "Ratings saved",
         description: "Your factor evaluations have been saved successfully.",
       });
-      
+
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'success-factor-ratings'] });
       queryClient.invalidateQueries({ queryKey: ['resonanceRatings', projectId] });
-      
+
       console.log('🔄 Block1Discover.handleConfirmAndSave - Save completed successfully');
     } catch (error) {
       console.error("🔴 Block1Discover.handleConfirmAndSave - Error:", error);
@@ -450,27 +450,27 @@ export default function Block1Discover() {
       });
     }
   };
-  
+
   // Combined function to save both local progress and send to server
   const handleSaveAll = async () => {
     console.log('🔄 Block1Discover.handleSaveAll - starting combined save operation');
-    
+
     try {
       // Save local progress using the mutation
       console.log('🔄 Block1Discover.handleSaveAll - saving local progress first');
       await saveMutation.mutateAsync();
-      
+
       // Use the new handler to save ratings to the server
       await handleConfirmAndSave();
-      
+
       toast({
         title: "All changes saved",
         description: "Your changes have been saved locally and to the server.",
       });
-      
+
       // Refresh queries to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
-      
+
     } catch (error) {
       console.error("🔴 Block1Discover - Error in combined save:", error);
       toast({
@@ -480,10 +480,10 @@ export default function Block1Discover() {
       });
     }
   };
-  
+
   // Get the block save hook to use consistent API pattern
   const { saveBlock: saveBlockWithHook, isLoading: isSavingBlock } = useBlockSave();
-  
+
   // Heuristic add mutation with optimistic UI
   const addHeuristicMutation = useMutation({
     mutationFn: async (newHeuristicData: { 
@@ -497,11 +497,11 @@ export default function Block1Discover() {
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Adding new heuristic for project ${projectId}`);
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Current plan ID: ${plan?.id || 'null'}`);
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Data:`, newHeuristicData);
-      
+
       // If no plan ID exists, this may be our first save
       if (!plan?.id) {
         console.info(`[SAVE] Block1Discover.addHeuristicMutation - No plan ID detected, ensuring plan exists`);
-        
+
         try {
           // Create a minimal plan to ensure we have an ID
           const response = await apiRequest(
@@ -516,7 +516,7 @@ export default function Block1Discover() {
               }
             }
           );
-          
+
           if (!response.ok) {
             console.error(`[SAVE] Block1Discover.addHeuristicMutation - Failed to create plan: ${response.status} ${response.statusText}`);
           } else {
@@ -529,14 +529,14 @@ export default function Block1Discover() {
           console.error(`[SAVE] Block1Discover.addHeuristicMutation - Error creating plan:`, error);
         }
       }
-      
+
       // Get existing heuristics or empty array if none
       const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Current heuristics count: ${existingHeuristics.length}`);
-      
+
       // Make sure the ID is always defined
       const heuristicId = newHeuristicData.id || `h-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      
+
       // Ensure we have a properly formatted heuristic with ALL field variants for maximum compatibility
       // This helps with both the UI rendering and server persistence
       const heuristicToSave = {
@@ -548,22 +548,22 @@ export default function Block1Discover() {
         description: newHeuristicData.description || newHeuristicData.notes || '',
         favourite: !!newHeuristicData.favourite
       };
-      
+
       // Add the new heuristic to local state first
       const updatedHeuristics = [...personalHeuristics, heuristicToSave];
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - New heuristics count: ${updatedHeuristics.length}`);
-      
+
       // Update local state immediately for optimistic UI update
       setPersonalHeuristics(updatedHeuristics);
-      
+
       // Log the new heuristic being added for debugging
       console.log(`%c[HEURISTIC ADD] New heuristic being added:`, 'color: #059669; font-weight: bold;');
       console.log(JSON.stringify(heuristicToSave, null, 2));
-      
+
       // Log the complete updated heuristics array for debugging
       console.log(`%c[HEURISTIC ADD] Complete updated personalHeuristics (${updatedHeuristics.length}):`, 'color: #059669; font-weight: bold;');
       console.log(JSON.stringify(updatedHeuristics, null, 2));
-      
+
       // Build the block data with consistent structure
       const blockData = {
         personalHeuristics: updatedHeuristics,
@@ -572,36 +572,36 @@ export default function Block1Discover() {
         successCriteria: successCriteria || "",
         lastUpdated: new Date().toISOString()
       };
-      
+
       // Log the complete block data being saved
       console.log(`%c[HEURISTIC ADD] Complete block data being saved:`, 'color: #a855f7; font-weight: bold;');
       console.log(JSON.stringify(blockData, null, 2));
-      
+
       // Use the context save method to ensure consistent saving
       const result = await saveBlockFromContext('block1', blockData);
-      
+
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Save successful, result:`, result);
       return result;
     },
     onMutate: async (newHeuristicData) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
-      
+
       // Snapshot the previous value
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
-      
+
       // Create the new heuristic with ID
       const newHeuristicWithId = { ...newHeuristicData, id: Date.now().toString() };
-      
+
       // Optimistically update to the new value
       queryClient.setQueryData(['plan', projectId], (old: any) => {
         if (!old) return old;
-        
+
         const updatedHeuristics = [
           ...(old.blocks?.block1?.personalHeuristics || []),
           newHeuristicWithId
         ];
-        
+
         return {
           ...old,
           blocks: {
@@ -614,18 +614,18 @@ export default function Block1Discover() {
           }
         };
       });
-      
+
       // Show immediate feedback
       toast({
         title: "Adding heuristic...",
         description: "Your personal heuristic is being saved.",
       });
-      
+
       return { previousPlan, newHeuristicWithId };
     },
     onSuccess: (_result, _variables, context) => {
       setNewHeuristic({ name: "", description: "" });
-      
+
       toast({
         title: "Heuristic added",
         description: "Your personal heuristic has been added successfully.",
@@ -635,7 +635,7 @@ export default function Block1Discover() {
       if (context?.previousPlan) {
         queryClient.setQueryData(['plan', projectId], context.previousPlan);
       }
-      
+
       console.error("🔴 Error adding heuristic:", error);
       toast({
         title: "Error adding heuristic",
@@ -647,17 +647,17 @@ export default function Block1Discover() {
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     }
   });
-  
+
   // Heuristic remove mutation with optimistic UI
   const removeHeuristicMutation = useMutation({
     mutationFn: async (heuristicId: string) => {
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Removing heuristic ${heuristicId} for project ${projectId}`);
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Current plan ID: ${plan?.id || 'null'}`);
-      
+
       // If no plan ID exists, this may be our first save
       if (!plan?.id) {
         console.info(`[SAVE] Block1Discover.removeHeuristicMutation - No plan ID detected, ensuring plan exists`);
-        
+
         try {
           // Create a minimal plan to ensure we have an ID
           const response = await apiRequest(
@@ -672,7 +672,7 @@ export default function Block1Discover() {
               }
             }
           );
-          
+
           if (!response.ok) {
             console.error(`[SAVE] Block1Discover.removeHeuristicMutation - Failed to create plan: ${response.status} ${response.statusText}`);
           } else {
@@ -685,14 +685,14 @@ export default function Block1Discover() {
           console.error(`[SAVE] Block1Discover.removeHeuristicMutation - Error creating plan:`, error);
         }
       }
-      
+
       // Get existing heuristics safely
       const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Current heuristics count: ${existingHeuristics.length}`);
-      
+
       // Deep clone to avoid reference issues
       const clonedHeuristics = JSON.parse(JSON.stringify(existingHeuristics));
-      
+
       // Filter out the one to remove
       const updatedHeuristics = clonedHeuristics
         .filter((h: { id: string }) => {
@@ -702,16 +702,16 @@ export default function Block1Discover() {
           }
           return matches;
         });
-      
+
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - New heuristics count: ${updatedHeuristics.length}`);
-      
+
       // Update local state immediately for optimistic UI
       setPersonalHeuristics(updatedHeuristics);
-      
+
       // Log the updated heuristics array after removal
       console.log(`%c[HEURISTIC REMOVE] Updated personalHeuristics after removal (${updatedHeuristics.length}):`, 'color: #059669; font-weight: bold;');
       console.log(JSON.stringify(updatedHeuristics, null, 2));
-      
+
       // Build the block data with consistent structure
       const blockData = {
         personalHeuristics: updatedHeuristics,
@@ -720,37 +720,37 @@ export default function Block1Discover() {
         successCriteria: successCriteria || "",
         lastUpdated: new Date().toISOString()
       };
-      
+
       // Log the complete block data being saved
       console.log(`%c[HEURISTIC REMOVE] Complete block data being saved:`, 'color: #a855f7; font-weight: bold;');
       console.log(JSON.stringify(blockData, null, 2));
-      
+
       // Save using consistent context method
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Saving to block1 for project ${projectId}`);
       const result = await saveBlockFromContext('block1', blockData);
-      
+
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Save successful, result:`, result);
       return result;
     },
     onMutate: async (heuristicId) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
-      
+
       // Snapshot the previous value
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
-      
+
       // Find the heuristic being removed for potential restore
       const heuristicToRemove = plan?.blocks?.block1?.personalHeuristics?.find(
         (h: { id: string }) => h.id === heuristicId
       );
-      
+
       // Optimistically update to the new value
       queryClient.setQueryData(['plan', projectId], (old: any) => {
         if (!old) return old;
-        
+
         const updatedHeuristics = (old.blocks?.block1?.personalHeuristics || [])
           .filter((h: { id: string }) => h.id !== heuristicId);
-        
+
         return {
           ...old,
           blocks: {
@@ -763,13 +763,13 @@ export default function Block1Discover() {
           }
         };
       });
-      
+
       // Show immediate feedback
       toast({
         title: "Removing heuristic...",
         description: "The personal heuristic is being removed.",
       });
-      
+
       return { previousPlan, heuristicToRemove };
     },
     onSuccess: () => {
@@ -782,7 +782,7 @@ export default function Block1Discover() {
       if (context?.previousPlan) {
         queryClient.setQueryData(['plan', projectId], context.previousPlan);
       }
-      
+
       console.error("🔴 Error removing heuristic:", error);
       toast({
         title: "Error removing heuristic",
@@ -794,7 +794,7 @@ export default function Block1Discover() {
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     }
   });
-  
+
   // Handle adding a new personal heuristic
   const handleAddHeuristic = async () => {
     if (!newHeuristic.name.trim()) {
@@ -805,9 +805,9 @@ export default function Block1Discover() {
       });
       return;
     }
-    
+
     console.log('🔄 Block1Discover.handleAddHeuristic - Adding new personal heuristic:', newHeuristic);
-    
+
     try {
       // Format personal heuristic for compatibility with HeuristicList component
       const formattedHeuristic = {
@@ -819,9 +819,9 @@ export default function Block1Discover() {
         id: Date.now().toString(),
         favourite: false
       };
-      
+
       console.log('🔄 Block1Discover.handleAddHeuristic - Formatted heuristic:', formattedHeuristic);
-      
+
       // Use the mutation with optimistic updates
       await addHeuristicMutation.mutateAsync(formattedHeuristic);
     } catch (error) {
@@ -829,11 +829,11 @@ export default function Block1Discover() {
       // Error handling is done in the mutation callbacks
     }
   };
-  
+
   // Handle removing a personal heuristic
   const handleRemoveHeuristic = async (id: string) => {
     console.log('🔄 Block1Discover.handleRemoveHeuristic - Removing heuristic with id:', id);
-    
+
     try {
       // Use the mutation with optimistic updates
       await removeHeuristicMutation.mutateAsync(id);
@@ -842,14 +842,14 @@ export default function Block1Discover() {
       // Error handling is done in the mutation callbacks
     }
   };
-  
+
   // Handle saving the success criteria
   const handleSuccessCriteriaChange = (value: string) => {
     console.log(`%c[SUCCESS CRITERIA] Updating success criteria value:`, 'color: #0ea5e9; font-weight: bold;');
     console.log(value);
-    
+
     setSuccessCriteria(value);
-    
+
     // Create block data with all required fields
     const blockData = {
       successCriteria: value,
@@ -857,36 +857,36 @@ export default function Block1Discover() {
       successFactorRatings: ratings || {},
       lastUpdated: new Date().toISOString()
     };
-    
+
     // Log the block data that includes personal heuristics
-    console.log(`%c[SUCCESS CRITERIA] Saving block data with ${personalHeuristics.length} personal heuristics:`, 'color: #a855f7; font-weight: bold;');
+    console.log(`%c[SUCCESS CRITERIA] Saving block data with ${personalHeuristics.length} personalheuristics:`, 'color: #a855f7; font-weight: bold;');
     console.log(JSON.stringify(blockData, null, 2));
-    
+
     // Save success criteria with personal heuristics to ensure they're preserved
     saveBlockFromContext('block1', blockData);
   };
-  
+
   // Mark block as complete and go to next block
   const handleCompleteBlock = async () => {
     try {
       // Save current progress first
       await saveMutation.mutateAsync();
-      
+
       // Mark block as complete in tool progress
       const res = await apiRequest("POST", `/api/tool-progress/${projectId}/block1`, {
         completed: true
       });
-      
+
       if (!res.ok) {
         throw new Error("Failed to mark block as complete");
       }
-      
+
       // Refresh progress data
       await refreshProgress();
-      
+
       // Navigate to next block
       navigate(`/make-a-plan/${projectId}/block-2`);
-      
+
       toast({
         title: "Block 1 completed",
         description: "You're now ready to move to Block 2: Design.",
@@ -900,36 +900,36 @@ export default function Block1Discover() {
       });
     }
   };
-  
+
   // Calculate completion percentage
   const calculateCompletionPercentage = () => {
     let completedItems = 0;
     let totalItems = 0;
-    
+
     // Check success factor evaluations
     if (successFactors?.length > 0) {
       totalItems += successFactors.length;
       const evaluationsCount = Object.keys(ratings || {}).length;
       completedItems += evaluationsCount;
     }
-    
+
     // Check personal heuristics
     totalItems += 1; // At least one personal heuristic is recommended
     if ((plan?.blocks?.block1?.personalHeuristics || []).length > 0) {
       completedItems += 1;
     }
-    
+
     // Check success criteria
     totalItems += 1;
     if (successCriteria?.trim()) {
       completedItems += 1;
     }
-    
+
     return Math.round((completedItems / totalItems) * 100);
   };
-  
+
   const completionPercentage = calculateCompletionPercentage();
-  
+
   // Helper function to get emoji option details by value with additional safety checks
   const getOptionByValue = (value?: number | null) => {
     if (value === undefined || value === null) return null;
@@ -937,13 +937,13 @@ export default function Block1Discover() {
     const numericValue = typeof value === 'string' ? parseInt(value, 10) : value;
     return isNaN(numericValue) ? null : RESONANCE_OPTIONS.find(opt => opt.value === numericValue) || null;
   };
-  
+
   return (
     <PlanProvider>
       <div className="min-h-screen bg-gray-50">
         {/* Project Banner */}
         <ProjectBanner />
-        
+
         {/* Main content */}
         <div className="container mx-auto px-4 py-8">
           {/* Back button */}
@@ -954,7 +954,7 @@ export default function Block1Discover() {
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Make a Plan
           </Button>
-          
+
           {/* Debug panel - only visible during development to track persistence issues */}
           {/* Expand this panel on DEV for better debugging - it provides critical information for troubleshooting */}
           {import.meta.env.DEV && (
@@ -966,7 +966,7 @@ export default function Block1Discover() {
                   {plan?.id ? "✓ PLAN ID OK" : "⚠️ NO PLAN ID"}
                 </span>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <div>Project ID: <span className="font-mono">{projectId}</span></div>
                 <div>Plan ID: <span className="font-mono">{plan?.id || 'null'}</span></div>
@@ -976,7 +976,7 @@ export default function Block1Discover() {
                 <div>Heuristics count: <span className="font-mono">{plan?.blocks?.block1?.personalHeuristics?.length || 0}</span></div>
                 <div>Last updated: <span className="font-mono">{plan?.updatedAt ? new Date(plan.updatedAt).toLocaleTimeString() : 'never'}</span></div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-2">
                 <details className="overflow-hidden">
                   <summary className="cursor-pointer hover:bg-gray-200 p-1 rounded">
@@ -986,7 +986,7 @@ export default function Block1Discover() {
                     {JSON.stringify(ratings, null, 2)}
                   </pre>
                 </details>
-                
+
                 <details className="overflow-hidden">
                   <summary className="cursor-pointer hover:bg-gray-200 p-1 rounded">
                     Personal Heuristics Data ({plan?.blocks?.block1?.personalHeuristics?.length || 0})
@@ -996,7 +996,7 @@ export default function Block1Discover() {
                   </pre>
                 </details>
               </div>
-              
+
               <div className="mt-2 pt-1 border-t text-xs text-gray-500">
                 <div className="flex items-center">
                   <span className={ratings && Object.keys(ratings).length > 0 ? "text-green-600" : "text-red-600"}>
@@ -1014,14 +1014,14 @@ export default function Block1Discover() {
               </div>
             </div>
           )}
-          
+
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
               <div>
                 <h1 className="text-3xl font-bold text-tcof-dark">Block 1: Discover</h1>
                 <p className="text-gray-600 mt-1">Define project scope and success criteria</p>
               </div>
-              
+
               {/* Completion status */}
               <div className="mt-4 sm:mt-0 bg-tcof-light rounded-lg px-4 py-2 flex items-center">
                 <div className="w-32 bg-gray-200 rounded-full h-4 mr-3">
@@ -1035,7 +1035,7 @@ export default function Block1Discover() {
                 </span>
               </div>
             </div>
-            
+
             {/* Tabs navigation */}
             <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-4 w-full max-w-4xl mx-auto">
@@ -1044,7 +1044,7 @@ export default function Block1Discover() {
                 <TabsTrigger value="personalHeuristics">Personal Heuristics</TabsTrigger>
                 <TabsTrigger value="summary">Summary & Next Steps</TabsTrigger>
               </TabsList>
-              
+
               {/* Overview tab content */}
               <TabsContent value="overview" className="mt-6">
                 <Card>
@@ -1054,7 +1054,7 @@ export default function Block1Discover() {
                       The first block of the Make a Plan tool helps you discover what makes a technology project successful 
                       and define what success means for your specific project.
                     </p>
-                    
+
                     <div className="space-y-6 mt-8">
                       <div className="flex items-start">
                         <div className="bg-tcof-light rounded-full w-10 h-10 flex items-center justify-center mr-4 shrink-0">
@@ -1068,7 +1068,7 @@ export default function Block1Discover() {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-start">
                         <div className="bg-tcof-light rounded-full w-10 h-10 flex items-center justify-center mr-4 shrink-0">
                           <span className="text-tcof-teal font-bold">2</span>
@@ -1081,7 +1081,7 @@ export default function Block1Discover() {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-start">
                         <div className="bg-tcof-light rounded-full w-10 h-10 flex items-center justify-center mr-4 shrink-0">
                           <span className="text-tcof-teal font-bold">3</span>
@@ -1095,7 +1095,7 @@ export default function Block1Discover() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-end">
                       <Button
                         variant="outline"
@@ -1108,7 +1108,7 @@ export default function Block1Discover() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               {/* Success Factors tab content */}
               <TabsContent value="successFactors" className="mt-6">
                 <Card>
@@ -1139,13 +1139,13 @@ export default function Block1Discover() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     <h2 className="text-2xl font-semibold mb-4">Evaluate Success Factors</h2>
                     <p className="mb-6">
                       Rate how much each of the 12 TCOF success factors resonates with your experience. 
                       This will help identify which factors are most relevant to your project's context.
                     </p>
-                    
+
                     {factorsLoading ? (
                       <div className="flex items-center justify-center h-64">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tcof-teal"></div>
@@ -1201,7 +1201,7 @@ export default function Block1Discover() {
                             </TableBody>
                           </Table>
                         </div>
-                        
+
                         {/* Enhanced Live Ratings Preview Panel */}
                         <div className="mt-8 p-4 bg-gray-50 border rounded-md shadow-sm">
                           <div className="flex items-center justify-between mb-4">
@@ -1210,13 +1210,13 @@ export default function Block1Discover() {
                               {Object.keys(ratings).length} of {successFactors?.length || 0} factors rated
                             </div>
                           </div>
-                          
+
                           {Object.keys(ratings).length > 0 ? (
                             <div className="space-y-3">
                               {successFactors?.map((factor: any) => {
                                 const ratingValue = ratings[factor.factorId];
                                 const option = getOptionByValue(ratingValue);
-                                
+
                                 // Display all factors, but highlight those with ratings
                                 return (
                                   <div 
@@ -1257,14 +1257,14 @@ export default function Block1Discover() {
                               <p className="text-gray-400 text-sm mt-1">Click on the emoji buttons above to rate factors.</p>
                             </div>
                           )}
-                          
+
                           <div className="mt-4 pt-4 border-t border-gray-200">
                             <div className="text-sm text-gray-600">
                               Ratings are automatically previewed here but will only be saved when you click "Confirm & Save".
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="mt-8 flex justify-end gap-4">
                           <Button
                             variant="outline"
@@ -1287,7 +1287,7 @@ export default function Block1Discover() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               {/* Personal Heuristics tab content */}
               <TabsContent value="personalHeuristics" className="mt-6">
                 <Card>
@@ -1318,13 +1318,13 @@ export default function Block1Discover() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     <h2 className="text-2xl font-semibold mb-4">Personal Heuristics</h2>
                     <p className="mb-6">
                       Add your own personal success criteria or "rules of thumb" that aren't covered by the TCOF factors 
                       but are important for your specific project context.
                     </p>
-                    
+
                     <div className="mb-8">
                       <h3 className="text-lg font-medium mb-3">Add a New Heuristic</h3>
                       <div className="grid grid-cols-1 gap-4 mb-4">
@@ -1357,11 +1357,11 @@ export default function Block1Discover() {
                         {addHeuristicMutation.isPending ? 'Adding...' : 'Add Heuristic'}
                       </Button>
                     </div>
-                    
+
                     <p className="text-gray-600 mb-4">
                       Add any specific success criteria that aren't covered by the standard TCOF factors.
                     </p>
-                    
+
                     {/* Existing personal heuristics */}
                     {(plan?.blocks?.block1?.personalHeuristics?.length || 0) > 0 ? (
                       <div className="mb-8">
@@ -1372,14 +1372,14 @@ export default function Block1Discover() {
                             const displayName = heuristic.name || heuristic.text || 'Unnamed Heuristic';
                             const displayDescription = heuristic.description || heuristic.notes || '';
                             const heuristicId = heuristic.id || String(Date.now());
-                            
+
                             console.log('🔄 Rendering heuristic:', { 
                               id: heuristicId, 
                               displayName, 
                               displayDescription,
                               originalFields: Object.keys(heuristic)
                             });
-                            
+
                             return (
                               <div 
                                 key={heuristicId} 
@@ -1411,7 +1411,7 @@ export default function Block1Discover() {
                         </p>
                       </div>
                     )}
-                    
+
                     <div className="flex justify-end gap-4">
                       <Button
                         variant="outline"
@@ -1432,7 +1432,7 @@ export default function Block1Discover() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               {/* Summary tab content */}
               <TabsContent value="summary" className="mt-6">
                 <Card>
@@ -1464,13 +1464,13 @@ export default function Block1Discover() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     <h2 className="text-2xl font-semibold mb-4">Summary & Next Steps</h2>
                     <p className="mb-6">
                       Now that you've evaluated success factors and added personal heuristics, define your overall
                       success criteria and complete this block to move forward in your planning process.
                     </p>
-                    
+
                     {/* Success Criteria */}
                     <div className="mb-8">
                       <Label htmlFor="successCriteria" className="text-lg font-medium">
@@ -1489,7 +1489,7 @@ export default function Block1Discover() {
                         placeholder="e.g., Our project will be successful when users can easily access and use our service, we've delivered on time and on budget, and we've established a sustainable operating model."
                       />
                     </div>
-                    
+
                     {/* Block completion progress */}
                     <div className="bg-tcof-light p-4 rounded-md mb-8">
                       <h3 className="font-medium text-lg mb-2">Block 1 Completion: {completionPercentage}%</h3>
@@ -1499,7 +1499,7 @@ export default function Block1Discover() {
                           style={{ width: `${completionPercentage}%` }}
                         ></div>
                       </div>
-                      
+
                       <ul className="space-y-2">
                         <li className="flex items-center">
                           {Object.keys(ratings).length > 0 ? (
@@ -1527,7 +1527,7 @@ export default function Block1Discover() {
                         </li>
                       </ul>
                     </div>
-                    
+
                     <div className="flex justify-between gap-4">
                       <Button
                         variant="outline"
