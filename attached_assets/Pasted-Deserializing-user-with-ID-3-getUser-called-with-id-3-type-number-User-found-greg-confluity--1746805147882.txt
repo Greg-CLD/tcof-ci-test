@@ -1,0 +1,712 @@
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Fetching detailed project: 3
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Found 0 projects for user 3
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Current user: greg@confluity.co.uk
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Fetching detailed project: 3
+Found 1 projects for user 3
+3:37:34 PM [express] GET /api/auth/user 200 in 125ms :: {"id":3,"username":"greg@confluity.co.uk","e…
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+3:37:34 PM [express] GET /api/projects 200 in 152ms :: [{"id":3,"name":"Test Project 0705","descript…
+3:37:34 PM [express] GET /api/projects/3 200 in 196ms :: {"id":3,"name":"Test Project 0705","descrip…
+3:37:34 PM [express] GET /api/projects/3 200 in 201ms :: {"id":3,"name":"Test Project 0705","descrip…
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Found 0 projects for user 3
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Found 0 projects for user 3
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Deserializing user with ID: 3
+getUser called with id: 3 (type: number)
+Found 1 projects for user 3
+Found 1 projects for user 3
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+Found 0 projects for user 3
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+3:37:34 PM [express] GET /api/projects 200 in 154ms :: [{"id":3,"name":"Test Project 0705","descript…
+Found 1 projects for user 3
+3:37:34 PM [express] GET /api/projects 200 in 160ms :: [{"id":3,"name":"Test Project 0705","descript…
+User found: greg@confluity.co.uk
+Successfully deserialized user: greg@confluity.co.uk
+3:37:34 PM [express] GET /api/projects 200 in 154ms :: [{"id":3,"name":"Test Project 0705","descript…
+3:37:34 PM [express] GET /api/success-factors 200 in 207ms :: [{"id":"sf-1","factor":"1.1 Ask Why","…
+3:37:34 PM [express] GET /api/plans/project/3 200 in 226ms :: {"id":null,"projectId":3,"blocks":{"bl…
