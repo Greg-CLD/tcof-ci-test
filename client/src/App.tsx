@@ -344,7 +344,7 @@ function Router() {
         </ProtectedRouteGuard>
       </Route>
       <Route path="/make-a-plan/:projectId/landing">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <MakeAPlanLanding />
           </ProtectedRouteGuard>
@@ -353,7 +353,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1/step-1">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Block1Step1 />
           </ProtectedRouteGuard>
@@ -362,7 +362,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1/step-2">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Block1Step2 />
           </ProtectedRouteGuard>
@@ -371,7 +371,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-1">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Block1Discover />
           </ProtectedRouteGuard>
@@ -380,7 +380,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-3">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Block2Step3 />
           </ProtectedRouteGuard>
@@ -389,7 +389,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-4">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Block2Step4 />
           </ProtectedRouteGuard>
@@ -398,7 +398,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2/step-5">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Block2Step5 />
           </ProtectedRouteGuard>
@@ -407,7 +407,7 @@ function Router() {
         )}
       </Route>
       <Route path="/make-a-plan/:projectId/block-2">
-        {user ? (
+        {isAuthenticated ? (
           <ProtectedRouteGuard>
             <Block2Design />
           </ProtectedRouteGuard>
