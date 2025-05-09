@@ -5,9 +5,15 @@ import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import crypto from "crypto";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 // TEMPORARY SOLUTION: Using a local strategy with hardcoded credentials 
 // since we're having issues with OpenID Connect
+
+const scryptAsync = promisify(scrypt);
 
 // Function to create a session store
 export function getSession() {
@@ -33,29 +39,44 @@ export function getSession() {
   });
 }
 
-// Import password hash/verify functions directly from storage to ensure consistent behavior
-import { comparePasswords } from "./storage";
-
-// Helper function to hash passwords - use the same function from storage
-// but wrap it for local use
+// Helper function to hash passwords - matches storage.ts implementation
 async function hashPassword(password: string) {
-  // Import the same function dynamically to avoid circular dependencies
-  const { hashPassword: storageHashPassword } = await import('./storage');
-  return storageHashPassword(password);
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
 }
 
-// Use the storage comparePasswords function for verification
+// Helper function to verify passwords - matches storage.ts implementation
 async function verifyPassword(candidatePassword: string, hashedPassword: string) {
-  return comparePasswords(candidatePassword, hashedPassword);
+  const [hashed, salt] = hashedPassword.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(candidatePassword, salt, 64)) as Buffer;
+  return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
 // Function to create a new test user if it doesn't exist
-async function createTestUser() {
+async function createTestUser(forceRecreate = false) {
   try {
+    // Flag to determine if we need to create a user
+    let needToCreateUser = false;
+    
     // Check if the test user already exists
     const existingUser = await storage.getUserByUsername("admin");
     
-    if (!existingUser) {
+    // If user exists and we want to force recreate, delete it first
+    if (existingUser && forceRecreate) {
+      console.log("Forcing recreation of test user...");
+      // Use direct SQL to delete the user to avoid dependency on schema
+      await db.execute(sql`DELETE FROM users WHERE username = 'admin'`);
+      console.log("Deleted existing admin user");
+      // Set flag to create a new user
+      needToCreateUser = true;
+    } else if (!existingUser) {
+      // No existing user found, need to create one
+      needToCreateUser = true;
+    }
+    
+    if (needToCreateUser) {
       // Create the test user with a hashed password
       const hashedPassword = await hashPassword("admin123");
       
@@ -69,11 +90,19 @@ async function createTestUser() {
       });
       
       console.log("Created test user:", newUser.username);
-    } else {
+      console.log("Password hash used:", hashedPassword);
+      return newUser;
+    } else if (existingUser) {
+      // We know existingUser is not null at this point since needToCreateUser would be true otherwise
       console.log("Test user already exists:", existingUser.username);
+      return existingUser;
+    } else {
+      // This should never happen given our logic, but added for TypeScript safety
+      throw new Error("Failed to create or find test user");
     }
   } catch (error) {
     console.error("Error creating test user:", error);
+    throw error; // Re-throw to ensure startup fails if this fails
   }
 }
 
@@ -84,8 +113,24 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Create a test user on startup
-  await createTestUser();
+  // Create a test user on startup - force recreate if the TEST_USER_RESET env var is set
+  const forceReset = process.env.TEST_USER_RESET === 'true';
+  await createTestUser(forceReset);
+  
+  // Add route to force recreate the test user (admin only)
+  app.post("/api/admin/reset-test-user", async (req, res) => {
+    try {
+      const user = await createTestUser(true);
+      // If we get here, we know user is defined due to our createTestUser implementation
+      if (!user) {
+        throw new Error("Failed to reset test user - no user returned");
+      }
+      res.status(200).json({ message: "Test user reset successfully", username: user.username });
+    } catch (error: any) {
+      console.error("Error resetting test user:", error);
+      res.status(500).json({ error: "Failed to reset test user", message: error?.message || "Unknown error" });
+    }
+  });
 
   // Set up the LocalStrategy for authentication
   passport.use(new LocalStrategy(async (username, password, done) => {
