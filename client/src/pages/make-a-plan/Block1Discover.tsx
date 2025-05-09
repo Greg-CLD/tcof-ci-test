@@ -330,7 +330,8 @@ export default function Block1Discover() {
   // Use resonance ratings hook for server persistence
   const { 
     updateEvaluations,
-    evaluations, 
+    evaluations,
+    getEvaluationForFactor,
     isSaving: isRatingsSaving 
   } = useResonanceRatings(projectId);
 
@@ -369,7 +370,7 @@ export default function Block1Discover() {
     console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'value:', value);
 
     // Get existing rating if any
-    const existingRating = getRatingForFactor(factorId);
+    const existingRating = getEvaluationForFactor(factorId);
 
     // Optimistic update
     setRatings(prev => ({ ...prev, [factorId]: value }));
