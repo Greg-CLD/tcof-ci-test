@@ -1,6 +1,9 @@
 import { Router } from 'express';
+import { v4 as uuidv4 } from 'uuid';
 // Correct path to projectsDb.js (using .ts instead of .js)
 import { projectsDb } from '../../../projectsDb.ts';
+// Import functions for direct file operations when needed
+import { loadProjectPlans, saveProjectPlans } from '../../../projectsDb.ts';
 
 const router = Router();
 
@@ -73,6 +76,28 @@ router.patch('/plans/project/:projectId/block/:blockId', async (req, res) => {
       }
     } else {
       console.warn(`[SERVER] Warning: No personal heuristics found in request for block ${blockId}`);
+    }
+    
+    // Check for and fix any invalid success factor ratings 
+    if (blockData.successFactorRatings) {
+      // Filter out any rating with undefined or "undefined" as factorId
+      const cleanedRatings = {};
+      let originalKeys = Object.keys(blockData.successFactorRatings);
+      let invalidKeysFound = false;
+      
+      for (const key of originalKeys) {
+        if (key && key !== "undefined" && key !== "null") {
+          cleanedRatings[key] = blockData.successFactorRatings[key];
+        } else {
+          invalidKeysFound = true;
+          console.warn(`[SERVER] Removing invalid factorId key from ratings: "${key}"`);
+        }
+      }
+      
+      if (invalidKeysFound) {
+        console.info(`[SERVER] Cleaned success factor ratings object. Original keys: ${originalKeys.length}, Valid keys: ${Object.keys(cleanedRatings).length}`);
+        blockData.successFactorRatings = cleanedRatings;
+      }
     }
     
     // Update block data while preserving the id and other metadata
@@ -333,35 +358,33 @@ router.get('/plans/project/:projectId', async (req, res) => {
     let plan = await projectsDb.getProjectPlan(projectId);
     
     if (!plan) {
-      console.info(`[SERVER] No plan found for projectId=${projectId}, creating a default structure`);
+      console.info(`[SERVER] No plan found for projectId=${projectId}, creating a new plan`);
       
-      // Instead of 404, return a default plan structure with non-null IDs
-      // This helps the UI initialize properly with non-null IDs
-      const planId = Math.floor(Date.now() / 1000);
-      const block1Id = planId + 1;
-      const block2Id = planId + 2;
-      const block3Id = planId + 3;
+      // Generate a real UUID for the plan
+      const planId = uuidv4();
+      console.info(`[SERVER] Generated new UUID for plan: ${planId}`);
       
+      // Create a new plan with proper structure
       plan = {
-        id: planId,
+        id: planId, // Use UUID for reliable ID
         projectId,
         blocks: {
           block1: {
-            id: block1Id,
-            successFactors: [],
+            id: `${planId}_block1`, // Use composite ID to ensure uniqueness
+            successFactorRatings: {}, // Initialize as empty object, not array
             personalHeuristics: [],
             completed: false,
             createdAt: Date.now()
           },
           block2: {
-            id: block2Id,
+            id: `${planId}_block2`,
             tasks: [],
             stakeholders: [],
             completed: false,
             createdAt: Date.now()
           },
           block3: {
-            id: block3Id,
+            id: `${planId}_block3`,
             timeline: null,
             deliveryApproach: "",
             deliveryNotes: "",
@@ -376,9 +399,14 @@ router.get('/plans/project/:projectId', async (req, res) => {
       const createdPlan = await projectsDb.createProjectPlan(projectId);
       if (createdPlan) {
         console.info(`[SERVER] Created new plan in database for projectId=${projectId} with id=${createdPlan.id}`);
-        plan = createdPlan;
+        // Important: Use the plan we already constructed but with the DB-generated ID
+        plan.id = createdPlan.id;
       } else {
-        console.info(`[SERVER] Failed to create plan in database, returning temporary plan structure with id=${planId}`);
+        console.info(`[SERVER] Failed to create plan in database, using generated plan with id=${planId}`);
+        // We'll try to save it ourselves to ensure it persists
+        const plans = loadProjectPlans();
+        plans.push(plan);
+        saveProjectPlans(plans);
       }
     } else {
       console.info(`[SERVER] Found existing plan with id=${plan.id || 'null'}`);
