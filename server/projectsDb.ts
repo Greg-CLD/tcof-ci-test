@@ -12,6 +12,7 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json');
 const TASKS_FILE = path.join(DATA_DIR, 'project_tasks.json');
 const POLICIES_FILE = path.join(DATA_DIR, 'project_policies.json');
+const PLANS_FILE = path.join(DATA_DIR, 'project_plans.json');
 
 // Project data type
 export interface Project {
@@ -52,6 +53,28 @@ export interface ProjectPolicy {
   updatedAt: string;
 }
 
+// Project plan data type - supports the Block system
+export interface ProjectPlan {
+  id: string | number;
+  projectId: string;
+  blocks: {
+    [blockId: string]: {
+      id?: string | number;
+      successFactors?: any[];
+      personalHeuristics?: any[];
+      tasks?: any[];
+      stakeholders?: any[];
+      timeline?: any;
+      deliveryApproach?: string;
+      deliveryNotes?: string;
+      completed?: boolean;
+      createdAt?: number;
+      updatedAt?: number;
+    }
+  };
+  lastUpdated: number;
+}
+
 // Create data directory if it doesn't exist
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -73,6 +96,12 @@ if (!fs.existsSync(TASKS_FILE)) {
 if (!fs.existsSync(POLICIES_FILE)) {
   fs.writeFileSync(POLICIES_FILE, JSON.stringify([], null, 2), 'utf8');
   console.log('Created empty project_policies.json file');
+}
+
+// Initialize project plans data file if it doesn't exist
+if (!fs.existsSync(PLANS_FILE)) {
+  fs.writeFileSync(PLANS_FILE, JSON.stringify([], null, 2), 'utf8');
+  console.log('Created empty project_plans.json file');
 }
 
 /**
