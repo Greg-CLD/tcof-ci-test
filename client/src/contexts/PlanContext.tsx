@@ -12,7 +12,7 @@ export interface PlanData {
     block1?: {
       successFactors: any[];
       personalHeuristics: any[];
-      successFactorRatings?: {[key: string]: string};
+      successFactorRatings?: {[key: string]: number};
       successCriteria?: string;
       lastUpdated?: string;
       completed: boolean;

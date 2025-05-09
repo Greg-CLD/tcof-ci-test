@@ -101,6 +101,7 @@ export function useResonanceRatings(projectId?: string | number) {
     const validEvaluations = evaluationsData.filter(evaluation => {
       return (
         evaluation.factorId && 
+        evaluation.factorId !== 'undefined' &&
         typeof evaluation.resonance === 'number' && 
         evaluation.resonance >= 1 && 
         evaluation.resonance <= 5

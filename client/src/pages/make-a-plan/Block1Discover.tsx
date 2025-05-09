@@ -77,6 +77,9 @@ export default function Block1Discover() {
   // Local state for ratings - using number types for values
   const [ratings, setRatings] = useState<Record<string, number>>({});
   
+  // Debug flag for tracking ratings state
+  const [lastRatingsSaveTime, setLastRatingsSaveTime] = useState<string | null>(null);
+  
   // Fetch project details if projectId is provided
   const { 
     data: project, 
@@ -298,16 +301,21 @@ export default function Block1Discover() {
       }
       
       // First save ratings to local plan for persistence
-      saveBlock('block1', {
+      console.log('🔄 Block1Discover.handleConfirmAndSave - Saving ratings to local plan:', ratings);
+      const now = new Date().toISOString();
+      setLastRatingsSaveTime(now);
+      await saveBlock('block1', {
         successFactorRatings: ratings,
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: now,
       });
       
-      // Map ratings to the payload format expected by the API
-      const payload = Object.entries(ratings).map(([factorId, value]) => ({ 
-        factorId, 
-        resonance: value 
-      }));
+      // Map ratings to the payload format expected by the API and filter out undefined factorIds
+      const payload = Object.entries(ratings)
+        .filter(([factorId, value]) => factorId && factorId !== 'undefined')
+        .map(([factorId, value]) => ({ 
+          factorId, 
+          resonance: typeof value === 'number' ? value : parseInt(String(value), 10)
+        }));
       
       console.log('🔄 Block1Discover.handleConfirmAndSave - Mapped payload:', payload);
       console.log('🔄 Block1Discover.handleConfirmAndSave - Sending ratings for project:', projectId);
