@@ -1082,25 +1082,39 @@ export default function Block1Discover() {
                       <div className="mb-8">
                         <h3 className="text-lg font-medium mb-3">Your Personal Heuristics</h3>
                         <div className="space-y-3">
-                          {plan?.blocks?.block1?.personalHeuristics?.map((heuristic: { id: string; name: string; description: string }) => (
-                            <div 
-                              key={heuristic.id} 
-                              className="bg-white border rounded-md p-4 flex justify-between items-start"
-                            >
-                              <div>
-                                <h4 className="font-medium text-tcof-dark">{heuristic.name}</h4>
-                                <p className="text-sm text-gray-600 mt-1">{heuristic.description}</p>
-                              </div>
-                              <Button
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleRemoveHeuristic(heuristic.id)}
-                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                          {plan?.blocks?.block1?.personalHeuristics?.map((heuristic: any) => {
+                            // Support both old and new data formats
+                            const displayName = heuristic.name || heuristic.text || 'Unnamed Heuristic';
+                            const displayDescription = heuristic.description || heuristic.notes || '';
+                            const heuristicId = heuristic.id || String(Date.now());
+                            
+                            console.log('🔄 Rendering heuristic:', { 
+                              id: heuristicId, 
+                              displayName, 
+                              displayDescription,
+                              originalFields: Object.keys(heuristic)
+                            });
+                            
+                            return (
+                              <div 
+                                key={heuristicId} 
+                                className="bg-white border rounded-md p-4 flex justify-between items-start"
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
+                                <div>
+                                  <h4 className="font-medium text-tcof-dark">{displayName}</h4>
+                                  <p className="text-sm text-gray-600 mt-1">{displayDescription}</p>
+                                </div>
+                                <Button
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleRemoveHeuristic(heuristicId)}
+                                  className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     ) : (
