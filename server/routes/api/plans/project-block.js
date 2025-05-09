@@ -44,11 +44,32 @@ router.patch('/plans/project/:projectId/block/:blockId', async (req, res) => {
     
     // Update the specific block
     plan.blocks = plan.blocks || {};
+    
+    // Debug logging for personal heuristics specifically
+    if (blockData.personalHeuristics) {
+      console.log(`[SERVER] Received ${blockData.personalHeuristics.length} personal heuristics for block ${blockId}, project ${projectId}`);
+      if (blockData.personalHeuristics.length > 0) {
+        console.log('[SERVER] First heuristic sample:', JSON.stringify(blockData.personalHeuristics[0]));
+      }
+    } else {
+      console.log(`[SERVER] Warning: No personal heuristics found in request for block ${blockId}`);
+    }
+    
     plan.blocks[blockId] = blockData;
     plan.lastUpdated = Date.now();
     
     // Save the updated plan
     await projectsDb.saveProjectPlan(projectId, plan);
+    
+    // Verify the data was correctly stored before sending response
+    const savedPlan = await projectsDb.getProjectPlan(projectId);
+    const savedBlockData = savedPlan?.blocks?.[blockId];
+    
+    if (savedBlockData?.personalHeuristics) {
+      console.log(`[SERVER] Verified ${savedBlockData.personalHeuristics.length} heuristics were saved to database`);
+    } else {
+      console.log(`[SERVER] Warning: No personal heuristics found in saved data for block ${blockId}`);
+    }
     
     // Return the saved block data like Goal-Mapping does, not just metadata
     return res.status(200).json({
@@ -57,7 +78,7 @@ router.patch('/plans/project/:projectId/block/:blockId', async (req, res) => {
       projectId,
       lastUpdated: plan.lastUpdated,
       // Include the actual block data that was saved
-      blockData: plan.blocks[blockId]
+      blockData: savedBlockData || plan.blocks[blockId]
     });
   } catch (error) {
     console.error('Error saving project block:', error);
@@ -98,13 +119,26 @@ router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
     const plan = await projectsDb.getProjectPlan(projectId);
     
     if (!plan || !plan.blocks || !plan.blocks[blockId]) {
+      console.log(`[SERVER] Block not found: blockId=${blockId}, projectId=${projectId}`);
       return res.status(404).json({ 
         message: 'Block not found',
         details: `Block "${blockId}" not found for project "${projectId}"`
       });
     }
     
-    return res.status(200).json(plan.blocks[blockId]);
+    // Debug logging for personal heuristics specifically
+    const blockData = plan.blocks[blockId];
+    
+    if (blockData.personalHeuristics) {
+      console.log(`[SERVER] GET request: Found ${blockData.personalHeuristics.length} personal heuristics for block ${blockId}, project ${projectId}`);
+      if (blockData.personalHeuristics.length > 0) {
+        console.log('[SERVER] GET request: First heuristic sample:', JSON.stringify(blockData.personalHeuristics[0]));
+      }
+    } else {
+      console.log(`[SERVER] GET request: Warning: No personal heuristics found in block ${blockId} for project ${projectId}`);
+    }
+    
+    return res.status(200).json(blockData);
   } catch (error) {
     console.error('Error retrieving project block:', error);
     return res.status(500).json({ 

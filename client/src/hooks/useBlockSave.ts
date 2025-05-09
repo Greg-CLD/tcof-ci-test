@@ -76,17 +76,35 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
         };
         
         // Verify they have the correct structure
-        console.log(`🔍 HEURISTICS CHECK: Found ${data.personalHeuristics.length} personal heuristics to save`);
+        console.log(`🔍 [SAVE-HOOK] HEURISTICS CHECK: Found ${data.personalHeuristics.length} personal heuristics to save`);
+        console.table({
+          'Operation': 'VERIFY HEURISTICS',
+          'Count': data.personalHeuristics.length,
+          'Array Type': Array.isArray(data.personalHeuristics) ? 'Valid Array' : 'NOT AN ARRAY!',
+          'BlockId': blockId,
+          'ProjectId': projectId
+        });
+        
         if (data.personalHeuristics.length > 0) {
           const sample = data.personalHeuristics[0];
-          console.log(`🔍 HEURISTICS STRUCTURE CHECK: First heuristic has properties:`, 
-            Object.keys(sample).join(', '));
+          console.log(`🔍 [SAVE-HOOK] HEURISTICS STRUCTURE CHECK: First heuristic:`, JSON.stringify(sample, null, 2));
+          console.log(`🔍 [SAVE-HOOK] First heuristic has properties:`, Object.keys(sample).join(', '));
         }
+      } else {
+        console.warn(`⚠️ [SAVE-HOOK] No personalHeuristics found in save data!`);
       }
       
       // Always save to localStorage as fallback first
       saveLocalStorageBlock(blockId, projectId, data);
-      console.log(`🔶 SAVE BLOCK ${blockId} - Saved to localStorage as fallback`);
+      console.log(`🔶 [SAVE-HOOK] Saved to localStorage as fallback`);
+      
+      // Verify localStorage backup worked
+      const localBackup = getLocalStorageBlock(blockId, projectId);
+      if (localBackup?.personalHeuristics) {
+        console.log(`✅ [SAVE-HOOK] Verified localStorage backup contains ${localBackup.personalHeuristics.length} heuristics`);
+      } else {
+        console.warn(`⚠️ [SAVE-HOOK] LocalStorage backup may have failed - no heuristics found!`);
+      }
       
       // Prepare the API payload
       const payload = {
@@ -95,51 +113,84 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
         blockData: data,
       };
       
-      console.log(`🔶 SAVE BLOCK ${blockId} - Sending payload:`, JSON.stringify(payload, null, 2));
+      console.log(`🔶 [SAVE-HOOK] Sending payload to server:`, JSON.stringify(payload, null, 2));
       
       // Send the data to the server
-      console.log(`🔶 SAVE BLOCK ${blockId} - Sending PATCH request to /api/plans/project/${projectId}/block/${blockId}`);
+      console.log(`🔶 [SAVE-HOOK] Sending PATCH request to /api/plans/project/${projectId}/block/${blockId}`);
       
       // Debug pre-save - especially for personal heuristics
       if (data.personalHeuristics) {
-        console.log(`🔍 Debug: Personal heuristics before save:`, 
+        console.log(`🔍 [SAVE-HOOK] Personal heuristics API payload:`, 
           JSON.stringify(data.personalHeuristics, null, 2));
       }
       
       // Log the queryKey being used for cache invalidation
-      console.log(`🔑 Using query key for invalidation: ["project-block", "${projectId}", "${blockId}"]`);
+      console.log(`🔑 [SAVE-HOOK] Using query key for invalidation: ["project-block", "${projectId}", "${blockId}"]`);
       
       const response = await apiRequest("PATCH", `/api/plans/project/${projectId}/block/${blockId}`, data);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`🔶 SAVE BLOCK ${blockId} - Failed with status ${response.status}: ${errorText}`);
+        console.error(`❌ [SAVE-HOOK] API request failed with status ${response.status}: ${errorText}`);
         throw new Error(`Failed to save ${blockId}: ${errorText}`);
       }
       
       const result = await response.json();
-      console.log(`🔶 SAVE BLOCK ${blockId} - Success. Response:`, JSON.stringify(result, null, 2));
+      console.log(`✅ [SAVE-HOOK] API request succeeded with response:`, JSON.stringify(result, null, 2));
+      
+      // Check if server returned the expected data structure
+      if (result.blockData) {
+        console.log(`✅ [SAVE-HOOK] Server returned blockData in response`);
+        if (result.blockData.personalHeuristics) {
+          console.log(`✅ [SAVE-HOOK] Server returned ${result.blockData.personalHeuristics.length} heuristics in response`);
+          console.log(`📊 [SAVE-HOOK] First server-returned heuristic:`, 
+            result.blockData.personalHeuristics.length > 0 ? 
+              JSON.stringify(result.blockData.personalHeuristics[0], null, 2) : 'none');
+        } else {
+          console.warn(`⚠️ [SAVE-HOOK] Server response missing personalHeuristics!`);
+        }
+      } else {
+        console.warn(`⚠️ [SAVE-HOOK] Server did not return blockData in response!`);
+      }
       
       // Double check the localStorage save occurred
       const storedData = getLocalStorageBlock(blockId, projectId);
-      console.log(`🔶 SAVE BLOCK ${blockId} - LocalStorage data after save:`, 
+      console.log(`🔍 [SAVE-HOOK] LocalStorage verification after API save:`, 
         storedData ? 'Data found' : 'NO DATA FOUND', 
         storedData?.personalHeuristics ? 
-          `(${storedData.personalHeuristics.length} heuristics)` : '');
+          `(${storedData.personalHeuristics.length} heuristics)` : 'No heuristics found');
           
       return result;
     },
     onSuccess: (data) => {
-      console.log(`🔶 SAVE BLOCK ${blockId} - Successfully saved block data`);
+      console.log(`✅ [SAVE-HOOK] Successfully saved block data (onSuccess callback)`);
+      console.table({
+        'Operation': 'SAVE SUCCESS',
+        'BlockId': blockId,
+        'ProjectId': projectId,
+        'Response': data ? 'Data returned' : 'No data returned',
+        'Next': 'Invalidating queries'
+      });
       
       // Invalidate relevant queries to refresh data using a consistent query key pattern
       // Main specific block query key for this block
+      console.log(`🔄 [SAVE-HOOK] Invalidating primary query: ["project-block", "${projectId}", "${blockId}"]`);
       queryClient.invalidateQueries({ queryKey: ["project-block", projectId, blockId] });
       
       // Legacy path-based query keys for backward compatibility
+      console.log(`🔄 [SAVE-HOOK] Invalidating legacy query paths for compatibility`);
       queryClient.invalidateQueries({ queryKey: [`/api/plans/project/${projectId}/block/${blockId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/plans/project/${projectId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/plans`] });
+      
+      // Verify the block data in React Query cache was refreshed
+      const cachedData = queryClient.getQueryData(["project-block", projectId, blockId]);
+      console.log(`🔍 [SAVE-HOOK] Query cache after invalidation:`, 
+        cachedData ? 'Cached data exists' : 'No cached data yet');
+      
+      if (cachedData && (cachedData as any).personalHeuristics) {
+        console.log(`✅ [SAVE-HOOK] Cache contains ${(cachedData as any).personalHeuristics.length} heuristics`);
+      }
       
       toast({
         title: "Progress saved",
@@ -147,12 +198,24 @@ export function useBlockSave(blockId: BlockId, projectId: string | undefined) {
       });
     },
     onError: (error: Error) => {
-      console.error(`🔶 SAVE BLOCK ${blockId} - Error:`, error);
+      console.error(`❌ [SAVE-HOOK] Error in save operation:`, error);
+      console.table({
+        'Operation': 'SAVE ERROR',
+        'BlockId': blockId,
+        'ProjectId': projectId,
+        'Error': error.message,
+        'Next': 'Checking localStorage fallback'
+      });
       
       // Check if we have a local fallback saved
       const localData = getLocalStorageBlock(blockId, projectId || "");
       if (localData) {
-        console.log(`🔶 SAVE BLOCK ${blockId} - Fallback data available in localStorage`);
+        console.log(`🛟 [SAVE-HOOK] Fallback data available in localStorage`);
+        if (localData.personalHeuristics) {
+          console.log(`🛟 [SAVE-HOOK] Fallback contains ${localData.personalHeuristics.length} heuristics`);
+        }
+      } else {
+        console.warn(`⚠️ [SAVE-HOOK] No fallback data available in localStorage!`);
       }
       
       toast({

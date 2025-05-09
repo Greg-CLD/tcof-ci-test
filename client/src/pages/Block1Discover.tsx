@@ -63,34 +63,60 @@ export default function Block1Discover() {
       if (!projectId) throw new Error("No project ID available");
       
       try {
-        console.log('🔄 Fetching block1 data for project:', projectId);
-        console.log('🔑 Using query key: ["project-block", "' + projectId + '", "block1"]');
+        console.log('🔄 [LOAD] Fetching block1 data for project:', projectId);
+        console.log('🔑 [LOAD] Using query key: ["project-block", "' + projectId + '", "block1"]');
         
         // Match the API path from the server route structure
         const response = await fetch(`/api/plans/project/${projectId}/block/block1`);
         
         if (!response.ok) {
-          console.error(`⚠️ API returned status ${response.status} when loading block data`);
+          console.error(`⚠️ [LOAD] API returned status ${response.status} when loading block data`);
           throw new Error(`Failed to fetch block1 data: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('✅ Block1 data loaded from API:', data);
+        console.log('✅ [LOAD] Block1 data loaded from API:', data);
+        console.table({
+          'API Response': 'FULL RESPONSE DATA',
+          'personalHeuristics': data.personalHeuristics ? 
+            `Found ${data.personalHeuristics.length} heuristics` : 'MISSING',
+          'successFactorRatings': data.successFactorRatings ? 
+            `Found ${Object.keys(data.successFactorRatings).length} ratings` : 'MISSING' 
+        });
+        
+        if (data.personalHeuristics) {
+          console.log('📊 [LOAD] Personal heuristics detail:', JSON.stringify(data.personalHeuristics, null, 2));
+        }
         
         // Save to localStorage as a backup
         if (data) {
           saveLocalStorageBlock("block1", projectId, data);
-          console.log('💾 Block1 data saved to localStorage for backup');
+          const localBackup = getLocalStorageBlock("block1", projectId);
+          console.log('💾 [LOAD] Block1 data saved to localStorage for backup');
+          console.log('💾 [LOAD] localStorage backup verification:', 
+            localBackup?.personalHeuristics ? 
+              `Contains ${localBackup.personalHeuristics.length} heuristics` : 
+              'No heuristics in backup');
         }
         
         return data;
       } catch (error) {
-        console.warn('⚠️ Could not load block1 data from API:', error);
+        console.warn('⚠️ [LOAD] Could not load block1 data from API:', error);
         // Try to get from localStorage as fallback
         const localData = getLocalStorageBlock("block1", projectId);
         
+        console.log('🔍 [LOAD] Checking localStorage fallback:', 
+          localData ? 'Data found' : 'No data',
+          localData?.personalHeuristics ? 
+            `(${localData.personalHeuristics.length} heuristics)` : 
+            '(No heuristics)');
+        
         if (localData) {
-          console.log('✅ Block1 data loaded from localStorage fallback');
+          console.log('✅ [LOAD] Block1 data loaded from localStorage fallback');
+          if (localData.personalHeuristics) {
+            console.log('📊 [LOAD] Personal heuristics from localStorage:', 
+              JSON.stringify(localData.personalHeuristics, null, 2));
+          }
           return localData;
         }
         
@@ -270,7 +296,13 @@ export default function Block1Discover() {
   
   // Handle personal heuristics change
   const handlePersonalHeuristicsChange = async (heuristics: PersonalHeuristic[]) => {
-    console.log('🔄 handlePersonalHeuristicsChange called with:', JSON.stringify(heuristics));
+    console.log('🔄 [SAVE] handlePersonalHeuristicsChange called with:', JSON.stringify(heuristics));
+    console.table({
+      'Operation': 'SAVE HEURISTICS',
+      'Trigger': 'User modified heuristics',
+      'Heuristics Count': heuristics.length,
+      'ProjectId': projectId || 'MISSING'
+    });
     
     // Store a deep clone of the heuristics to avoid reference issues
     const clonedHeuristics = JSON.parse(JSON.stringify(heuristics));
@@ -280,7 +312,7 @@ export default function Block1Discover() {
     // Auto-saves aren't sufficient for this critical data
     if (projectId) {
       try {
-        console.log('🔄 Saving personal heuristics to backend:', clonedHeuristics);
+        console.log('🔄 [SAVE] Saving personal heuristics to backend:', JSON.stringify(clonedHeuristics, null, 2));
         
         // Show a toast that we're saving
         toast({
@@ -294,18 +326,33 @@ export default function Block1Discover() {
           personalHeuristics: clonedHeuristics
         };
         
+        // Log the exact payload we're sending
+        console.log('📤 [SAVE] Payload being sent to server:', JSON.stringify(blockData, null, 2));
+        
         // We explicitly save here and wait for the result
-        console.log('🔄 Calling saveBlock with data:', JSON.stringify(blockData));
+        console.log('🔄 [SAVE] Calling saveBlock with data...');
         const saved = await saveBlock(blockData);
         
+        // Check localStorage after save attempt to see if our backup worked
+        const localBackup = getLocalStorageBlock("block1", projectId);
+        console.log('💾 [SAVE] After save, localStorage contains:', 
+          localBackup?.personalHeuristics ? 
+            `${localBackup.personalHeuristics.length} heuristics` : 
+            'No heuristics');
+        
+        if (localBackup?.personalHeuristics) {
+          console.log('📊 [SAVE] localStorage heuristics detail:', 
+            JSON.stringify(localBackup.personalHeuristics, null, 2));
+        }
+        
         if (saved) {
-          console.log('✅ Successfully saved personal heuristics');
+          console.log('✅ [SAVE] Successfully saved personal heuristics');
           toast({
             title: "Heuristics saved",
             description: "Your personal heuristics have been saved",
           });
         } else {
-          console.warn('⚠️ Failed to save personal heuristics, check saveBlock implementation');
+          console.warn('⚠️ [SAVE] Failed to save personal heuristics, check saveBlock implementation');
           toast({
             title: "Save failed",
             description: "Could not save your heuristics. Please try again.",
@@ -313,7 +360,7 @@ export default function Block1Discover() {
           });
         }
       } catch (err) {
-        console.error('❌ Error saving heuristics:', err);
+        console.error('❌ [SAVE] Error saving heuristics:', err);
         toast({
           title: "Error",
           description: "Failed to save heuristics: " + (err as Error).message,
@@ -321,7 +368,7 @@ export default function Block1Discover() {
         });
       }
     } else {
-      console.warn('⚠️ No projectId available, cannot save heuristics');
+      console.warn('⚠️ [SAVE] No projectId available, cannot save heuristics');
       toast({
         title: "Cannot save",
         description: "No project selected for saving heuristics",
