@@ -1,1 +1,27 @@
-[]
+[
+  {
+    "id": "4e984ae1-41fe-4c39-8e9c-fb0293b6cb7b",
+    "projectId": "3",
+    "blocks": {
+      "block1": {
+        "id": "block1",
+        "createdAt": 1746814466960,
+        "personalHeuristics": [
+          {
+            "id": "1746814465858",
+            "name": "Test 1",
+            "description": "Test 1",
+            "text": "Test 1",
+            "notes": "Test 1",
+            "favourite": false
+          }
+        ],
+        "lastUpdated": "2025-05-09T18:14:28.108Z",
+        "updatedAt": 1746814468506,
+        "successCriteria": "",
+        "successFactorRatings": {}
+      }
+    },
+    "lastUpdated": 1746814468506
+  }
+]
