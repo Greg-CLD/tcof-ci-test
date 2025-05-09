@@ -322,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
     try {
       // Get user ID directly from the user object (local auth)
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       console.log('Fetching goal map for projectId:', req.query.projectId);
@@ -527,7 +527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Saving goal map at', new Date().toISOString());
       
       // Get user ID directly from the user object (local auth)
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const { name, data, projectId } = req.body;
       
       // Log the full request body for debugging
@@ -808,7 +808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/project-progress/goal-mapping/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
@@ -852,7 +852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Only returns the stored tool progress (simple {completed: true/false} flag)
   app.get("/api/project-progress/goal-mapping/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (!projectId || !userId) {
@@ -892,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/project-progress/cynefin-orientation/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
@@ -962,7 +962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Cynefin Orientation completion status for a project
   app.get("/api/project-progress/cynefin-orientation/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (!projectId || !userId) {
@@ -1028,7 +1028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/project-progress/tcof-journey/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
@@ -1098,7 +1098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get TCOF Journey completion status for a project
   app.get("/api/project-progress/tcof-journey/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (!projectId || !userId) {
@@ -1163,7 +1163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cynefin Selection API endpoints
   app.get("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (projectId) {
@@ -1291,7 +1291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure user owns this selection
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       if (selection.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
@@ -1305,7 +1305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cynefin-selections", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const { name, data } = req.body;
       
       if (!name || !data) {
@@ -1336,7 +1336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure user owns this selection
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       if (existingSelection.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
@@ -1352,7 +1352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TCOF Journey API endpoints
   app.get("/api/tcof-journeys", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
       
       if (projectId) {
@@ -1480,7 +1480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure user owns this journey
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       if (journey.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
@@ -1494,7 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tcof-journeys", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const { name, data } = req.body;
       
       if (!name || !data) {
@@ -1525,7 +1525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure user owns this journey
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       if (existingJourney.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
@@ -1541,7 +1541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Project API endpoints
   app.get("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.query.id as string;
       const organisationId = req.query.organisationId as string;
       
@@ -1612,7 +1612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Outcome API endpoints
   app.get("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.params.projectId;
       
       // Get the project to verify existence
@@ -1658,7 +1658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update selected outcomes for a project
   app.patch("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.params.projectId;
       const { selectedOutcomeIds } = req.body;
       
@@ -1709,7 +1709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a custom outcome
   app.post("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.params.projectId;
       const { title, level = 'custom' } = req.body;
       
@@ -1760,7 +1760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Outcome Progress API endpoints
   app.get("/api/projects/:projectId/outcomes/progress", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.params.projectId;
       
       // Get the project to verify existence
@@ -1802,7 +1802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create outcome progress entry
   app.post("/api/projects/:projectId/outcomes/:outcomeId/progress", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const { projectId, outcomeId } = req.params;
       const { value } = req.body;
       
@@ -1853,7 +1853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update outcome progress (PATCH endpoint for updating a specific outcome's progress)
   app.patch("/api/projects/:projectId/outcomes/:outcomeId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const { projectId, outcomeId } = req.params;
       const { value } = req.body;
       
@@ -1909,7 +1909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.params.id;
       const project = await projectsDb.getProject(projectId);
       
@@ -1947,7 +1947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Project selection endpoint for tracking current project relationships
   app.post("/api/projects/select", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const { projectId } = req.body;
       
       if (!projectId) {
@@ -1998,7 +1998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const { 
         name, 
         description, 
@@ -2096,7 +2096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.params.id;
       const { 
         name, 
@@ -2193,7 +2193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE project endpoint
   app.delete("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims?.sub || (req.user as any).id;
+      const userId = (req.user as any).id;
       const projectId = req.params.id;
       
       // Get the project to verify existence

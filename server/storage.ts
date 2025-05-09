@@ -52,27 +52,13 @@ export const storage = {
     try {
       console.log(`getUser called with id: ${id} (type: ${typeof id})`);
       
-      // Convert string ID to number since the users table has an integer ID column
-      let userId: number;
-      if (typeof id === 'string') {
-        userId = parseInt(id, 10);
-        console.log(`Converted string ID to number: ${userId}`);
-      } else {
-        userId = id as number;
-      }
+      // Convert number ID to string if needed, since users table now uses text IDs
+      const userId = id.toString();
       
-      if (isNaN(userId)) {
-        console.error(`Invalid user ID: ${id} (could not convert to number)`);
-        return null;
-      }
+      // Use Drizzle to query the user
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
       
-      // Use explicit SQL query to avoid type issues with the ORM
-      const result = await db.execute(
-        sql`SELECT * FROM users WHERE id = ${userId}`
-      );
-      
-      if (result.rows && result.rows.length > 0) {
-        const user = result.rows[0];
+      if (user) {
         console.log(`User found: ${user.username}`);
         return user;
       }
