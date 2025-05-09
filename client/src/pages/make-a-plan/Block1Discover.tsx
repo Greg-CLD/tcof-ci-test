@@ -225,14 +225,14 @@ export default function Block1Discover() {
         }
       }
       
-      // Include both success criteria and ratings in the save
-      return saveBlockWithHook({
-        blockId: 'block1',
-        blockData: {
-          successCriteria,
-          successFactorRatings: ratings,
-          lastUpdated: new Date().toISOString(),
-        }
+      // Include success criteria, ratings, AND personal heuristics in the save
+      console.info(`[SAVE] Block1Discover.saveMutation - Including ${personalHeuristics.length} heuristics in save`);
+      
+      return saveBlockFromContext('block1', {
+        successCriteria,
+        successFactorRatings: ratings,
+        personalHeuristics: personalHeuristics, // Add personal heuristics to every save
+        lastUpdated: new Date().toISOString(),
       });
     },
     onMutate: (newData) => {
@@ -531,17 +531,20 @@ export default function Block1Discover() {
         favourite: !!newHeuristicData.favourite
       };
       
-      // Create updated list with deep clone to avoid reference issues
-      const updatedHeuristics = [...JSON.parse(JSON.stringify(existingHeuristics)), heuristicToSave];
+      // Add the new heuristic to local state first
+      const updatedHeuristics = [...personalHeuristics, heuristicToSave];
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - New heuristics count: ${updatedHeuristics.length}`);
       
-      // Use our new useBlockSave hook to ensure consistent API usage
-      const result = await saveBlockWithHook({ 
-        blockId: 'block1', 
-        blockData: {
-          personalHeuristics: updatedHeuristics,
-          lastUpdated: new Date().toISOString(),
-        }
+      // Update local state immediately for optimistic UI update
+      setPersonalHeuristics(updatedHeuristics);
+      
+      // Use the context save method to ensure consistent saving
+      const result = await saveBlockFromContext('block1', {
+        personalHeuristics: updatedHeuristics,
+        // Maintain any existing data to avoid overwriting
+        successFactorRatings: ratings || {},
+        successCriteria: successCriteria || "",
+        lastUpdated: new Date().toISOString()
       });
       
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Save successful, result:`, result);
@@ -669,14 +672,17 @@ export default function Block1Discover() {
       
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - New heuristics count: ${updatedHeuristics.length}`);
       
-      // Save using our consistent block save hook
+      // Update local state immediately for optimistic UI
+      setPersonalHeuristics(updatedHeuristics);
+      
+      // Save using consistent context method
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Saving to block1 for project ${projectId}`);
-      const result = await saveBlockWithHook({ 
-        blockId: 'block1', 
-        blockData: {
-          personalHeuristics: updatedHeuristics,
-          lastUpdated: new Date().toISOString(),
-        }
+      const result = await saveBlockFromContext('block1', {
+        personalHeuristics: updatedHeuristics,
+        // Maintain any existing data to avoid overwriting
+        successFactorRatings: ratings || {},
+        successCriteria: successCriteria || "",
+        lastUpdated: new Date().toISOString()
       });
       
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Save successful, result:`, result);
@@ -796,6 +802,14 @@ export default function Block1Discover() {
   // Handle saving the success criteria
   const handleSuccessCriteriaChange = (value: string) => {
     setSuccessCriteria(value);
+    
+    // Save success criteria with personal heuristics to ensure they're preserved
+    saveBlockFromContext('block1', {
+      successCriteria: value,
+      personalHeuristics: personalHeuristics,
+      successFactorRatings: ratings || {},
+      lastUpdated: new Date().toISOString()
+    });
   };
   
   // Mark block as complete and go to next block
