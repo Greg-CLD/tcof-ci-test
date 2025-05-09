@@ -24,6 +24,11 @@ export default function HeuristicList({
   const [newHeuristicNotes, setNewHeuristicNotes] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   
+  // Log initial heuristics value to help with debugging
+  React.useEffect(() => {
+    console.log('HeuristicList mounted or updated with heuristics:', heuristics);
+  }, [heuristics]);
+  
   // Handle adding a new heuristic
   const handleAddHeuristic = () => {
     if (!newHeuristicText.trim()) return;
@@ -36,8 +41,17 @@ export default function HeuristicList({
       favourite: false
     };
     
-    // Add to list
-    const updatedHeuristics = [...heuristics, newHeuristic];
+    // Deep clone to avoid any reference issues
+    const existingHeuristics = JSON.parse(JSON.stringify(heuristics || []));
+    
+    // Create a new array by concatenating rather than modifying the existing one
+    const updatedHeuristics = [...existingHeuristics, newHeuristic];
+    
+    // Log the addition to help with debugging
+    console.log('Adding heuristic:', newHeuristic);
+    console.log('Updated heuristic list:', updatedHeuristics);
+    
+    // Call the change handler
     onChange(updatedHeuristics);
     
     // Reset form
@@ -48,30 +62,48 @@ export default function HeuristicList({
   
   // Handle removing a heuristic
   const handleRemoveHeuristic = (id: string) => {
-    const updatedHeuristics = heuristics.filter(h => h.id !== id);
+    console.log('Removing heuristic with ID:', id);
+    
+    // Deep clone to avoid any reference issues
+    const existingHeuristics = JSON.parse(JSON.stringify(heuristics || []));
+    const updatedHeuristics = existingHeuristics.filter(h => h.id !== id);
+    
+    console.log('After removal, heuristics:', updatedHeuristics);
     onChange(updatedHeuristics);
   };
   
   // Handle toggling favourite for a heuristic
   const handleToggleFavourite = (id: string) => {
-    const heuristic = heuristics.find(h => h.id === id);
-    if (!heuristic) return;
+    console.log('Toggling favourite for heuristic ID:', id);
+    
+    // Deep clone to avoid any reference issues
+    const existingHeuristics = JSON.parse(JSON.stringify(heuristics || []));
+    const heuristic = existingHeuristics.find(h => h.id === id);
+    
+    if (!heuristic) {
+      console.warn('Could not find heuristic with ID:', id);
+      return;
+    }
     
     // If already favourited, we can always unfavourite
     if (heuristic.favourite) {
-      const updatedHeuristics = heuristics.map(h => 
+      const updatedHeuristics = existingHeuristics.map(h => 
         h.id === id ? { ...h, favourite: false } : h
       );
+      console.log('Unfavourited heuristic, updated list:', updatedHeuristics);
       onChange(updatedHeuristics);
       return;
     }
     
     // Otherwise, check if we've reached the limit
     if (totalFavourites < 3) {
-      const updatedHeuristics = heuristics.map(h => 
+      const updatedHeuristics = existingHeuristics.map(h => 
         h.id === id ? { ...h, favourite: true } : h
       );
+      console.log('Favourited heuristic, updated list:', updatedHeuristics);
       onChange(updatedHeuristics);
+    } else {
+      console.warn('Cannot favourite more than 3 heuristics');
     }
   };
 

@@ -186,21 +186,30 @@ export default function Block1Discover() {
   };
   
   // Handle personal heuristics change
-  const handlePersonalHeuristicsChange = (heuristics: PersonalHeuristic[]) => {
+  const handlePersonalHeuristicsChange = async (heuristics: PersonalHeuristic[]) => {
     setPersonalHeuristics(heuristics);
     
-    // Auto-save debounced (don't show toast for interim saves)
+    // We'll explicitly save with a full saveBlock call to ensure reliability
+    // Auto-saves aren't sufficient for this critical data
     if (projectId) {
-      // Prepare and save data
-      const blockData = {
-        successFactorRatings,
-        personalHeuristics: heuristics
-      };
-      
-      // We're not awaiting here intentionally - this is just an auto-save
-      saveBlock(blockData).catch(err => {
-        console.error('Error auto-saving after heuristic change:', err);
-      });
+      try {
+        console.log('Saving personal heuristics:', heuristics);
+        
+        // Prepare block data with current ratings and updated heuristics
+        const blockData = {
+          successFactorRatings,
+          personalHeuristics: heuristics
+        };
+        
+        // We explicitly save here and wait for the result
+        const saved = await saveBlock(blockData);
+        
+        if (!saved) {
+          console.warn('Failed to save personal heuristics, check saveBlock implementation');
+        }
+      } catch (err) {
+        console.error('Error saving heuristics:', err);
+      }
     }
   };
   
