@@ -368,19 +368,26 @@ export default function Block1Discover() {
   const handleEvaluationChange = async (factorId: string, value: number) => {
     console.log('🔄 Block1Discover.handleEvaluationChange - factorId:', factorId, 'value:', value);
 
+    // Get existing rating if any
+    const existingRating = getRatingForFactor(factorId);
+
     // Optimistic update
     setRatings(prev => ({ ...prev, [factorId]: value }));
 
     // User feedback
     toast({
-      title: "Rating updated",
+      title: "Rating updated", 
       description: `Changed rating for factor: ${factorId}`,
       duration: 1500,
     });
 
     // Persist to server
     try {
-      await updateEvaluations([{ factorId, resonance: value }]);
+      await updateEvaluations([{ 
+        id: existingRating?.id,
+        factorId, 
+        resonance: value 
+      }]);
       console.log('🔄 Single rating PATCH succeeded');
     } catch (err) {
       console.error('🔴 Single rating PATCH failed', err);

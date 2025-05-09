@@ -28,11 +28,21 @@ export function useResonanceRatings(projectId?: string | number) {
       
       console.log('🔄 useResonanceRatings - saving evaluations for projectId:', projectId);
       console.log('🔄 useResonanceRatings - evaluationsData:', JSON.stringify(evaluationsData));
+
+      // First get existing ratings to include IDs
+      const existingRatings = evaluations || [];
+      const ratingWithIds = evaluationsData.map(newRating => {
+        const existing = existingRatings.find(e => e.factorId === newRating.factorId);
+        return {
+          ...newRating,
+          id: existing?.id // Include ID if rating exists
+        };
+      });
       
       const res = await apiRequest(
         'PUT', 
         `/api/projects/${projectId}/success-factor-ratings`,
-        evaluationsData
+        ratingWithIds 
       );
       
       const jsonResponse = await res.json();
