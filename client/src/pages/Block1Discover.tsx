@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, useParams } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { getLatestPlanId, quickStartPlan } from '@/lib/planHelpers';
 import { loadPlan, savePlan, SuccessFactorRating, PersonalHeuristic, PlanRecord } from '@/lib/plan-db';
+import { useBlockSave } from '@/hooks/useBlockSave';
 import IntroAccordion from '@/components/plan/IntroAccordion';
 import SuccessFactorTable from '@/components/plan/SuccessFactorTable';
 import HeuristicList from '@/components/plan/HeuristicList';
@@ -22,7 +23,11 @@ import {
 
 export default function Block1Discover() {
   const [_, setLocation] = useLocation();
+  const { projectId } = useParams<{ projectId?: string }>();
   const { toast } = useToast();
+  
+  // Use our new reliable save hook
+  const { saveBlock, isSaving } = useBlockSave("block1", projectId);
   
   // State for the plan data
   const [planId, setPlanId] = useState<string | null>(null);
@@ -137,31 +142,21 @@ export default function Block1Discover() {
     []
   );
   
-  // Save the current plan data
+  // Save the current plan data using our new reliable save pattern
   const saveCurrentPlan = async () => {
     if (!planId || !plan) return false;
     
-    const updatedPlan = {
-      ...plan,
-      stages: {
-        ...plan.stages,
-        Identification: {
-          ...plan.stages.Identification,
-          successFactorRatings,
-          personalHeuristics
-        }
-      }
+    // Prepare block data to save
+    const blockData = {
+      successFactorRatings,
+      personalHeuristics
     };
     
+    // Use our new reliable save pattern that saves to both API and localStorage
     try {
-      return await savePlan(planId, updatedPlan);
+      return await saveBlock(blockData);
     } catch (error) {
       console.error('Error saving plan:', error);
-      toast({
-        title: "Save Failed",
-        description: "There was a problem saving your plan. Please try again.",
-        variant: "destructive"
-      });
       return false;
     }
   };
@@ -175,16 +170,17 @@ export default function Block1Discover() {
     
     setSuccessFactorRatings(updatedRatings);
     
-    if (planId) {
-      debouncedSave(planId, {
-        stages: {
-          ...plan?.stages,
-          Identification: {
-            ...plan?.stages.Identification,
-            successFactorRatings: updatedRatings,
-            personalHeuristics
-          }
-        }
+    // Auto-save debounced (don't show toast for interim saves)
+    if (projectId) {
+      // Prepare and save data
+      const blockData = {
+        successFactorRatings: updatedRatings,
+        personalHeuristics
+      };
+      
+      // We're not awaiting here intentionally - this is just an auto-save
+      saveBlock(blockData).catch(err => {
+        console.error('Error auto-saving after rating change:', err);
       });
     }
   };
@@ -193,16 +189,17 @@ export default function Block1Discover() {
   const handlePersonalHeuristicsChange = (heuristics: PersonalHeuristic[]) => {
     setPersonalHeuristics(heuristics);
     
-    if (planId) {
-      debouncedSave(planId, {
-        stages: {
-          ...plan?.stages,
-          Identification: {
-            ...plan?.stages.Identification,
-            successFactorRatings,
-            personalHeuristics: heuristics
-          }
-        }
+    // Auto-save debounced (don't show toast for interim saves)
+    if (projectId) {
+      // Prepare and save data
+      const blockData = {
+        successFactorRatings,
+        personalHeuristics: heuristics
+      };
+      
+      // We're not awaiting here intentionally - this is just an auto-save
+      saveBlock(blockData).catch(err => {
+        console.error('Error auto-saving after heuristic change:', err);
       });
     }
   };
@@ -220,14 +217,25 @@ export default function Block1Discover() {
     }
   };
   
+  // Explicit save handler - this shows a toast notification
   const handleSave = async () => {
-    const saved = await saveCurrentPlan();
-    if (saved) {
+    if (!projectId) {
       toast({
-        title: "Progress saved",
-        description: "Your plan has been saved successfully.",
+        title: "Error",
+        description: "No project selected",
+        variant: "destructive",
       });
+      return;
     }
+    
+    // Prepare block data with all current state
+    const blockData = {
+      successFactorRatings,
+      personalHeuristics
+    };
+    
+    // Save using new reliable pattern with localStorage backup
+    await saveBlock(blockData);
   };
   
   const handleSkipToChecklist = async () => {
@@ -242,24 +250,17 @@ export default function Block1Discover() {
   
   // Clear Block 1 data after confirmation
   const handleClearBlockConfirmed = async () => {
-    if (!planId || !plan) return;
+    if (!projectId) return;
     
     try {
-      // Create a copy of the plan with empty Identification stage data
-      const updatedPlan = { 
-        ...plan, 
-        stages: { 
-          ...plan.stages,
-          Identification: {
-            ...plan.stages.Identification,
-            successFactorRatings: {},
-            personalHeuristics: []
-          }
-        }
+      // Create empty block data to clear existing data
+      const emptyBlockData = {
+        successFactorRatings: {},
+        personalHeuristics: []
       };
       
-      // Save the updated plan
-      const success = await savePlan(planId, updatedPlan);
+      // Save the empty block data using our reliable save pattern
+      const success = await saveBlock(emptyBlockData);
       
       if (success) {
         // Update local state
