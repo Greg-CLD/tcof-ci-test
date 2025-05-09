@@ -9,6 +9,7 @@ type AuthContextType = {
   isLoading: boolean;
   error: Error | null;
   logout: () => Promise<void>;
+  isAuthenticated: boolean;
 };
 
 // Create the auth context
@@ -80,7 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Provide the auth context to the children
   return (
     <AuthContext.Provider
-      value={{ user: user || null, isLoading, error, logout }}
+      value={{ 
+        user: user || null, 
+        isLoading, 
+        error, 
+        logout,
+        isAuthenticated: Boolean(user)
+      }}
     >
       {children}
     </AuthContext.Provider>
