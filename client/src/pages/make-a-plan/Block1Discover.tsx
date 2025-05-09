@@ -140,6 +140,17 @@ export default function Block1Discover() {
         
         setRatings(numericalRatings);
       }
+      
+      // Load personal heuristics if available
+      if (plan.blocks?.block1?.personalHeuristics) {
+        console.log('🔄 Block1Discover.useEffect - Personal heuristics found in plan:', 
+          plan.blocks.block1.personalHeuristics.length);
+          
+        // No need to set state manually as the PlanContext will handle this data
+        // We're just logging for debugging purposes
+      } else {
+        console.log('🔄 Block1Discover.useEffect - No personal heuristics found in plan');
+      }
     }
   }, [plan]);
   
@@ -382,12 +393,31 @@ export default function Block1Discover() {
   
   // Heuristic add mutation with optimistic UI
   const addHeuristicMutation = useMutation({
-    mutationFn: async (newHeuristicData: { name: string, description: string }) => {
-      const newHeuristicWithId = { ...newHeuristicData, id: Date.now().toString() };
-      const updatedHeuristics = [
-        ...(plan?.blocks?.block1?.personalHeuristics || []),
-        newHeuristicWithId
-      ];
+    mutationFn: async (newHeuristicData: { 
+      text: string;
+      notes: string;
+      id: string;
+      name: string;
+      description: string;
+      favourite: boolean;
+    }) => {
+      // Ensure we have a properly formatted heuristic that's compatible with the HeuristicList component
+      const heuristicToSave = {
+        id: newHeuristicData.id,
+        text: newHeuristicData.text || newHeuristicData.name, // Support either property
+        notes: newHeuristicData.notes || newHeuristicData.description, // Support either property
+        favourite: !!newHeuristicData.favourite
+      };
+      
+      console.log('🔄 addHeuristicMutation - Formatted heuristic to save:', heuristicToSave);
+      
+      // Get existing heuristics or empty array if none
+      const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
+      console.log('🔄 addHeuristicMutation - Existing heuristics:', existingHeuristics.length);
+      
+      // Create updated list
+      const updatedHeuristics = [...existingHeuristics, heuristicToSave];
+      console.log('🔄 addHeuristicMutation - New heuristics count:', updatedHeuristics.length);
       
       // Save to block1
       return saveBlock('block1', {
@@ -549,8 +579,21 @@ export default function Block1Discover() {
     console.log('🔄 Block1Discover.handleAddHeuristic - Adding new personal heuristic:', newHeuristic);
     
     try {
+      // Format personal heuristic for compatibility with HeuristicList component
+      const formattedHeuristic = {
+        name: newHeuristic.name,
+        description: newHeuristic.description,
+        // For compatibility with the HeuristicList component
+        text: newHeuristic.name,
+        notes: newHeuristic.description,
+        id: Date.now().toString(),
+        favourite: false
+      };
+      
+      console.log('🔄 Block1Discover.handleAddHeuristic - Formatted heuristic:', formattedHeuristic);
+      
       // Use the mutation with optimistic updates
-      await addHeuristicMutation.mutateAsync(newHeuristic);
+      await addHeuristicMutation.mutateAsync(formattedHeuristic);
     } catch (error) {
       console.error("🔴 Block1Discover.handleAddHeuristic - Error saving heuristic:", error);
       // Error handling is done in the mutation callbacks
@@ -663,6 +706,29 @@ export default function Block1Discover() {
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Make a Plan
           </Button>
+          
+          {/* Debug panel - only visible during development to track persistence issues */}
+          {import.meta.env.DEV && (
+            <div className="bg-gray-100 p-3 mb-4 text-xs rounded">
+              <div><strong>DEBUG</strong> - Current plan status</div>
+              <div>Plan ID: {plan?.id || 'null'}</div>
+              <div>Ratings count: {Object.keys(ratings).length}</div>
+              <div>Last saved: {plan?.blocks?.block1?.lastUpdated || 'Never'}</div>
+              <div>Personal heuristics: {plan?.blocks?.block1?.personalHeuristics?.length || 0}</div>
+              <details>
+                <summary>Ratings data</summary>
+                <pre className="text-xs max-h-20 overflow-auto">
+                  {JSON.stringify(ratings, null, 2)}
+                </pre>
+              </details>
+              <details>
+                <summary>Personal heuristics</summary>
+                <pre className="text-xs max-h-20 overflow-auto">
+                  {JSON.stringify(plan?.blocks?.block1?.personalHeuristics || [], null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
           
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
