@@ -23,6 +23,8 @@ import { useProgress } from "@/contexts/ProgressContext";
 import { usePlan } from "@/contexts/PlanContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useBlockSave } from "@/hooks/useBlockSave";
 import { 
   Select,
   SelectContent,
@@ -36,10 +38,14 @@ export default function Block3Deliver() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { progress } = useProgress();
-  const { plan, saveBlock, markBlockComplete } = usePlan();
+  const { plan } = usePlan();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [deliveryApproach, setDeliveryApproach] = useState<string>("agile");
   const [deliveryNotes, setDeliveryNotes] = useState<string>("");
+  
+  // Use our new reliable save hook
+  const { saveBlock, markBlockComplete, isSaving } = useBlockSave("block3", projectId);
   
   // Verify that Block 2 is completed
   const block2Completed = plan?.blocks?.block2?.completed;
@@ -84,17 +90,46 @@ export default function Block3Deliver() {
   
   // Handler to save the current block data
   const handleSaveBlock = async () => {
-    await saveBlock('block3', {
-      deliveryApproach,
-      deliveryNotes,
-      timeline: null // Placeholder for future timeline implementation
-    });
+    try {
+      // Save data with our useBlockSave hook
+      await saveBlock({
+        deliveryApproach,
+        deliveryNotes,
+        timeline: null // Placeholder for future timeline implementation
+      });
+      toast({
+        title: "Success",
+        description: "Your progress has been saved",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error saving block data:", error);
+      toast({
+        title: "Save failed",
+        description: "There was a problem saving your progress. Your changes are stored locally.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Handler to mark this block as complete and proceed to summary
   const handleCompleteBlock = async () => {
-    await markBlockComplete('block3');
-    navigate(`/make-a-plan/${projectId}`);
+    try {
+      // Mark block as complete and advance to summary
+      await markBlockComplete({
+        deliveryApproach,
+        deliveryNotes,
+        timeline: null
+      });
+      navigate(`/make-a-plan/${projectId}`);
+    } catch (error) {
+      console.error("Error marking block as complete:", error);
+      toast({
+        title: "Action failed",
+        description: "There was a problem completing this block. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Handler to export the plan as PDF (placeholder)
@@ -316,8 +351,9 @@ export default function Block3Deliver() {
                   variant="outline" 
                   className="mr-2"
                   onClick={handleSaveBlock}
+                  disabled={isSaving}
                 >
-                  Save Progress
+                  {isSaving ? "Saving..." : "Save Progress"}
                 </Button>
               </div>
             </CardContent>
@@ -366,9 +402,6 @@ export default function Block3Deliver() {
                   <li>Define milestones</li>
                   <li>Visualize the project timeline</li>
                 </ul>
-                <p className="text-amber-600 font-medium">
-                  For now, you can proceed to the summary and complete your plan.
-                </p>
               </div>
               
               <div className="flex justify-end mt-6">
@@ -376,8 +409,9 @@ export default function Block3Deliver() {
                   variant="outline" 
                   className="mr-2"
                   onClick={handleSaveBlock}
+                  disabled={isSaving}
                 >
-                  Save Progress
+                  {isSaving ? "Saving..." : "Save Progress"}
                 </Button>
               </div>
             </CardContent>
@@ -398,94 +432,66 @@ export default function Block3Deliver() {
           </Card>
         </TabsContent>
         
-        {/* Summary Tab */}
+        {/* Summary & Export */}
         <TabsContent value="summary" className="pt-6">
           <Card className="max-w-4xl mx-auto">
             <CardHeader>
-              <CardTitle className="text-tcof-dark">Plan Complete!</CardTitle>
+              <CardTitle className="text-tcof-dark">Block 3 Summary & Export</CardTitle>
               <CardDescription>
-                Review your complete plan and export for your team
+                Review your delivery plan and export your complete plan
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-green-50 rounded-lg p-6 mb-6 flex items-center">
-                <CheckCircle2 className="h-10 w-10 text-green-500 mr-4" />
-                <div>
-                  <h3 className="text-lg font-medium text-green-800 mb-1">Congratulations!</h3>
-                  <p className="text-green-700">
-                    You've completed all three blocks of the planning process. Your comprehensive
-                    plan is now ready to be shared with your team and stakeholders.
-                  </p>
-                </div>
-              </div>
+              <p className="mb-6 text-gray-700">
+                You've now completed all three blocks of the Make a Plan tool. Review your
+                delivery approach and complete this block to finalize your plan.
+              </p>
               
-              <h3 className="text-lg font-medium text-tcof-dark mb-4">Plan Summary</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white p-4 rounded-lg border hover:border-tcof-teal transition-colors">
-                  <h4 className="font-medium text-tcof-dark mb-2">Block 1: Discover</h4>
-                  <p className="text-sm text-gray-600 mb-2">
-                    You identified key success factors and personal heuristics to guide your project.
-                  </p>
-                  <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full inline-flex items-center">
-                    <Check className="h-3 w-3 mr-1" /> Completed
-                  </div>
-                </div>
+              <div className="bg-gray-50 p-6 rounded-lg mb-6">
+                <h3 className="text-lg font-medium text-tcof-dark mb-4">Plan Summary</h3>
                 
-                <div className="bg-white p-4 rounded-lg border hover:border-tcof-teal transition-colors">
-                  <h4 className="font-medium text-tcof-dark mb-2">Block 2: Design</h4>
-                  <p className="text-sm text-gray-600 mb-2">
-                    You created tasks and identified key stakeholders for effective delivery.
-                  </p>
-                  <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full inline-flex items-center">
-                    <Check className="h-3 w-3 mr-1" /> Completed
-                  </div>
-                </div>
-                
-                <div className="bg-white p-4 rounded-lg border hover:border-tcof-teal transition-colors">
-                  <h4 className="font-medium text-tcof-dark mb-2">Block 3: Deliver</h4>
-                  <p className="text-sm text-gray-600 mb-2">
-                    You've selected a {deliveryApproach} delivery approach and prepared for implementation.
-                  </p>
-                  <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full inline-flex items-center">
-                    <Check className="h-3 w-3 mr-1" /> Completed
+                <div className="space-y-4">
+                  <div className="p-4 border rounded-lg bg-white">
+                    <h4 className="font-medium text-tcof-dark flex items-center">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
+                      Delivery Approach
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {deliveryApproach ? 
+                        deliveryApproach.charAt(0).toUpperCase() + deliveryApproach.slice(1) 
+                        : "Not selected"}
+                    </p>
+                    {deliveryNotes && (
+                      <p className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded">
+                        {deliveryNotes}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
               
-              <div className="bg-tcof-light p-6 rounded-lg mb-6">
-                <h4 className="font-medium text-tcof-dark mb-4">Next Steps</h4>
-                <ol className="list-decimal pl-6 space-y-2 text-gray-700">
-                  <li>Share your plan with key stakeholders and team members</li>
-                  <li>Begin implementing tasks according to your selected delivery approach</li>
-                  <li>Regularly review progress and adjust as needed</li>
-                  <li>Refer back to your success factors to ensure you're on track</li>
-                </ol>
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8">
+                <p className="text-amber-800">
+                  <strong>Next Steps:</strong> After completing Block 3, you can export your
+                  full plan or return to the Make a Plan dashboard to review your work.
+                </p>
               </div>
               
-              <div className="flex flex-col md:flex-row justify-center gap-4 mt-8">
+              <div className="flex flex-col sm:flex-row justify-end space-y-4 sm:space-y-0 sm:space-x-4">
                 <Button 
                   variant="outline" 
-                  className="flex items-center"
                   onClick={handleExportPlan}
+                  className="flex items-center"
                 >
-                  <Download className="h-4 w-4 mr-2" /> Export as PDF
+                  <Download className="mr-2 h-4 w-4" /> Export Plan (Coming Soon)
                 </Button>
                 
                 <Button 
-                  variant="outline" 
-                  className="flex items-center"
-                  onClick={handleExportPlan}
+                  className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
+                  onClick={handleCompleteBlock}
+                  disabled={isSaving}
                 >
-                  <Download className="h-4 w-4 mr-2" /> Export as Word Document
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="flex items-center"
-                  onClick={handleExportPlan}
-                >
-                  <Download className="h-4 w-4 mr-2" /> Email to Team
+                  {isSaving ? "Saving..." : "Complete Block 3 & Finalize Plan"} <Check className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </CardContent>
@@ -494,13 +500,7 @@ export default function Block3Deliver() {
                 variant="outline" 
                 onClick={() => setActiveTab("step2")}
               >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 2
-              </Button>
-              <Button 
-                className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
-                onClick={handleCompleteBlock}
-              >
-                Finish & Return to Overview <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Timeline
               </Button>
             </CardFooter>
           </Card>
