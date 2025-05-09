@@ -18,28 +18,28 @@ export default function Block1Step2() {
   const { plan, saveBlock } = usePlan();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Input refs for focus management
   const nameInputRef = useRef<HTMLInputElement>(null);
-  
+
   // State for new heuristic fields
   const [newName, setNewName] = useState("");
   const [newNotes, setNewNotes] = useState("");
-  
+
   // Local state for existing heuristics
   const [heuristics, setHeuristics] = useState<PersonalHeuristic[]>([]);
-  
+
   // Load existing heuristics from plan data on component mount
   useEffect(() => {
     console.log(`%c[HEURISTICS INIT] Loading heuristics from plan:`, 'color: #0ea5e9; font-weight: bold;');
     console.log(plan?.blocks?.block1);
-    
+
     const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
-    
+
     if (existingHeuristics.length > 0) {
       console.log(`%c[HEURISTICS INIT] Found ${existingHeuristics.length} heuristics:`, 'color: #059669; font-weight: bold;');
       console.log(JSON.stringify(existingHeuristics, null, 2));
-      
+
       // Normalize all heuristics to ensure consistent field structure
       const normalizedHeuristics = existingHeuristics.map(h => {
         if (typeof h === 'string') {
@@ -63,7 +63,7 @@ export default function Block1Step2() {
             favourite: h.favourite || false
           } as PersonalHeuristic;
         }
-        
+
         // Fallback for any other formats
         return {
           id: uuid(),
@@ -74,16 +74,16 @@ export default function Block1Step2() {
           favourite: false
         } as PersonalHeuristic;
       });
-      
+
       console.log(`%c[HEURISTICS INIT] Normalized to consistent format:`, 'color: #059669; font-weight: bold;');
       console.log(JSON.stringify(normalizedHeuristics, null, 2));
-      
+
       setHeuristics(normalizedHeuristics);
     } else {
       console.log(`%c[HEURISTICS INIT] No personal heuristics found in plan data`, 'color: #dc2626; font-weight: bold;');
     }
   }, [plan]);
-  
+
   // Guard against invalid state - no project ID available
   if (!projectId) {
     return (
@@ -96,19 +96,19 @@ export default function Block1Step2() {
       </div>
     );
   }
-  
+
   // Single function to save heuristics
   const saveHeuristics = async (updatedHeuristics: PersonalHeuristic[]) => {
     console.log(`%c[SAVE HEURISTICS] Saving ${updatedHeuristics.length} heuristics:`, 'color: #059669; font-weight: bold;');
     console.log(JSON.stringify(updatedHeuristics, null, 2));
-    
+
     // Use a single, consistent save path for all heuristic operations
     return saveBlock('block1', {
       personalHeuristics: updatedHeuristics,
       lastUpdated: new Date().toISOString(),
     });
   };
-  
+
   // Add heuristic mutation 
   const addHeuristicMutation = useMutation({
     mutationFn: async () => {
@@ -121,10 +121,10 @@ export default function Block1Step2() {
         notes: newNotes.trim(),     // Alias for description
         favourite: false
       };
-      
+
       console.log(`%c[ADD HEURISTIC] Creating new heuristic:`, 'color: #059669; font-weight: bold;');
       console.log(JSON.stringify(newHeuristic, null, 2));
-      
+
       // Add to existing array and save
       const updatedHeuristics = [...heuristics, newHeuristic];
       return saveHeuristics(updatedHeuristics);
@@ -132,11 +132,11 @@ export default function Block1Step2() {
     onMutate: async () => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
-      
+
       // Snapshot previous value for rollback
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
       const previousHeuristics = [...heuristics];
-      
+
       // Create the new heuristic with full structure
       const newHeuristic: PersonalHeuristic = {
         id: uuid(),
@@ -146,15 +146,15 @@ export default function Block1Step2() {
         notes: newNotes.trim(),
         favourite: false
       };
-      
+
       // Update local state for immediate UI feedback
       const updatedHeuristics = [...heuristics, newHeuristic];
       setHeuristics(updatedHeuristics);
-      
+
       // Optimistically update the query cache
       queryClient.setQueryData(['plan', projectId], (old: any) => {
         if (!old) return old;
-        
+
         return {
           ...old,
           blocks: {
@@ -167,25 +167,25 @@ export default function Block1Step2() {
           }
         };
       });
-      
+
       // Show feedback toast
       toast({
         title: "Adding heuristic...",
         description: "Your personal heuristic is being saved.",
       });
-      
+
       return { previousPlan, previousHeuristics };
     },
     onSuccess: () => {
       // Clear input fields
       setNewName("");
       setNewNotes("");
-      
+
       // Return focus to name input
       if (nameInputRef.current) {
         nameInputRef.current.focus();
       }
-      
+
       toast({
         title: "Heuristic added",
         description: "Your custom heuristic has been added successfully."
@@ -193,16 +193,16 @@ export default function Block1Step2() {
     },
     onError: (error, _variables, context) => {
       console.error("Error adding heuristic:", error);
-      
+
       // Revert to previous state
       if (context?.previousPlan) {
         queryClient.setQueryData(['plan', projectId], context.previousPlan);
       }
-      
+
       if (context?.previousHeuristics) {
         setHeuristics(context.previousHeuristics);
       }
-      
+
       toast({
         title: "Failed to add heuristic",
         description: "There was an error saving your heuristic. Your changes have been reverted.",
@@ -214,7 +214,7 @@ export default function Block1Step2() {
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     }
   });
-  
+
   // Remove heuristic mutation
   const removeHeuristicMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -224,24 +224,24 @@ export default function Block1Step2() {
     onMutate: async (id) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
-      
+
       // Snapshot previous values
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
       const previousHeuristics = [...heuristics];
-      
+
       // Get heuristic being removed for logging
       const heuristicToRemove = heuristics.find(h => h.id === id);
       console.log(`%c[REMOVE HEURISTIC] Removing heuristic with ID ${id}:`, 'color: #dc2626; font-weight: bold;');
       console.log(JSON.stringify(heuristicToRemove, null, 2));
-      
+
       // Update local state
       const updatedHeuristics = heuristics.filter(h => h.id !== id);
       setHeuristics(updatedHeuristics);
-      
+
       // Optimistic update
       queryClient.setQueryData(['plan', projectId], (old: any) => {
         if (!old) return old;
-        
+
         return {
           ...old,
           blocks: {
@@ -254,12 +254,12 @@ export default function Block1Step2() {
           }
         };
       });
-      
+
       toast({
         title: "Removing heuristic...",
         description: "Your heuristic is being removed."
       });
-      
+
       return { previousPlan, previousHeuristics };
     },
     onSuccess: () => {
@@ -270,16 +270,16 @@ export default function Block1Step2() {
     },
     onError: (error, _variables, context) => {
       console.error("Error removing heuristic:", error);
-      
+
       // Roll back to previous state
       if (context?.previousPlan) {
         queryClient.setQueryData(['plan', projectId], context.previousPlan);
       }
-      
+
       if (context?.previousHeuristics) {
         setHeuristics(context.previousHeuristics);
       }
-      
+
       toast({
         title: "Failed to remove heuristic",
         description: "There was an error removing your heuristic. Your changes have been reverted.",
@@ -290,7 +290,7 @@ export default function Block1Step2() {
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     }
   });
-  
+
   // Save all heuristics
   const saveAllHeuristicsMutation = useMutation({
     mutationFn: async () => {
@@ -303,18 +303,18 @@ export default function Block1Step2() {
         notes: h.description,
         favourite: h.favourite || false
       }));
-      
+
       return saveHeuristics(normalizedHeuristics);
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['plan', projectId] });
       const previousPlan = queryClient.getQueryData(['plan', projectId]);
-      
+
       toast({
         title: "Saving all heuristics...",
         description: "Your custom heuristics are being saved."
       });
-      
+
       return { previousPlan };
     },
     onSuccess: () => {
@@ -325,11 +325,11 @@ export default function Block1Step2() {
     },
     onError: (error, _variables, context) => {
       console.error("Error saving all heuristics:", error);
-      
+
       if (context?.previousPlan) {
         queryClient.setQueryData(['plan', projectId], context.previousPlan);
       }
-      
+
       toast({
         title: "Failed to save heuristics",
         description: "There was an error saving your heuristics. Please try again.",
@@ -340,11 +340,11 @@ export default function Block1Step2() {
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
     }
   });
-  
+
   // Handle form submission
   const handleAddHeuristic = () => {
     const trimmedName = newName.trim();
-    
+
     if (!trimmedName) {
       toast({
         variant: "destructive",
@@ -353,10 +353,10 @@ export default function Block1Step2() {
       });
       return;
     }
-    
+
     addHeuristicMutation.mutate();
   };
-  
+
   // Handle pressing Enter in the name input field
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -364,22 +364,22 @@ export default function Block1Step2() {
       handleAddHeuristic();
     }
   };
-  
+
   // Clean up heuristics for rendering
   const renderName = (heuristic: PersonalHeuristic) => {
     return heuristic.name || heuristic.text || 
       (typeof heuristic === 'string' ? heuristic : '');
   };
-  
+
   const renderNotes = (heuristic: PersonalHeuristic) => {
     return heuristic.description || heuristic.notes || '';
   };
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Project Banner */}
       <ProjectBanner />
-      
+
       {/* Main content */}
       <div className="container mx-auto px-4 py-8">
         {/* Back button */}
@@ -390,7 +390,7 @@ export default function Block1Step2() {
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Step 1
         </Button>
-        
+
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col mb-6">
             <h1 className="text-3xl font-bold text-tcof-dark">Block 1: Define Personal Heuristics</h1>
@@ -398,7 +398,7 @@ export default function Block1Step2() {
               Add your own custom heuristics to guide your project thinking
             </p>
           </div>
-          
+
           <Card>
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold mb-4">Custom Heuristics Builder</h2>
@@ -406,7 +406,7 @@ export default function Block1Step2() {
                 Heuristics are mental shortcuts or rules of thumb that help guide decision-making.
                 Add your own personal or project-specific heuristics that will help you evaluate options.
               </p>
-              
+
               {/* Add heuristic form */}
               <div className="space-y-4 mb-8 border rounded-lg p-4 bg-gray-50">
                 <h3 className="text-lg font-medium mb-2">Add New Heuristic</h3>
@@ -436,7 +436,7 @@ export default function Block1Step2() {
                   <Plus className="mr-2 h-4 w-4" /> Add Heuristic
                 </Button>
               </div>
-              
+
               {/* Heuristics list */}
               <div className="border rounded-lg mb-6">
                 <div className="px-4 py-3 bg-gray-50 border-b flex justify-between items-center">
@@ -450,7 +450,7 @@ export default function Block1Step2() {
                     <Save className="mr-2 h-4 w-4" /> Save All
                   </Button>
                 </div>
-                
+
                 <div className="max-h-[300px] overflow-auto p-2">
                   {heuristics.length === 0 ? (
                     <div className="p-4 text-center text-gray-500">
@@ -484,7 +484,7 @@ export default function Block1Step2() {
                   )}
                 </div>
               </div>
-              
+
               <div className="flex justify-between mt-8">
                 <Button
                   variant="outline"
