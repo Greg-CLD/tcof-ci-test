@@ -26,7 +26,7 @@ import plansRouter from './routes/plans.js';
 import usersRouter from './routes/users.js';
 import { readFileSync } from 'fs';
 // Import our local username/password authentication system instead of Replit Auth
-import { setupAuth, isAuthenticated } from './auth';
+import { setupAuth, isAuthenticated } from './auth-simple';
 
 // Initialize Stripe with your secret key
 if (!process.env.STRIPE_SECRET_KEY) {
