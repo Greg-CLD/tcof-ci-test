@@ -10,9 +10,23 @@ import { query } from './direct-db'; // Using direct-db for query
 import PgStore from 'connect-pg-simple';
 import crypto from 'crypto';
 
+// Import the storage interface from storage.ts
+import { storage } from './storage';
+
 // Helper function to hash passwords - uses simple SHA-256 hash for consistency
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+// Helper function to compare scrypt-based passwords
+async function comparePasswords(supplied: string, stored: string) {
+  try {
+    // Import from storage.ts
+    return await storage.comparePasswords(supplied, stored);
+  } catch (error) {
+    console.error('Error comparing passwords:', error);
+    return false;
+  }
 }
 
 // Simplified middleware to check if user is authenticated
@@ -50,25 +64,51 @@ export function setupAuth(app: Express) {
     try {
       console.log(`Authenticating user: ${username}`);
       
-      // Generate hash for the provided password
+      // Generate hash for the provided password for simple comparison
       const passwordHash = hashPassword(password);
       console.log(`Generated hash for comparison: ${passwordHash.substring(0, 10)}...`);
       
-      // Get user from database
-      const users = await query('SELECT * FROM users WHERE username = $1 OR email = $1', [username]);
+      // Try to find user with direct username match first
+      let user = await storage.getUserByUsername(username);
       
-      if (!users || users.length === 0) {
+      // If not found by username, try with email
+      if (!user) {
+        user = await storage.getUserByEmail(username);
+      }
+      
+      // If still not found, try with direct query as a fallback
+      if (!user) {
+        console.log('User not found in storage, trying direct query...');
+        const users = await query('SELECT * FROM users WHERE username = $1 OR email = $1', [username]);
+        if (users && users.length > 0) {
+          user = users[0];
+        }
+      }
+      
+      if (!user) {
         console.log(`No user found with username/email: ${username}`);
         return done(null, false, { message: 'Invalid username or password' });
       }
       
-      const user = users[0];
       console.log(`Found user with ID: ${user.id}, username: ${user.username}`);
       
-      // Check if password matches the stored hash directly
+      // First try exact hash match for simple passwords
       if (user.password === passwordHash) {
         console.log('Password matched with exact hash comparison');
         return done(null, user);
+      }
+      
+      // Then try the scrypt format if the password has a dot in it (indicating salt)
+      if (user.password && user.password.includes('.')) {
+        try {
+          const isValid = await comparePasswords(password, user.password);
+          if (isValid) {
+            console.log('Password matched with scrypt comparison');
+            return done(null, user);
+          }
+        } catch (err) {
+          console.error('Error comparing passwords with scrypt:', err);
+        }
       }
       
       console.log('Password did not match any known format, authentication failed');
@@ -89,14 +129,25 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number | string, done) => {
     try {
       console.log(`Deserializing user with ID: ${id}`);
-      const users = await query('SELECT * FROM users WHERE id = $1', [id]);
       
-      if (!users || users.length === 0) {
+      // First try using storage getUser method
+      let user = await storage.getUser(id);
+      
+      // If storage method failed, fallback to direct query
+      if (!user) {
+        console.log('User not found via storage, trying direct query...');
+        const users = await query('SELECT * FROM users WHERE id = $1', [id]);
+        
+        if (users && users.length > 0) {
+          user = users[0];
+        }
+      }
+      
+      if (!user) {
         console.log(`No user found with ID: ${id} during deserialization`);
         return done(null, false);
       }
       
-      const user = users[0];
       console.log(`Successfully deserialized user: ${user.username}`);
       done(null, user);
     } catch (error) {
@@ -184,41 +235,55 @@ export function setupAuth(app: Express) {
       console.log(`Registration request for username: ${username}`);
       
       // Check if username already exists
-      const existingUsers = await query('SELECT * FROM users WHERE username = $1', [username]);
+      const existingUser = await storage.getUserByUsername(username);
       
-      if (existingUsers && existingUsers.length > 0) {
+      if (existingUser) {
         console.log(`Username already taken: ${username}`);
         return res.status(409).json({ message: 'Username already taken' });
       }
       
-      // Hash password with simple SHA-256
-      const passwordHash = hashPassword(password);
-      
-      // Insert new user
-      const result = await query(
-        'INSERT INTO users (username, email, password, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
-        [username, email || null, passwordHash, new Date()]
-      );
-      
-      if (!result || result.length === 0) {
-        throw new Error('Failed to create user');
+      // Check if email already exists if provided
+      if (email) {
+        const existingEmail = await storage.getUserByEmail(email);
+        if (existingEmail) {
+          console.log(`Email already in use: ${email}`);
+          return res.status(409).json({ message: 'Email already in use' });
+        }
       }
       
-      const newUser = result[0];
-      console.log(`User created with ID: ${newUser.id}`);
+      // Hash password with simple SHA-256 for better compatibility
+      const passwordHash = hashPassword(password);
       
-      // Log user in
-      req.login(newUser, (err) => {
-        if (err) {
-          console.error('Login error after registration:', err);
-          return res.status(500).json({ message: 'Error logging in after registration' });
+      try {
+        // Create user using direct query for full control
+        const result = await query(
+          'INSERT INTO users (username, email, password, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
+          [username, email || null, passwordHash, new Date()]
+        );
+      
+        if (!result || result.length === 0) {
+          throw new Error('Failed to create user');
         }
         
-        // Remove password from response
-        const { password, ...safeUser } = newUser;
-        console.log(`New user logged in: ${safeUser.username}`);
-        res.status(201).json(safeUser);
-      });
+        const newUser = result[0];
+        console.log(`User created with ID: ${newUser.id}`);
+        
+        // Log user in
+        req.login(newUser, (err) => {
+          if (err) {
+            console.error('Login error after registration:', err);
+            return res.status(500).json({ message: 'Error logging in after registration' });
+          }
+          
+          // Remove password from response
+          const { password, ...safeUser } = newUser;
+          console.log(`New user logged in: ${safeUser.username}`);
+          res.status(201).json(safeUser);
+        });
+      } catch (dbError) {
+        console.error('Database error during user creation:', dbError);
+        return res.status(500).json({ message: 'Error creating user' });
+      }
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({ message: 'Internal server error' });
