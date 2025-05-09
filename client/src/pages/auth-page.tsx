@@ -1,14 +1,37 @@
-import { useAuth } from "@/contexts/AuthContext";
-import { LoginButton } from "@/components/auth-buttons";
+import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertCircle, LogIn } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AuthPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, loginMutation, authError } = useAuth();
+  
+  const [formType, setFormType] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   
   // If user is already logged in, redirect to home
   if (user && !isLoading) {
     return <Redirect to="/" />;
   }
+  
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    loginMutation.mutate({ username, password });
+  };
+  
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    // We'll handle registration separately
+    console.log("Register with:", username, email, password);
+  };
   
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -20,21 +43,117 @@ export default function AuthPage() {
             Sign in to manage your organizations and projects
           </p>
           
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex flex-col items-center justify-center space-y-4 py-6">
-              <LoginButton />
-              <p className="text-sm text-gray-500 mt-4 text-center">
-                By signing in, you agree to our{" "}
-                <a href="/terms" className="text-tcof-primary hover:underline">
-                  Terms of Service
-                </a>{" "}
-                and{" "}
-                <a href="/privacy" className="text-tcof-primary hover:underline">
-                  Privacy Policy
-                </a>
-              </p>
-            </div>
-          </div>
+          <Tabs defaultValue="login" className="w-full" onValueChange={(value) => setFormType(value as "login" | "register")}>
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Log in to your account</CardTitle>
+                  <CardDescription>Enter your username and password to access your account</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {authError && (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{authError}</AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username</Label>
+                      <Input 
+                        id="username" 
+                        placeholder="Enter your username" 
+                        value={username} 
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input 
+                        id="password" 
+                        type="password" 
+                        placeholder="Enter your password" 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={loginMutation.isPending}
+                    >
+                      {loginMutation.isPending ? "Logging in..." : "Log in"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="register">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create an account</CardTitle>
+                  <CardDescription>Fill in the information to create your account</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-username">Username</Label>
+                      <Input 
+                        id="reg-username" 
+                        placeholder="Choose a username" 
+                        value={username} 
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="Enter your email" 
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-password">Password</Label>
+                      <Input 
+                        id="reg-password" 
+                        type="password" 
+                        placeholder="Choose a password" 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">Register</Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+          
+          <p className="text-sm text-gray-500 mt-4 text-center">
+            By signing in, you agree to our{" "}
+            <a href="/terms" className="text-tcof-primary hover:underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" className="text-tcof-primary hover:underline">
+              Privacy Policy
+            </a>
+          </p>
         </div>
       </div>
       

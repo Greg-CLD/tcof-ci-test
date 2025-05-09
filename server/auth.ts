@@ -84,7 +84,13 @@ export function setupAuth(app: Express) {
 
   // Serialize and deserialize user
   passport.serializeUser((user: any, done) => {
-    done(null, user.id);
+    // Ensure we're using the user id as a number
+    const userId = parseInt(user.id, 10);
+    if (isNaN(userId)) {
+      console.error("Invalid user ID for serialization:", user.id);
+      return done(new Error("Invalid user ID for serialization"));
+    }
+    done(null, userId);
   });
 
   passport.deserializeUser(async (id: number, done) => {
