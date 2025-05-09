@@ -263,10 +263,27 @@ router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
     // Load the block directly using getProjectPlanBlock
     let block = await projectsDb.getProjectPlanBlock(projectId, blockId);
     
+    console.info(`[LOAD-API] GET plans/project/${projectId}/block/${blockId} - Result: ${block ? 'Found' : 'Not found'}`);
+    
     if (block) {
-      console.info(`[LOAD] GET plans/project/${projectId}/block/${blockId} - Block found:`, JSON.stringify(block));
-      console.info(`[LOAD] personalHeuristics: ${block.personalHeuristics ? `Found ${block.personalHeuristics.length} heuristics` : 'MISSING'}`);
-      console.info(`[LOAD] successFactorRatings: ${block.successFactorRatings ? `Found ratings data (${typeof block.successFactorRatings})` : 'MISSING'}`);
+      console.info(`[LOAD-API] Full JSON response: ${JSON.stringify(block)}`);
+      console.info(`[LOAD-API] Block ID: ${block.id || 'missing'}`);
+      console.info(`[LOAD-API] personalHeuristics: ${block.personalHeuristics ? `Found ${block.personalHeuristics.length} heuristics` : 'MISSING'}`);
+      
+      if (block.personalHeuristics && block.personalHeuristics.length > 0) {
+        console.info(`[LOAD-API] First heuristic: ${JSON.stringify(block.personalHeuristics[0])}`);
+      }
+      
+      console.info(`[LOAD-API] successFactorRatings: ${block.successFactorRatings ? 
+        `Found (type: ${typeof block.successFactorRatings}, keys: ${Object.keys(block.successFactorRatings || {}).length})` : 'MISSING'}`);
+      
+      if (block.successFactorRatings) {
+        const keys = Object.keys(block.successFactorRatings);
+        if (keys.length > 0) {
+          const firstKey = keys[0];
+          console.info(`[LOAD-API] First rating: ${firstKey} = ${block.successFactorRatings[firstKey]}`);
+        }
+      }
     }
     
     // Create a default block with proper ID if not found

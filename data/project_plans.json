@@ -33,20 +33,20 @@
         "createdAt": 1746815677224,
         "successCriteria": "",
         "successFactorRatings": {},
-        "lastUpdated": "2025-05-09T18:54:29.751Z",
-        "updatedAt": 1746816870166,
+        "lastUpdated": "2025-05-09T20:38:50.523Z",
+        "updatedAt": 1746823130972,
         "personalHeuristics": [
           {
-            "id": "1746816815793",
-            "name": "Test ",
-            "description": "Test",
-            "text": "Test ",
-            "notes": "Test",
+            "id": "1746823121349",
+            "name": "Test 12",
+            "description": "Test 3",
+            "text": "Test 12",
+            "notes": "Test 3",
             "favourite": false
           }
         ]
       }
     },
-    "lastUpdated": 1746816870166
+    "lastUpdated": 1746823130972
   }
 ]
