@@ -1,136 +1,70 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useState } from "react";
+import { useLocation, Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Create simple auth context to check if user is logged in
-import { useAuth } from "@/hooks/useAuth";
+// Import the consolidated auth hook
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
-  const { user, isLoading } = useAuth();
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const { user, isLoading, loginMutation, registerMutation, authError } = useAuth();
   
   // Form states
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [registerUsername, setRegisterUsername] = useState("");
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerPassword, setRegisterPassword] = useState("");
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
-  // Loading states
-  const [isLoginLoading, setIsLoginLoading] = useState(false);
-  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
 
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user && !isLoading) {
-      navigate("/");
-    }
-  }, [user, isLoading, navigate]);
+  // If already logged in, redirect to home
+  if (user && !isLoading) {
+    return <Redirect to="/" />;
+  }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!loginUsername.trim() || !loginPassword.trim()) {
-      toast({
-        title: "Invalid login",
-        description: "Please enter both username and password",
-        variant: "destructive",
-      });
-      return;
+    if (!username.trim() || !password.trim()) {
+      return; // Form validation happens in the mutation
     }
     
-    setIsLoginLoading(true);
-    
-    try {
-      const response = await apiRequest("POST", "/api/login", {
-        username: loginUsername,
-        password: loginPassword,
-      });
-      
-      if (response.ok) {
-        // Login successful, refresh the page to update auth state
-        window.location.href = "/";
-      } else {
-        const data = await response.json();
-        toast({
-          title: "Login failed",
-          description: data.message || "Invalid username or password",
-          variant: "destructive",
-        });
+    loginMutation.mutate({ 
+      username, 
+      password 
+    }, {
+      onSuccess: () => {
+        navigate("/");
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast({
-        title: "Login error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoginLoading(false);
-    }
+    });
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate form
-    if (!registerUsername.trim() || !registerPassword.trim()) {
-      toast({
-        title: "Invalid registration",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
+    if (!username.trim() || !password.trim()) {
+      return; // Form validation happens in the mutation
     }
     
-    if (registerPassword !== confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please ensure your passwords match",
-        variant: "destructive",
-      });
-      return;
+    if (password !== confirmPassword) {
+      return; // Password mismatch validation in the UI
     }
     
-    setIsRegisterLoading(true);
-    
-    try {
-      const response = await apiRequest("POST", "/api/register", {
-        username: registerUsername,
-        email: registerEmail,
-        password: registerPassword,
-      });
-      
-      if (response.ok) {
-        // Registration successful, navigate to home page
-        window.location.href = "/";
-      } else {
-        const data = await response.json();
-        toast({
-          title: "Registration failed",
-          description: data.message || "Failed to create account",
-          variant: "destructive",
-        });
+    registerMutation.mutate({ 
+      username, 
+      email, 
+      password 
+    }, {
+      onSuccess: () => {
+        navigate("/");
       }
-    } catch (error) {
-      console.error("Registration error:", error);
-      toast({
-        title: "Registration error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRegisterLoading(false);
-    }
+    });
   };
 
   // If still checking auth status, show loading
@@ -147,6 +81,13 @@ export default function AuthPage() {
         <Card className="w-full max-w-md p-8 shadow-lg">
           <h1 className="text-3xl font-bold text-center mb-8">TCOF Toolkit</h1>
           
+          {authError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{authError}</AlertDescription>
+            </Alert>
+          )}
+
           <Tabs defaultValue={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
               <TabsTrigger value="login">Login</TabsTrigger>
@@ -156,33 +97,33 @@ export default function AuthPage() {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="login-username">Username</Label>
+                  <Label htmlFor="username">Username</Label>
                   <Input 
-                    id="login-username"
+                    id="username"
                     type="text"
                     placeholder="Username"
-                    value={loginUsername}
-                    onChange={(e) => setLoginUsername(e.target.value)}
-                    disabled={isLoginLoading}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={loginMutation.isPending}
                     required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="password">Password</Label>
                   <Input 
-                    id="login-password"
+                    id="password"
                     type="password"
                     placeholder="Password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    disabled={isLoginLoading}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loginMutation.isPending}
                     required
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={isLoginLoading}>
-                  {isLoginLoading ? (
+                <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                  {loginMutation.isPending ? (
                     <>
                       <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
                       Logging in...
@@ -200,9 +141,9 @@ export default function AuthPage() {
                     id="register-username"
                     type="text"
                     placeholder="Username"
-                    value={registerUsername}
-                    onChange={(e) => setRegisterUsername(e.target.value)}
-                    disabled={isRegisterLoading}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={registerMutation.isPending}
                     required
                   />
                 </div>
@@ -213,9 +154,9 @@ export default function AuthPage() {
                     id="register-email"
                     type="email"
                     placeholder="Email (optional)"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    disabled={isRegisterLoading}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={registerMutation.isPending}
                   />
                 </div>
                 
@@ -225,9 +166,9 @@ export default function AuthPage() {
                     id="register-password"
                     type="password"
                     placeholder="Password"
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    disabled={isRegisterLoading}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={registerMutation.isPending}
                     required
                   />
                 </div>
@@ -240,13 +181,13 @@ export default function AuthPage() {
                     placeholder="Confirm Password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isRegisterLoading}
+                    disabled={registerMutation.isPending}
                     required
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={isRegisterLoading}>
-                  {isRegisterLoading ? (
+                <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                  {registerMutation.isPending ? (
                     <>
                       <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
                       Creating Account...
