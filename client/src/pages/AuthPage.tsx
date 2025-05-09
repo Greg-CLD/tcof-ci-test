@@ -17,8 +17,6 @@ export default function AuthPage() {
     user, 
     isLoading, 
     isAuthenticated,
-    login,
-    register,
     loginMutation,
     registerMutation,
     authError 
@@ -53,8 +51,8 @@ export default function AuthPage() {
       return;
     }
     
-    // Use the simplified login function from our hook
-    login({ 
+    // Use the login mutation directly
+    loginMutation.mutate({ 
       username, 
       password 
     }, {
@@ -89,8 +87,8 @@ export default function AuthPage() {
       return;
     }
     
-    // Use the simplified register function from our hook
-    register({ 
+    // Use the register mutation directly
+    registerMutation.mutate({ 
       username, 
       email, 
       password 

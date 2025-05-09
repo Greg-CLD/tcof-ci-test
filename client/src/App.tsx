@@ -44,7 +44,7 @@ import BasicProjectEditPage from "@/pages/BasicProjectEditPage";
 import TestAuth from "@/pages/TestAuth";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/useAuth";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/hooks/auth-hook";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { ProtectedRoute } from "@/components/protected-route";
 import { ProtectedRouteGuard } from "@/components/ProtectedRouteGuard";

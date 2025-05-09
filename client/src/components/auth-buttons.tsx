@@ -1,22 +1,38 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Settings } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { User as UserType } from "@shared/schema";
+
+/**
+ * Login button component
+ */
+export function LoginButton() {
+  return (
+    <Link href="/auth">
+      <Button variant="outline" size="sm">
+        Login
+      </Button>
+    </Link>
+  );
+}
 
 /**
  * Renders login/logout buttons based on authentication status
  */
 export function AuthButtons() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logoutMutation } = useAuth();
 
   if (!isAuthenticated) {
-    return (
-      <Link href="/auth">
-        <Button variant="outline" size="sm">
-          Login
-        </Button>
-      </Link>
-    );
+    return <LoginButton />;
   }
 
   return (
@@ -28,7 +44,7 @@ export function AuthButtons() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => logout()}
+        onClick={() => logoutMutation.mutate()}
         className="flex items-center gap-1.5 text-red-500 hover:text-red-600 hover:bg-red-50"
       >
         <LogOut className="h-4 w-4" />
@@ -39,19 +55,85 @@ export function AuthButtons() {
 }
 
 /**
- * Avatar button for the logged in user
+ * User menu dropdown component
+ */
+export function UserMenu() {
+  const { user, logoutMutation } = useAuth();
+  
+  if (!user) return null;
+  
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <UserAvatar />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{user.username}</p>
+            {user.email && (
+              <p className="text-xs leading-none text-muted-foreground">
+                {user.email}
+              </p>
+            )}
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <Link href="/profile">
+          <DropdownMenuItem>
+            <User className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
+        </Link>
+        <Link href="/settings">
+          <DropdownMenuItem>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
+          </DropdownMenuItem>
+        </Link>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          className="text-red-500 focus:text-red-500" 
+          onClick={() => logoutMutation.mutate()}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * Get a user's profile image from various possible sources
+ */
+function getUserProfileImage(user: UserType): string | null {
+  // Check all the various possible profile image properties
+  // @ts-ignore - handle old database format
+  if (user.profileImageUrl) return user.profileImageUrl;
+  if (user.avatarUrl) return user.avatarUrl;
+  return null;
+}
+
+/**
+ * Avatar component for the logged in user
  */
 export function UserAvatar() {
   const { user } = useAuth();
 
   if (!user) return null;
 
+  // Get profile image from any available source
+  const profileImage = getUserProfileImage(user);
+  
   // If user has a profile image, use it
-  if (user.profileImageUrl) {
+  if (profileImage) {
     return (
       <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-primary">
         <img
-          src={user.profileImageUrl}
+          src={profileImage}
           alt={`${user.username}'s avatar`}
           className="absolute w-full h-full object-cover"
         />
