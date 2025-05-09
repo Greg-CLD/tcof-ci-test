@@ -263,6 +263,12 @@ router.get('/plans/project/:projectId/block/:blockId', async (req, res) => {
     // Load the block directly using getProjectPlanBlock
     let block = await projectsDb.getProjectPlanBlock(projectId, blockId);
     
+    if (block) {
+      console.info(`[LOAD] GET plans/project/${projectId}/block/${blockId} - Block found:`, JSON.stringify(block));
+      console.info(`[LOAD] personalHeuristics: ${block.personalHeuristics ? `Found ${block.personalHeuristics.length} heuristics` : 'MISSING'}`);
+      console.info(`[LOAD] successFactorRatings: ${block.successFactorRatings ? `Found ratings data (${typeof block.successFactorRatings})` : 'MISSING'}`);
+    }
+    
     // Create a default block with proper ID if not found
     if (!block) {
       console.info(`[SERVER] Block not found: blockId=${blockId}, projectId=${projectId}, creating default structure`);

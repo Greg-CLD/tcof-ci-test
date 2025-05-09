@@ -33,10 +33,20 @@
         "createdAt": 1746815677224,
         "successCriteria": "",
         "successFactorRatings": {},
-        "lastUpdated": "2025-05-09T18:34:36.812Z",
-        "updatedAt": 1746815677224
+        "lastUpdated": "2025-05-09T18:54:29.751Z",
+        "updatedAt": 1746816870166,
+        "personalHeuristics": [
+          {
+            "id": "1746816815793",
+            "name": "Test ",
+            "description": "Test",
+            "text": "Test ",
+            "notes": "Test",
+            "favourite": false
+          }
+        ]
       }
     },
-    "lastUpdated": 1746815677224
+    "lastUpdated": 1746816870166
   }
 ]

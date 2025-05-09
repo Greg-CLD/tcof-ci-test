@@ -76,14 +76,22 @@ export default function Block1Discover() {
         
         const data = await response.json();
         console.info('✅ [LOAD] Block1 data loaded from API:', data);
-        console.info('📋 [LOAD-TABLE] API Response: FULL RESPONSE DATA');
-        console.info('📋 [LOAD-TABLE] personalHeuristics: ', data.personalHeuristics ? 
-          `Found ${data.personalHeuristics.length} heuristics` : 'MISSING');
-        console.info('📋 [LOAD-TABLE] successFactorRatings: ', data.successFactorRatings ? 
-          `Found ${Object.keys(data.successFactorRatings).length} ratings` : 'MISSING');
+        console.info(`[LOAD] GET /api/plans/project/${projectId}/block/block1 full response:`, JSON.stringify(data));
+        console.info(`[LOAD] Response.id: ${data.id || 'missing'}`);
+        console.info(`[LOAD] personalHeuristics: ${data.personalHeuristics ? `Found ${data.personalHeuristics.length} heuristics` : 'MISSING'}`);
         
-        if (data.personalHeuristics) {
-          console.info('📊 [LOAD] Personal heuristics detail:', JSON.stringify(data.personalHeuristics, null, 2));
+        if (data.personalHeuristics && data.personalHeuristics.length > 0) {
+          console.info(`[LOAD] First heuristic:`, JSON.stringify(data.personalHeuristics[0]));
+        }
+        
+        console.info(`[LOAD] successFactorRatings: ${data.successFactorRatings ? 
+          `Found (type: ${typeof data.successFactorRatings}, entries: ${Object.entries(data.successFactorRatings || {}).length})` : 'MISSING'}`);
+        
+        if (data.successFactorRatings) {
+          const entries = Object.entries(data.successFactorRatings);
+          if (entries.length > 0) {
+            console.info(`[LOAD] First rating:`, JSON.stringify(entries[0]));
+          }
         }
         
         // Save to localStorage as a backup
