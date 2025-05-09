@@ -68,14 +68,14 @@ const RESONANCE_OPTIONS = [
 
 export default function Block1Step1() {
   console.log('🔥 Block1Step1 v2 loaded 🔥');
-  
+
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { plan, saveBlock } = usePlan();
   const { toast } = useToast();
-  
+
   console.log('🧩 Block1Step1 component - projectId:', projectId, 'planState:', plan?.blocks?.block1 ? 'present' : 'missing');
-  
+
   // Use our new hooks
   const { successFactors, isLoading: factorsLoading } = useSuccessFactors();
   const { 
@@ -85,12 +85,12 @@ export default function Block1Step1() {
     updateSingleRating: updateSingleEvaluation,
     isSaving
   } = useResonanceRatings(projectId);
-  
+
   console.log('🧩 Hook state - success factors:', successFactors?.length, 'evaluations:', evaluations?.length, 'loading:', factorsLoading, evaluationsLoading);
-  
+
   // Local state for evaluations (merges DB evaluations with local changes)
   const [localEvaluations, setLocalEvaluations] = useState<{[key: string]: number}>({});
-  
+
   // Initialize local state from DB evaluations
   useEffect(() => {
     if (evaluations && evaluations.length > 0) {
@@ -103,13 +103,13 @@ export default function Block1Step1() {
       setLocalEvaluations(evaluationMap);
     }
   }, [evaluations]);
-  
+
   // Initialize from plan context as fallback
   useEffect(() => {
     if (plan?.blocks?.block1?.successFactorRatings && Object.keys(localEvaluations).length === 0) {
       const planEvaluations = plan.blocks.block1.successFactorRatings;
       const convertedEvaluations: {[key: string]: number} = {};
-      
+
       // Convert string evaluations to numbers
       Object.keys(planEvaluations).forEach(factorId => {
         const value = planEvaluations[factorId];
@@ -118,11 +118,11 @@ export default function Block1Step1() {
           convertedEvaluations[factorId] = evaluation;
         }
       });
-      
+
       setLocalEvaluations(convertedEvaluations);
     }
   }, [plan, localEvaluations]);
-  
+
   // Guard against invalid state - no project ID available
   if (!projectId) {
     return (
@@ -135,13 +135,13 @@ export default function Block1Step1() {
       </div>
     );
   }
-  
+
   // Handle evaluation change
   const handleEvaluationChange = async (factorId: string, evaluationValue: string) => {
     const numericEvaluation = parseInt(evaluationValue);
-    
+
     console.log(`🧪 handleEvaluationChange - factorId: ${factorId}, value: ${evaluationValue}, numeric: ${numericEvaluation}`);
-    
+
     // Update local state for immediate UI feedback
     setLocalEvaluations(prev => {
       const newState = {
@@ -151,28 +151,28 @@ export default function Block1Step1() {
       console.log('🧪 localEvaluations update - before:', prev, 'after:', newState);
       return newState;
     });
-    
+
     // Save to PlanContext
     const updatedRatings = {
       ...plan?.blocks?.block1?.successFactorRatings,
       [factorId]: evaluationValue
     };
     console.log('🧪 saveBlock updatedRatings:', updatedRatings);
-    
+
     saveBlock('block1', {
       successFactorRatings: updatedRatings,
       lastUpdated: new Date().toISOString(),
     });
-    
+
     // Save to database
     try {
       console.log('🧪 Calling updateSingleEvaluation API with:', { factorId, resonance: numericEvaluation });
-      
+
       await updateSingleEvaluation({
         factorId,
         resonance: numericEvaluation
       });
-      
+
       console.log('🧪 updateSingleEvaluation API call successful');
     } catch (error) {
       console.error("🔴 Error saving evaluation to database:", error);
@@ -180,7 +180,7 @@ export default function Block1Step1() {
       // as it's saved in context
     }
   };
-  
+
   // Handle save button click
   const handleSave = async () => {
     console.log('🧪 handleSave - starting batch save operation');
@@ -190,7 +190,7 @@ export default function Block1Step1() {
     // If no plan ID exists, this may be our first save
     if (!plan?.id) {
       console.info(`[SAVE] Block1Step1.handleSave - No plan ID detected, ensuring plan exists`);
-      
+
       try {
         // Create a minimal plan to ensure we have an ID
         const response = await apiRequest(
@@ -205,7 +205,7 @@ export default function Block1Step1() {
             }
           }
         );
-        
+
         if (!response.ok) {
           console.error(`[SAVE] Block1Step1.handleSave - Failed to create plan: ${response.status} ${response.statusText}`);
         } else {
@@ -237,9 +237,9 @@ export default function Block1Step1() {
         factorId,
         resonance
       }));
-    
+
     console.log('🧪 evaluationInputs prepared for API:', evaluationInputs);
-    
+
     // Save to PlanContext (only valid evaluations)
     const validEvaluations = Object.fromEntries(
       Object.entries(localEvaluations).filter(([_, resonance]) => 
@@ -248,14 +248,14 @@ export default function Block1Step1() {
           !isNaN(parseInt(resonance as unknown as string)))
       )
     );
-    
+
     console.log('🧪 validEvaluations for PlanContext:', validEvaluations);
-    
+
     saveBlock('block1', {
       successFactorRatings: validEvaluations,
       lastUpdated: new Date().toISOString(),
     });
-    
+
     // Save to database
     try {
       if (evaluationInputs.length === 0) {
@@ -267,12 +267,12 @@ export default function Block1Step1() {
         });
         return;
       }
-      
+
       console.log('🧪 Calling updateEvaluations API with:', evaluationInputs.length, 'evaluations');
       console.log('🧪 First few evaluations:', evaluationInputs.slice(0, 3));
       await updateEvaluations(evaluationInputs);
       console.log('🧪 updateEvaluations API call successful');
-      
+
       toast({
         title: "Evaluations saved",
         description: "Your success factor evaluations have been saved successfully."
@@ -286,22 +286,22 @@ export default function Block1Step1() {
       });
     }
   };
-  
+
   // Calculate completion percentage
   const calculateCompletionPercentage = () => {
     if (!successFactors || successFactors.length === 0) return 0;
-    
+
     const evaluatedCount = Object.keys(localEvaluations).length;
     return Math.round((evaluatedCount / successFactors.length) * 100);
   };
-  
+
   const completionPercentage = calculateCompletionPercentage();
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Project Banner */}
       <ProjectBanner />
-      
+
       {/* Main content */}
       <div className="container mx-auto px-4 py-8">
         {/* Back button */}
@@ -312,14 +312,14 @@ export default function Block1Step1() {
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Make a Plan
         </Button>
-        
+
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-tcof-dark">Block 1: Evaluate Success Factors</h1>
               <p className="text-gray-600 mt-1">Evaluate how strongly each success factor resonates with your project</p>
             </div>
-            
+
             {/* Completion status */}
             <div className="mt-4 sm:mt-0 bg-tcof-light rounded-lg px-4 py-3 flex items-center">
               <div className="flex flex-col mr-3">
@@ -344,7 +344,7 @@ export default function Block1Step1() {
               </div>
             </div>
           </div>
-          
+
           <Card>
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold mb-4">Evaluate TCOF Success Factors</h2>
@@ -353,7 +353,7 @@ export default function Block1Step1() {
                 Your evaluations will help prioritize and customize tasks in your project plan.
                 Click on the emoji circles below to indicate importance levels.
               </p>
-              
+
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
                 <div className="flex">
                   <div className="flex-shrink-0">
@@ -367,7 +367,7 @@ export default function Block1Step1() {
                   </div>
                 </div>
               </div>
-              
+
               {factorsLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="w-8 h-8 border-4 border-tcof-teal border-t-transparent rounded-full animate-spin"></div>
@@ -384,7 +384,7 @@ export default function Block1Step1() {
                     </TableHeader>
                     <TableBody>
                       {successFactors.map((factor) => (
-                        <TableRow key={factor.id}>
+                        <TableRow key={factor.factorId}>
                           <TableCell className="py-4">
                             <div>
                               <h3 className="font-medium text-tcof-dark">{factor.title}</h3>
@@ -399,14 +399,14 @@ export default function Block1Step1() {
                             <div className="flex flex-col space-y-2">
                               <div className="flex space-x-2">
                                 {RESONANCE_OPTIONS.map((option) => {
-                                  const isSelected = localEvaluations[factor.id]?.toString() === option.value;
+                                  const isSelected = localEvaluations[factor.factorId]?.toString() === option.value;
                                   return (
                                     <TooltipProvider key={option.value}>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <button
                                             type="button"
-                                            onClick={() => handleEvaluationChange(factor.id, option.value)}
+                                            onClick={() => handleEvaluationChange(factor.factorId, option.value)}
                                             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
                                               isSelected 
                                                 ? 'bg-tcof-teal text-white ring-2 ring-tcof-dark shadow-lg transform scale-110' 
@@ -447,7 +447,7 @@ export default function Block1Step1() {
                   </Table>
                 </div>
               )}
-              
+
               <div className="flex justify-between mt-8">
                 <Button
                   variant="outline"
