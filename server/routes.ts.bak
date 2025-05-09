@@ -321,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Goal Map API endpoints
   app.get("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // Get user ID directly from the user object (local auth)
+      // Get user ID from Replit Auth claims (sub) or fallback to legacy id property
       const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const projectId = req.query.projectId as string;
       
@@ -526,7 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Saving goal map at', new Date().toISOString());
       
-      // Get user ID directly from the user object (local auth)
+      // Get user ID from Replit Auth claims (sub) or fallback to legacy id property
       const userId = (req.user as any).claims?.sub || (req.user as any).id;
       const { name, data, projectId } = req.body;
       

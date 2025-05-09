@@ -172,14 +172,7 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // Auth check endpoint
-  app.get("/api/auth/user", isAuthenticated, (req, res) => {
-    // Remove sensitive information
-    const userWithoutPassword = { ...req.user };
-    delete (userWithoutPassword as any).password;
-    
-    res.json(userWithoutPassword);
-  });
+  // Auth check endpoint is now implemented in routes.ts
 
   // Logout endpoint
   app.post("/api/logout", (req, res) => {
