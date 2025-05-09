@@ -553,14 +553,29 @@ export default function Block1Discover() {
       // Update local state immediately for optimistic UI update
       setPersonalHeuristics(updatedHeuristics);
       
-      // Use the context save method to ensure consistent saving
-      const result = await saveBlockFromContext('block1', {
+      // Log the new heuristic being added for debugging
+      console.log(`%c[HEURISTIC ADD] New heuristic being added:`, 'color: #059669; font-weight: bold;');
+      console.log(JSON.stringify(heuristicToSave, null, 2));
+      
+      // Log the complete updated heuristics array for debugging
+      console.log(`%c[HEURISTIC ADD] Complete updated personalHeuristics (${updatedHeuristics.length}):`, 'color: #059669; font-weight: bold;');
+      console.log(JSON.stringify(updatedHeuristics, null, 2));
+      
+      // Build the block data with consistent structure
+      const blockData = {
         personalHeuristics: updatedHeuristics,
         // Maintain any existing data to avoid overwriting
         successFactorRatings: ratings || {},
         successCriteria: successCriteria || "",
         lastUpdated: new Date().toISOString()
-      });
+      };
+      
+      // Log the complete block data being saved
+      console.log(`%c[HEURISTIC ADD] Complete block data being saved:`, 'color: #a855f7; font-weight: bold;');
+      console.log(JSON.stringify(blockData, null, 2));
+      
+      // Use the context save method to ensure consistent saving
+      const result = await saveBlockFromContext('block1', blockData);
       
       console.info(`[SAVE] Block1Discover.addHeuristicMutation - Save successful, result:`, result);
       return result;
@@ -690,15 +705,26 @@ export default function Block1Discover() {
       // Update local state immediately for optimistic UI
       setPersonalHeuristics(updatedHeuristics);
       
-      // Save using consistent context method
-      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Saving to block1 for project ${projectId}`);
-      const result = await saveBlockFromContext('block1', {
+      // Log the updated heuristics array after removal
+      console.log(`%c[HEURISTIC REMOVE] Updated personalHeuristics after removal (${updatedHeuristics.length}):`, 'color: #059669; font-weight: bold;');
+      console.log(JSON.stringify(updatedHeuristics, null, 2));
+      
+      // Build the block data with consistent structure
+      const blockData = {
         personalHeuristics: updatedHeuristics,
         // Maintain any existing data to avoid overwriting
         successFactorRatings: ratings || {},
         successCriteria: successCriteria || "",
         lastUpdated: new Date().toISOString()
-      });
+      };
+      
+      // Log the complete block data being saved
+      console.log(`%c[HEURISTIC REMOVE] Complete block data being saved:`, 'color: #a855f7; font-weight: bold;');
+      console.log(JSON.stringify(blockData, null, 2));
+      
+      // Save using consistent context method
+      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Saving to block1 for project ${projectId}`);
+      const result = await saveBlockFromContext('block1', blockData);
       
       console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Save successful, result:`, result);
       return result;
@@ -816,15 +842,25 @@ export default function Block1Discover() {
   
   // Handle saving the success criteria
   const handleSuccessCriteriaChange = (value: string) => {
+    console.log(`%c[SUCCESS CRITERIA] Updating success criteria value:`, 'color: #0ea5e9; font-weight: bold;');
+    console.log(value);
+    
     setSuccessCriteria(value);
     
-    // Save success criteria with personal heuristics to ensure they're preserved
-    saveBlockFromContext('block1', {
+    // Create block data with all required fields
+    const blockData = {
       successCriteria: value,
       personalHeuristics: personalHeuristics,
       successFactorRatings: ratings || {},
       lastUpdated: new Date().toISOString()
-    });
+    };
+    
+    // Log the block data that includes personal heuristics
+    console.log(`%c[SUCCESS CRITERIA] Saving block data with ${personalHeuristics.length} personal heuristics:`, 'color: #a855f7; font-weight: bold;');
+    console.log(JSON.stringify(blockData, null, 2));
+    
+    // Save success criteria with personal heuristics to ensure they're preserved
+    saveBlockFromContext('block1', blockData);
   };
   
   // Mark block as complete and go to next block
