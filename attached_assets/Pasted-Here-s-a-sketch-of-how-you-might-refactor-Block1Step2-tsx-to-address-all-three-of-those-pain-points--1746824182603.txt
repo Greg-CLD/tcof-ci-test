@@ -1,0 +1,92 @@
+Here’s a sketch of how you might refactor Block1Step2.tsx to address all three of those pain-points:
+
+Unify your personal-heuristic shape (e.g. always use id, name, text, notes, favourite)
+
+Only one save path—always funnel through saveBlock (so you never forget to create or merge a plan)
+
+Deep-merge arrays by pulling the existing array off of your loaded block, appending, then saving the whole thing back
+
+tsx
+Copy
+Edit
+// client/src/pages/make-a-plan/Block1Step2.tsx
+import { useContext, useState } from 'react'
+import { PlanContext } from '../../contexts/PlanContext'
+import { v4 as uuid } from 'uuid'
+
+export function Block1Step2() {
+  const { plan, saveBlock } = useContext(PlanContext)
+  const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || []
+
+  const [newName, setNewName] = useState('')
+  const [newText, setNewText] = useState('')
+  const [newNotes, setNewNotes] = useState('')
+
+  const handleAdd = async () => {
+    // 1. Build a fully-populated heuristic object
+    const h = {
+      id: uuid(),
+      name: newName.trim(),
+      text: newText.trim(),
+      notes: newNotes.trim(),
+      favourite: false
+    }
+
+    // 2. Merge into the existing array
+    const updated = [...existingHeuristics, h]
+
+    console.log('[SAVE] Block1Step2: saving heuristics array:', updated)
+
+    // 3. Single, consistent save call
+    await saveBlock({
+      blockId: 'block1',
+      blockData: {
+        personalHeuristics: updated,
+        lastUpdated: new Date().toISOString(),
+      },
+    })
+
+    // clear inputs
+    setNewName('')
+    setNewText('')
+    setNewNotes('')
+  }
+
+  return (
+    <div>
+      <h2>Personal Heuristics</h2>
+      <ul>
+        {existingHeuristics.map(h => (
+          <li key={h.id}>
+            <strong>{h.name}</strong>: {h.text} <em>({h.notes})</em>
+          </li>
+        ))}
+      </ul>
+
+      <div>
+        <input
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          placeholder="Name"
+        />
+        <input
+          value={newText}
+          onChange={e => setNewText(e.target.value)}
+          placeholder="Text"
+        />
+        <input
+          value={newNotes}
+          onChange={e => setNewNotes(e.target.value)}
+          placeholder="Notes"
+        />
+        <button onClick={handleAdd}>Add Heuristic + Save</button>
+      </div>
+    </div>
+  )
+}
+What we’ve changed
+• We stopped juggling multiple save paths; everything now goes through a single saveBlock call
+• We always construct a full {id,name,text,notes,favourite} object, so there’s no mismatch between “text” vs “name” fields
+• We pull the existing heuristics array off the loaded block, spread in our new one, and send that back to the server—so we never accidentally wipe out what was there before
+
+Once that’s in place, add a quick console check in your server route for /api/plans/project/:id/block/block1 to confirm the incoming personalHeuristics payload matches what you saw logged here in the client. If that lines up, your persistence should finally stick. Let me know what you see!
