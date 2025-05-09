@@ -175,7 +175,38 @@ export default function Block1Step1() {
   // Handle save button click
   const handleSave = async () => {
     console.log('🧪 handleSave - starting batch save operation');
+    console.log('🧪 handleSave - Current plan ID:', plan?.id || 'null');
     console.log('🧪 localEvaluations raw state:', localEvaluations);
+
+    // If no plan ID exists, this may be our first save
+    if (!plan?.id) {
+      console.info(`[SAVE] Block1Step1.handleSave - No plan ID detected, ensuring plan exists`);
+      
+      try {
+        // Create a minimal plan to ensure we have an ID
+        const response = await apiRequest(
+          "POST", 
+          "/api/plans", 
+          { 
+            projectId, 
+            blocks: {
+              block1: {
+                successFactorRatings: localEvaluations
+              }
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          console.error(`[SAVE] Block1Step1.handleSave - Failed to create plan: ${response.status} ${response.statusText}`);
+        } else {
+          const result = await response.json();
+          console.info(`[SAVE] Block1Step1.handleSave - Created new plan with ID: ${result.id}`);
+        }
+      } catch (error) {
+        console.error(`[SAVE] Block1Step1.handleSave - Error creating plan:`, error);
+      }
+    }
 
     // Format local evaluations for the API, filtering out any invalid values
     const evaluationInputs: EvaluationInput[] = Object.entries(localEvaluations)
@@ -228,7 +259,8 @@ export default function Block1Step1() {
         return;
       }
       
-      console.log('🧪 Calling updateEvaluations API with:', evaluationInputs);
+      console.log('🧪 Calling updateEvaluations API with:', evaluationInputs.length, 'evaluations');
+      console.log('🧪 First few evaluations:', evaluationInputs.slice(0, 3));
       await updateEvaluations(evaluationInputs);
       console.log('🧪 updateEvaluations API call successful');
       
