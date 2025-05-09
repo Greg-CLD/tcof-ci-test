@@ -46,7 +46,7 @@ import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-prot
 import { useAuth } from "@/hooks/useAuth";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProgressProvider } from "@/contexts/ProgressContext";
-import { ProtectedRoute } from "@/lib/protected-route";
+import { ProtectedRoute } from "@/components/protected-route";
 import { ProtectedRouteGuard } from "@/components/ProtectedRouteGuard";
 import { Button } from "@/components/ui/button";
 import GoalMappingTool from "@/components/GoalMappingTool";

@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { UserMenu } from "@/components/auth-buttons";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { PropsWithChildren } from "react";
 
 export function MainLayout({ children }: PropsWithChildren) {
