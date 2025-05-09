@@ -10,13 +10,14 @@ import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
 import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation, RelationType } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { db } from './db';
 import {
   userInsertSchema as insertUserSchema,
   projectInsertSchema,
   outcomeInsertSchema,
   outcomeProgressInsertSchema,
+  users,
   organisationMemberships
 } from "@shared/schema";
 import projectsRouter from './routes/projects.js';
@@ -3269,6 +3270,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error getting success factors:', error);
       res.status(500).json({ message: 'Failed to get success factors' });
+    }
+  });
+
+  // Public endpoint to create admin user (no authentication required)
+  app.post('/create-admin-user', async (req: Request, res: Response) => {
+    try {
+      // Use direct SQL execution
+      const result = await db.execute(sql`
+        INSERT INTO users (id, username, password, email, created_at, updated_at)
+        VALUES 
+        ('admin123', 'admin', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4.1a39d2f5bbcb25bde1e62a69b', 'admin@example.com', NOW(), NOW())
+        ON CONFLICT (username) DO UPDATE 
+        SET id = 'admin123', password = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4.1a39d2f5bbcb25bde1e62a69b'
+        RETURNING id, username, email;
+      `);
+      
+      res.status(200).json({ 
+        message: 'Admin user created successfully', 
+        user: result.rows[0] 
+      });
+    } catch (error) {
+      console.error('Error creating admin user:', error);
+      res.status(500).json({ 
+        error: 'Failed to create admin user', 
+        message: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 
