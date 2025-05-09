@@ -1178,7 +1178,7 @@ export default function Block1Discover() {
                             </TableHeader>
                             <TableBody>
                               {successFactors?.map((factor: any) => (
-                                <TableRow key={factor.id}>
+                                <TableRow key={factor.factorId}>
                                   <TableCell className="font-medium">
                                     {factor.title}
                                   </TableCell>
@@ -1193,11 +1193,11 @@ export default function Block1Discover() {
                                             <TooltipTrigger asChild>
                                               <button
                                                 className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
-                                                  ${ratings[factor.id] === option.value
+                                                  ${ratings[factor.factorId] === option.value
                                                     ? 'bg-tcof-teal text-white ring-2 ring-offset-2 ring-tcof-teal'
                                                     : 'bg-gray-100 hover:bg-gray-200'
                                                   }`}
-                                                onClick={() => handleEvaluationChange(factor.id, option.value)}
+                                                onClick={() => handleEvaluationChange(factor.factorId, option.value)}
                                               >
                                                 {option.symbol}
                                               </button>
@@ -1228,13 +1228,13 @@ export default function Block1Discover() {
                           {Object.keys(ratings).length > 0 ? (
                             <div className="space-y-3">
                               {successFactors?.map((factor: any) => {
-                                const ratingValue = ratings[factor.id];
+                                const ratingValue = ratings[factor.factorId];
                                 const option = getOptionByValue(ratingValue);
 
                                 // Display all factors, but highlight those with ratings
                                 return (
                                   <div 
-                                    key={factor.id} 
+                                    key={factor.factorId} 
                                     className={`p-2 rounded-md transition-all duration-300 ${
                                       ratingValue ? 'bg-white border border-tcof-teal/20' : 'opacity-50'
                                     }`}
