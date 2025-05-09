@@ -3278,29 +3278,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // This is a temporary solution until we can migrate the schema
   app.post('/create-admin-user', async (req: Request, res: Response) => {
     try {
-      // We now know the database expects an integer ID
-      const adminUser = {
-        id: 999999, // Using a numeric ID that should work with current schema
-        username: 'admin',
-        password: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4.1a39d2f5bbcb25bde1e62a69b',
-        email: 'admin@example.com'
-      };
+      // Import the admin creation utility from new file
+      const { createAdminUser } = await import('./create-admin-v2');
       
-      // Direct database query to create admin user with numeric ID
-      // Use the actual DB instead of storage interface to avoid type conversions
-      const result = await db.execute(sql`
-        INSERT INTO users (id, username, password, email, created_at)
-        VALUES (${adminUser.id}, ${adminUser.username}, ${adminUser.password}, ${adminUser.email}, NOW())
-        ON CONFLICT (id) 
-        DO UPDATE SET username = ${adminUser.username}, password = ${adminUser.password}
-        RETURNING id, username, email
-      `);
-      
-      console.log('Admin user created or updated successfully:', result);
+      // Create admin user with the utility function
+      const admin = await createAdminUser();
       
       res.status(200).json({ 
         message: 'Admin user created successfully', 
-        user: result.length > 0 ? result[0] : adminUser
+        user: {
+          id: admin.id,
+          username: admin.username,
+          email: admin.email
+        }
       });
     } catch (error) {
       console.error('Error creating admin user:', error);
