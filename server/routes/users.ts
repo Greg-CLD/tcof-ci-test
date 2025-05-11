@@ -2,12 +2,12 @@
  * User profile API routes
  */
 import express from 'express';
-import { db } from '../../db/index.js';
+import { db } from '../../db/index.ts';
 import { users } from '@shared/schema.ts';
 import { userUpdateSchema, passwordChangeSchema } from '@shared/schema.ts';
 import { eq } from 'drizzle-orm';
-import { comparePasswords, hashPassword } from '../auth.js';
-import { isAuthenticated } from '../middleware/auth.js';
+import { comparePasswords, hashPassword } from '../auth-utils.ts';
+import { isAuthenticated } from '../auth-utils.ts';
 
 const router = express.Router();
 
