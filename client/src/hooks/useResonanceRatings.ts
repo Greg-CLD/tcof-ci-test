@@ -44,15 +44,44 @@ export function useResonanceRatings(projectId?: string | number) {
       const toUpdate = ratingWithIds.filter(e => e.id);
       console.log('♻️ toUpdate (has id):', toUpdate);
       
-      const res = await apiRequest(
-        'PUT', 
-        `/api/projects/${projectId}/success-factor-ratings`,
-        ratingWithIds 
-      );
-      
-      const jsonResponse = await res.json();
-      console.log('🔄 useResonanceRatings - server response:', jsonResponse);
-      return jsonResponse;
+      // Build payload items with or without id
+      const payload = evaluationsData.map(input => {
+        const existing = evaluations?.find(e => e.factorId === input.factorId);
+        return existing?.id
+          ? { id: existing.id, factorId: input.factorId, resonance: input.resonance }
+          : { factorId: input.factorId, resonance: input.resonance };
+      });
+
+      // Split into create and update arrays
+      const toCreate = payload.filter(p => !p.id);
+      const toUpdate = payload.filter(p => p.id);
+
+      let results = [];
+
+      // Handle new ratings with POST
+      if (toCreate.length > 0) {
+        const createRes = await apiRequest(
+          'POST',
+          `/api/projects/${projectId}/success-factor-ratings`,
+          toCreate
+        );
+        const createJson = await createRes.json();
+        results = results.concat(createJson);
+      }
+
+      // Handle updates with PUT
+      if (toUpdate.length > 0) {
+        const updateRes = await apiRequest(
+          'PUT',
+          `/api/projects/${projectId}/success-factor-ratings`,
+          toUpdate
+        );
+        const updateJson = await updateRes.json();
+        results = results.concat(updateJson);
+      }
+
+      console.log('🔄 useResonanceRatings - server response:', results);
+      return results;
     },
     onSuccess: (data) => {
       // Invalidate and refetch

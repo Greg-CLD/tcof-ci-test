@@ -384,11 +384,9 @@ export default function Block1Discover() {
 
     // Persist to server
     try {
-      await updateEvaluations([{ 
-        id: existingRating?.id,
-        factorId, 
-        resonance: value 
-      }]);
+      const payloadItem = { factorId, resonance: value };
+      if (existingRating?.id) payloadItem.id = existingRating.id;
+      await updateEvaluations([payloadItem]);
       console.log('🔄 Single rating PATCH succeeded');
     } catch (err) {
       console.error('🔴 Single rating PATCH failed', err);
