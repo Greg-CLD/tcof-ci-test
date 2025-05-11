@@ -8,7 +8,6 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "migrate": "ts-node -O '{\"module\":\"commonjs\"}' -r tsconfig-paths/register db/migrations/*.ts",
-    "migrate": "ts-node -O '{\"module\":\"commonjs\"}' -r tsconfig-paths/register db/migrations/*.ts",
     "check": "tsc",
     "db:push": "drizzle-kit push --force --config=./drizzle.config.ts",
     "db:seed": "tsx db/seed.ts",
@@ -137,7 +136,9 @@
     "tailwindcss": "^3.4.14",
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
-    "vite": "^5.4.9"
+    "vite": "^5.4.9",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
