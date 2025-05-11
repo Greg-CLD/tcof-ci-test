@@ -4,6 +4,7 @@ import { successFactorRatings } from '@shared/schema';
 import { resonanceRatingsArraySchema } from '@shared/types/resonance-ratings';
 import { isAuthenticated } from '../../../middlewares/isAuthenticated';
 import { eq, and } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 const router = express.Router();
 
@@ -33,15 +34,11 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
     const { projectId } = req.params;
 
     // Check if table exists
-    const [tableExists] = await db.execute(sql`SELECT to_regclass('public.success_factor_ratings')`);
-    console.log('Table existence check:', tableExists);
+    const exists = await db.query(`SELECT to_regclass('public.success_factor_ratings') as tbl`);
+    console.log('success_factor_ratings table exists:', exists[0].tbl);
 
-    if (!tableExists) {
-      console.error('success_factor_ratings table does not exist');
-      return res.status(500).json({ 
-        error: true, 
-        message: 'Database table not properly initialized' 
-      });
+    if (!exists[0].tbl) {
+      return res.status(500).json({ error: true, message: 'Table success_factor_ratings not found' });
     }
 
     // Validate input array
