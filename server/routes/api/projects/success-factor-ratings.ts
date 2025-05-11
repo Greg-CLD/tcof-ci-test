@@ -35,7 +35,11 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
 
     // Check if table exists
     const exists = await db.query(`SELECT to_regclass('public.success_factor_ratings') as tbl`);
-    console.log('success_factor_ratings table exists:', exists[0].tbl);
+    console.log('Table existence check result:', {
+      tableName: 'success_factor_ratings',
+      exists: exists[0].tbl,
+      timestamp: new Date().toISOString()
+    });
 
     if (!exists[0].tbl) {
       return res.status(500).json({ error: true, message: 'Table success_factor_ratings not found' });
