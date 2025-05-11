@@ -39,11 +39,6 @@ export function useResonanceRatings(projectId?: string | number) {
         };
       });
       
-      const toCreate = ratingWithIds.filter(e => !e.id);
-      console.log('🆕 toCreate (no id):', toCreate);
-      const toUpdate = ratingWithIds.filter(e => e.id);
-      console.log('♻️ toUpdate (has id):', toUpdate);
-      
       // Build payload items with or without id
       const payload = evaluationsData.map(input => {
         const existing = evaluations?.find(e => e.factorId === input.factorId);
@@ -55,6 +50,9 @@ export function useResonanceRatings(projectId?: string | number) {
       // Split into create and update arrays
       const toCreate = payload.filter(p => !p.id);
       const toUpdate = payload.filter(p => p.id);
+      
+      console.log('🆕 toCreate (no id):', toCreate);
+      console.log('♻️ toUpdate (has id):', toUpdate);
 
       let results = [];
 
