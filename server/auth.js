@@ -7,6 +7,20 @@ import { promisify } from 'util';
 // Convert callback-based scrypt to Promise-based
 const scryptAsync = promisify(scrypt);
 
+// Export password utility functions
+export async function comparePasswords(suppliedPassword, storedPassword) {
+  const [hash, salt] = storedPassword.split('.');
+  const hashedBuf = Buffer.from(hash, 'hex');
+  const suppliedBuf = await scryptAsync(suppliedPassword, salt, 64);
+  return timingSafeEqual(hashedBuf, suppliedBuf);
+}
+
+export async function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex');
+  const buf = await scryptAsync(password, salt, 64);
+  return `${buf.toString('hex')}.${salt}`;
+}
+
 /**
  * Hash a password using scrypt with salt
  * @param {string} password - The plain text password to hash
