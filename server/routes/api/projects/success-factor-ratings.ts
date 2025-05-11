@@ -60,6 +60,7 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req: Re
     });
     
     console.log(`✅ [API:GET] Found ${ratings.length} ratings for project ${projectId}`);
+    res.setHeader('Content-Type', 'application/json');
     return res.status(200).json(ratings);
   } catch (error) {
     console.error('❌ [API:GET] Error fetching success factor ratings:', error);
@@ -181,6 +182,7 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req: Re
     }
     
     console.log(`✅ [API:PUT] Successfully updated ${results.length} ratings for project ${projectId}`);
+    res.setHeader('Content-Type', 'application/json');
     return res.status(200).json({
       message: 'Success factor ratings updated successfully',
       ratings: results
