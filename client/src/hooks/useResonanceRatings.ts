@@ -27,7 +27,7 @@ export function useResonanceRatings(projectId?: string | number) {
       if (!projectId) throw new Error('Project ID is required');
       
       console.log('🔄 useResonanceRatings - saving evaluations for projectId:', projectId);
-      console.log('🔄 useResonanceRatings - evaluationsData:', JSON.stringify(evaluationsData));
+      console.log('🔍 incoming payload:', evaluationsData);
 
       // First get existing ratings to include IDs
       const existingRatings = evaluations || [];
@@ -38,6 +38,11 @@ export function useResonanceRatings(projectId?: string | number) {
           id: existing?.id // Include ID if rating exists
         };
       });
+      
+      const toCreate = ratingWithIds.filter(e => !e.id);
+      console.log('🆕 toCreate (no id):', toCreate);
+      const toUpdate = ratingWithIds.filter(e => e.id);
+      console.log('♻️ toUpdate (has id):', toUpdate);
       
       const res = await apiRequest(
         'PUT', 
