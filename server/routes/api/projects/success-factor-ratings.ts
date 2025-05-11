@@ -32,6 +32,18 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
   try {
     const { projectId } = req.params;
 
+    // Check if table exists
+    const [tableExists] = await db.execute(sql`SELECT to_regclass('public.success_factor_ratings')`);
+    console.log('Table existence check:', tableExists);
+
+    if (!tableExists) {
+      console.error('success_factor_ratings table does not exist');
+      return res.status(500).json({ 
+        error: true, 
+        message: 'Database table not properly initialized' 
+      });
+    }
+
     // Validate input array
     const validatedRatings = resonanceRatingsArraySchema.parse(req.body);
 

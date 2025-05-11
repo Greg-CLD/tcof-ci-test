@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm';
 
 export async function up() {
   return sql`
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    
     CREATE TABLE IF NOT EXISTS success_factor_ratings (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
