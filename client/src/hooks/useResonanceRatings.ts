@@ -63,8 +63,14 @@ export function useResonanceRatings(projectId?: string | number) {
           `/api/projects/${projectId}/success-factor-ratings`,
           toCreate
         );
-        const createJson = await createRes.json();
-        results = results.concat(createJson);
+        if (createRes.headers.get("content-type")?.includes("application/json")) {
+          const createJson = await createRes.json();
+          results = results.concat(createJson);
+        } else {
+          const text = await createRes.text();
+          console.error("[useResonanceRatings] Non-JSON response:", text);
+          throw new Error(`Unexpected response from /success-factor-ratings (status ${createRes.status})`);
+        }
       }
 
       // Handle updates with PUT
@@ -74,8 +80,14 @@ export function useResonanceRatings(projectId?: string | number) {
           `/api/projects/${projectId}/success-factor-ratings`,
           toUpdate
         );
-        const updateJson = await updateRes.json();
-        results = results.concat(updateJson);
+        if (updateRes.headers.get("content-type")?.includes("application/json")) {
+          const updateJson = await updateRes.json();
+          results = results.concat(updateJson);
+        } else {
+          const text = await updateRes.text();
+          console.error("[useResonanceRatings] Non-JSON response:", text);
+          throw new Error(`Unexpected response from /success-factor-ratings (status ${updateRes.status})`);
+        }
       }
 
       console.log('🔄 useResonanceRatings - server response:', results);
