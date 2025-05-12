@@ -58,6 +58,7 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
       resonance: rating.resonance,
       notes: rating.notes || ''
     }));
+    console.log('ratingsToInsert:', ratingsToInsert);
 
     // Insert or update ratings using UPSERT
     const newRatings = await db
