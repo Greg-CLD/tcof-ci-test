@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlanRecord, loadPlan, savePlan, TaskItem, Stage } from '@/lib/plan-db';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { CircleX, Download, FileText, Loader2, PlusCircle } from 'lucide-react';
+import { CircleX, Download, FileText, Loader2, PlusCircle, PlusSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StageAccordion from '@/components/checklist/StageAccordion';
 import SummaryBar from '@/components/checklist/SummaryBar';
@@ -632,9 +632,49 @@ export default function Checklist({ projectId }: ChecklistProps) {
           
           <div className="flex gap-3 mt-4 md:mt-0">
             {!plan && (
-              <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 mr-2">
-                Read-Only
-              </Badge>
+              <>
+                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 mr-2">
+                  Read-Only
+                </Badge>
+                <Button 
+                  onClick={async () => {
+                    if (!getSelectedProject()?.id) return;
+                    
+                    try {
+                      setLoading(true);
+                      const planId = await ensurePlanForProject(getSelectedProject()?.id as string);
+                      setSelectedPlanId(planId);
+                      const loadedPlan = await loadPlan(planId);
+                      setPlan(loadedPlan || null);
+                      
+                      toast({
+                        title: "Plan Created",
+                        description: "You can now save changes to tasks",
+                        variant: "success"
+                      });
+                    } catch (err) {
+                      console.error("Error creating plan:", err);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating Plan...
+                    </>
+                  ) : (
+                    <>
+                      <PlusSquare className="h-4 w-4" />
+                      Create Plan
+                    </>
+                  )}
+                </Button>
+              </>
             )}
             <Button
               variant="outline"
