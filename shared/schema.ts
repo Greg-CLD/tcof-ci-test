@@ -92,7 +92,7 @@ export const organisationHeuristics = pgTable("organisation_heuristics", {
 // Project table - main entity for storing project metadata
 // Important: This schema reflects the actual database columns
 export const projects = pgTable("projects", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: integer("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   userId: integer("user_id").references(() => users.id),
@@ -115,8 +115,8 @@ export const projects = pgTable("projects", {
 
 // New table for success factor ratings
 export const successFactorRatings = pgTable("success_factor_ratings", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  id: integer("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   factorId: varchar("factor_id", { length: 255 }).notNull(),
   resonance: integer("resonance").notNull(), // Rating from 1-5
   notes: text("notes"),
