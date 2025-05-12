@@ -29,7 +29,7 @@ export const factorsDb = {
   getAll(): FactorTask[] {
     return factorsArray;
   },
-  setAll(factors: FactorTask[]): void {
+  setAll: function(factors: FactorTask[]): void {
     // Clear existing array
     factorsArray.length = 0;
     // Add normalized factors
@@ -49,7 +49,7 @@ export const factorsDb = {
     });
     this.length = factorsArray.length;
   },
-  add: (factor: FactorTask): void => {
+  add: function(factor: FactorTask): void {
     factorsArray.push({
       id: factor.id,
       title: factor.title,
@@ -68,7 +68,7 @@ export const factorsDb = {
     const factor = factorsArray.find(f => f.id === id);
     return factor ? factor : undefined;
   },
-  removeById: (id: string): boolean => {
+  removeById: function(id: string): boolean {
     const index = factorsArray.findIndex(f => f.id === id);
     if (index !== -1) {
       factorsArray.splice(index, 1);
@@ -96,7 +96,7 @@ export const factorsDb = {
     }
     return false;
   },
-  clear: (): void => {
+  clear: function(): void {
     factorsArray.length = 0;
     this.length = factorsArray.length;
   }

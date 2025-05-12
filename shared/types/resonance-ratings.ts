@@ -1,21 +1,5 @@
 
 import { z } from 'zod';
-
-// Schema for individual resonance rating
-export const resonanceRatingSchema = z.object({
-  factorId: z.string(),
-  resonance: z.number().min(0).max(5),
-  notes: z.string().optional()
-});
-
-// Schema for array of resonance ratings
-export const resonanceRatingsArraySchema = z.array(resonanceRatingSchema);
-
-// TypeScript types derived from schemas
-export type ResonanceRating = z.infer<typeof resonanceRatingSchema>;
-export type ResonanceRatings = z.infer<typeof resonanceRatingsArraySchema>;
-
-import { z } from 'zod';
 import { successFactorRatingInsertSchema, successFactorRatingSelectSchema } from '../schema';
 
 /**
