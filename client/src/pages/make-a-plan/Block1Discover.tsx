@@ -89,8 +89,8 @@ export default function Block1Discover() {
   // Local state for ratings - using number types for values
   const [ratings, setRatings] = useState<Record<string, number>>({});
 
-  // Debug flag for tracking ratings state
-  const [lastRatingsSaveTime, setLastRatingsSaveTime] = useState<string | null>(null);
+  // State for tracking the UI
+  // (Removed debug panel tracking)
 
   // Fetch project details if projectId is provided
   const { 
