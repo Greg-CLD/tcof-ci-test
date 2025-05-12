@@ -40,7 +40,43 @@ export async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
-export const storage = {
+// Define interface for all storage operations
+interface IStorage {
+  sessionStore: any;
+  getUser(id: string | number): Promise<any>;
+  getUserByUsername(username: string): Promise<any>;
+  getUserByEmail(email: string): Promise<any>;
+  createUser(userData: any): Promise<any>;
+  upsertUser(userData: any): Promise<any>;
+  comparePasswords: (supplied: string, stored: string) => Promise<boolean>;
+  getGoalMaps(userId: string): Promise<any[]>;
+  getGoalMap(id: number | string): Promise<any>;
+  saveGoalMap(userId: string, name: string, data: any): Promise<any>;
+  createGoalMap(userId: string, payload: any): Promise<any>;
+  updateGoalMap(id: number, data: any, name?: string): Promise<any>;
+  getCynefinSelections(userId: string): Promise<any[]>;
+  getCynefinSelection(id: number | string): Promise<any>;
+  saveCynefinSelection(userId: string, name: string, data: any): Promise<any>;
+  updateCynefinSelection(id: number | string, data: any, name?: string): Promise<any>;
+  getTCOFJourneys(userId: string): Promise<any[]>;
+  getTCOFJourney(id: number | string): Promise<any>;
+  saveTCOFJourney(userId: string, name: string, data: any): Promise<any>;
+  updateTCOFJourney(id: number | string, data: any, name?: string): Promise<any>;
+  getProjects(userId: string): Promise<any[]>;
+  getProject(id: string | number): Promise<any>;
+  createProject(userId: string, name: string, description: string | null, goalMapId: number | null, cynefinSelectionId: number | null, tcofJourneyId: number | null): Promise<any>;
+  updateProject(id: string, data: any): Promise<any>;
+  storeToolProgress(userId: string, projectId: string, toolName: string, progressData: any): Promise<boolean>;
+  getToolProgress(userId: string, projectId: string, toolName: string): Promise<any>;
+  markCynefinOrientationComplete(userId: string, projectId: string): Promise<boolean>;
+  getCynefinOrientationStatus(userId: string, projectId: string): Promise<any>;
+  markGoalMappingComplete(userId: string, projectId: string): Promise<boolean>;
+  getGoalMappingStatus(userId: string, projectId: string): Promise<any>;
+  markTCOFJourneyComplete(userId: string, projectId: string): Promise<boolean>;
+  getTCOFJourneyStatus(userId: string, projectId: string): Promise<any>;
+}
+
+export const storage: IStorage = {
   // Session store for authentication
   sessionStore: new PostgresSessionStore({ 
     pool, 
@@ -191,8 +227,10 @@ export const storage = {
     }
   },
 
-  // Password verification
-  comparePasswords,
+  // Password verification helper for authentication
+  async comparePasswords(supplied: string, stored: string) {
+    return comparePasswords(supplied, stored);
+  },
 
   // Goal Map methods
   async getGoalMaps(userId: string) {
@@ -729,5 +767,9 @@ export const storage = {
       completed: true,
       lastUpdated: new Date().toISOString()
     });
+  },
+  
+  async getTCOFJourneyStatus(userId: string, projectId: string) {
+    return this.getToolProgress(userId, projectId, "tcofJourney");
   }
 };
