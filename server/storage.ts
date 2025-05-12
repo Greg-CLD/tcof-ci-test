@@ -197,7 +197,7 @@ export const storage = {
   // Goal Map methods
   async getGoalMaps(userId: string) {
     return await db.query.goalMaps.findMany({
-      where: eq(goalMaps.userId, userId),
+      where: eq(goalMaps.userId, Number(userId)),
       orderBy: desc(goalMaps.lastUpdated)
     });
   },
@@ -220,7 +220,7 @@ export const storage = {
     
     const [goalMap] = await db.insert(goalMaps)
       .values({
-        userId,
+        userId: Number(userId),
         name,
         data,
         lastUpdated: new Date()
@@ -290,7 +290,7 @@ export const storage = {
       // Create the goal map in the database
       const [goalMap] = await db.insert(goalMaps)
         .values({
-          userId,
+          userId: Number(userId),
           name,
           data,
           lastUpdated: new Date()
@@ -395,7 +395,7 @@ export const storage = {
   // Cynefin Selection methods
   async getCynefinSelections(userId: string) {
     return await db.query.cynefinSelections.findMany({
-      where: eq(cynefinSelections.userId, userId),
+      where: eq(cynefinSelections.userId, Number(userId)),
       orderBy: desc(cynefinSelections.lastUpdated)
     });
   },
@@ -409,7 +409,7 @@ export const storage = {
   async saveCynefinSelection(userId: string, name: string, data: any) {
     const [selection] = await db.insert(cynefinSelections)
       .values({
-        userId,
+        userId: Number(userId),
         name,
         data,
         lastUpdated: new Date()
@@ -419,7 +419,7 @@ export const storage = {
     return selection;
   },
 
-  async updateCynefinSelection(id: number, data: any, name?: string) {
+  async updateCynefinSelection(id: number | string, data: any, name?: string) {
     const updateValues: any = {
       data,
       lastUpdated: new Date()
@@ -432,7 +432,7 @@ export const storage = {
     const [updatedSelection] = await db
       .update(cynefinSelections)
       .set(updateValues)
-      .where(eq(cynefinSelections.id, id))
+      .where(eq(cynefinSelections.id, Number(id)))
       .returning();
     
     return updatedSelection;
