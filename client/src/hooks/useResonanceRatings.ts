@@ -8,7 +8,7 @@ export function useResonanceRatings(projectId?: string | number) {
   const queryClient = useQueryClient();
   
   // Handle null or undefined projectId
-  const projectQueryKey = projectId ? ['/api/projects', projectId, 'success-factor-ratings'] : [];
+  const projectQueryKey = projectId ? [`/api/projects/${projectId}/success-factor-ratings`] : [];
   
   // Fetch evaluations
   const {
@@ -54,7 +54,7 @@ export function useResonanceRatings(projectId?: string | number) {
       console.log('🆕 toCreate (no id):', toCreate);
       console.log('♻️ toUpdate (has id):', toUpdate);
 
-      let results = [];
+      let results: ResonanceEvaluation[] = [];
 
       // Handle new ratings with POST
       if (toCreate.length > 0) {
@@ -64,7 +64,7 @@ export function useResonanceRatings(projectId?: string | number) {
           toCreate
         );
         if (createRes.headers.get("content-type")?.includes("application/json")) {
-          const createJson = await createRes.json();
+          const createJson = await createRes.json() as ResonanceEvaluation[];
           results = results.concat(createJson);
         } else {
           const text = await createRes.text();
@@ -81,7 +81,7 @@ export function useResonanceRatings(projectId?: string | number) {
           toUpdate
         );
         if (updateRes.headers.get("content-type")?.includes("application/json")) {
-          const updateJson = await updateRes.json();
+          const updateJson = await updateRes.json() as ResonanceEvaluation[];
           results = results.concat(updateJson);
         } else {
           const text = await updateRes.text();
@@ -96,7 +96,8 @@ export function useResonanceRatings(projectId?: string | number) {
     onSuccess: (data) => {
       // Invalidate and refetch
       console.log('🔄 useResonanceRatings - mutation success, invalidating query cache');
-      if (projectQueryKey) {
+      if (projectId) {
+        console.log('🔄 Invalidating query cache for projectQueryKey:', projectQueryKey);
         queryClient.invalidateQueries({ queryKey: projectQueryKey });
       }
       
