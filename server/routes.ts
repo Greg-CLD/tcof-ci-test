@@ -87,38 +87,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get user ID directly from req.user (local auth)
       const userId = req.user.id;
-      
+
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       // Return the user object directly, already populated by passport
       // Strip sensitive data like password
       const userWithoutPassword = { ...req.user };
       delete userWithoutPassword.password;
-      
+
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
-  
+
   // Check if an account exists by email (no auth required)
   app.get('/api/auth/checkAccount', async (req, res) => {
     try {
       const email = req.query.email as string;
-      
+
       if (!email) {
         return res.status(400).json({ 
           exists: false, 
           message: "Email parameter is required" 
         });
       }
-      
+
       // Check if account exists with this email
       const user = await storage.getUserByEmail(email);
-      
+
       return res.json({
         exists: !!user,
         message: user ? "Account found" : "No account found with this email",
@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error initializing factors database:', error);
   }
-  
+
   // Register organisation routes
   try {
     const organisationRoutes = await importOrganisationRoutes();
@@ -152,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering organisation routes:', error);
   }
-  
+
   // Register projects routes
   try {
     app.use('/api/projects', projectsRouter);
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering projects routes:', error);
   }
-  
+
   // Register task routes
   try {
     const tasksRoutes = await import('./routes/tasks.js');
@@ -169,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering task routes:', error);
   }
-  
+
   // Register policy routes
   try {
     const policiesRoutes = await import('./routes/policies.js');
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering policy routes:', error);
   }
-  
+
   // Register frameworks routes
   try {
     const frameworksRoutes = await import('./routes/frameworks-router.js');
@@ -187,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering frameworks routes:', error);
   }
-  
+
   // Register framework tasks routes
   try {
     const frameworkTasksRoutes = await import('./routes/framework-tasks-router.js');
@@ -196,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering framework tasks routes:', error);
   }
-  
+
   // Register success factor ratings routes
   try {
     const successFactorRatingsRouter = await import('./routes/api/projects/success-factor-ratings.js');
@@ -205,14 +205,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering success factor ratings routes:', error);
   }
-  
+
   // Register plans routes
   try {
     app.use('/', plansRouter);
-    
+
     // Register the improved plans API endpoints
     const plansApiRouter = await import('./routes/api/plans/index.js');
-    
+
     // Apply authentication middleware to all plans API routes
     app.use('/api', (req, res, next) => {
       // Check if request is authenticated
@@ -222,12 +222,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Otherwise return 401 Unauthorized
       res.status(401).json({ message: "Authentication required" });
     }, plansApiRouter.default);
-    
+
     console.log('Plans routes registered successfully');
   } catch (error) {
     console.error('Error registering plans routes:', error);
   }
-  
+
   // Register user routes
   try {
     app.use('/api/users', usersRouter);
@@ -240,13 +240,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
   });
-  
+
   // Public endpoint to get success factors
   app.get('/api/success-factors', (req, res) => {
     try {
       // Get success factors from the factorsDb
       const successFactors = factorsDb.getAll();
-      
+
       // Transform the data to match the structure needed by the client
       const formattedFactors = successFactors.map(factor => ({
         id: factor.id,
@@ -256,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : 'No description available'),
         category: factor.category || 'Uncategorized'
       }));
-      
+
       res.status(200).json(formattedFactors);
     } catch (error) {
       console.error('Error fetching success factors:', error);
@@ -290,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log the URL for debugging
       console.log("Stripe checkout URL:", session.url);
-      
+
       res.status(200).json({ id: session.id, url: session.url });
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
@@ -307,13 +307,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/webhook-event", async (req: Request, res: Response) => {
     try {
       const { type, data } = req.body;
-      
+
       if (type === "checkout.session.completed") {
         const session = data.object;
         console.log("Payment successful for session:", session.id);
         // Here you would typically update your database with user's payment info
       }
-      
+
       res.status(200).json({ received: true });
     } catch (error: any) {
       console.error("Webhook error:", error);
@@ -327,94 +327,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user ID directly from the user object (local auth)
       const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
-      
+
       console.log('Fetching goal map for projectId:', req.query.projectId);
-      
+
       if (projectId) {
         console.log(`Fetching goal maps for project ID: ${projectId} (type: ${typeof projectId})`);
-        
+
         // Try to get the project by UUID or numeric ID
         let project;
         let originalProjectId = projectId; // Store the original ID as sent by client
-        
+
         try {
           // First try direct lookup using the projectId parameter
           project = await projectsDb.getProject(projectId);
           console.log(`Found project directly: ${project?.id}`);
         } catch (error) {
           console.log(`Error finding project directly: ${error.message}`);
-          
+
           // If direct lookup fails and we have a numeric ID, search all projects
           if (!isNaN(Number(projectId))) {
             console.log(`Looking up numeric project ID: ${projectId}`);
             const allProjects = await projectsDb.getProjects();
-            
+
             // Find project matching numeric ID
             project = allProjects.find(p => 
               p.id.toString() === projectId.toString() || 
               (typeof p.id === 'number' && p.id === Number(projectId))
             );
-            
+
             if (project) {
               console.log(`Found project by numeric ID: ${project.id}`);
             }
           }
         }
-        
+
         // If no project found, return 404
         if (!project) {
           console.log(`No project found with ID: ${projectId}`);
           return res.status(404).json({ message: "Project not found" });
         }
-        
+
         // Ensure user owns this project
         if (project.userId !== userId) {
           console.log(`User ${userId} not authorized for project ${project.id}`);
           return res.status(403).json({ message: "Unauthorized access to project" });
         }
-        
+
         // Get all user's goal maps
         const goalMaps = await storage.getGoalMaps(userId);
-        
+
         // Filter maps for this project - checking multiple possible ID formats
         const projectGoalMaps = goalMaps.filter(map => {
           if (!map.data) return false;
-          
+
           // 1. Check for UUID match with project.id
           if (map.data.projectId && map.data.projectId.toString() === project.id.toString()) {
             console.log(`Found map with matching project UUID: ${map.data.projectId}`);
             return true;
           }
-          
+
           // 2. Check for positional ID match with original client-sent ID
           if (map.data.projectId && map.data.projectId.toString() === originalProjectId.toString()) {
             console.log(`Found map with matching positional ID: ${map.data.projectId}`);
             return true;
           }
-          
+
           // 3. Check for original ID in the data structure
           if (map.data.originalProjectId && map.data.originalProjectId.toString() === originalProjectId.toString()) {
             console.log(`Found map with matching originalProjectId: ${map.data.originalProjectId}`);
             return true;
           }
-          
+
           // 4. Check for relationship between map and project
           const relations = loadRelations().filter(rel => 
             rel.fromId === map.id.toString() && 
             (rel.toId === project.id.toString() || rel.toId === originalProjectId.toString()) && 
             rel.relType === 'GOAL_MAP_FOR_PROJECT'
           );
-          
+
           if (relations.length > 0) {
             console.log(`Found map with relation to project: ${map.id}`);
             return true;
           }
-          
+
           return false;
         });
-        
+
         console.log(`Found ${projectGoalMaps.length} goal maps for project ${project.id}`);
-        
+
         if (projectGoalMaps.length > 0) {
           // Sort by lastUpdated to get the most recent
           projectGoalMaps.sort((a, b) => {
@@ -422,10 +422,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
             return bTime - aTime;
           });
-          
+
           // Format response with normalized data structure
           const latestMap = projectGoalMaps[0];
-          
+
           // First, extract all relevant data from the stored map
           let responseData: any = {
             id: latestMap.id,
@@ -435,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastUpdated: latestMap.data?.lastUpdated || (latestMap.lastModified ? latestMap.lastModified.getTime() : Date.now()),
             projectId: project.id // Always use the actual project ID
           };
-          
+
           // Include goals if they exist in the data
           if (latestMap.data?.goals && latestMap.data.goals.length > 0) {
             console.log(`Including ${latestMap.data.goals.length} goals from stored data`);
@@ -453,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Ensure there's always a goals array
             responseData.goals = [];
           }
-          
+
           console.log('Fetched goal map data:', JSON.stringify({
             id: responseData.id,
             name: responseData.name,
@@ -462,15 +462,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastUpdated: responseData.lastUpdated,
             projectId: responseData.projectId
           }, null, 2));
-          
+
           return res.json(responseData);
         } else {
           // Return an empty goal map template instead of 404 to avoid client errors
           console.log(`No goal maps found for project ${project.id}, returning empty template`);
-          
+
           // Get any saved draft from client-side storage if it exists (check query param)
           const hasDraft = req.query.hasDraft === 'true';
-          
+
           const emptyTemplate = {
             id: null,
             name: "New Goal Map",
@@ -480,14 +480,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastUpdated: Date.now(),
             projectId: project.id // Always use the actual project ID
           };
-          
+
           console.log('Sending empty goal map template:', JSON.stringify(emptyTemplate, null, 2));
           return res.json(emptyTemplate);
         }
       } else {
         // Get all user's goal maps
         const goalMaps = await storage.getGoalMaps(userId);
-        
+
         // Format the response
         const formattedMaps = goalMaps.map(map => ({
           id: map.id,
@@ -495,7 +495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastUpdated: map.data?.lastUpdated || (map.lastModified ? map.lastModified.getTime() : Date.now()),
           projectId: map.data?.projectId || null
         }));
-        
+
         res.json(formattedMaps);
       }
     } catch (error: any) {
@@ -508,16 +508,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const goalMapId = parseInt(req.params.id);
       const goalMap = await storage.getGoalMap(goalMapId);
-      
+
       if (!goalMap) {
         return res.status(404).json({ message: "Goal map not found" });
       }
-      
+
       // Ensure user owns this goal map
       if (goalMap.userId !== (req.user as any).id) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       res.json(goalMap);
     } catch (error: any) {
       console.error("Error fetching goal map:", error);
@@ -528,11 +528,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/goal-maps", isAuthenticated, async (req: Request, res: Response) => {
     try {
       console.log('Saving goal map at', new Date().toISOString());
-      
+
       // Get user ID directly from the user object (local auth)
       const userId = (req.user as any).id;
       const { name, data, projectId } = req.body;
-      
+
       // Log the full request body for debugging
       console.log("POST /api/goal-maps - Request body:", JSON.stringify({
         userId,
@@ -540,45 +540,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId,
         data: typeof data === 'object' ? `[Object with keys: ${Object.keys(data).join(', ')}]` : data
       }, null, 2));
-      
+
       // Validate required fields
       if (!projectId) {
         console.error("Error: Missing required field 'projectId'");
         return res.status(400).json({ message: "Project ID is required" });
       }
-      
+
       if (!name) {
         console.error("Error: Missing required field 'name'");
         return res.status(400).json({ message: "Name is required" });
       }
-      
+
       if (!data) {
         console.error("Error: Missing required field 'data'");
         return res.status(400).json({ message: "Data is required" });
       }
-      
+
       console.log(`Creating goal map with projectId: ${projectId} (type: ${typeof projectId})`);
-      
+
       // Validate project exists and user has access
       let project;
-      
+
       // Directly use getProject instead of getProjects
       project = await projectsDb.getProject(projectId);
       console.log(`Project lookup result:`, project ? `Found project ${project.id}` : 'No project found');
-      
+
       if (!project) {
         console.error(`Project with ID ${projectId} not found`);
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if we need to convert goals to nodes/connections format for compatibility
-      let processedData = { ...data };
-      
+      const processedData: Record<string, any> = { ...data };
+
       // Store both the actual project ID (UUID) and the original client-sent ID
       // This is crucial for handling both formats in retrieval
       processedData.projectId = project.id;
       processedData.originalProjectId = projectId;
-      
+
       // Log the structure of the data
       console.log("Data structure before processing:", JSON.stringify({
         dataType: typeof data,
@@ -589,11 +589,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId: processedData.projectId,
         originalProjectId: processedData.originalProjectId
       }, null, 2));
-      
+
       // If we have goals but no nodes, convert goals to nodes
       if (data.goals && (!data.nodes || data.nodes.length === 0)) {
         console.log("Converting goals to nodes for server compatibility");
-        
+
         // Convert goals to nodes format
         processedData.nodes = data.goals.map(goal => ({
           id: goal.id,
@@ -602,18 +602,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: goal.level,
           timeframe: goal.timeframe || ""
         }));
-        
+
         // Store the original goals too for backward compatibility
         processedData.goals = data.goals;
-        
+
         console.log(`Converted ${processedData.nodes.length} goals to nodes`);
         console.log("First node example:", processedData.nodes.length > 0 ? JSON.stringify(processedData.nodes[0]) : "No nodes");
       }
-      
+
       // Save the goal map with the appropriate data
       console.log(`Saving goal map for user ${userId} with name "${name}"`);
       const goalMap = await storage.saveGoalMap(userId, name, processedData);
-      
+
       try {
         // Create relationship between goal map and project
         const relation = await createRelation(
@@ -623,21 +623,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           project.id.toString(),
           { createdAt: new Date().toISOString() }
         );
-        
+
         console.log(`Created relation between goal map ${goalMap.id} and project ${project.id}`);
       } catch (relationError) {
         console.error("Error creating relation:", relationError);
         // We'll continue even if the relation creation fails
       }
-      
+
       console.log(`Goal map created successfully with ID: ${goalMap.id}`);
-      
+
       // Include the projectId in the response
       const responseData = {
         ...goalMap,
         projectId: project.id
       };
-      
+
       console.log('Goal map created response:', JSON.stringify(responseData, null, 2));
       return res.status(201).json(responseData);
     } catch (error: any) {
@@ -652,10 +652,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/goal-maps/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       console.log('Updating goal map at', new Date().toISOString());
-      
+
       const goalMapId = parseInt(req.params.id);
       const { name, data, projectId } = req.body;
-      
+
       // Log the full update request body for debugging
       console.log("PUT /api/goal-maps/:id - Request body:", JSON.stringify({
         goalMapId,
@@ -663,53 +663,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId,
         data: typeof data === 'object' ? `[Object with keys: ${Object.keys(data).join(', ')}]` : data
       }, null, 2));
-      
+
       // Validate all required fields
       if (!data) {
         return res.status(400).json({ message: "Data is required" });
       }
-      
+
       if (!projectId) {
         return res.status(400).json({ message: "Project ID is required" });
       }
-      
+
       if (!name) {
         return res.status(400).json({ message: "Name is required" });
       }
-      
+
       // Log the update request
       console.log(`Updating goal map ${goalMapId} for project ${projectId}`);
-      
+
       // Get the goal map to verify ownership
       const existingMap = await storage.getGoalMap(goalMapId);
       if (!existingMap) {
         return res.status(404).json({ message: "Goal map not found" });
       }
-      
+
       // Ensure user owns this goal map
       if (existingMap.userId !== (req.user as any).id) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // Validate project exists
       let project;
-      
+
       // Direct lookup using getProject
       project = await projectsDb.getProject(projectId);
       console.log(`Project lookup result:`, project ? `Found project ${project.id}` : 'No project found');
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if we need to convert goals to nodes/connections format for compatibility
-      let processedData = { ...data };
-      
+      const processedData: Record<string, any> = { ...data };
+
       // Store both the actual project ID (UUID) and the original client-sent ID
       // This is crucial for handling both formats in retrieval
       processedData.projectId = project.id;
       processedData.originalProjectId = projectId;
-      
+
       // Log the structure of the data
       console.log("Data structure before processing:", JSON.stringify({
         dataType: typeof data,
@@ -720,11 +720,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId: processedData.projectId,
         originalProjectId: processedData.originalProjectId
       }, null, 2));
-      
+
       // If we have goals but no nodes, convert goals to nodes
       if (data.goals && (!data.nodes || data.nodes.length === 0)) {
         console.log("Converting goals to nodes for server compatibility");
-        
+
         // Convert goals to nodes format 
         processedData.nodes = data.goals.map(goal => ({
           id: goal.id,
@@ -733,42 +733,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: goal.level,
           timeframe: goal.timeframe || ""
         }));
-        
+
         // Store the original goals too for backward compatibility
         processedData.goals = data.goals;
-        
+
         console.log(`Converted ${processedData.nodes.length} goals to nodes`);
         console.log("First node example:", processedData.nodes.length > 0 ? JSON.stringify(processedData.nodes[0]) : "No nodes");
       }
-      
+
       // Update the goal map with processed data
       const updatedMap = await storage.updateGoalMap(goalMapId, processedData, name);
-      
+
       try {
         // Check if there's already a relation for this goal map
         const relations = loadRelations().filter(rel => 
           rel.fromId === goalMapId.toString() && 
           rel.relType === 'GOAL_MAP_FOR_PROJECT'
         );
-        
+
         // If relation exists with a different project, update it
         if (relations.length > 0) {
           // If the projectId changed, update the relation
           if (relations[0].toId !== projectId.toString()) {
             // Get all relations
             const allRelations = loadRelations();
-            
+
             // Update the existing relation
             const index = allRelations.findIndex(rel => 
               rel.fromId === goalMapId.toString() && 
               rel.relType === 'GOAL_MAP_FOR_PROJECT'
             );
-            
+
             if (index !== -1) {
               allRelations[index].toId = projectId.toString();
               allRelations[index].projectId = projectId.toString();
               allRelations[index].timestamp = new Date().toISOString();
-              
+
               // Save updated relations
               saveRelations(allRelations);
               console.log(`Updated relation for goal map ${goalMapId} to project ${projectId}`);
@@ -783,21 +783,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             projectId.toString(),
             { createdAt: new Date().toISOString() }
           );
-          
+
           console.log(`Created relation between goal map ${goalMapId} and project ${projectId}`);
         }
       } catch (relationError) {
         console.error("Error updating goal map relation:", relationError);
         // We'll continue even if the relation update fails
       }
-      
+
       // Return success with the updated map and project ID
       const responseData = {
         ...updatedMap,
         projectId: projectId,
         success: true
       };
-      
+
       console.log('Goal map updated response:', JSON.stringify(responseData, null, 2));
       return res.status(200).json(responseData);
     } catch (error: any) {
@@ -805,26 +805,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error updating goal map" });
     }
   });
-  
+
   // Mark goal mapping as complete for a project (explicit submit)
   // This endpoint ONLY writes {completed: true} to tool-progress without affecting goal-map storage or relations
   app.post("/api/project-progress/goal-mapping/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
       const userId = (req.user as any).id;
-      
+
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
       }
-      
+
       console.log(`Marking goal mapping as complete for project ${projectId} and user ${userId}`);
-      
+
       // Validate project exists and user has access to it
       const project = await projectsDb.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // SIMPLIFIED APPROACH: Only store completed: true in tool progress
       // Do NOT modify goal-map storage or create/update relations
       try {
@@ -837,7 +837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error storing tool progress:", err);
         return res.status(500).json({ message: "Error storing completion status" });
       }
-      
+
       // Return simple completed status back to client
       return res.status(200).json({
         completed: true,
@@ -850,34 +850,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error marking goal mapping as complete" });
     }
   });
-  
+
   // Get Goal Mapping completion status for a project
   // Only returns the stored tool progress (simple {completed: true/false} flag)
   app.get("/api/project-progress/goal-mapping/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
-      
+
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
       }
-      
+
       console.log(`Getting Goal Mapping status for project ${projectId} and user ${userId}`);
-      
+
       // Validate project exists and user has access to it
       const project = await projectsDb.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Get the stored tool progress using the dedicated helper method
       const progress = await storage.getGoalMappingStatus(userId, projectId);
-      
+
       if (progress) {
         console.log(`Found Goal Mapping status for project ${projectId}:`, progress);
         return res.status(200).json(progress);
       }
-      
+
       // No progress found, return default status
       return res.status(200).json({
         completed: false,
@@ -890,51 +890,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error getting Goal Mapping status" });
     }
   });
-  
+
   // Mark Cynefin Orientation as complete for a project (explicit submit)
   app.post("/api/project-progress/cynefin-orientation/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
       const userId = (req.user as any).id;
-      
+
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
       }
-      
+
       // Validate project exists and user has access to it
       const project = await projectsDb.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Find any Cynefin selections for this project to check if there's data
       const allSelections = await storage.getCynefinSelections(userId);
-      
+
       // Filter for this project - using both embedded projectId and relations
       const projectSelections = allSelections.filter(selection => {
         // Check embedded projectId in data
         if (selection.data && selection.data.projectId) {
           const selectionProjectId = selection.data.projectId.toString();
           const compareId = project.id.toString();
-          
+
           if (selectionProjectId === compareId) {
             return true;
           }
         }
-        
+
         // Check for relations
         const relations = loadRelations().filter(rel => 
           rel.fromId === selection.id.toString() && 
           (rel.toId === project.id.toString() || rel.toId === projectId) && 
           rel.relType === 'CYNEFIN_SELECTION_FOR_PROJECT'
         );
-        
+
         return relations.length > 0;
       });
-      
+
       // We'll consider the tool complete regardless of whether there are selections,
       // since this is a manual submission by the user
-      
+
       // Store completion status in a dedicated data structure for tool progress
       try {
         console.log("Storing Cynefin orientation completion in progress data");
@@ -947,7 +947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error storing tool progress:", err);
         // Continue even if there's an error storing the progress
       }
-      
+
       // Return success with a completion status
       return res.status(200).json({
         completed: true,
@@ -961,58 +961,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error marking Cynefin Orientation as complete" });
     }
   });
-  
+
   // Get Cynefin Orientation completion status for a project
   app.get("/api/project-progress/cynefin-orientation/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
-      
+
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
       }
-      
+
       console.log(`Getting Cynefin orientation status for project ${projectId} and user ${userId}`);
-      
+
       // Validate project exists and user has access to it
       const project = await projectsDb.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Get the stored tool progress
       const progress = await storage.getToolProgress(userId, projectId, "cynefinOrientation");
-      
+
       if (progress) {
         console.log(`Found Cynefin orientation progress for project ${projectId}:`, progress);
         return res.status(200).json(progress);
       }
-      
+
       // If no progress found, check if there are any selections that would indicate completion
       const allSelections = await storage.getCynefinSelections(userId);
-      
+
       // Filter for this project
       const projectSelections = allSelections.filter(selection => {
         // Check embedded projectId in data
         if (selection.data && selection.data.projectId) {
           const selectionProjectId = selection.data.projectId.toString();
           const compareId = project.id.toString();
-          
+
           if (selectionProjectId === compareId) {
             return true;
           }
         }
-        
+
         // Check for relations
         const relations = loadRelations().filter(rel => 
           rel.fromId === selection.id.toString() && 
           (rel.toId === project.id.toString() || rel.toId === projectId) && 
           rel.relType === 'CYNEFIN_SELECTION_FOR_PROJECT'
         );
-        
+
         return relations.length > 0;
       });
-      
+
       // We only consider it complete if it was explicitly submitted
       // Having selections alone doesn't make it complete
       return res.status(200).json({
@@ -1026,51 +1026,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error getting Cynefin Orientation status" });
     }
   });
-  
+
   // Mark TCOF Journey as complete for a project (explicit submit)
   app.post("/api/project-progress/tcof-journey/complete", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.body;
       const userId = (req.user as any).id;
-      
+
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
       }
-      
+
       // Validate project exists and user has access to it
       const project = await projectsDb.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Find any TCOF journeys for this project to check if there's data
       const allJourneys = await storage.getTCOFJourneys(userId);
-      
+
       // Filter journeys for this project - checking relations and embedded projectId
       const projectJourneys = allJourneys.filter(journey => {
         // Check project ID in the journey's embedded data
         if (journey.data && journey.data.projectId) {
           const journeyProjectId = journey.data.projectId.toString();
           const compareId = project.id.toString();
-          
+
           if (journeyProjectId === compareId) {
             return true;
           }
         }
-        
+
         // Check for relationship between journey and project
         const relations = loadRelations().filter(rel => 
           rel.fromId === journey.id.toString() && 
           (rel.toId === project.id.toString() || rel.toId === projectId) && 
           rel.relType === 'TCOF_JOURNEY_FOR_PROJECT'
         );
-        
+
         return relations.length > 0;
       });
-      
+
       // We'll consider the tool complete regardless of whether there are journeys,
       // since this is a manual submission by the user
-      
+
       // Store completion status in a dedicated data structure for tool progress
       try {
         console.log("Storing TCOF Journey completion in progress data");
@@ -1083,7 +1083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error storing tool progress:", err);
         // Continue even if there's an error storing the progress
       }
-      
+
       // Return success with a completion status
       return res.status(200).json({
         completed: true,
@@ -1097,58 +1097,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error marking TCOF Journey as complete" });
     }
   });
-  
+
   // Get TCOF Journey completion status for a project
   app.get("/api/project-progress/tcof-journey/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
-      
+
       if (!projectId || !userId) {
         return res.status(400).json({ message: "Missing project ID" });
       }
-      
+
       console.log(`Getting TCOF Journey status for project ${projectId} and user ${userId}`);
-      
+
       // Validate project exists and user has access to it
       const project = await projectsDb.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Get the stored tool progress
       const progress = await storage.getToolProgress(userId, projectId, "tcofJourney");
-      
+
       if (progress) {
         console.log(`Found TCOF Journey progress for project ${projectId}:`, progress);
         return res.status(200).json(progress);
       }
-      
+
       // If no progress found, check if there are any journeys that would indicate completion
       const allJourneys = await storage.getTCOFJourneys(userId);
-      
+
       // Filter for this project
       const projectJourneys = allJourneys.filter(journey => {
         // Check embedded projectId in data
         if (journey.data && journey.data.projectId) {
           const journeyProjectId = journey.data.projectId.toString();
           const compareId = project.id.toString();
-          
+
           if (journeyProjectId === compareId) {
             return true;
           }
         }
-        
+
         // Check for relations
         const relations = loadRelations().filter(rel => 
           rel.fromId === journey.id.toString() && 
           (rel.toId === project.id.toString() || rel.toId === projectId) && 
           rel.relType === 'TCOF_JOURNEY_FOR_PROJECT'
         );
-        
+
         return relations.length > 0;
       });
-      
+
       // We only consider it complete if it was explicitly submitted
       // Having journeys alone doesn't make it complete
       return res.status(200).json({
@@ -1168,82 +1168,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
-      
+
       if (projectId) {
         console.log(`Fetching cynefin selections for project ID: ${projectId} (type: ${typeof projectId})`);
-        
+
         // Try to get the project by UUID or numeric ID
         let project;
-        
+
         try {
           // First try direct lookup using the projectId parameter
           project = await projectsDb.getProject(projectId);
           console.log(`Found project directly: ${project?.id}`);
-        } catch (error) {
+        } catch (error: any) {
           console.log(`Error finding project directly: ${error.message}`);
-          
+
           // If direct lookup fails and we have a numeric ID, search all projects
           if (!isNaN(Number(projectId))) {
             console.log(`Looking up numeric project ID: ${projectId}`);
             const allProjects = await projectsDb.getProjects();
-            
+
             // Find project matching numeric ID
             project = allProjects.find(p => 
               p.id.toString() === projectId.toString() || 
               (typeof p.id === 'number' && p.id === Number(projectId))
             );
-            
+
             if (project) {
               console.log(`Found project by numeric ID: ${project.id}`);
             }
           }
         }
-        
+
         // If no project found, return 404
         if (!project) {
           console.log(`No project found with ID: ${projectId}`);
           return res.status(404).json({ message: "Project not found" });
         }
-        
+
         // Ensure user owns this project
         if (project.userId !== userId) {
           console.log(`User ${userId} not authorized for project ${project.id}`);
           return res.status(403).json({ message: "Unauthorized access to project" });
         }
-        
+
         // Get all user's cynefin selections
         const selections = await storage.getCynefinSelections(userId);
-        
+
         // Filter selections for this project - checking relations
         const projectSelections = selections.filter(selection => {
           // Check project ID in the selection's embedded data
           if (selection.data && selection.data.projectId) {
             const selectionProjectId = selection.data.projectId.toString();
             const compareId = project.id.toString();
-            
+
             if (selectionProjectId === compareId) {
               console.log(`Found selection with matching embedded projectId: ${selectionProjectId}`);
               return true;
             }
           }
-          
+
           // Check for relationship between selection and project
           const relations = loadRelations().filter(rel => 
             rel.fromId === selection.id.toString() && 
             (rel.toId === project.id.toString() || rel.toId === projectId) && 
             rel.relType === 'CYNEFIN_SELECTION_FOR_PROJECT'
           );
-          
+
           if (relations.length > 0) {
             console.log(`Found selection with relation to project: ${selection.id}`);
             return true;
           }
-          
+
           return false;
         });
-        
+
         console.log(`Found ${projectSelections.length} cynefin selections for project ${project.id}`);
-        
+
         if (projectSelections.length > 0) {
           // Sort by lastUpdated to get the most recent
           projectSelections.sort((a, b) => {
@@ -1251,7 +1251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
             return bTime - aTime;
           });
-          
+
           // Format response with normalized data structure
           const latestSelection = projectSelections[0];
           return res.json({
@@ -1267,7 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Get all user's cynefin selections
         const selections = await storage.getCynefinSelections(userId);
-        
+
         // Format the response
         const formattedSelections = selections.map(selection => ({
           id: selection.id,
@@ -1275,7 +1275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastUpdated: selection.data?.lastUpdated || (selection.lastModified ? selection.lastModified.getTime() : Date.now()),
           projectId: selection.data?.projectId || null
         }));
-        
+
         res.json(formattedSelections);
       }
     } catch (error: any) {
@@ -1288,17 +1288,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const selectionId = parseInt(req.params.id);
       const selection = await storage.getCynefinSelection(selectionId);
-      
+
       if (!selection) {
         return res.status(404).json({ message: "Cynefin selection not found" });
       }
-      
+
       // Ensure user owns this selection
       const userId = (req.user as any).id;
       if (selection.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       res.json(selection);
     } catch (error: any) {
       console.error("Error fetching cynefin selection:", error);
@@ -1310,11 +1310,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const { name, data } = req.body;
-      
+
       if (!name || !data) {
         return res.status(400).json({ message: "Name and data are required" });
       }
-      
+
       const selection = await storage.saveCynefinSelection(userId, name, data);
       res.status(201).json(selection);
     } catch (error: any) {
@@ -1327,23 +1327,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const selectionId = parseInt(req.params.id);
       const { name, data } = req.body;
-      
+
       if (!data) {
         return res.status(400).json({ message: "Data is required" });
       }
-      
+
       // Get the selection to verify ownership
       const existingSelection = await storage.getCynefinSelection(selectionId);
       if (!existingSelection) {
         return res.status(404).json({ message: "Cynefin selection not found" });
       }
-      
+
       // Ensure user owns this selection
       const userId = (req.user as any).id;
       if (existingSelection.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       const updatedSelection = await storage.updateCynefinSelection(selectionId, data, name);
       res.json(updatedSelection);
     } catch (error: any) {
@@ -1357,82 +1357,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const projectId = req.query.projectId as string;
-      
+
       if (projectId) {
         console.log(`Fetching TCOF journeys for project ID: ${projectId} (type: ${typeof projectId})`);
-        
+
         // Try to get the project by UUID or numeric ID
         let project;
-        
+
         try {
           // First try direct lookup using the projectId parameter
           project = await projectsDb.getProject(projectId);
           console.log(`Found project directly: ${project?.id}`);
         } catch (error: any) {
           console.log(`Error finding project directly: ${error.message}`);
-          
+
           // If direct lookup fails and we have a numeric ID, search all projects
           if (!isNaN(Number(projectId))) {
             console.log(`Looking up numeric project ID: ${projectId}`);
             const allProjects = await projectsDb.getProjects();
-            
+
             // Find project matching numeric ID
             project = allProjects.find(p => 
               p.id.toString() === projectId.toString() || 
               (typeof p.id === 'number' && p.id === Number(projectId))
             );
-            
+
             if (project) {
               console.log(`Found project by numeric ID: ${project.id}`);
             }
           }
         }
-        
+
         // If no project found, return 404
         if (!project) {
           console.log(`No project found with ID: ${projectId}`);
           return res.status(404).json({ message: "Project not found" });
         }
-        
+
         // Ensure user owns this project
         if (project.userId !== userId) {
           console.log(`User ${userId} not authorized for project ${project.id}`);
           return res.status(403).json({ message: "Unauthorized access to project" });
         }
-        
+
         // Get all user's TCOF journeys
         const journeys = await storage.getTCOFJourneys(userId);
-        
+
         // Filter journeys for this project - checking relations and embedded projectId
         const projectJourneys = journeys.filter(journey => {
           // Check project ID in the journey's embedded data
           if (journey.data && journey.data.projectId) {
             const journeyProjectId = journey.data.projectId.toString();
             const compareId = project.id.toString();
-            
+
             if (journeyProjectId === compareId) {
               console.log(`Found journey with matching embedded projectId: ${journeyProjectId}`);
               return true;
             }
           }
-          
+
           // Check for relationship between journey and project
           const relations = loadRelations().filter(rel => 
             rel.fromId === journey.id.toString() && 
             (rel.toId === project.id.toString() || rel.toId === projectId) && 
             rel.relType === 'TCOF_JOURNEY_FOR_PROJECT'
           );
-          
+
           if (relations.length > 0) {
             console.log(`Found journey with relation to project: ${journey.id}`);
             return true;
           }
-          
+
           return false;
         });
-        
+
         console.log(`Found ${projectJourneys.length} TCOF journeys for project ${project.id}`);
-        
+
         if (projectJourneys.length > 0) {
           // Sort by lastUpdated to get the most recent
           projectJourneys.sort((a, b) => {
@@ -1440,7 +1440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
             return bTime - aTime;
           });
-          
+
           // Format response with normalized data structure
           const latestJourney = projectJourneys[0];
           return res.json({
@@ -1456,7 +1456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Get all user's TCOF journeys
         const journeys = await storage.getTCOFJourneys(userId);
-        
+
         // Format the response
         const formattedJourneys = journeys.map(journey => ({
           id: journey.id,
@@ -1464,7 +1464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastUpdated: journey.data?.lastUpdated || (journey.lastModified ? journey.lastModified.getTime() : Date.now()),
           projectId: journey.data?.projectId || null
         }));
-        
+
         res.json(formattedJourneys);
       }
     } catch (error: any) {
@@ -1477,17 +1477,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const journeyId = parseInt(req.params.id);
       const journey = await storage.getTCOFJourney(journeyId);
-      
+
       if (!journey) {
         return res.status(404).json({ message: "TCOF journey not found" });
       }
-      
+
       // Ensure user owns this journey
       const userId = (req.user as any).id;
       if (journey.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       res.json(journey);
     } catch (error: any) {
       console.error("Error fetching TCOF journey:", error);
@@ -1499,11 +1499,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const { name, data } = req.body;
-      
+
       if (!name || !data) {
         return res.status(400).json({ message: "Name and data are required" });
       }
-      
+
       const journey = await storage.saveTCOFJourney(userId, name, data);
       res.status(201).json(journey);
     } catch (error: any) {
@@ -1516,23 +1516,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const journeyId = parseInt(req.params.id);
       const { name, data } = req.body;
-      
+
       if (!data) {
         return res.status(400).json({ message: "Data is required" });
       }
-      
+
       // Get the journey to verify ownership
       const existingJourney = await storage.getTCOFJourney(journeyId);
       if (!existingJourney) {
         return res.status(404).json({ message: "TCOF journey not found" });
       }
-      
+
       // Ensure user owns this journey
       const userId = (req.user as any).id;
       if (existingJourney.userId !== userId) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       const updatedJourney = await storage.updateTCOFJourney(journeyId, data, name);
       res.json(updatedJourney);
     } catch (error: any) {
@@ -1547,15 +1547,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any).id;
       const projectId = req.query.id as string;
       const organisationId = req.query.organisationId as string;
-      
+
       if (projectId) {
         // Return full project details for a specific project
         const project = await projectsDb.getProject(projectId);
-        
+
         if (!project) {
           return res.status(404).json({ message: "Project not found" });
         }
-        
+
         // Verify access to the project
         if (project.organisationId) {
           // For organization projects, check membership
@@ -1565,7 +1565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(organisationMemberships.organisationId, project.organisationId)
             )
           });
-          
+
           if (!membership) {
             return res.status(403).json({ 
               message: "You are not a member of this organization" 
@@ -1575,7 +1575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // For personal projects, check ownership
           return res.status(403).json({ message: "Unauthorized access" });
         }
-        
+
         console.log(`Fetched detailed project: ${projectId}`);
         return res.json(project);
       } else {
@@ -1588,13 +1588,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(organisationMemberships.organisationId, organisationId)
             )
           });
-          
+
           if (!membership) {
             return res.status(403).json({ 
               message: "You are not a member of this organization" 
             });
           }
-          
+
           // Return projects for this organization
           const projects = await projectsDb.listProjects(userId, organisationId);
           console.log(`Found ${projects.length} projects for user ${userId} in organization ${organisationId}`);
@@ -1611,19 +1611,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching projects" });
     }
   });
-  
+
   // Outcome API endpoints
   app.get("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const projectId = req.params.projectId;
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (existingProject.organisationId) {
         // For organization projects, check membership
@@ -1633,7 +1633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, existingProject.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -1643,10 +1643,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // Get custom outcomes for this project
       const customOutcomes = await outcomesDb.getCustomOutcomesByUserId(userId);
-      
+
       // Return the outcome IDs and custom outcomes
       res.json({
         selectedOutcomeIds: existingProject.selectedOutcomeIds || [],
@@ -1657,24 +1657,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching project outcomes" });
     }
   });
-  
+
   // Update selected outcomes for a project
   app.patch("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const projectId = req.params.projectId;
       const { selectedOutcomeIds } = req.body;
-      
+
       if (!Array.isArray(selectedOutcomeIds)) {
         return res.status(400).json({ message: "selectedOutcomeIds must be an array" });
       }
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (existingProject.organisationId) {
         // For organization projects, check membership
@@ -1684,7 +1684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, existingProject.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -1694,38 +1694,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // Update the project with the selected outcome IDs
       const updatedProject = await projectsDb.updateProject(projectId, { selectedOutcomeIds });
-      
+
       if (!updatedProject) {
         return res.status(500).json({ message: "Error updating project" });
       }
-      
+
       res.json({ selectedOutcomeIds: updatedProject.selectedOutcomeIds || [] });
     } catch (error: any) {
       console.error("Error updating project outcomes:", error);
-      res.status(500).json({ message: "Error updating project outcomes" });
+      res.status(50code>
     }
   });
-  
+
   // Create a custom outcome
   app.post("/api/projects/:projectId/outcomes", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const projectId = req.params.projectId;
       const { title, level = 'custom' } = req.body;
-      
+
       if (!title) {
         return res.status(400).json({ message: "Title is required" });
       }
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (existingProject.organisationId) {
         // For organization projects, check membership
@@ -1735,7 +1735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, existingProject.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -1745,33 +1745,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // Create the custom outcome
       const outcome = await outcomesDb.createCustomOutcome(title, userId, level === 'custom' ? undefined : level);
-      
+
       if (!outcome) {
         return res.status(500).json({ message: "Error creating outcome" });
       }
-      
+
       res.status(201).json(outcome);
     } catch (error: any) {
       console.error("Error creating custom outcome:", error);
       res.status(500).json({ message: "Error creating custom outcome" });
     }
   });
-  
+
   // Outcome Progress API endpoints
   app.get("/api/projects/:projectId/outcomes/progress", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const projectId = req.params.projectId;
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (existingProject.organisationId) {
         // For organization projects, check membership
@@ -1781,7 +1781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, existingProject.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -1791,34 +1791,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // Get all outcome progress entries for this project
       const progress = await outcomeProgressDb.getProgressByProjectId(projectId);
-      
+
       res.json(progress);
     } catch (error: any) {
       console.error("Error fetching outcome progress:", error);
       res.status(500).json({ message: "Error fetching outcome progress" });
     }
   });
-  
+
   // Create outcome progress entry
   app.post("/api/projects/:projectId/outcomes/:outcomeId/progress", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const { projectId, outcomeId } = req.params;
       const { value } = req.body;
-      
+
       if (typeof value !== 'number' || value < 0 || value > 100) {
         return res.status(400).json({ message: "Value must be a number between 0 and 100" });
       }
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (existingProject.organisationId) {
         // For organization projects, check membership
@@ -1828,7 +1828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, existingProject.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -1838,38 +1838,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // Create the outcome progress entry
       const progress = await outcomeProgressDb.updateOutcomeProgress(projectId, outcomeId, value);
-      
+
       if (!progress) {
         return res.status(500).json({ message: "Error creating outcome progress" });
       }
-      
+
       res.status(201).json(progress);
     } catch (error: any) {
       console.error("Error creating outcome progress:", error);
       res.status(500).json({ message: "Error creating outcome progress" });
     }
   });
-  
+
   // Update outcome progress (PATCH endpoint for updating a specific outcome's progress)
   app.patch("/api/projects/:projectId/outcomes/:outcomeId", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const { projectId, outcomeId } = req.params;
       const { value } = req.body;
-      
+
       if (typeof value !== 'number' || value < 0 || value > 100) {
         return res.status(400).json({ message: "Value must be a number between 0 and 100" });
       }
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (existingProject.organisationId) {
         // For organization projects, check membership
@@ -1879,7 +1879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, existingProject.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -1889,20 +1889,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // Verify that the outcome exists
       const outcome = await outcomesDb.getOutcomeById(outcomeId);
       if (!outcome) {
         return res.status(404).json({ message: "Outcome not found" });
       }
-      
+
       // Update the outcome progress
       const updatedProgress = await outcomeProgressDb.updateOutcomeProgress(projectId, outcomeId, value);
-      
+
       if (!updatedProgress) {
         return res.status(500).json({ message: "Error updating outcome progress" });
       }
-      
+
       res.json(updatedProgress);
     } catch (error: any) {
       console.error("Error updating outcome progress:", error);
@@ -1915,11 +1915,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any).id;
       const projectId = req.params.id;
       const project = await projectsDb.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (project.organisationId) {
         // For organization projects, check membership
@@ -1929,7 +1929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, project.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -1939,7 +1939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       res.json(project);
     } catch (error: any) {
       console.error("Error fetching project:", error);
@@ -1952,17 +1952,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const { projectId } = req.body;
-      
+
       if (!projectId) {
         return res.status(400).json({ message: "Project ID is required" });
       }
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (existingProject.organisationId) {
         // For organization projects, check membership
@@ -1972,7 +1972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, existingProject.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -1982,7 +1982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // Create relationship between user and project
       await createRelation(
         userId.toString(),
@@ -1991,14 +1991,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId,
         { origin: 'selectProject' }
       );
-      
+
       res.status(200).json({ message: "Project selection tracked successfully" });
     } catch (error: any) {
       console.error("Error tracking project selection:", error);
       res.status(500).json({ message: "Error tracking project selection" });
     }
   });
-  
+
   app.post("/api/projects", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
@@ -2012,11 +2012,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentStage,
         organisationId 
       } = req.body;
-      
+
       if (!name) {
         return res.status(400).json({ message: "Project name is required" });
       }
-      
+
       // If organisationId is provided, verify user's membership
       if (organisationId) {
         try {
@@ -2027,7 +2027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(organisationMemberships.organisationId, organisationId)
             )
           });
-          
+
           if (!membership) {
             return res.status(403).json({ 
               message: "You are not a member of this organization" 
@@ -2040,7 +2040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Create project with minimal data - only name is required
       // Other profile fields can be completed later
       const project = await projectsDb.createProject(
@@ -2056,7 +2056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           organisationId: organisationId || undefined
         }
       );
-      
+
       if (!project) {
         return res.status(500).json({ message: "Failed to create project" });
       }
@@ -2069,11 +2069,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         project.id,
         { origin: 'createProject' }
       );
-      
+
       // Automatically create a plan for this project on server-side
       // This is a lightweight plan shell - client-side can fully populate it
       const planId = uuidv4();
-      
+
       // Store the plan ID's association with the project
       await relationsDb.createRelation(
         planId, 
@@ -2085,7 +2085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stage: 'initial'
         }
       );
-      
+
       console.log(`Project saved → ${project.id} with plan ${planId}`);
       res.status(201).json({ 
         ...project, 
@@ -2112,13 +2112,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organisationId,
         isProfileComplete
       } = req.body;
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Verify access to the project
       if (existingProject.organisationId) {
         // For organization projects, check membership
@@ -2128,7 +2128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, existingProject.organisationId)
           )
         });
-        
+
         if (!membership) {
           return res.status(403).json({ 
             message: "You are not a member of this organization" 
@@ -2138,7 +2138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For personal projects, check ownership
         return res.status(403).json({ message: "Unauthorized access" });
       }
-      
+
       // If changing organization, verify membership in new organization
       if (organisationId && organisationId !== existingProject.organisationId) {
         const newOrgMembership = await db.query.organisationMemberships.findFirst({
@@ -2147,14 +2147,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(organisationMemberships.organisationId, organisationId)
           )
         });
-        
+
         if (!newOrgMembership) {
           return res.status(403).json({ 
             message: "You are not a member of the target organization" 
           });
         }
       }
-      
+
       const updateData: { 
         name?: string; 
         description?: string;
@@ -2166,7 +2166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organisationId?: string;
         isProfileComplete?: boolean;
       } = {};
-      
+
       if (name !== undefined) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (sector !== undefined) updateData.sector = sector;
@@ -2176,38 +2176,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (currentStage !== undefined) updateData.currentStage = currentStage;
       if (organisationId !== undefined) updateData.organisationId = organisationId;
       if (isProfileComplete !== undefined) updateData.isProfileComplete = isProfileComplete;
-      
+
       console.log(`Updating project ${projectId} with fields:`, JSON.stringify(updateData, null, 2));
-      
+
       const updatedProject = await projectsDb.updateProject(projectId, updateData);
       console.log("Updated project result:", JSON.stringify(updatedProject, null, 2));
-      
+
       if (!updatedProject) {
         return res.status(500).json({ message: "Failed to update project" });
       }
-      
+
       res.json(updatedProject);
     } catch (error: any) {
       console.error("Error updating project:", error);
       res.status(500).json({ message: "Error updating project" });
     }
   });
-  
+
   // DELETE project endpoint
   app.delete("/api/projects/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).id;
       const projectId = req.params.id;
-      
+
       // Get the project to verify existence
       const existingProject = await projectsDb.getProject(projectId);
       if (!existingProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user is an admin
       const isUserAdmin = !!(req.user as any).isAdmin;
-      
+
       // Verify access to the project unless the user is an admin
       if (!isUserAdmin) {
         if (existingProject.organisationId) {
@@ -2218,13 +2218,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(organisationMemberships.organisationId, existingProject.organisationId)
             )
           });
-          
+
           if (!membership) {
             return res.status(403).json({ 
               message: "You are not a member of this organization" 
             });
           }
-          
+
           // Additionally check if user is an admin or owner of the organization
           if (membership.role !== 'admin' && membership.role !== 'owner') {
             return res.status(403).json({
@@ -2236,23 +2236,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Unauthorized access" });
         }
       }
-      
+
       // For plan deletion, we'll just log a message since plans are stored client-side
       // The client will handle cleaning up plans from localStorage when needed
       console.log(`Plans for project ${projectId} should be cleaned up client-side`);
       // Note: storage in this context refers to server-side database storage, not plan storage
-      
+
       // Delete the project
       const deleted = await projectsDb.deleteProject(projectId);
-      
+
       if (!deleted) {
         return res.status(500).json({ message: "Failed to delete project" });
       }
-      
+
       // Delete all relations for this project
       await relationsDb.deleteProjectRelations(projectId);
       console.log(`Relations deleted for project ${projectId}`);
-      
+
       // Return 204 No Content for successful deletion
       res.status(204).send();
     } catch (error: any) {
@@ -2263,7 +2263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Set up utilities for success factors using file system
   // factorsDb is imported from './factorsDb'
-  
+
   // Initialize the database with default success factors
   async function initializeFactorsDatabase(): Promise<boolean> {
     try {
@@ -2283,13 +2283,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn('Error reading existing success factors:', error);
         }
       }
-      
+
       // No existing factors, load from default file
       const v2FactorsPath = path.join(process.cwd(), 'data', 'tcof_success_factors_v2.json');
       if (fs.existsSync(v2FactorsPath)) {
         const rawData = fs.readFileSync(v2FactorsPath, 'utf8');
         let v2Factors: any[] = JSON.parse(rawData);
-        
+
         // Transform the data to match our expected format if needed
         const transformedFactors: FactorTask[] = v2Factors.map(factor => ({
           id: factor.id,
@@ -2301,7 +2301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
           }
         }));
-        
+
         // Save to database
         const result = await saveFactors(transformedFactors);
         if (result) {
@@ -2309,14 +2309,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return true;
         }
       }
-      
+
       return false;
     } catch (error) {
       console.error('Error initializing factors database:', error);
       return false;
     }
   }
-  
+
   // Get factors from database or file system with guaranteed task structure
   async function getFactors(forceRefresh: boolean = false): Promise<FactorTask[]> {
     // If we're forcing a refresh, or the database is empty
@@ -2327,61 +2327,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (fs.existsSync(factorsPath)) {
           const data = fs.readFileSync(factorsPath, 'utf8');
           const parsed = JSON.parse(data) as FactorTask[];
-          
+
           // Update database (normalization happens in factorsDb.setAll)
           factorsDb.setAll(parsed);
-          
+
           console.log(`Loaded ${parsed.length} factors from disk${forceRefresh ? ' (forced refresh)' : ''}`);
           return factorsDb.getAll();
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error refreshing factors from disk:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load success factors from disk';
+        console.error(errorMessage);
       }
     }
-    
+
     // If no refresh needed or refresh failed, return current data
     // Note: factorsDb.getAll() already normalizes task structure
     return factorsDb.getAll();
   }
-  
+
   // Legacy function kept for backward compatibility
   async function _getFactorsLegacy(): Promise<FactorTask[]> {
     if (factorsDb.length > 0) {
       return factorsDb.getAll();
     }
-    
+
     try {
       // Try to load from successFactors.json first
       const factorsPath = path.join(process.cwd(), 'data', 'successFactors.json');
       if (fs.existsSync(factorsPath)) {
         const data = fs.readFileSync(factorsPath, 'utf8');
         const parsed = JSON.parse(data) as FactorTask[];
-        
+
         // Update database
         factorsDb.setAll(parsed);
-        
+
         return factorsDb.getAll();
       }
-      
+
       // Fall back to tcofTasks.json if needed
       const tasksPath = path.join(process.cwd(), 'data', 'tcofTasks.json');
       if (fs.existsSync(tasksPath)) {
         const data = fs.readFileSync(tasksPath, 'utf8');
         const parsed = JSON.parse(data) as FactorTask[];
-        
+
         // Update database
         factorsDb.setAll(parsed);
-        
+
         return factorsDb.getAll();
       }
-      
+
       // Fall back to tcof_success_factors_v2.json if needed
       const v2FactorsPath = path.join(process.cwd(), 'data', 'tcof_success_factors_v2.json');
       if (fs.existsSync(v2FactorsPath)) {
         // Direct load from v2 JSON to avoid circular references
         const rawData = fs.readFileSync(v2FactorsPath, 'utf8');
         const v2Factors = JSON.parse(rawData);
-        
+
         // Transform the data to match our expected format if needed
         const transformedFactors: FactorTask[] = v2Factors.map((factor: any) => ({
           id: factor.id,
@@ -2393,32 +2395,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
             Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
           }
         }));
-        
+
         // Save to file
         const dataDir = path.join(process.cwd(), 'data');
         if (!fs.existsSync(dataDir)) {
           fs.mkdirSync(dataDir, { recursive: true });
         }
-        
+
         fs.writeFileSync(
           path.join(dataDir, 'successFactors.json'), 
           JSON.stringify(transformedFactors, null, 2),
           'utf8'
         );
-        
+
         // Update database
         factorsDb.setAll(transformedFactors);
-        
+
         return factorsDb.getAll();
       }
-      
+
       return factorsDb.getAll();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading factors:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load factors';
+      console.error(errorMessage);
       return factorsDb.getAll();
     }
   }
-  
+
   // Save factors to database and file system for persistence
   async function saveFactors(factors: FactorTask[]): Promise<boolean> {
     try {
@@ -2426,7 +2430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
       }
-      
+
       // Normalize task structure for each factor before saving
       const normalizedFactors = factors.map(factor => ({
         id: factor.id,
@@ -2438,113 +2442,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
           Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
         }
       }));
-      
+
       // Save to file system
       fs.writeFileSync(
         path.join(dataDir, 'successFactors.json'), 
         JSON.stringify(normalizedFactors, null, 2),
         'utf8'
       );
-      
+
       // Update the database - factorsDb.setAll also normalizes the data
       factorsDb.setAll(normalizedFactors);
-      
+
       console.log(`Saved ${normalizedFactors.length} factors with normalized task structure`);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving factors:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save factors';
+      console.error(errorMessage);
       return false;
     }
   }
-  
+
   // Admin preset editor API endpoints
   app.get('/api/admin/tcof-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
       // First try to load the success factors from database
       const factors = await getFactors();
-      
+
       if (factors && factors.length > 0) {
         return res.json(factors);
       }
-      
+
       // If no factors in DB, try to load from files
       try {
         const successFactorsData = fs.readFileSync(path.join(process.cwd(), 'data', 'successFactors.json'), 'utf8');
         const parsedFactors = JSON.parse(successFactorsData);
-        
+
         // Store in database for future use
         await saveFactors(parsedFactors);
-        
+
         return res.json(parsedFactors);
-      } catch (sfError) {
+      } catch (sfError: unknown) {
         console.warn('successFactors.json not found, falling back to tcofTasks.json');
       }
-      
+
       // Fall back to the old format if needed
       const coreTasksData = fs.readFileSync(path.join(process.cwd(), 'data', 'tcofTasks.json'), 'utf8');
       const oldFormatData = JSON.parse(coreTasksData);
-      
+
       // Store in database for future use
       await saveFactors(oldFormatData);
-      
+
       res.json(oldFormatData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading tasks data:', error);
-      res.status(500).json({ message: 'Failed to load core tasks data' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load core tasks data';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   app.post('/api/admin/tcof-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
-      
+
       // Validate request data
       if (!Array.isArray(req.body)) {
         return res.status(400).json({ message: 'Invalid data format. Expected an array of success factors.' });
       }
-      
+
       // Save the success factors (this already normalizes task structure and writes to file)
       await saveFactors(req.body);
-      
+
       // Get the normalized data to return
       const normalizedFactors = await getFactors(true); // Force refresh from database
-      
+
       res.json({ 
         success: true, 
         message: 'Success factors saved successfully',
         count: normalizedFactors.length 
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving success factors:', error);
-      res.status(500).json({ message: 'Failed to save success factors data' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save success factors data';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
       const factors = await getFactors();
       res.json(factors || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting success factors:', error);
-      res.status(500).json({ message: 'Failed to get success factors' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   // Endpoint to run factor deduplication (admin only)
   app.post('/api/admin/deduplicate-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      
+
       console.log('Starting deduplication process via API endpoint...');
-      
+
       // Get all existing factors
       const rawFactors = await getFactors();
-      
+
       if (!rawFactors || rawFactors.length === 0) {
         return res.status(404).json({ message: 'No factors found to deduplicate' });
       }
-      
+
       console.log(`Found ${rawFactors.length} factors to deduplicate`);
-      
+
       // Official TCOF success factors - these are the ones we want to keep and merge duplicates into
       const officialFactorTitles = [
         "1.1 Ask Why",
@@ -2560,36 +2569,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "4.2 Measure What Matters, Be Ready to Step Away",
         "4.3 Be Ready to Adapt"
       ];
-      
+
       // Mapping of official factor titles to their actual database IDs
       const officialFactorIdMap: Record<string, string> = {};
-      
+
       // First pass - identify official factors by exact title match
       rawFactors.forEach(factor => {
         const normalizedTitle = factor.title.trim();
-        
+
         // If this is an official factor title, remember its ID
         if (officialFactorTitles.includes(normalizedTitle)) {
           officialFactorIdMap[normalizedTitle] = factor.id;
         }
       });
-      
+
       // Deduplicate by factor title
       const dedupMap: Record<string, FactorTask> = {};
-      
+
       type StageKey = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
       const stages: StageKey[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
-      
+
       // Process each raw factor
       rawFactors.forEach(item => {
         const normalizedTitle = item.title.trim();
-        
+
         // If this title already exists in our map, merge tasks
         if (dedupMap[normalizedTitle]) {
           // Merge tasks from all stages
           stages.forEach(stage => {
             const sourceTasks = item.tasks?.[stage] || [];
-            
+
             for (const task of sourceTasks) {
               // Only add unique tasks (avoid duplicates)
               if (!dedupMap[normalizedTitle].tasks[stage].includes(task)) {
@@ -2629,10 +2638,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       });
-      
+
       // Filter to keep only the official factors
       const dedupFactors = officialFactorTitles.map(title => dedupMap[title]);
-      
+
       // Verify we have exactly 12 factors
       if (dedupFactors.length !== 12) {
         return res.status(500).json({
@@ -2640,19 +2649,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           factors: dedupFactors.map(f => f.title)
         });
       }
-      
+
       // Assign consistent IDs
       dedupFactors.forEach((factor, index) => {
         if (!factor.id || factor.id.includes("duplicate")) {
           factor.id = `sf-${index + 1}`;
         }
       });
-      
+
       // Save to database
       await saveFactors(dedupFactors);
-      
+
       console.log(`Successfully deduplicated ${rawFactors.length} factors to 12 official TCOF success factors`);
-      
+
       res.json({ 
         success: true, 
         message: `Deduplicated ${rawFactors.length} factors to 12 official TCOF success factors`,
@@ -2660,149 +2669,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newCount: dedupFactors.length,
         factors: dedupFactors.map(f => `${f.id}: ${f.title}`)
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deduplicating factors:', error);
-      res.status(500).json({ message: 'Failed to deduplicate factors', error: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to deduplicate factors';
+      res.status(500).json({ message: 'Failed to deduplicate factors', error: errorMessage });
     }
   });
-  
+
   app.get('/api/admin/success-factors/:id', isAdmin, async (req: Request, res: Response) => {
     try {
       const factorId = req.params.id;
       const factors = await getFactors();
-      
+
       if (!factors || factors.length === 0) {
         return res.status(404).json({ message: 'No success factors found' });
       }
-      
+
       const factor = factors.find((f: FactorTask) => f.id === factorId);
-      
+
       if (!factor) {
         return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
       }
-      
+
       res.json(factor);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting success factor:', error);
-      res.status(500).json({ message: 'Failed to get success factor' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get success factor';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   app.post('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      
+
       const newFactor = req.body;
-      
+
       // Validate the new factor
       if (!newFactor.id || !newFactor.title || !newFactor.tasks) {
         return res.status(400).json({ message: 'Invalid factor data. Must include id, title, and tasks.' });
       }
-      
+
       // Ensure description is a string (default to empty string if missing)
       if (newFactor.description !== undefined && typeof newFactor.description !== 'string') {
         return res.status(400).json({ message: 'Description must be a string' });
       }
-      
+
       // Set default empty string for description if not provided
       if (newFactor.description === undefined) {
         newFactor.description = '';
       }
-      
+
       // Get existing factors
       const factors = await getFactors() || [];
-      
+
       // Check if factor with this ID already exists
       if (factors.some((f: FactorTask) => f.id === newFactor.id)) {
         return res.status(409).json({ message: `Factor with ID ${newFactor.id} already exists` });
       }
-      
+
       // Add the new factor
       factors.push(newFactor);
-      
+
       // Save updated factors
       await saveFactors(factors);
-      
+
       res.status(201).json(newFactor);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating success factor:', error);
-      res.status(500).json({ message: 'Failed to create success factor' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create success factor';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   app.put('/api/admin/success-factors/:id', isAdmin, async (req: Request, res: Response) => {
     try {
-      
+
       const factorId = req.params.id;
       const updatedFactor = req.body;
-      
+
       // Validate the updated factor
       if (!updatedFactor.id || !updatedFactor.title || !updatedFactor.tasks) {
         return res.status(400).json({ message: 'Invalid factor data. Must include id, title, and tasks.' });
       }
-      
+
       // Ensure description is a string (default to empty string if missing)
       if (updatedFactor.description !== undefined && typeof updatedFactor.description !== 'string') {
         return res.status(400).json({ message: 'Description must be a string' });
       }
-      
+
       // Set default empty string for description if not provided
       if (updatedFactor.description === undefined) {
         updatedFactor.description = '';
       }
-      
+
       // Get existing factors
       const factors = await getFactors() || [];
-      
+
       // Find the factor to update
       const factorIndex = factors.findIndex((f: FactorTask) => f.id === factorId);
-      
+
       if (factorIndex === -1) {
         return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
       }
-      
+
       // Ensure the ID in the body matches the URL parameter
       if (updatedFactor.id !== factorId) {
         return res.status(400).json({ message: 'Factor ID in body must match ID in URL' });
       }
-      
+
       // Update the factor
       factors[factorIndex] = updatedFactor;
-      
+
       // Save updated factors
       await saveFactors(factors);
-      
+
       res.json(updatedFactor);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating success factor:', error);
-      res.status(500).json({ message: 'Failed to update success factor' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update success factor';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   app.delete('/api/admin/success-factors/:id', isAdmin, async (req: Request, res: Response) => {
     try {
-      
+
       const factorId = req.params.id;
-      
+
       // Get existing factors
       const factors = await getFactors() || [];
-      
+
       // Find the factor to delete
       const factorIndex = factors.findIndex(f => f.id === factorId);
-      
+
       if (factorIndex === -1) {
         return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
       }
-      
+
       // Remove the factor
       factors.splice(factorIndex, 1);
-      
+
       // Save updated factors
       await saveFactors(factors);
-      
+
       res.json({ success: true, message: `Success factor with ID ${factorId} deleted` });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting success factor:', error);
-      res.status(500).json({ message: 'Failed to delete success factor' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete success factor';
+      res.status(500).json({ message: errorMessage });
     }
   });
 
@@ -2810,7 +2824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/graph', isAdmin, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.query;
-      
+
       // Load relations (either all or filtered by project)
       let relations;
       if (projectId && typeof projectId === 'string') {
@@ -2818,21 +2832,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         relations = loadRelations();
       }
-      
+
       // Skip invalid relations (missing projectId)
       relations = relations.filter(r => r.projectId);
-      
+
       if (relations.length > 5000) {
         console.warn(`Large graph with ${relations.length} links being sent. Consider filtering by projectId.`);
       }
-      
+
       // Create node set from unique fromId and toId values
       const nodeSet = new Set<string>();
       relations.forEach(rel => {
         nodeSet.add(rel.fromId);
         nodeSet.add(rel.toId);
       });
-      
+
       // Generate nodes array with type info
       const nodes = Array.from(nodeSet).map(id => {
         // Determine node type based on patterns or prefixes
@@ -2846,45 +2860,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           type = 'task';
         }
-        
+
         return {
           id,
           label: id,
           type
         };
       });
-      
+
       // Create links array from relations
       const links = relations.map(rel => ({
         source: rel.fromId,
         target: rel.toId,
         relType: rel.relType
       }));
-      
+
       // Set cache control header
       res.setHeader('Cache-Control', 'no-store');
-      
+
       // Return graph data
       res.json({
         nodes,
         links
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error generating graph data:', error);
-      res.status(500).json({ message: 'Failed to generate graph data' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate graph data';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   // Admin endpoint for focused node view
   app.get('/api/admin/graph/neighbours/:nodeId', isAdmin, async (req: Request, res: Response) => {
     try {
       const { nodeId } = req.params;
       const { projectId } = req.query;
-      
+
       if (!nodeId) {
         return res.status(400).json({ message: 'Node ID is required' });
       }
-      
+
       // Load relations (either all or filtered by project)
       let relations;
       if (projectId && typeof projectId === 'string') {
@@ -2892,26 +2907,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         relations = loadRelations();
       }
-      
+
       // Filter relations where nodeId is either fromId or toId
       const neighbourRelations = relations.filter(
         r => r.fromId === nodeId || r.toId === nodeId
       );
-      
+
       // Skip if no relations found
       if (neighbourRelations.length === 0) {
         return res.status(404).json({ message: `No relations found for node ${nodeId}` });
       }
-      
+
       // Create node set from the filtered relations
       const nodeSet = new Set<string>();
       nodeSet.add(nodeId); // Add the central node
-      
+
       neighbourRelations.forEach(rel => {
         nodeSet.add(rel.fromId);
         nodeSet.add(rel.toId);
       });
-      
+
       // Generate nodes array with type info
       const nodes = Array.from(nodeSet).map(id => {
         // Determine node type based on patterns or prefixes
@@ -2925,7 +2940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           type = 'task';
         }
-        
+
         return {
           id,
           label: id,
@@ -2933,25 +2948,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isCentral: id === nodeId
         };
       });
-      
+
       // Create links array from relations
       const links = neighbourRelations.map(rel => ({
         source: rel.fromId,
         target: rel.toId,
         relType: rel.relType
       }));
-      
+
       // Set cache control header
       res.setHeader('Cache-Control', 'no-store');
-      
+
       // Return focused graph data
       res.json({
         nodes,
         links
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error generating neighbour graph data:', error);
-      res.status(500).json({ message: 'Failed to generate neighbour graph data' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate neighbour graph data';
+      res.status(500).json({ message: errorMessage });
     }
   });
 
@@ -2959,7 +2975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/relations-export', isAdmin, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.query;
-      
+
       // Get all relations or filtered by project if projectId is provided
       let relations;
       if (projectId && typeof projectId === 'string') {
@@ -2969,23 +2985,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const allRelations = loadRelations();
         relations = allRelations;
       }
-      
+
       // If no relations found, return 404
       if (!relations || relations.length === 0) {
         return res.status(404).json({ 
           message: projectId ? `No relations found for project ${projectId}` : 'No relations found' 
         });
       }
-      
+
       // Set appropriate headers for download
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-store');
-      
+
       // Return the relations data
       res.status(200).json(relations);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error exporting relations:', error);
-      res.status(500).json({ message: 'Failed to export relations data' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to export relations data';
+      res.status(500).json({ message: errorMessage });
     }
   });
 
@@ -2994,7 +3011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Import the factor utilities dynamically
       const factorUtils = await import('../scripts/factorUtils.js');
-      
+
       // Generate a comprehensive integrity report
       const report: {
         factorCount: number;
@@ -3018,45 +3035,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         gapReport: []
       };
-      
+
       // Get factor metrics
       const factorsReport = factorUtils.generateFactorsReport();
       report.factorCount = factorsReport.factorCount;
       report.taskDistribution = factorsReport.tasksByStage;
       report.gapsByFactor = factorsReport.gapsByFactor;
-      
+
       // Check canonical integrity
       const canonicalCheck = factorUtils.checkCanonicalFactorsIntegrity();
       report.canonicalIntegrity = canonicalCheck;
-      
+
       // Get all task gaps
       report.gapReport = factorUtils.identifyTaskGaps();
-      
+
       // Run the full integrity check
       const integrityValid = factorUtils.verifyFactorsIntegrity();
       report.overallValid = integrityValid;
-      
+
       res.status(200).json(report);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error generating factors integrity report:', error);
-      res.status(500).json({ message: 'Failed to generate factors integrity report' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate factors integrity report';
+      res.status(500).json({ message: errorMessage });
     }
   });
 
   app.post('/api/admin/update-canonical-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      
+
       console.log('Starting canonical factor update via API endpoint...');
-      
+
       // Get all existing factors
       const rawFactors = await getFactors();
-      
+
       if (!rawFactors || rawFactors.length === 0) {
         return res.status(404).json({ message: 'No factors found to update' });
       }
-      
+
       console.log(`Found ${rawFactors.length} existing factors in database`);
-      
+
       // The 12 official TCOF success factors to use
       const officialFactorTitles = [
         "1.1 Ask Why",
@@ -3072,24 +3090,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "4.2 Measure What Matters, Be Ready to Step Away",
         "4.3 Be Ready to Adapt"
       ];
-      
+
       // Create the 12 canonical factors
       type StageKey = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
       const stages: StageKey[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
       const canonicalFactors: FactorTask[] = [];
-      
+
       for (let i = 0; i < officialFactorTitles.length; i++) {
         const title = officialFactorTitles[i];
         const factorId = `sf-${i + 1}`;
-        
+
         // Try to find an existing factor with exact title match
         let existingFactor = rawFactors.find(f => f.title.trim() === title);
-        
+
         // If no exact match, try to find any factor with similar title
         if (!existingFactor) {
           // Extract number prefix (e.g., "1.1" from "1.1 Ask Why")
           const prefix = title.split(' ')[0];
-          
+
           // Look for factors that might match by prefix or keyword
           existingFactor = rawFactors.find(f => 
             f.title.includes(prefix) || 
@@ -3097,7 +3115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             f.title.toLowerCase().includes(title.toLowerCase().split(' ').slice(1).join(' '))
           );
         }
-        
+
         // If we found a matching factor, merge its tasks
         if (existingFactor) {
           canonicalFactors.push({
@@ -3124,56 +3142,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Save the canonical factors to database
       await saveFactors(canonicalFactors);
-      
+
       console.log(`Successfully updated database with 12 canonical success factors`);
-      
+
       res.json({ 
         success: true, 
         message: `Successfully updated to the 12 canonical TCOF success factors`,
         factors: canonicalFactors.map(f => f.title)
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating canonical factors:', error);
-      res.status(500).json({ message: 'Failed to update canonical factors', error: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update canonical factors';
+      res.status(500).json({ message: 'Failed to update canonical factors', error: errorMessage });
     }
   });
-  
+
   app.get('/api/admin/preset-heuristics', isAdmin, async (req: Request, res: Response) => {
     try {
       const presetHeuristicsData = fs.readFileSync(path.join(process.cwd(), 'data', 'presetHeuristics.json'), 'utf8');
       res.json(JSON.parse(presetHeuristicsData));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading presetHeuristics.json:', error);
-      res.status(500).json({ message: 'Failed to load preset heuristics data' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load preset heuristics data';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   // Update success factor tasks from CSV
   app.post('/api/admin/update-factor-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
       // Import dynamically to avoid circular dependencies - using dynamic import for ES modules
       const updateFactorsModule = await import('../scripts/updateFactorTasks.js');
       const { updateFactorTasks } = updateFactorsModule;
-      
+
       const result = await updateFactorTasks();
-      
+
       if (!result.success) {
         return res.status(500).json({ error: result.message });
       }
-      
+
       // Refresh the in-memory database from disk
       await getFactors(true);
-      
+
       res.json({ 
         success: true, 
         message: result.message || 'Successfully updated success factor tasks'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating factor tasks:', error);
-      res.status(500).json({ error: 'Error updating factor tasks: ' + error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Error updating factor tasks: ';
+      res.status(500).json({ error: errorMessage + (error instanceof Error ? error.message : "") });
     }
   });
 
@@ -3183,44 +3204,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!Array.isArray(req.body)) {
         return res.status(400).json({ message: 'Invalid data format. Expected an array of heuristics.' });
       }
-      
+
       // Save the updated heuristics to the file
       fs.writeFileSync(
         path.join(process.cwd(), 'data', 'presetHeuristics.json'), 
         JSON.stringify(req.body, null, 2),
         'utf8'
       );
-      
+
       res.json({ success: true, message: 'Preset heuristics saved successfully' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving presetHeuristics.json:', error);
-      res.status(500).json({ message: 'Failed to save preset heuristics data' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save preset heuristics data';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   // Endpoint to export success factors data for external analysis
   app.get('/api/admin/factors-export', isAdmin, async (req: Request, res: Response) => {
     try {
       // Import the factor utilities dynamically
       const factorUtils = await import('../scripts/factorUtils.js');
-      
+
       // Get the format parameter (default to 'json')
       const format = req.query.format as string || 'json';
-      
+
       // Get all factors
       const factors = factorUtils.loadFactors();
-      
+
       if (!factors || factors.length === 0) {
         return res.status(404).json({ message: 'No success factors found to export' });
       }
-      
+
       // Set appropriate headers for download
       res.setHeader('Cache-Control', 'no-store');
-      
+
       if (format === 'csv') {
         // Transform into CSV format (simpler format for Excel/analysis tools)
         let csvData = 'Factor ID,Factor Title,Stage,Task\n';
-        
+
         factors.forEach(factor => {
           for (const stage in factor.tasks) {
             const tasks = factor.tasks[stage as keyof typeof factor.tasks];
@@ -3236,7 +3258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         });
-        
+
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="success-factors-export.csv"`);
         res.status(200).send(csvData);
@@ -3246,18 +3268,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.setHeader('Content-Disposition', `attachment; filename="success-factors-export.json"`);
         res.status(200).json(factors);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error exporting success factors:', error);
-      res.status(500).json({ message: 'Failed to export success factors data' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to export success factors data';
+      res.status(500).json({ message: errorMessage });
     }
   });
-  
+
   // Public API endpoint for success factors (accessible to all authenticated users)
   app.get('/api/factors', isAuthenticated, async (req: Request, res: Response) => {
     try {
       // Get factors from the database
       const factors = factorsDb.getAll();
-      
+
       if (!factors || factors.length === 0) {
         console.warn('No success factors found in database, attempting to load from file');
         // Try to load from file if database is empty
@@ -3267,11 +3290,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return res.status(404).json({ message: 'No success factors found' });
       }
-      
+
       res.json(factors);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting success factors:', error);
-      res.status(500).json({ message: 'Failed to get success factors' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
+      res.status(500).json({ message: errorMessage });
     }
   });
 
@@ -3281,10 +3305,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Import the admin creation utility from new file
       const { createAdminUser } = await import('./create-admin-v2');
-      
+
       // Create admin user with the utility function
       const admin = await createAdminUser();
-      
+
       res.status(200).json({ 
         message: 'Admin user created successfully', 
         user: {
@@ -3293,7 +3317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: admin.email
         }
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating admin user:', error);
       res.status(500).json({ 
         error: 'Failed to create admin user', 
@@ -3301,7 +3325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Show schema detail for debugging purposes (public endpoint, no auth required)
   app.get('/debug/schema', async (req: Request, res: Response) => {
     try {
@@ -3311,7 +3335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE table_name = 'users'
       `);
       res.status(200).json(result);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error getting schema:', error);
       res.status(500).json({ 
         error: 'Failed to get schema', 
