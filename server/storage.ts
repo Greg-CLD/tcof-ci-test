@@ -52,8 +52,8 @@ export const storage = {
     try {
       console.log(`getUser called with id: ${id} (type: ${typeof id})`);
       
-      // Convert number ID to string if needed, since users table now uses text IDs
-      const userId = id.toString();
+      // Convert ID to number for Drizzle
+      const userId = Number(id);
       
       // Use Drizzle to query the user
       const [user] = await db.select().from(users).where(eq(users.id, userId));
@@ -202,9 +202,9 @@ export const storage = {
     });
   },
 
-  async getGoalMap(id: number) {
+  async getGoalMap(id: number | string) {
     return await db.query.goalMaps.findFirst({
-      where: eq(goalMaps.id, id)
+      where: eq(goalMaps.id, Number(id))
     });
   },
 
@@ -400,9 +400,9 @@ export const storage = {
     });
   },
 
-  async getCynefinSelection(id: number) {
+  async getCynefinSelection(id: number | string) {
     return await db.query.cynefinSelections.findFirst({
-      where: eq(cynefinSelections.id, id)
+      where: eq(cynefinSelections.id, Number(id))
     });
   },
 
@@ -446,9 +446,9 @@ export const storage = {
     });
   },
 
-  async getTCOFJourney(id: number) {
+  async getTCOFJourney(id: number | string) {
     return await db.query.tcofJourneys.findFirst({
-      where: eq(tcofJourneys.id, id)
+      where: eq(tcofJourneys.id, Number(id))
     });
   },
 
@@ -492,9 +492,9 @@ export const storage = {
     });
   },
 
-  async getProject(id: string) {
+  async getProject(id: string | number) {
     return await db.query.projects.findFirst({
-      where: eq(projects.id, id),
+      where: eq(projects.id, Number(id)),
       with: {
         goalMap: true,
         cynefinSelection: true,
