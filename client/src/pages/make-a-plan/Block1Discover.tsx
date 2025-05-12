@@ -444,7 +444,7 @@ export default function Block1Discover() {
       // First save ratings to local plan for persistence
       console.log('🔄 Block1Discover.handleConfirmAndSave - Saving ratings to local plan:', ratings);
       const now = new Date().toISOString();
-      setLastRatingsSaveTime(now);
+      // Removed debug timestamp tracking
       await saveBlockFromContext('block1', {
         successFactorRatings: ratings,
         lastUpdated: now,
@@ -932,34 +932,7 @@ export default function Block1Discover() {
     }
   };
 
-  // Calculate completion percentage
-  const calculateCompletionPercentage = () => {
-    let completedItems = 0;
-    let totalItems = 0;
-
-    // Check success factor evaluations
-    if (successFactors?.length > 0) {
-      totalItems += successFactors.length;
-      const evaluationsCount = Object.keys(ratings || {}).length;
-      completedItems += evaluationsCount;
-    }
-
-    // Check personal heuristics
-    totalItems += 1; // At least one personal heuristic is recommended
-    if ((plan?.blocks?.block1?.personalHeuristics || []).length > 0) {
-      completedItems += 1;
-    }
-
-    // Check success criteria
-    totalItems += 1;
-    if (successCriteria?.trim()) {
-      completedItems += 1;
-    }
-
-    return Math.round((completedItems / totalItems) * 100);
-  };
-
-  const completionPercentage = calculateCompletionPercentage();
+  // (Removed completion percentage calculation)
 
   // Helper function to get emoji option details by value with additional safety checks
   const getOptionByValue = (value?: number | null) => {
@@ -1053,27 +1026,15 @@ export default function Block1Discover() {
                 <p className="text-gray-600 mt-1">Define project scope and success criteria</p>
               </div>
 
-              {/* Completion status */}
-              <div className="mt-4 sm:mt-0 bg-tcof-light rounded-lg px-4 py-2 flex items-center">
-                <div className="w-32 bg-gray-200 rounded-full h-4 mr-3">
-                  <div 
-                    className="bg-tcof-teal h-4 rounded-full"
-                    style={{ width: `${completionPercentage}%` }}
-                  ></div>
-                </div>
-                <span className="text-sm font-medium text-tcof-dark">
-                  {completionPercentage}% Complete
-                </span>
-              </div>
+              {/* Removed completion percentage bar */}
             </div>
 
             {/* Tabs navigation */}
             <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-4 w-full max-w-4xl mx-auto">
+              <TabsList className="grid grid-cols-3 w-full max-w-4xl mx-auto">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="successFactors">Success Factors</TabsTrigger>
                 <TabsTrigger value="personalHeuristics">Personal Heuristics</TabsTrigger>
-                <TabsTrigger value="summary">Summary & Next Steps</TabsTrigger>
               </TabsList>
 
               {/* Overview tab content */}
