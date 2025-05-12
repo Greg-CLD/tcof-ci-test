@@ -108,12 +108,12 @@ export const storage = {
       // Hash the password if provided
       const hashedPassword = userData.password ? await hashPassword(userData.password) : null;
       
-      // Generate user ID as string
-      const userId = userData.id?.toString() || Date.now().toString();
+      // Convert/generate user ID as number
+      const userId = userData.id ? Number(userData.id) : Date.now();
       
       console.log(`Using userId: ${userId} (type: ${typeof userId})`);
       
-      // Use Drizzle to insert user with text ID
+      // Use Drizzle to insert user with numeric ID
       const [user] = await db.insert(users).values({
         id: userId,
         username: userData.username,
@@ -138,8 +138,8 @@ export const storage = {
     try {
       console.log("storage.upsertUser called with:", JSON.stringify(userData, null, 2));
       
-      // Convert ID to string for database operations
-      const userId = userData.id.toString();
+      // Convert ID to number for database operations
+      const userId = Number(userData.id);
       
       console.log(`Using userId for upsert: ${userId} (type: ${typeof userId})`);
       
@@ -168,7 +168,7 @@ export const storage = {
       } else {
         console.log("Creating new user:", userId);
         
-        // Use Drizzle to insert user
+        // Use Drizzle to insert user with numeric ID
         const [newUser] = await db.insert(users)
           .values({
             id: userId,
