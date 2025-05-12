@@ -46,11 +46,11 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
 
     // Ensure req.body is treated as an array
     const inputData = Array.isArray(req.body) ? req.body : [req.body];
-    
+
     // Validate input array
     const validatedRatings = resonanceRatingsArraySchema.parse(inputData);
     console.log('validatedRatings:', validatedRatings);
-    
+
     // Map the validated ratings for insertion
     const ratingsToInsert = validatedRatings.map(rating => ({
       projectId,
@@ -58,7 +58,7 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
       resonance: rating.resonance,
       notes: rating.notes || ''
     }));
-    
+
     // Insert new ratings
     const newRatings = await db.insert(successFactorRatings)
       .values(ratingsToInsert.map(rating => ({
