@@ -12,7 +12,7 @@ export async function createSuccessFactorRatingsTable() {
       
       CREATE TABLE IF NOT EXISTS success_factor_ratings (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
         factor_id VARCHAR(255) NOT NULL,
         resonance INTEGER NOT NULL CHECK (resonance >= 1 AND resonance <= 5),
         notes TEXT,
