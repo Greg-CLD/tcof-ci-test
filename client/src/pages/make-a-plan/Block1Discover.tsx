@@ -959,65 +959,7 @@ export default function Block1Discover() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Make a Plan
           </Button>
 
-          {/* Debug panel - only visible during development to track persistence issues */}
-          {/* Expand this panel on DEV for better debugging - it provides critical information for troubleshooting */}
-          {import.meta.env.DEV && (
-            <div className="bg-gray-100 p-3 mb-4 text-xs rounded">
-              <div className="mb-2 border-b pb-1 text-sm font-semibold flex justify-between items-center">
-                <span>📊 PERSISTENCE DEBUG PANEL</span>
-                <span className={plan?.id ? "bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs" : 
-                                          "bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs"}>
-                  {plan?.id ? "✓ PLAN ID OK" : "⚠️ NO PLAN ID"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <div>Project ID: <span className="font-mono">{projectId}</span></div>
-                <div>Plan ID: <span className="font-mono">{plan?.id || 'null'}</span></div>
-                <div>Ratings count: <span className="font-mono">{Object.keys(ratings).length}</span></div>
-                <div>Last saved: <span className="font-mono">{plan?.blocks?.block1?.lastUpdated ? 
-                  new Date(plan.blocks.block1.lastUpdated).toLocaleTimeString() : 'Never'}</span></div>
-                <div>Heuristics count: <span className="font-mono">{plan?.blocks?.block1?.personalHeuristics?.length || 0}</span></div>
-                <div>Last updated: <span className="font-mono">{plan?.updatedAt ? new Date(plan.updatedAt).toLocaleTimeString() : 'never'}</span></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <details className="overflow-hidden">
-                  <summary className="cursor-pointer hover:bg-gray-200 p-1 rounded">
-                    Success Factor Ratings
-                  </summary>
-                  <pre className="text-xs max-h-32 overflow-auto bg-gray-50 p-1 rounded mt-1">
-                    {JSON.stringify(ratings, null, 2)}
-                  </pre>
-                </details>
-
-                <details className="overflow-hidden">
-                  <summary className="cursor-pointer hover:bg-gray-200 p-1 rounded">
-                    Personal Heuristics Data ({plan?.blocks?.block1?.personalHeuristics?.length || 0})
-                  </summary>
-                  <pre className="text-xs max-h-32 overflow-auto bg-gray-50 p-1 rounded mt-1">
-                    {JSON.stringify(plan?.blocks?.block1?.personalHeuristics || [], null, 2)}
-                  </pre>
-                </details>
-              </div>
-
-              <div className="mt-2 pt-1 border-t text-xs text-gray-500">
-                <div className="flex items-center">
-                  <span className={ratings && Object.keys(ratings).length > 0 ? "text-green-600" : "text-red-600"}>
-                    {ratings && Object.keys(ratings).length > 0 ? "✓" : "✗"} Step 1: Factor Ratings
-                  </span>
-                  <span className="mx-2">•</span>
-                  <span className={plan?.blocks?.block1?.personalHeuristics?.length ? "text-green-600" : "text-red-600"}>
-                    {plan?.blocks?.block1?.personalHeuristics?.length ? "✓" : "✗"} Step 2: Heuristics
-                  </span>
-                  <span className="mx-2">•</span>
-                  <span className={successCriteria ? "text-green-600" : "text-red-600"}>
-                    {successCriteria ? "✓" : "✗"} Step 3: Success Criteria
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Removed Debug Panel */}
 
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
