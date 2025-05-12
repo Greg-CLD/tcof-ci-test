@@ -278,7 +278,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json(formattedFactors);
     } catch (error) {
       console.error('Error fetching success factors:', error);
-      res.status(500).json({ message: 'Failed to fetch success factors' });
+    }
+  });
+
+  // Public endpoint to get canonical checklist data with tasks
+  app.get('/api/checklist/:projectId', (req, res) => {
+    try {
+      const { projectId } = req.params;
+      // Get success factors from the factorsDb
+      const successFactors = factorsDb.getAll();
+      
+      // Create a canonical checklist with all tasks organized by stage
+      const canonicalChecklist = {
+        id: `canonical-${projectId}`,
+        projectId,
+        name: "Canonical Checklist",
+        description: "Auto-generated checklist based on success factors",
+        created: new Date().toISOString(),
+        stages: {
+          Identification: {
+            heuristics: [],
+            factors: [],
+            practiceTasks: [],
+            successFactorRatings: {},
+            personalHeuristics: [],
+            mappings: [],
+            tasks: [],
+            policyTasks: [],
+            goodPractice: {
+              zone: null,
+              frameworks: [],
+              tasks: []
+            }
+          },
+          Definition: {
+            heuristics: [],
+            factors: [],
+            practiceTasks: [],
+            successFactorRatings: {},
+            personalHeuristics: [],
+            mappings: [],
+            tasks: [],
+            policyTasks: [],
+            goodPractice: {
+              zone: null,
+              frameworks: [],
+              tasks: []
+            }
+          },
+          Delivery: {
+            heuristics: [],
+            factors: [],
+            practiceTasks: [],
+            successFactorRatings: {},
+            personalHeuristics: [],
+            mappings: [],
+            tasks: [],
+            policyTasks: [],
+            goodPractice: {
+              zone: null,
+              frameworks: [],
+              tasks: []
+            }
+          },
+          Closure: {
+            heuristics: [],
+            factors: [],
+            practiceTasks: [],
+            successFactorRatings: {},
+            personalHeuristics: [],
+            mappings: [],
+            tasks: [],
+            policyTasks: [],
+            goodPractice: {
+              zone: null,
+              frameworks: [],
+              tasks: []
+            }
+          }
+        }
+      };
+      
+      // Add tasks from success factors to each stage
+      successFactors.forEach(factor => {
+        if (factor.tasks) {
+          Object.entries(factor.tasks).forEach(([stage, tasks]) => {
+            if (canonicalChecklist.stages[stage as Stage] && Array.isArray(tasks)) {
+              tasks.forEach(task => {
+                canonicalChecklist.stages[stage as Stage].tasks.push({
+                  id: `${factor.id}-${uuidv4().substring(0, 8)}`,
+                  text: task,
+                  stage: stage,
+                  origin: 'factor',
+                  sourceId: factor.id,
+                  completed: false
+                });
+              });
+            }
+          });
+        }
+      });
+
+      res.status(200).json(canonicalChecklist);
+    } catch (error) {
+      console.error('Error generating canonical checklist:', error);
+      res.status(500).json({ message: 'Failed to generate canonical checklist' });
     }
   });
 

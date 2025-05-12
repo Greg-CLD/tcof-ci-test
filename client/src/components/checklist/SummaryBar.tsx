@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
 interface SummaryBarProps {
-  plan: PlanRecord;
+  plan: PlanRecord | null;
 }
 
 interface StageMetrics {
@@ -16,8 +16,23 @@ interface StageMetrics {
 type StageMetricsMap = Record<Stage, StageMetrics>;
 
 export default function SummaryBar({ plan }: SummaryBarProps) {
+  // Create default empty metrics
+  const defaultMetrics = (): StageMetricsMap => {
+    return {
+      Identification: { total: 0, completed: 0, percentage: 0 },
+      Definition: { total: 0, completed: 0, percentage: 0 },
+      Delivery: { total: 0, completed: 0, percentage: 0 },
+      Closure: { total: 0, completed: 0, percentage: 0 }
+    };
+  };
+
   // Calculate metrics for each stage
   const calculateStageMetrics = (): StageMetricsMap => {
+    // If no plan exists, return default empty metrics
+    if (!plan) {
+      return defaultMetrics();
+    }
+
     const metrics: Partial<StageMetricsMap> = {};
     
     Object.entries(plan.stages).forEach(([stageName, stageData]) => {
