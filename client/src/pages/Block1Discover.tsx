@@ -26,10 +26,10 @@ export default function Block1Discover() {
   const [_, setLocation] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { toast } = useToast();
-  
+
   // Use our new reliable save hook
   const { saveBlock, isSaving } = useBlockSave("block1", projectId);
-  
+
   // State for the plan data
   const [planId, setPlanId] = useState<string | null>(null);
   const [plan, setPlan] = useState<PlanRecord | null>(null);
@@ -37,63 +37,63 @@ export default function Block1Discover() {
   const [personalHeuristics, setPersonalHeuristics] = useState<PersonalHeuristic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
-  
+
   // Track total favourites across both lists
   const totalSuccessFactorFavourites = Object.values(successFactorRatings).filter(r => r.favourite).length;
   const totalPersonalHeuristicFavourites = personalHeuristics.filter(h => h.favourite).length;
   const totalFavourites = totalSuccessFactorFavourites + totalPersonalHeuristicFavourites;
-  
+
   // Navigation validation
   const hasRatings = Object.keys(successFactorRatings).length > 0;
   const hasHeuristics = personalHeuristics.length > 0;
   const canProceed = hasRatings && hasHeuristics;
-  
+
   // Define steps for the progress bar
   const steps: Step[] = [
     { id: 'block-1', label: 'Block 1: Discover', completed: false },
     { id: 'block-2', label: 'Block 2: Design', completed: false },
     { id: 'block-3', label: 'Block 3: Deliver', completed: false },
   ];
-  
+
   // Use React Query for data fetching with localStorage fallback
   // Using the same consistent "project-block" query key pattern used in useBlockSave.ts
   const { data: blockData, isLoading: isBlockLoading, error: blockError } = useQuery({
     queryKey: projectId ? ["project-block", projectId, "block1"] : [],
     queryFn: async () => {
       if (!projectId) throw new Error("No project ID available");
-      
+
       try {
         console.info('🔄 [LOAD] Fetching block1 data for project:', projectId);
         console.info('🔑 [LOAD] Using query key: ["project-block", "' + projectId + '", "block1"]');
-        
+
         // Match the API path from the server route structure
         const response = await fetch(`/api/plans/project/${projectId}/block/block1`);
-        
+
         if (!response.ok) {
           console.error(`⚠️ [LOAD] API returned status ${response.status} when loading block data`);
           throw new Error(`Failed to fetch block1 data: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.info('✅ [LOAD] Block1 data loaded from API:', data);
         console.info(`[LOAD] GET /api/plans/project/${projectId}/block/block1 full response:`, JSON.stringify(data));
         console.info(`[LOAD] Response.id: ${data.id || 'missing'}`);
         console.info(`[LOAD] personalHeuristics: ${data.personalHeuristics ? `Found ${data.personalHeuristics.length} heuristics` : 'MISSING'}`);
-        
+
         if (data.personalHeuristics && data.personalHeuristics.length > 0) {
           console.info(`[LOAD] First heuristic:`, JSON.stringify(data.personalHeuristics[0]));
         }
-        
+
         console.info(`[LOAD] successFactorRatings: ${data.successFactorRatings ? 
           `Found (type: ${typeof data.successFactorRatings}, entries: ${Object.entries(data.successFactorRatings || {}).length})` : 'MISSING'}`);
-        
+
         if (data.successFactorRatings) {
           const entries = Object.entries(data.successFactorRatings);
           if (entries.length > 0) {
             console.info(`[LOAD] First rating:`, JSON.stringify(entries[0]));
           }
         }
-        
+
         // Save to localStorage as a backup
         if (data) {
           saveLocalStorageBlock("block1", projectId, data);
@@ -104,19 +104,19 @@ export default function Block1Discover() {
               `Contains ${localBackup.personalHeuristics.length} heuristics` : 
               'No heuristics in backup');
         }
-        
+
         return data;
       } catch (error) {
         console.warn('⚠️ [LOAD] Could not load block1 data from API:', error);
         // Try to get from localStorage as fallback
         const localData = getLocalStorageBlock("block1", projectId);
-        
+
         console.info('🔍 [LOAD] Checking localStorage fallback:', 
           localData ? 'Data found' : 'No data',
           localData?.personalHeuristics ? 
             `(${localData.personalHeuristics.length} heuristics)` : 
             '(No heuristics)');
-        
+
         if (localData) {
           console.info('✅ [LOAD] Block1 data loaded from localStorage fallback');
           if (localData.personalHeuristics) {
@@ -125,7 +125,7 @@ export default function Block1Discover() {
           }
           return localData;
         }
-        
+
         // If we don't have local data either, throw the original error
         throw error;
       }
@@ -139,19 +139,19 @@ export default function Block1Discover() {
     // Always refetch on window focus
     refetchOnWindowFocus: true
   });
-  
+
   // Use the block data to set our local state
   useEffect(() => {
     if (blockData) {
       console.info('🔄 [LOAD-EFFECT] Updating state from loaded block data');
-      
+
       // Extract success factor ratings
       if (blockData.successFactorRatings) {
         console.info('🔄 [LOAD-EFFECT] Setting success factor ratings:', 
           Object.keys(blockData.successFactorRatings).length, 'ratings');
         setSuccessFactorRatings(blockData.successFactorRatings);
       }
-      
+
       // Extract personal heuristics
       if (blockData.personalHeuristics) {
         console.info('🔄 [LOAD-EFFECT] Setting personal heuristics:', 
@@ -163,18 +163,18 @@ export default function Block1Discover() {
       }
     }
   }, [blockData]);
-  
+
   // If we have no block data, fall back to legacy plan loading
   useEffect(() => {
     async function loadLegacyPlan() {
       if (!projectId || blockData || isBlockLoading) return;
-      
+
       try {
         console.log('ℹ️ No block data found, falling back to legacy plan loading');
-        
+
         // Get the plan ID if it exists, or create a new one if not
         let id = getLatestPlanId();
-        
+
         // If we came from the intro page and don't have a plan yet, create one
         if (!id) {
           // Show a loading toast
@@ -182,10 +182,10 @@ export default function Block1Discover() {
             title: "Creating new plan",
             description: "Setting up your plan, please wait...",
           });
-          
+
           // Create a new quick start plan
           id = await quickStartPlan();
-          
+
           if (!id) {
             // Failed to create a plan, redirect back
             toast({
@@ -196,17 +196,17 @@ export default function Block1Discover() {
             setLocation('/make-a-plan');
             return;
           }
-          
+
           // Success toast for new plan
           toast({
             title: "Plan created!",
             description: "Your new plan is ready to customize.",
           });
         }
-        
+
         setPlanId(id);
         const loadedPlan = await loadPlan(id);
-        
+
         if (!loadedPlan) {
           toast({
             title: "Error",
@@ -216,15 +216,15 @@ export default function Block1Discover() {
           setLocation('/make-a-plan');
           return;
         }
-        
+
         setPlan(loadedPlan);
-        
+
         // Extract success factor ratings and personal heuristics
         if (loadedPlan.stages.Identification.successFactorRatings) {
           console.log('🔄 Setting success factor ratings from legacy plan');
           setSuccessFactorRatings(loadedPlan.stages.Identification.successFactorRatings);
         }
-        
+
         if (loadedPlan.stages.Identification.personalHeuristics) {
           console.log('🔄 Setting personal heuristics from legacy plan:',
             JSON.stringify(loadedPlan.stages.Identification.personalHeuristics));
@@ -241,10 +241,10 @@ export default function Block1Discover() {
         setIsLoading(false);
       }
     }
-    
+
     loadLegacyPlan();
   }, [projectId, blockData, isBlockLoading, setLocation, toast]);
-  
+
   // Create a debounced save function
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSave = useCallback(
@@ -258,17 +258,17 @@ export default function Block1Discover() {
     }, 500),
     []
   );
-  
+
   // Save the current plan data using our new reliable save pattern
   const saveCurrentPlan = async () => {
     if (!planId || !plan) return false;
-    
+
     // Prepare block data to save
     const blockData = {
       successFactorRatings,
       personalHeuristics
     };
-    
+
     // Use our new reliable save pattern that saves to both API and localStorage
     try {
       return await saveBlock(blockData);
@@ -277,16 +277,16 @@ export default function Block1Discover() {
       return false;
     }
   };
-  
+
   // Handle success factor rating change
   const handleSuccessFactorChange = (factorId: string, rating: SuccessFactorRating) => {
     const updatedRatings = {
       ...successFactorRatings,
       [factorId]: rating
     };
-    
+
     setSuccessFactorRatings(updatedRatings);
-    
+
     // Auto-save debounced (don't show toast for interim saves)
     if (projectId) {
       // Prepare and save data
@@ -294,14 +294,14 @@ export default function Block1Discover() {
         successFactorRatings: updatedRatings,
         personalHeuristics
       };
-      
+
       // We're not awaiting here intentionally - this is just an auto-save
       saveBlock(blockData).catch(err => {
         console.error('Error auto-saving after rating change:', err);
       });
     }
   };
-  
+
   // Handle personal heuristics change
   const handlePersonalHeuristicsChange = async (heuristics: PersonalHeuristic[]) => {
     console.info('🔄 [SAVE] handlePersonalHeuristicsChange called with:', JSON.stringify(heuristics));
@@ -309,48 +309,48 @@ export default function Block1Discover() {
     console.info('📋 [SAVE-TABLE] Trigger: User modified heuristics');
     console.info('📋 [SAVE-TABLE] Heuristics Count:', heuristics.length);
     console.info('📋 [SAVE-TABLE] ProjectId:', projectId || 'MISSING');
-    
+
     // Store a deep clone of the heuristics to avoid reference issues
     const clonedHeuristics = JSON.parse(JSON.stringify(heuristics));
     setPersonalHeuristics(clonedHeuristics);
-    
+
     // We'll explicitly save with a full saveBlock call to ensure reliability
     // Auto-saves aren't sufficient for this critical data
     if (projectId) {
       try {
         console.info('🔄 [SAVE] Saving personal heuristics to backend:', JSON.stringify(clonedHeuristics, null, 2));
-        
+
         // Show a toast that we're saving
         toast({
           title: "Saving heuristics...",
           description: "Updating your personal heuristics",
         });
-        
+
         // Prepare block data with current ratings and updated heuristics
         const blockData = {
           successFactorRatings,
           personalHeuristics: clonedHeuristics
         };
-        
+
         // Log the exact payload we're sending
         console.info('📤 [SAVE] Payload being sent to server:', JSON.stringify(blockData, null, 2));
-        
+
         // We explicitly save here and wait for the result
         console.info('🔄 [SAVE] Calling saveBlock with data...');
         const saved = await saveBlock(blockData);
-        
+
         // Check localStorage after save attempt to see if our backup worked
         const localBackup = getLocalStorageBlock("block1", projectId);
         console.info('💾 [SAVE] After save, localStorage contains:', 
           localBackup?.personalHeuristics ? 
             `${localBackup.personalHeuristics.length} heuristics` : 
             'No heuristics');
-        
+
         if (localBackup?.personalHeuristics) {
           console.info('📊 [SAVE] localStorage heuristics detail:', 
             JSON.stringify(localBackup.personalHeuristics, null, 2));
         }
-        
+
         if (saved) {
           console.info('✅ [SAVE] Successfully saved personal heuristics');
           toast({
@@ -382,20 +382,20 @@ export default function Block1Discover() {
       });
     }
   };
-  
+
   // Navigation handlers
   const handleBack = async () => {
     await saveCurrentPlan();
     setLocation('/make-a-plan');
   };
-  
+
   const handleNext = async () => {
     const saved = await saveCurrentPlan();
     if (saved) {
       setLocation('/make-a-plan/full/block-2');
     }
   };
-  
+
   // Explicit save handler - this shows a toast notification
   const handleSave = async () => {
     if (!projectId) {
@@ -406,46 +406,46 @@ export default function Block1Discover() {
       });
       return;
     }
-    
+
     // Prepare block data with all current state
     const blockData = {
       successFactorRatings,
       personalHeuristics
     };
-    
+
     // Save using new reliable pattern with localStorage backup
     await saveBlock(blockData);
   };
-  
+
   const handleSkipToChecklist = async () => {
     await saveCurrentPlan();
     setLocation('/checklist');
   };
-  
+
   // Open confirmation dialog for clearing Block 1
   const handleClearBlockRequest = () => {
     setClearConfirmOpen(true);
   };
-  
+
   // Clear Block 1 data after confirmation
   const handleClearBlockConfirmed = async () => {
     if (!projectId) return;
-    
+
     try {
       // Create empty block data to clear existing data
       const emptyBlockData = {
         successFactorRatings: {},
         personalHeuristics: []
       };
-      
+
       // Save the empty block data using our reliable save pattern
       const success = await saveBlock(emptyBlockData);
-      
+
       if (success) {
         // Update local state
         setSuccessFactorRatings({});
         setPersonalHeuristics([]);
-        
+
         toast({
           title: "Block cleared",
           description: "All data for Block 1 has been reset",
@@ -468,7 +468,7 @@ export default function Block1Discover() {
       setClearConfirmOpen(false);
     }
   };
-  
+
   // Show loading state while either the block data or legacy plan is loading
   if (isLoading || isBlockLoading) {
     return (
@@ -478,7 +478,7 @@ export default function Block1Discover() {
       </div>
     );
   }
-  
+
   // Show error state if we have one
   if (blockError && !blockData) {
     return (
@@ -498,14 +498,14 @@ export default function Block1Discover() {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <ProgressNav steps={steps} currentStepId="block-1" />
-        
+
         <h1 className="text-3xl font-bold text-tcof-dark mb-6">Block 1: Discover & Reflect</h1>
-        
+
         <IntroAccordion title="Why start here?">
           <p className="mb-4">
             Simpler rules beat complicated plans. TCOF gives you 12 proven "rules of thumb". 
@@ -525,7 +525,7 @@ export default function Block1Discover() {
             </ol>
           </p>
         </IntroAccordion>
-        
+
         <div className="bg-white p-6 rounded-lg border mb-8">
           {/* Step 1 - Rate TCOF Success Factors */}
           <div className="mb-6">
@@ -539,15 +539,15 @@ export default function Block1Discover() {
               </ul>
             </div>
           </div>
-          
+
           <SuccessFactorTable 
             ratings={successFactorRatings} 
             onChange={handleSuccessFactorChange}
             totalFavourites={totalFavourites}
           />
-          
+
           <hr className="my-8" />
-          
+
           {/* Step 2 - Add Personal Heuristics */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-tcof-dark mb-3">Step 2: Add Your Personal Heuristics</h3>
@@ -572,14 +572,14 @@ export default function Block1Discover() {
               </ol>
             </div>
           </div>
-          
+
           <HeuristicList 
             heuristics={personalHeuristics}
             onChange={handlePersonalHeuristicsChange}
             totalFavourites={totalFavourites}
           />
         </div>
-        
+
         <ActionButtons 
           onPrevious={handleBack}
           onNext={handleNext}
@@ -590,7 +590,7 @@ export default function Block1Discover() {
           showClear={true}
           isNextDisabled={!canProceed}
         />
-        
+
         {/* Clear Block Confirmation Dialog */}
         <AlertDialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
           <AlertDialogContent>
