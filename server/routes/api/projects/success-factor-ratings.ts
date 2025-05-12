@@ -14,7 +14,7 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req: Re
     const { projectId } = req.params;
 
     const ratings = await db.query.successFactorRatings.findMany({
-      where: eq(successFactorRatings.projectId, projectId),
+      where: eq(successFactorRatings.projectId, parseInt(projectId, 10)),
     });
 
     res.setHeader('Content-Type', 'application/json');
@@ -29,7 +29,7 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req: Re
 });
 
 // POST /api/projects/:projectId/success-factor-ratings
-router.post('/:projectId/success-factor-ratings', async (req: Request, res: Response) => {
+router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     console.log('→ HIT POST /api/projects/' + projectId + '/success-factor-ratings');
@@ -53,7 +53,7 @@ router.post('/:projectId/success-factor-ratings', async (req: Request, res: Resp
 
     // Map the validated ratings for insertion
     const ratingsToInsert = validatedRatings.map(rating => ({
-      projectId,
+      projectId: parseInt(projectId, 10),
       factorId: rating.factorId,
       resonance: rating.resonance,
       notes: rating.notes || ''
@@ -132,7 +132,7 @@ router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req: Re
         .where(
           and(
             eq(successFactorRatings.id, rating.id),
-            eq(successFactorRatings.projectId, projectId)
+            eq(successFactorRatings.projectId, parseInt(projectId, 10))
           )
         )
         .returning();

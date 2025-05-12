@@ -16,12 +16,25 @@ export const resonanceRatingSchema = z.object({
     })
   ]),
   notes: z.string().optional(),
+  id: z.string().uuid().optional(), // Add optional ID field
 });
 
 /**
- * Validation schema for an array of ratings (used in batch updates)
+ * Validation schema specifically for updating existing ratings (requires ID)
+ */
+export const resonanceRatingUpdateSchema = resonanceRatingSchema.extend({
+  id: z.string().uuid(), // ID is required for updates
+});
+
+/**
+ * Validation schema for an array of ratings (used in batch creates)
  */
 export const resonanceRatingsArraySchema = z.array(resonanceRatingSchema);
+
+/**
+ * Validation schema for an array of ratings with IDs (used in batch updates)
+ */
+export const resonanceRatingsUpdateArraySchema = z.array(resonanceRatingUpdateSchema);
 
 /**
  * Type for a single resonance evaluation input
