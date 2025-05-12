@@ -582,11 +582,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
         )}
       
         {/* Outcome Progress Tracking */}
-        {projectId ? (
-          <ChecklistHeader projectId={projectId} />
-        ) : getSelectedProject()?.id ? (
-          <ChecklistHeader projectId={getSelectedProject()?.id as string} />
-        ) : null}
+        {currentProjectId && <ChecklistHeader projectId={currentProjectId} />}
         
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -603,6 +599,11 @@ export default function Checklist({ projectId }: ChecklistProps) {
           </div>
           
           <div className="flex gap-3 mt-4 md:mt-0">
+            {!plan && (
+              <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 mr-2">
+                Read-Only
+              </Badge>
+            )}
             <Button
               variant="outline"
               className="flex items-center gap-2"
