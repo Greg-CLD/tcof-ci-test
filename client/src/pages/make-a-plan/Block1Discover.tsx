@@ -70,10 +70,18 @@ export default function Block1Discover() {
   // Active tab state
   const [activeTab, setActiveTab] = useState("overview");
 
-  // State for personal heuristics
+  // State for new heuristic input
   const [newHeuristic, setNewHeuristic] = useState({ name: "", description: "" });
-  // Get the saved personal heuristics
-  const [personalHeuristics, setPersonalHeuristics] = useState<any[]>([]);
+  
+  // Use personal heuristics hook for server persistence
+  const {
+    heuristics: personalHeuristics,
+    createHeuristic,
+    updateHeuristic,
+    deleteHeuristic,
+    toggleFavorite,
+    isLoading: isLoadingHeuristics
+  } = usePersonalHeuristics(projectId);
 
   // State for success criteria
   const [successCriteria, setSuccessCriteria] = useState("");
