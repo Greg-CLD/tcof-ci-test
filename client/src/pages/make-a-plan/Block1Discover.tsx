@@ -1014,19 +1014,6 @@ export default function Block1Discover() {
                           </p>
                         </div>
                       </div>
-
-                      <div className="flex items-start">
-                        <div className="bg-tcof-light rounded-full w-10 h-10 flex items-center justify-center mr-4 shrink-0">
-                          <span className="text-tcof-teal font-bold">3</span>
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-lg mb-1">Define Success Criteria</h3>
-                          <p className="text-gray-600">
-                            Summarize what success will look like for your project, incorporating both TCOF
-                            factors and your personal heuristics to create a comprehensive success definition.
-                          </p>
-                        </div>
-                      </div>
                     </div>
 
                     <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-end">
