@@ -131,7 +131,7 @@ export const successFactorRatings = pgTable("success_factor_ratings", {
 
 // New table for personal heuristics
 export const personalHeuristics = pgTable("personal_heuristics", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),

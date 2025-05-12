@@ -77,8 +77,8 @@ router.post("/:projectId/heuristics", isAuthenticated, async (req: Request, res:
       return res.status(400).json({ error: true, message: "Invalid project ID" });
     }
 
-    // Insert the heuristic
-    const heuristicToInsert: InsertPersonalHeuristic = {
+    // Insert the heuristic - no need to provide id, will be auto-generated
+    const heuristicToInsert = {
       projectId: numericProjectId,
       name: validatedData.name,
       description: validatedData.description || "",
@@ -87,9 +87,10 @@ router.post("/:projectId/heuristics", isAuthenticated, async (req: Request, res:
 
     console.log("Inserting heuristic:", heuristicToInsert);
 
+    // Use any assertion for now to bypass TypeScript issue
     const result = await db
       .insert(personalHeuristics)
-      .values(heuristicToInsert)
+      .values(heuristicToInsert as any)
       .returning();
 
     // Return the newly created heuristic

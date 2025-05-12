@@ -14,6 +14,8 @@ export function usePersonalHeuristics(projectId?: string) {
   } = useQuery<PersonalHeuristic[]>({
     queryKey: [`/api/projects/${projectId}/heuristics`],
     enabled: !!projectId,
+    staleTime: 30000, // 30 seconds before refetching
+    gcTime: 1000 * 60 * 5, // Cache for 5 minutes (formerly cacheTime in v4)
   });
   
   // Mutation to create a new heuristic
@@ -78,16 +80,52 @@ export function usePersonalHeuristics(projectId?: string) {
   });
   
   // Convenience functions
-  const createHeuristic = async (text: string) => {
-    return await createHeuristicMutation.mutateAsync(text);
+  const createHeuristic = async (nameOrHeuristic: string | { name: string; description?: string; favourite?: boolean }) => {
+    // Convert string to heuristic object if needed
+    const heuristic = typeof nameOrHeuristic === 'string' 
+      ? { name: nameOrHeuristic } 
+      : nameOrHeuristic;
+    
+    console.log('Creating heuristic:', heuristic);
+    return await createHeuristicMutation.mutateAsync(heuristic);
   };
   
-  const updateHeuristic = async (heuristicId: string, text: string) => {
-    return await updateHeuristicMutation.mutateAsync({ heuristicId, text });
+  const updateHeuristic = async (
+    heuristicId: string, 
+    nameOrHeuristic: string | { name: string; description?: string; favourite?: boolean }
+  ) => {
+    // Convert string to heuristic object if needed
+    const heuristic = typeof nameOrHeuristic === 'string' 
+      ? { name: nameOrHeuristic } 
+      : nameOrHeuristic;
+    
+    console.log(`Updating heuristic ${heuristicId}:`, heuristic);
+    return await updateHeuristicMutation.mutateAsync({ heuristicId, heuristic });
   };
   
   const deleteHeuristic = async (heuristicId: string) => {
     return await deleteHeuristicMutation.mutateAsync(heuristicId);
+  };
+  
+  // Function to toggle favorite status
+  const toggleFavorite = async (heuristicId: string, currentValue: boolean) => {
+    if (!heuristics) {
+      console.error('Heuristics not loaded yet');
+      return;
+    }
+    
+    // Type assertion to make TypeScript happy
+    const foundHeuristic = heuristics.find((h: PersonalHeuristic) => h.id === heuristicId);
+    if (!foundHeuristic) {
+      console.error('Heuristic not found:', heuristicId);
+      return;
+    }
+    
+    return await updateHeuristic(heuristicId, {
+      name: foundHeuristic.name,
+      description: foundHeuristic.description ? String(foundHeuristic.description) : '',
+      favourite: !currentValue
+    });
   };
   
   return {
