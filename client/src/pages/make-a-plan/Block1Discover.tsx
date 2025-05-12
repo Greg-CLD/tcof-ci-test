@@ -75,7 +75,7 @@ export default function Block1Discover() {
   
   // Use personal heuristics hook for server persistence
   const {
-    heuristics: personalHeuristics,
+    heuristics: personalHeuristics = [],
     createHeuristic,
     updateHeuristic,
     deleteHeuristic,
@@ -190,12 +190,26 @@ export default function Block1Discover() {
           }
         });
 
-        console.log('🔄 Block1Discover.useEffect - Setting personal heuristics:', JSON.stringify(formattedHeuristics, null, 2));
+        console.log('🔄 Block1Discover.useEffect - Found personal heuristics in plan:', JSON.stringify(formattedHeuristics, null, 2));
         console.log('🔄 Block1Discover.useEffect - COMPLETE BLOCK DATA BEING LOADED:', JSON.stringify(plan.blocks.block1, null, 2));
-        setPersonalHeuristics(formattedHeuristics);
+        
+        // Create server heuristics from plan data if they don't exist yet
+        if (formattedHeuristics.length > 0 && personalHeuristics.length === 0) {
+          console.log('🔄 Block1Discover.useEffect - Creating server heuristics from plan data');
+          formattedHeuristics.forEach(async (h) => {
+            try {
+              await createHeuristic({
+                name: h.name,
+                description: h.description,
+                favourite: h.favourite
+              });
+            } catch (err) {
+              console.error('Error creating heuristic from plan data:', err);
+            }
+          });
+        }
       } else {
         console.log('🔄 Block1Discover.useEffect - No personal heuristics found in plan');
-        setPersonalHeuristics([]); // Reset to empty array if none in plan
       }
     }
   }, [plan]);
@@ -570,24 +584,25 @@ export default function Block1Discover() {
         favourite: !!newHeuristicData.favourite
       };
 
-      // Add the new heuristic to local state first
-      const updatedHeuristics = [...personalHeuristics, heuristicToSave];
-      console.info(`[SAVE] Block1Discover.addHeuristicMutation - New heuristics count: ${updatedHeuristics.length}`);
-
-      // Update local state immediately for optimistic UI update
-      setPersonalHeuristics(updatedHeuristics);
+      // Add the new heuristic using the server persistence hook
+      console.info(`[SAVE] Block1Discover.addHeuristicMutation - Creating heuristic with server hook`);
+      await createHeuristic({
+        name: heuristicToSave.name,
+        description: heuristicToSave.description,
+        favourite: heuristicToSave.favourite
+      });
 
       // Log the new heuristic being added for debugging
       console.log(`%c[HEURISTIC ADD] New heuristic being added:`, 'color: #059669; font-weight: bold;');
       console.log(JSON.stringify(heuristicToSave, null, 2));
 
-      // Log the complete updated heuristics array for debugging
-      console.log(`%c[HEURISTIC ADD] Complete updated personalHeuristics (${updatedHeuristics.length}):`, 'color: #059669; font-weight: bold;');
-      console.log(JSON.stringify(updatedHeuristics, null, 2));
+      // Log the server-persisted heuristics array for debugging
+      console.log(`%c[HEURISTIC ADD] Server-persisted personalHeuristics (${personalHeuristics.length}):`, 'color: #059669; font-weight: bold;');
+      console.log(JSON.stringify(personalHeuristics, null, 2));
 
       // Build the block data with consistent structure
       const blockData = {
-        personalHeuristics: updatedHeuristics,
+        personalHeuristics: personalHeuristics,
         // Maintain any existing data to avoid overwriting
         successFactorRatings: ratings || {},
         successCriteria: successCriteria || "",
