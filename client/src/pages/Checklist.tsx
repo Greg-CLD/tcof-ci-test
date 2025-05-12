@@ -350,11 +350,41 @@ export default function Checklist({ projectId }: ChecklistProps) {
   // Handle task update
   const handleTaskUpdate = (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
     if (!plan) {
-      // If no plan exists, show a message about creating a plan first
+      // If trying to update a task in read-only mode, show a toast that will prompt the user to create a plan
       toast({
-        title: "Read-Only Checklist",
-        description: "Please initialize a plan to save changes to this checklist.",
-        variant: "warning"
+        title: "Read-Only Mode",
+        description: "Create a plan to save changes",
+        action: (
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="bg-white"
+            onClick={async () => {
+              if (!getSelectedProject()?.id) return;
+              
+              try {
+                setLoading(true);
+                const planId = await ensurePlanForProject(getSelectedProject()?.id as string);
+                setSelectedPlanId(planId);
+                const loadedPlan = await loadPlan(planId);
+                setPlan(loadedPlan || null);
+                
+                toast({
+                  title: "Plan Created",
+                  description: "You can now save changes to tasks"
+                });
+              } catch (err) {
+                console.error("Error creating plan:", err);
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            Create Plan
+          </Button>
+        ),
+        variant: "default",
+        duration: 5000
       });
       return;
     }
@@ -723,7 +753,8 @@ export default function Checklist({ projectId }: ChecklistProps) {
                                               task.source
                                             );
                                           }}
-                                          className="rounded-sm h-5 w-5 border-gray-300 text-tcof-teal focus:ring-tcof-teal"
+                                          className={`rounded-sm h-5 w-5 border-gray-300 ${!plan ? 'opacity-70 cursor-not-allowed' : 'text-tcof-teal'} focus:ring-tcof-teal`}
+                                          title={!plan ? "Read-only mode" : "Click to mark complete"}
                                         />
                                       </div>
                                       <div className="flex-grow min-w-0">
