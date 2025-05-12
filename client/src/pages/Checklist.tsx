@@ -178,8 +178,6 @@ export default function Checklist({ projectId }: ChecklistProps) {
   
   // Combine all tasks from different sources
   useEffect(() => {
-    if (!plan) return;
-    
     // Initialize the combined tasks object
     const combined: Record<Stage, UnifiedTask[]> = {
       Identification: [],
@@ -187,6 +185,12 @@ export default function Checklist({ projectId }: ChecklistProps) {
       Delivery: [],
       Closure: []
     };
+    
+    // If no plan, still initialize the task array but with empty data
+    if (!plan) {
+      setAllTasks(combined);
+      return;
+    }
     
     // Helper function to add tasks to the combined object
     const addTasksToStage = (tasks: UnifiedTask[]) => {
@@ -303,7 +307,15 @@ export default function Checklist({ projectId }: ChecklistProps) {
   
   // Handle task update
   const handleTaskUpdate = (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
-    if (!plan) return;
+    if (!plan) {
+      // If no plan exists, show a message about creating a plan first
+      toast({
+        title: "No Plan Available",
+        description: "Please create a plan first before updating tasks.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     const updatedPlan = { ...plan };
     
@@ -368,7 +380,14 @@ export default function Checklist({ projectId }: ChecklistProps) {
   
   // Handle exporting the plan
   const handleExportPDF = () => {
-    if (!plan) return;
+    if (!plan) {
+      toast({
+        title: "No Plan Available",
+        description: "Please create a plan first before exporting.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     exportPlanPDF(plan);
     
@@ -379,7 +398,14 @@ export default function Checklist({ projectId }: ChecklistProps) {
   };
   
   const handleExportCSV = () => {
-    if (!plan) return;
+    if (!plan) {
+      toast({
+        title: "No Plan Available",
+        description: "Please create a plan first before exporting.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     exportCSV(plan);
     
