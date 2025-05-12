@@ -617,7 +617,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-tcof-dark">Project Checklist</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-tcof-dark">Project Checklist</h1>
+            </div>
             <p className="text-gray-600 mt-1">
               Track and manage your project tasks across all stages
             </p>
