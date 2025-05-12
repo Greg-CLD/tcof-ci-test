@@ -351,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           project = await projectsDb.getProject(projectId);
           console.log(`Found project directly: ${project?.id}`);
         } catch (error) {
-          console.log(`Error finding project directly: ${error.message}`);
+          console.log(`Error finding project directly: ${getErrorMessage(error)}`);
 
           // If direct lookup fails and we have a numeric ID, search all projects
           if (!isNaN(Number(projectId))) {
@@ -389,21 +389,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const projectGoalMaps = goalMaps.filter(map => {
           if (!map.data) return false;
 
+          const mapData = map.data as any;
+          
           // 1. Check for UUID match with project.id
-          if (map.data.projectId && map.data.projectId.toString() === project.id.toString()) {
-            console.log(`Found map with matching project UUID: ${map.data.projectId}`);
+          if (mapData.projectId && mapData.projectId.toString() === project.id.toString()) {
+            console.log(`Found map with matching project UUID: ${mapData.projectId}`);
             return true;
           }
 
           // 2. Check for positional ID match with original client-sent ID
-          if (map.data.projectId && map.data.projectId.toString() === originalProjectId.toString()) {
-            console.log(`Found map with matching positional ID: ${map.data.projectId}`);
+          if (mapData.projectId && mapData.projectId.toString() === originalProjectId.toString()) {
+            console.log(`Found map with matching positional ID: ${mapData.projectId}`);
             return true;
           }
 
           // 3. Check for original ID in the data structure
-          if (map.data.originalProjectId && map.data.originalProjectId.toString() === originalProjectId.toString()) {
-            console.log(`Found map with matching originalProjectId: ${map.data.originalProjectId}`);
+          if (mapData.originalProjectId && mapData.originalProjectId.toString() === originalProjectId.toString()) {
+            console.log(`Found map with matching originalProjectId: ${mapData.originalProjectId}`);
             return true;
           }
 
@@ -604,7 +606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Converting goals to nodes for server compatibility");
 
         // Convert goals to nodes format
-        processedData.nodes = data.goals.map(goal => ({
+        processedData.nodes = data.goals.map((goal: { id: string; text: string; level?: string; timeframe?: string }) => ({
           id: goal.id,
           text: goal.text,
           type: "goal",
@@ -630,7 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           project.id.toString(),
           'GOAL_MAP_FOR_PROJECT',
           project.id.toString(),
-          { createdAt: new Date().toISOString() }
+          { createdAt: new Date().toISOString() } as any
         );
 
         console.log(`Created relation between goal map ${goalMap.id} and project ${project.id}`);
@@ -735,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Converting goals to nodes for server compatibility");
 
         // Convert goals to nodes format 
-        processedData.nodes = data.goals.map(goal => ({
+        processedData.nodes = data.goals.map((goal: { id: string; text: string; level?: string; timeframe?: string }) => ({
           id: goal.id,
           text: goal.text,
           type: "goal",
@@ -790,7 +792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             projectId.toString(),
             'GOAL_MAP_FOR_PROJECT',
             projectId.toString(),
-            { createdAt: new Date().toISOString() }
+            { createdAt: new Date().toISOString() } as any
           );
 
           console.log(`Created relation between goal map ${goalMapId} and project ${projectId}`);
