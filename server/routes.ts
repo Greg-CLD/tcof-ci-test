@@ -214,6 +214,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering success factor ratings routes:', error);
   }
+  
+  // Register personal heuristics routes
+  try {
+    const personalHeuristicsRouter = await import('./routes/api/projects/personal-heuristics.js');
+    app.use('/api/projects', personalHeuristicsRouter.default);
+    console.log('Personal heuristics routes registered successfully');
+  } catch (error) {
+    console.error('Error registering personal heuristics routes:', error);
+  }
 
   // Register plans routes
   try {

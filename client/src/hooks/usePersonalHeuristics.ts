@@ -1,14 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-
-interface PersonalHeuristic {
-  id: string;
-  text: string;
-  projectId: string;
-  userId: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { type PersonalHeuristic } from '@shared/schema';
 
 export function usePersonalHeuristics(projectId?: string) {
   const queryClient = useQueryClient();
@@ -26,11 +18,16 @@ export function usePersonalHeuristics(projectId?: string) {
   
   // Mutation to create a new heuristic
   const createHeuristicMutation = useMutation({
-    mutationFn: async (text: string) => {
-      const res = await apiRequest('POST', `/api/projects/${projectId}/heuristics`, { text });
+    mutationFn: async (heuristic: { name: string; description?: string; favourite?: boolean }) => {
+      const res = await apiRequest(
+        'POST', 
+        `/api/projects/${projectId}/heuristics`, 
+        heuristic
+      );
       return await res.json();
     },
     onSuccess: () => {
+      console.log('Successfully created heuristic, invalidating queries');
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/heuristics`] });
     },
     onError: (error) => {
@@ -41,11 +38,22 @@ export function usePersonalHeuristics(projectId?: string) {
   
   // Mutation to update an existing heuristic
   const updateHeuristicMutation = useMutation({
-    mutationFn: async ({ heuristicId, text }: { heuristicId: string, text: string }) => {
-      const res = await apiRequest('PUT', `/api/projects/${projectId}/heuristics/${heuristicId}`, { text });
+    mutationFn: async ({ 
+      heuristicId, 
+      heuristic 
+    }: { 
+      heuristicId: string, 
+      heuristic: { name: string; description?: string; favourite?: boolean } 
+    }) => {
+      const res = await apiRequest(
+        'PUT', 
+        `/api/projects/${projectId}/heuristics/${heuristicId}`, 
+        heuristic
+      );
       return await res.json();
     },
     onSuccess: () => {
+      console.log('Successfully updated heuristic, invalidating queries');
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/heuristics`] });
     },
     onError: (error) => {
