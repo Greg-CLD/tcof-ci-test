@@ -427,80 +427,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
     );
   }
   
-  // No plan state
-  if (!plan) {
-    // Get the currently selected project to show relevant information
-    const selectedProject = getSelectedProject();
-    
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="text-center max-w-md">
-          <CircleX className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-tcof-dark mb-2">Project Plan Setup Required</h2>
-          
-          {selectedProject ? (
-            <>
-              <p className="text-gray-600 mb-6">
-                The plan for <span className="font-semibold">{selectedProject.name}</span> needs to be initialized.
-                Please complete the process by clicking the button below.
-              </p>
-              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                <Button
-                  onClick={async () => {
-                    try {
-                      setLoading(true);
-                      const planId = await ensurePlanForProject(selectedProject.id);
-                      setSelectedPlanId(planId);
-                      const loadedPlan = await loadPlan(planId);
-                      setPlan(loadedPlan || null);
-                      toast({
-                        title: "Plan Initialized",
-                        description: "Your project plan has been created successfully."
-                      });
-                    } catch (err) {
-                      console.error("Error creating plan:", err);
-                      toast({
-                        title: "Error Creating Plan",
-                        description: "Please try again or select a different project.",
-                        variant: "destructive"
-                      });
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                >
-                  Initialize Project Plan
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link to="/">
-                    Return to Home
-                  </Link>
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-gray-600 mb-6">
-                You need to select or create a project before you can view the task checklist.
-              </p>
-              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                <Button asChild>
-                  <Link to="/make-a-plan">
-                    Create a Plan
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link to="/">
-                    Return to Home
-                  </Link>
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // Even if no plan exists, we'll still display the checklist UI
+  // Just track if we need to show a warning banner
+  const showNoPlanWarning = !plan;
   
   // Calculate total tasks and completed tasks
   const getTotalAndCompleted = () => {
@@ -576,6 +505,61 @@ export default function Checklist({ projectId }: ChecklistProps) {
   return (
     <div className="bg-gray-50 min-h-screen py-6 px-4 md:px-6">
       <div className="max-w-6xl mx-auto">
+        {/* Warning banner if no plan exists */}
+        {showNoPlanWarning && (
+          <div className="mb-4 p-4 border-l-4 border-amber-500 bg-amber-50 text-amber-800 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <CircleX className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium">Project Plan Required</h3>
+                <div className="mt-2 text-sm">
+                  <p>
+                    {getSelectedProject() ? (
+                      <>
+                        The plan for <span className="font-semibold">{getSelectedProject()?.name}</span> needs to be initialized.
+                        <Button 
+                          variant="link" 
+                          className="text-amber-800 underline p-0 h-auto font-semibold"
+                          onClick={async () => {
+                            try {
+                              setLoading(true);
+                              const planId = await ensurePlanForProject(getSelectedProject()?.id as string);
+                              setSelectedPlanId(planId);
+                              const loadedPlan = await loadPlan(planId);
+                              setPlan(loadedPlan || null);
+                              toast({
+                                title: "Plan Initialized",
+                                description: "Your project plan has been created successfully."
+                              });
+                            } catch (err) {
+                              console.error("Error creating plan:", err);
+                              toast({
+                                title: "Error Creating Plan",
+                                description: "Please try again or select a different project.",
+                                variant: "destructive"
+                              });
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                        >
+                          Click here to initialize it.
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        No project is selected. Please select a project first to access the full checklist functionality.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      
         {/* Outcome Progress Tracking */}
         {projectId ? (
           <ChecklistHeader projectId={projectId} />
