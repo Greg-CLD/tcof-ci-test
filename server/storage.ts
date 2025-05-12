@@ -511,11 +511,12 @@ export const storage = {
     cynefinSelectionId: number | null, 
     tcofJourneyId: number | null
   ) {
+    // Use the project schema fields directly
     const [project] = await db.insert(projects)
       .values({
-        userId: Number(userId),
         name,
         description,
+        userId: Number(userId),
         goalMapId,
         cynefinSelectionId,
         tcofJourneyId,
