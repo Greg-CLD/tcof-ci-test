@@ -1705,7 +1705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ selectedOutcomeIds: updatedProject.selectedOutcomeIds || [] });
     } catch (error: any) {
       console.error("Error updating project outcomes:", error);
-      res.status(50code>
+      res.status(500).json({ message: "Error updating project outcomes" });
     }
   });
 
