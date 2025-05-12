@@ -33,7 +33,7 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
   try {
     const { projectId } = req.params;
     console.log('→ HIT POST /api/projects/' + projectId + '/success-factor-ratings');
-    console.log('POST payload:', req.body);
+    console.log('POST payload JSON:', JSON.stringify(req.body, null, 2));
 
     // ----- table-existence check (safe) -----
     const { rows } = await db.execute(
