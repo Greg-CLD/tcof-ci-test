@@ -97,19 +97,17 @@ export default function Block2Design() {
     }
   }, [plan]);
   
-  // One-time check to redirect if prerequisites are not met
+  // Block 2 can now be accessed directly without requiring Block 1 completion
   useEffect(() => {
-    console.log("Routing OK: Block2Design mounted");
+    console.log("Block2Design mounted");
+    // Log a warning if Block 1 is not completed, but don't redirect
     if (projectId && !block1Completed) {
-      console.log("Block 1 not completed, redirecting to Block 1");
-      navigate(`/make-a-plan/${projectId}/block-1`);
+      console.log("Note: Block 1 is not completed, but allowing access to Block 2 directly");
     }
-  }, [projectId, block1Completed, navigate]);
+  }, [projectId, block1Completed]);
   
-  // If user directly navigates to this page without completing Block 1, redirect
-  if (!block1Completed) {
-    return <div className="p-8 text-center">Checking prerequisites...</div>;
-  }
+  // Show a warning but don't redirect if Block 1 isn't completed
+  const showWarning = !block1Completed;
   
   // Handler to save the current block data
   const handleSaveBlock = async () => {
@@ -195,6 +193,22 @@ export default function Block2Design() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="pt-6">
           <div className="max-w-4xl mx-auto bg-gradient-to-r from-tcof-light to-white p-8 rounded-xl shadow-md">
+            {showWarning && (
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+                <p className="text-amber-800">
+                  <strong>Note:</strong> You haven't completed Block 1 yet. It's recommended to complete 
+                  blocks in order, but you can continue using Block 2 directly if needed.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 border-amber-400 text-amber-700 hover:bg-amber-100"
+                  onClick={() => navigate(`/make-a-plan/${projectId}/block-1`)}
+                >
+                  Go to Block 1
+                </Button>
+              </div>
+            )}
             <div className="flex items-center mb-6">
               <div className="bg-tcof-teal rounded-full p-2 mr-4">
                 <ClipboardList className="h-8 w-8 text-white" />

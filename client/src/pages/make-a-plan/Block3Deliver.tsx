@@ -84,19 +84,17 @@ export default function Block3Deliver() {
     }
   }, [plan]);
   
-  // One-time check to redirect if prerequisites are not met
+  // Block 3 can now be accessed directly without requiring Block 2 completion
   useEffect(() => {
-    console.log("Routing OK: Block3Deliver mounted");
+    console.log("Block3Deliver mounted");
+    // Log a warning if Block 2 is not completed, but don't redirect
     if (projectId && !block2Completed) {
-      console.log("Block 2 not completed, redirecting to Block 2");
-      navigate(`/make-a-plan/${projectId}/block-2`);
+      console.log("Note: Block 2 is not completed, but allowing access to Block 3 directly");
     }
-  }, [projectId, block2Completed, navigate]);
+  }, [projectId, block2Completed]);
   
-  // If user directly navigates to this page without completing Block 2, redirect
-  if (!block2Completed) {
-    return <div className="p-8 text-center">Checking prerequisites...</div>;
-  }
+  // Show a warning but don't redirect if Block 2 isn't completed
+  const showWarning = !block2Completed;
   
   // Handler to save the current block data
   const handleSaveBlock = async () => {
