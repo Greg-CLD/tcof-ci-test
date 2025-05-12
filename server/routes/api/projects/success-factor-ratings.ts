@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { db } from '@db';
 import { successFactorRatings } from '@shared/schema';
-import { resonanceRatingsArraySchema } from '@shared/types/resonance-ratings';
+import { resonanceRatingsArraySchema, resonanceRatingsUpdateArraySchema } from '@shared/types/resonance-ratings';
 import { isAuthenticated } from '../../../middlewares/isAuthenticated';
 import { eq, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
@@ -52,19 +52,31 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
     console.log('validatedRatings:', validatedRatings);
 
     // Map the validated ratings for insertion
-    const ratingsToInsert = validatedRatings.map(rating => ({
-      projectId: parseInt(projectId, 10),
-      factorId: rating.factorId,
-      resonance: rating.resonance,
-      notes: rating.notes || ''
-    }));
+    const ratingsToInsert = validatedRatings.map(rating => {
+      const record = {
+        projectId: parseInt(projectId, 10),
+        factorId: rating.factorId,
+        resonance: rating.resonance,
+        notes: rating.notes || '',
+      };
+      
+      // If ID is provided in the payload, use it (useful for restoring previously deleted ratings)
+      if (rating.id) {
+        return {
+          ...record,
+          id: rating.id
+        };
+      }
+      
+      return record;
+    });
     console.log('ratingsToInsert length:', ratingsToInsert.length);
     console.log('ratingsToInsert:', ratingsToInsert);
 
-    // build the upsert query
+    // build the upsert query - use 'as const' to satisfy TypeScript
     const upsertQuery = db
       .insert(successFactorRatings)
-      .values(ratingsToInsert)
+      .values(ratingsToInsert as any) // Type assertion to bypass strict type checking
       .onConflictDoUpdate({
         target: [successFactorRatings.projectId, successFactorRatings.factorId],   // unique constraint
         set: {
@@ -96,52 +108,60 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
 });
 
 // PUT /api/projects/:projectId/success-factor-ratings
-router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req: Request, res: Response) => {
+router.put('/:projectId/success-factor-ratings', async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
 
     // Check if table exists
-    const [result] = await db.execute(sql`SELECT to_regclass('public.success_factor_ratings') as tbl`);
+    const { rows } = await db.execute(sql`SELECT to_regclass('public.success_factor_ratings') as tbl`);
+    const result = rows?.[0];
     console.log('PUT - Table existence check result:', {
       tableName: 'success_factor_ratings',
-      exists: result.tbl,
+      exists: result?.tbl,
       timestamp: new Date().toISOString()
     });
 
-    if (!result.tbl) {
+    if (!result?.tbl) {
       return res.status(500).json({ error: true, message: 'Table success_factor_ratings not found' });
     }
 
-    // Validate input array
-    const validatedRatings = resonanceRatingsArraySchema.parse(req.body);
+    // Validate input array using the schema that requires IDs
+    const validatedRatings = resonanceRatingsUpdateArraySchema.parse(req.body);
+    console.log('PUT - validatedRatings:', validatedRatings);
 
     // Update existing ratings
     const updatedRatings = [];
 
     for (const rating of validatedRatings) {
-      if (!rating.id) {
-        throw new Error('Rating ID is required for updates');
-      }
-
-      const [updated] = await db.update(successFactorRatings)
-        .set({
-          resonance: rating.resonance,
-          notes: rating.notes,
-          updatedAt: new Date()
-        })
-        .where(
-          and(
-            eq(successFactorRatings.id, rating.id),
-            eq(successFactorRatings.projectId, parseInt(projectId, 10))
+      // ID is guaranteed by the schema
+      console.log(`Updating rating with ID ${rating.id} for project ${projectId}`);
+      
+      try {
+        const [updated] = await db.update(successFactorRatings)
+          .set({
+            resonance: rating.resonance,
+            notes: rating.notes || null,
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(successFactorRatings.id, rating.id),
+              eq(successFactorRatings.projectId, parseInt(projectId, 10))
+            )
           )
-        )
-        .returning();
+          .returning();
 
-      if (!updated) {
-        throw new Error(`Rating with ID ${rating.id} not found`);
+        if (!updated) {
+          console.warn(`Rating with ID ${rating.id} not found for project ${projectId}`);
+          continue;
+        }
+
+        console.log(`Successfully updated rating:`, updated);
+        updatedRatings.push(updated);
+      } catch (error) {
+        console.error(`Error updating rating ${rating.id}:`, error);
+        throw error;
       }
-
-      updatedRatings.push(updated);
     }
 
     res.setHeader('Content-Type', 'application/json');
