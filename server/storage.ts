@@ -441,7 +441,7 @@ export const storage = {
   // TCOF Journey methods
   async getTCOFJourneys(userId: string) {
     return await db.query.tcofJourneys.findMany({
-      where: eq(tcofJourneys.userId, userId),
+      where: eq(tcofJourneys.userId, Number(userId)),
       orderBy: desc(tcofJourneys.lastUpdated)
     });
   },
@@ -455,7 +455,7 @@ export const storage = {
   async saveTCOFJourney(userId: string, name: string, data: any) {
     const [journey] = await db.insert(tcofJourneys)
       .values({
-        userId,
+        userId: Number(userId),
         name,
         data,
         lastUpdated: new Date()
@@ -465,7 +465,7 @@ export const storage = {
     return journey;
   },
 
-  async updateTCOFJourney(id: number, data: any, name?: string) {
+  async updateTCOFJourney(id: number | string, data: any, name?: string) {
     const updateValues: any = {
       data,
       lastUpdated: new Date()
@@ -478,7 +478,7 @@ export const storage = {
     const [updatedJourney] = await db
       .update(tcofJourneys)
       .set(updateValues)
-      .where(eq(tcofJourneys.id, id))
+      .where(eq(tcofJourneys.id, Number(id)))
       .returning();
     
     return updatedJourney;
@@ -487,7 +487,7 @@ export const storage = {
   // Project methods
   async getProjects(userId: string) {
     return await db.query.projects.findMany({
-      where: eq(projects.userId, userId),
+      where: eq(projects.userId, Number(userId)),
       orderBy: desc(projects.lastUpdated)
     });
   },
@@ -513,7 +513,7 @@ export const storage = {
   ) {
     const [project] = await db.insert(projects)
       .values({
-        userId,
+        userId: Number(userId),
         name,
         description,
         goalMapId,
@@ -551,7 +551,7 @@ export const storage = {
     const [updatedProject] = await db
       .update(projects)
       .set(updateValues)
-      .where(eq(projects.id, id))
+      .where(eq(projects.id, Number(id)))
       .returning();
     
     return updatedProject;
