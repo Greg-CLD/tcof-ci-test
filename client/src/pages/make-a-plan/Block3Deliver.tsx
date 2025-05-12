@@ -183,6 +183,22 @@ export default function Block3Deliver() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="pt-6">
           <div className="max-w-4xl mx-auto bg-gradient-to-r from-tcof-light to-white p-8 rounded-xl shadow-md">
+            {showWarning && (
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+                <p className="text-amber-800">
+                  <strong>Note:</strong> You haven't completed Block 2 yet. It's recommended to complete 
+                  blocks in order, but you can continue using Block 3 directly if needed.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 border-amber-400 text-amber-700 hover:bg-amber-100"
+                  onClick={() => navigate(`/make-a-plan/${projectId}/block-2`)}
+                >
+                  Go to Block 2
+                </Button>
+              </div>
+            )}
             <div className="flex items-center mb-6">
               <div className="bg-tcof-teal rounded-full p-2 mr-4">
                 <Calendar className="h-8 w-8 text-white" />
