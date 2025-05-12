@@ -59,14 +59,18 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
       notes: rating.notes || ''
     }));
 
-    // Insert new ratings
-    const newRatings = await db.insert(successFactorRatings)
-      .values(ratingsToInsert.map(rating => ({
-        projectId,
-        factorId: rating.factorId,
-        resonance: rating.resonance,
-        notes: rating.notes || ''
-      })))
+    // Insert or update ratings using UPSERT
+    const newRatings = await db
+      .insert(successFactorRatings)
+      .values(ratingsToInsert)
+      .onConflictDoUpdate({
+        target: ['project_id', 'factor_id'],   // unique constraint
+        set: ({ excluded }) => ({
+          resonance: excluded.resonance,
+          notes: excluded.notes,
+          updatedAt: new Date()
+        }),
+      })
       .returning();
 
     console.log('returning rows:', newRatings);
