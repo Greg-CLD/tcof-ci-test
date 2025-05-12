@@ -20,7 +20,7 @@ import {
 import { usePlan } from "@/contexts/PlanContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import ProjectBanner from "@/components/ProjectBanner";
+// ProjectBanner removed - now only in AppLayout
 import { ArrowLeft, ChevronRight, Info, Save } from "lucide-react";
 import { useSuccessFactors } from "@/hooks/useSuccessFactors";
 import { useResonanceRatings } from "@/hooks/useResonanceRatings";
@@ -300,7 +300,7 @@ export default function Block1Step1() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Project Banner */}
-      <ProjectBanner />
+      {/* ProjectBanner removed - now only in AppLayout */}
 
       {/* Main content */}
       <div className="container mx-auto px-4 py-8">

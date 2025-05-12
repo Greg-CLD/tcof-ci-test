@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import ProjectBanner from "@/components/ProjectBanner";
+// ProjectBanner removed - now only in AppLayout
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { usePlan } from "@/contexts/PlanContext";
 import { apiRequest } from "@/lib/queryClient";
@@ -97,7 +97,7 @@ export default function Block2Step3() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Project Banner */}
-      <ProjectBanner />
+      {/* ProjectBanner removed - now only in AppLayout */}
       
       {/* Main content */}
       <div className="container mx-auto px-4 py-8">

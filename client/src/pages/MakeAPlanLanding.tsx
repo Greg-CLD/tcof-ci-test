@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProgress } from "@/contexts/ProgressContext";
 import { PlanProvider } from "@/contexts/PlanContext";
-import ProjectBanner from "@/components/ProjectBanner";
+// ProjectBanner removed - now only in AppLayout
 
 export default function MakeAPlanLanding() {
   const [location, navigate] = useLocation();

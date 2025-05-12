@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { usePlan } from "@/contexts/PlanContext";
 import { useToast } from "@/hooks/use-toast";
-import ProjectBanner from "@/components/ProjectBanner";
+// ProjectBanner removed - now only in AppLayout
 import { ArrowLeft, ChevronRight, Plus, X, Save } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PersonalHeuristic } from "@shared/types/personal-heuristics";
@@ -378,7 +378,7 @@ export default function Block1Step2() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Project Banner */}
-      <ProjectBanner />
+      {/* ProjectBanner removed - now only in AppLayout */}
 
       {/* Main content */}
       <div className="container mx-auto px-4 py-8">
