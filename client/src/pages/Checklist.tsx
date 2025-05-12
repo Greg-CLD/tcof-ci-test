@@ -753,19 +753,21 @@ export default function Checklist({ projectId }: ChecklistProps) {
         </div>
         
         {/* Legacy stage accordions (hidden but still updated for export) */}
-        <div className="hidden">
-          {Object.keys(plan.stages).map((stageName) => (
-            <StageAccordion
-              key={stageName}
-              stage={stageName as any}
-              plan={plan}
-              onPlanUpdate={handlePlanUpdate}
-              stageFilter={stageFilter}
-              statusFilter={statusFilter}
-              sourceFilter={sourceFilter}
-            />
-          ))}
-        </div>
+        {plan && (
+          <div className="hidden">
+            {Object.keys(plan.stages).map((stageName) => (
+              <StageAccordion
+                key={stageName}
+                stage={stageName as any}
+                plan={plan}
+                onPlanUpdate={handlePlanUpdate}
+                stageFilter={stageFilter}
+                statusFilter={statusFilter}
+                sourceFilter={sourceFilter}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
