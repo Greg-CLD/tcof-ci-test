@@ -108,7 +108,7 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
 });
 
 // PUT /api/projects/:projectId/success-factor-ratings
-router.put('/:projectId/success-factor-ratings', async (req: Request, res: Response) => {
+router.put('/:projectId/success-factor-ratings', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
 

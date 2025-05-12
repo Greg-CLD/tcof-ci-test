@@ -210,43 +210,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   try {
     const successFactorRatingsRouter = await import('./routes/api/projects/success-factor-ratings.js');
     app.use('/api/projects', successFactorRatingsRouter.default);
-    
-    // Add a simple test endpoint for success factor ratings that bypasses authentication
-    app.post('/api/test/success-factor-ratings/:projectId', async (req: Request, res: Response) => {
-      try {
-        // Forward the request to the actual handler but without authentication
-        const { projectId } = req.params;
-        const inputData = Array.isArray(req.body) ? req.body : [req.body];
-        
-        // Map the inputs for insertion
-        const ratingsToInsert = inputData.map(rating => ({
-          projectId: parseInt(projectId, 10),
-          factorId: rating.factorId,
-          resonance: rating.resonance,
-          notes: rating.notes || ''
-        }));
-        
-        // Insert the ratings
-        const result = await db
-          .insert(await import('@shared/schema').then(m => m.successFactorRatings))
-          .values(ratingsToInsert as any)
-          .onConflictDoUpdate({
-            target: ['project_id', 'factor_id'],
-            set: {
-              resonance: sql`excluded.resonance`,
-              notes: sql`excluded.notes`,
-              updatedAt: new Date()
-            },
-          })
-          .returning();
-          
-        res.status(201).json(result);
-      } catch (error) {
-        console.error('Error in test endpoint:', error);
-        res.status(500).json({ error: true, message: error instanceof Error ? error.message : 'Unknown error' });
-      }
-    });
-    
     console.log('Success factor ratings routes registered successfully');
   } catch (error) {
     console.error('Error registering success factor ratings routes:', error);

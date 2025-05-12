@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Success Factor Ratings</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #0066cc;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        #loginStatus {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .logged-in {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .logged-out {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        #results {
+            white-space: pre-wrap;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Success Factor Ratings Test Page</h1>
+    
+    <div id="loginStatus" class="logged-out">
+        Not logged in
+    </div>
+    
+    <div class="card">
+        <h2>Login</h2>
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" value="testuser">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" value="testpassword">
+        </div>
+        <button id="loginBtn">Login</button>
+    </div>
+    
+    <div class="card">
+        <h2>Test Endpoints</h2>
+        <div class="form-group">
+            <label for="projectId">Project ID</label>
+            <input type="number" id="projectId" value="5">
+        </div>
+        
+        <div class="form-group">
+            <label for="factorId">Factor ID</label>
+            <input type="text" id="factorId" value="sf-3">
+        </div>
+        
+        <div class="form-group">
+            <label for="resonance">Resonance (1-5)</label>
+            <select id="resonance">
+                <option value="1">1 - Doesn't land</option>
+                <option value="2">2 - Unfamiliar</option>
+                <option value="3">3 - Seems true</option>
+                <option value="4">4 - Proven</option>
+                <option value="5" selected>5 - Hard-won truth</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" rows="3">Test note from interactive test page</textarea>
+        </div>
+        
+        <button id="testGetBtn">GET Ratings</button>
+        <button id="testPostBtn">POST Rating</button>
+        <button id="testPutBtn">PUT Rating</button>
+    </div>
+    
+    <h2>Results</h2>
+    <div id="results"></div>
+    
+    <script>
+        const loginStatus = document.getElementById('loginStatus');
+        const loginBtn = document.getElementById('loginBtn');
+        const testGetBtn = document.getElementById('testGetBtn');
+        const testPostBtn = document.getElementById('testPostBtn');
+        const testPutBtn = document.getElementById('testPutBtn');
+        const results = document.getElementById('results');
+        
+        // Check login status on page load
+        checkLoginStatus();
+        
+        loginBtn.addEventListener('click', async () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    loginStatus.textContent = `Logged in as ${user.username} (ID: ${user.id})`;
+                    loginStatus.className = 'logged-in';
+                    showResult('Login successful', user);
+                } else {
+                    const error = await response.json();
+                    loginStatus.textContent = `Login failed: ${error.message || 'Unknown error'}`;
+                    loginStatus.className = 'logged-out';
+                    showResult('Login failed', error);
+                }
+            } catch (error) {
+                loginStatus.textContent = `Error: ${error.message}`;
+                loginStatus.className = 'logged-out';
+                showResult('Error', error);
+            }
+            
+            // Refresh login status
+            checkLoginStatus();
+        });
+        
+        testGetBtn.addEventListener('click', async () => {
+            const projectId = document.getElementById('projectId').value;
+            
+            try {
+                const response = await fetch(`/api/projects/${projectId}/success-factor-ratings`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('GET Success', data);
+                } else {
+                    const error = await response.json();
+                    showResult('GET Failed', error);
+                }
+            } catch (error) {
+                showResult('GET Error', error);
+            }
+        });
+        
+        testPostBtn.addEventListener('click', async () => {
+            const projectId = document.getElementById('projectId').value;
+            const factorId = document.getElementById('factorId').value;
+            const resonance = parseInt(document.getElementById('resonance').value);
+            const notes = document.getElementById('notes').value;
+            
+            try {
+                const response = await fetch(`/api/projects/${projectId}/success-factor-ratings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        factorId,
+                        resonance,
+                        notes
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('POST Success', data);
+                } else {
+                    const error = await response.json();
+                    showResult('POST Failed', error);
+                }
+            } catch (error) {
+                showResult('POST Error', error);
+            }
+        });
+        
+        testPutBtn.addEventListener('click', async () => {
+            const projectId = document.getElementById('projectId').value;
+            const factorId = document.getElementById('factorId').value;
+            const resonance = parseInt(document.getElementById('resonance').value);
+            const notes = document.getElementById('notes').value;
+            
+            // First, get the existing rating to get its ID
+            try {
+                const getResponse = await fetch(`/api/projects/${projectId}/success-factor-ratings`);
+                
+                if (getResponse.ok) {
+                    const ratings = await getResponse.json();
+                    const existingRating = ratings.find(r => r.factorId === factorId);
+                    
+                    if (existingRating) {
+                        // Now update with PUT
+                        const putResponse = await fetch(`/api/projects/${projectId}/success-factor-ratings`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify([{
+                                id: existingRating.id,
+                                factorId,
+                                resonance,
+                                notes
+                            }])
+                        });
+                        
+                        if (putResponse.ok) {
+                            const data = await putResponse.json();
+                            showResult('PUT Success', data);
+                        } else {
+                            const error = await putResponse.json();
+                            showResult('PUT Failed', error);
+                        }
+                    } else {
+                        showResult('PUT Error', { message: `No existing rating found for factor ${factorId}` });
+                    }
+                } else {
+                    const error = await getResponse.json();
+                    showResult('GET (for PUT) Failed', error);
+                }
+            } catch (error) {
+                showResult('PUT Error', error);
+            }
+        });
+        
+        async function checkLoginStatus() {
+            try {
+                const response = await fetch('/api/auth/user');
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    loginStatus.textContent = `Logged in as ${user.username} (ID: ${user.id})`;
+                    loginStatus.className = 'logged-in';
+                } else {
+                    loginStatus.textContent = 'Not logged in';
+                    loginStatus.className = 'logged-out';
+                }
+            } catch (error) {
+                loginStatus.textContent = `Error: ${error.message}`;
+                loginStatus.className = 'logged-out';
+            }
+        }
+        
+        function showResult(title, data) {
+            results.textContent = `${title}:\n${JSON.stringify(data, null, 2)}`;
+        }
+    </script>
+</body>
+</html>
