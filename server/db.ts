@@ -1,9 +1,10 @@
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { neon, NeonQueryFunction } from '@neondatabase/serverless';
+
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from '@shared/schema';
 
-// Initialize neon with your connection string
-const sql = neon(process.env.DATABASE_URL!) as unknown as NeonQueryFunction<boolean, any>;
+// Create a Neon client (arrayMode = true because Drizzle expects row arrays)
+const sql = neon(process.env.DATABASE_URL!, { arrayMode: true });
 
-// Create drizzle instance 
+// Drizzle instance
 export const db = drizzle(sql, { schema });
