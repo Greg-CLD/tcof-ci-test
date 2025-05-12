@@ -61,19 +61,25 @@ router.post('/:projectId/success-factor-ratings', async (req: Request, res: Resp
     console.log('ratingsToInsert length:', ratingsToInsert.length);
     console.log('ratingsToInsert:', ratingsToInsert);
 
-    // Insert or update ratings using UPSERT
-    const newRatings = await db
+    // build the upsert query
+    const upsertQuery = db
       .insert(successFactorRatings)
       .values(ratingsToInsert)
       .onConflictDoUpdate({
-        target: ['project_id', 'factor_id'],   // unique constraint
-        set: ({ excluded }) => ({
-          resonance: excluded.resonance,
-          notes: excluded.notes,
+        target: [successFactorRatings.projectId, successFactorRatings.factorId],   // unique constraint
+        set: {
+          resonance: sql`excluded.resonance`,
+          notes: sql`excluded.notes`,
           updatedAt: new Date()
-        }),
+        },
       })
       .returning();
+      
+    // log the generated SQL and parameters
+    console.log('UPSERT SQL:', upsertQuery.toSQL());
+   
+    // execute the query
+    const newRatings = await upsertQuery;
 
     console.log('returning rows:', newRatings);
     console.log('newRatings:', newRatings);
