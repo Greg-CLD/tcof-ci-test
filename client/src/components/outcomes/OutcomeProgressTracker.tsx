@@ -151,12 +151,7 @@ export function OutcomeProgressTracker({
           <CardContent className="pt-2">
             {outcomes.length === 0 ? (
               <div className="py-8 text-center">
-                <BellRing className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-                <h3 className="text-lg font-medium">No outcomes selected</h3>
-                <p className="text-sm text-muted-foreground mt-1 mb-4">
-                  Select up to 5 outcomes to track your project's progress.
-                </p>
-                <Button onClick={onSelectOutcomes}>Select Outcomes</Button>
+                <Button onClick={onSelectOutcomes}>Manage Project Outcomes</Button>
               </div>
             ) : (
               <div className="space-y-6">

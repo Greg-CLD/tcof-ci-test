@@ -510,25 +510,6 @@ export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
         </CardContent>
       </Card>
       
-      {selectedOutcomes.length === 0 && (
-        <Card className="bg-white shadow-sm">
-          <CardContent className="py-6 px-4 text-center">
-            <Info className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <h3 className="text-lg font-medium">No outcomes selected</h3>
-            <p className="text-sm text-muted-foreground mt-1 mb-4">
-              Select up to 5 outcomes to track your project's progress.
-            </p>
-            <Button 
-              variant="outline"
-              onClick={() => setIsSelectingOutcomes(true)}
-              className="flex items-center gap-1 mx-auto"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>Select Outcomes</span>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
       
       <OutcomeSelectorModal
         isOpen={isSelectingOutcomes}

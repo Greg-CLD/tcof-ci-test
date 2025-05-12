@@ -469,9 +469,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
     );
   }
   
-  // Even if no plan exists, we'll still display the checklist UI
-  // Just track if we need to show a warning banner
-  const showNoPlanWarning = !plan;
+  // Always display the checklist UI regardless of plan status
   
   // Calculate total tasks and completed tasks
   const getTotalAndCompleted = () => {
