@@ -64,7 +64,7 @@ export const factorsDb = {
     });
     this.length = factorsArray.length;
   },
-  findById: (id: string): FactorTask | undefined => {
+  findById: function(id: string): FactorTask | undefined {
     const factor = factorsArray.find(f => f.id === id);
     return factor ? factor : undefined;
   },
@@ -77,7 +77,7 @@ export const factorsDb = {
     }
     return false;
   },
-  updateById: (id: string, updatedFactor: FactorTask): boolean => {
+  updateById: function(id: string, updatedFactor: FactorTask): boolean {
     const index = factorsArray.findIndex(f => f.id === id);
     if (index !== -1) {
       factorsArray[index] = {

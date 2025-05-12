@@ -16,7 +16,7 @@ export interface Goal {
   text: string;
   stage?: string;
   origin?: string;
-  createdAt?: string;
+  createdAt?: string | Date;
 }
 
 // Cynefin Selection interfaces
@@ -47,7 +47,7 @@ export interface ProjectRequestBody {
   templateId?: number;
 }
 
-// Error handling helper
+// Error handling helpers
 export function isErrorWithMessage(error: unknown): error is { message: string } {
   return (
     typeof error === 'object' &&
@@ -62,4 +62,10 @@ export function getErrorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+export function handleServerError(res: any, error: unknown): void {
+  console.error("Server error:", error);
+  const errorMessage = getErrorMessage(error);
+  res.status(500).json({ message: errorMessage });
 }

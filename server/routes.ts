@@ -10,6 +10,15 @@ import { factorsDb, type FactorTask } from './factorsDb';
 import { projectsDb } from './projectsDb';
 import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation, RelationType } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
+import { 
+  GoalMapRequestBody, 
+  CynefinRequestBody, 
+  TcofJourneyRequestBody, 
+  ProjectRequestBody,
+  Goal,
+  handleServerError,
+  getErrorMessage
+} from './types';
 import { eq, and, sql } from 'drizzle-orm';
 import { db } from './db';
 import { neon } from '@neondatabase/serverless';
