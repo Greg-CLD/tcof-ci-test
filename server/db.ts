@@ -3,7 +3,7 @@ import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 import * as schema from '@shared/schema';
 
 // Initialize neon with your connection string
-const sql = neon(process.env.DATABASE_URL!) as unknown as NeonQueryFunction;
+const sql = neon(process.env.DATABASE_URL!) as unknown as NeonQueryFunction<boolean, any>;
 
 // Create drizzle instance 
 export const db = drizzle(sql, { schema });
