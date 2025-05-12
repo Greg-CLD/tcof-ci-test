@@ -84,8 +84,7 @@ export default function MakeAPlanLanding() {
   return (
     <PlanProvider>
       <div className="min-h-screen bg-gray-50">
-        {/* Project Banner */}
-        {project && <ProjectBanner />}
+        {/* Project Banner removed - now only in AppLayout */}
         
         {/* Main content */}
         <div className="container mx-auto px-4 py-8">

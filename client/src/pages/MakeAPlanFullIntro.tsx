@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProgress } from "@/contexts/ProgressContext";
 import { PlanProvider } from "@/contexts/PlanContext";
-import ProjectBanner from "@/components/ProjectBanner";
+// ProjectBanner removed - now only in AppLayout
 
 export default function MakeAPlanFullIntro() {
   const [location, navigate] = useLocation();
@@ -56,8 +56,7 @@ export default function MakeAPlanFullIntro() {
   return (
     <PlanProvider>
       <div className="min-h-screen bg-gray-50">
-        {/* Project Banner */}
-        {project && <ProjectBanner />}
+        {/* Project Banner removed - now only in AppLayout */}
         
         {/* Main content */}
         <div className="container mx-auto px-4 py-8">
