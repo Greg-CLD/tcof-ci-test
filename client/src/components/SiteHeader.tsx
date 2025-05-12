@@ -31,7 +31,7 @@ import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/useAuth";
 import { UserMenu, LoginButton } from "@/components/auth-buttons";
 import { AuthStatus } from "@/components/AuthStatus";
-import ProjectBanner from "@/components/ProjectBanner";
+// ProjectBanner import removed - not used in this component
 import logoImage from "../assets/logo.png";
 
 // Keep track of header instances
