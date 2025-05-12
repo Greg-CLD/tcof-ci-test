@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlanRecord, loadPlan, savePlan, TaskItem, Stage } from '@/lib/plan-db';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { CircleX, Download, FileText, Loader2 } from 'lucide-react';
+import { CircleX, Download, FileText, Loader2, PlusCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StageAccordion from '@/components/checklist/StageAccordion';
 import SummaryBar from '@/components/checklist/SummaryBar';
@@ -545,59 +545,39 @@ export default function Checklist({ projectId }: ChecklistProps) {
   return (
     <div className="bg-gray-50 min-h-screen py-6 px-4 md:px-6">
       <div className="max-w-6xl mx-auto">
-        {/* Warning banner if no plan exists */}
-        {showNoPlanWarning && (
-          <div className="mb-4 p-4 border-l-4 border-amber-500 bg-amber-50 text-amber-800 rounded-md">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <CircleX className="h-5 w-5 text-amber-600" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium">Read-Only Checklist</h3>
-                <div className="mt-2 text-sm">
-                  <p>
-                    {getSelectedProject() ? (
-                      <>
-                        You're viewing a standard checklist for <span className="font-semibold">{getSelectedProject()?.name}</span>. 
-                        To save changes or customize tasks, you need to initialize a project plan.
-                        <Button 
-                          variant="link" 
-                          className="ml-2 text-amber-800 underline p-0 h-auto font-semibold"
-                          onClick={async () => {
-                            try {
-                              setLoading(true);
-                              const planId = await ensurePlanForProject(getSelectedProject()?.id as string);
-                              setSelectedPlanId(planId);
-                              const loadedPlan = await loadPlan(planId);
-                              setPlan(loadedPlan || null);
-                              toast({
-                                title: "Plan Initialized",
-                                description: "Your project plan has been created successfully."
-                              });
-                            } catch (err) {
-                              console.error("Error creating plan:", err);
-                              toast({
-                                title: "Error Creating Plan",
-                                description: "Please try again or select a different project.",
-                                variant: "destructive"
-                              });
-                            } finally {
-                              setLoading(false);
-                            }
-                          }}
-                        >
-                          Initialize Plan
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        No project is selected. Please select a project first to access the full checklist functionality.
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
+        {/* Custom plan initialization button (only show if no plan exists) */}
+        {!plan && getSelectedProject() && (
+          <div className="flex justify-end mb-4">
+            <Button 
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1 text-primary"
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  const planId = await ensurePlanForProject(getSelectedProject()?.id as string);
+                  setSelectedPlanId(planId);
+                  const loadedPlan = await loadPlan(planId);
+                  setPlan(loadedPlan || null);
+                  toast({
+                    title: "Plan Initialized",
+                    description: "Your project plan has been created successfully."
+                  });
+                } catch (err) {
+                  console.error("Error creating plan:", err);
+                  toast({
+                    title: "Error Creating Plan",
+                    description: "Please try again or select a different project.",
+                    variant: "destructive"
+                  });
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>Initialize Custom Plan</span>
+            </Button>
           </div>
         )}
       
