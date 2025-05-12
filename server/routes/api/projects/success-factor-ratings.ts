@@ -32,6 +32,8 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req: Re
 router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
+    console.log('→ HIT POST /api/projects/' + projectId + '/success-factor-ratings');
+    console.log('POST payload:', req.body);
 
     // ----- table-existence check (safe) -----
     const { rows } = await db.execute(
@@ -47,6 +49,7 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
     
     // Validate input array
     const validatedRatings = resonanceRatingsArraySchema.parse(inputData);
+    console.log('validatedRatings:', validatedRatings);
     
     // Map the validated ratings for insertion
     const ratingsToInsert = validatedRatings.map(rating => ({
@@ -65,6 +68,9 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
         notes: rating.notes || ''
       })))
       .returning();
+
+    console.log('returning rows:', newRatings);
+    console.log('newRatings:', newRatings);
 
     res.setHeader('Content-Type', 'application/json');
     res.status(201).json(newRatings);
