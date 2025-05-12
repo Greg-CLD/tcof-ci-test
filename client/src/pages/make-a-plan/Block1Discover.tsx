@@ -510,6 +510,9 @@ export default function Block1Discover() {
 
       // Refresh queries to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ['plan', projectId] });
+      
+      // Also invalidate the personal heuristics query to ensure the latest data is displayed
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/heuristics`] });
 
     } catch (error) {
       console.error("🔴 Block1Discover - Error in combined save:", error);
@@ -1391,17 +1394,21 @@ export default function Block1Discover() {
                     </p>
 
                     {/* Existing personal heuristics */}
-                    {(plan?.blocks?.block1?.personalHeuristics?.length || 0) > 0 ? (
+                    {isLoadingHeuristics ? (
+                      <div className="bg-white border rounded-md p-4 flex justify-center">
+                        <div className="animate-spin w-6 h-6 border-4 border-tcof-teal border-t-transparent rounded-full"></div>
+                      </div>
+                    ) : personalHeuristics.length > 0 ? (
                       <div className="mb-8">
                         <h3 className="text-lg font-medium mb-3">Your Personal Heuristics</h3>
                         <div className="space-y-3">
-                          {plan?.blocks?.block1?.personalHeuristics?.map((heuristic: any) => {
+                          {personalHeuristics.map((heuristic: any) => {
                             // Support both old and new data formats
                             const displayName = heuristic.name || heuristic.text || 'Unnamed Heuristic';
                             const displayDescription = heuristic.description || heuristic.notes || '';
                             const heuristicId = heuristic.id || String(Date.now());
 
-                            console.log('🔄 Rendering heuristic:', { 
+                            console.log('🔄 Rendering heuristic from server:', { 
                               id: heuristicId, 
                               displayName, 
                               displayDescription,
