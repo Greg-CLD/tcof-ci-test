@@ -21,7 +21,7 @@ import { useSuccessFactors } from "@/hooks/useSuccessFactors";
 import { useResonanceRatings } from "@/hooks/useResonanceRatings";
 import { useBlockSave } from "@/hooks/useBlockSave";
 import { usePersonalHeuristics } from "@/hooks/usePersonalHeuristics";
-import ProjectBanner from "@/components/ProjectBanner";
+// ProjectBanner removed - now only in AppLayout
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -945,8 +945,7 @@ export default function Block1Discover() {
   return (
     <PlanProvider>
       <div className="min-h-screen bg-gray-50">
-        {/* Project Banner */}
-        <ProjectBanner />
+        {/* Project Banner removed - now only in AppLayout */}
 
         {/* Main content */}
         <div className="container mx-auto px-4 py-8">
