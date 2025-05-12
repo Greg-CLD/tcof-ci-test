@@ -1361,10 +1361,10 @@ export default function Block1Discover() {
                         {saveMutation.isPending ? 'Saving...' : 'Save Progress'}
                       </Button>
                       <Button
-                        onClick={() => setActiveTab("summary")}
+                        onClick={handleCompleteBlock}
                         className="bg-tcof-teal hover:bg-tcof-teal/90 text-white"
                       >
-                        Next: Summary <ChevronRight className="ml-2 h-4 w-4" />
+                        Complete Block 1 <FastForward className="ml-2 h-4 w-4" />
                       </Button>
                     </div>
                   </CardContent>
