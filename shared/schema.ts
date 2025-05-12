@@ -129,6 +129,21 @@ export const successFactorRatings = pgTable("success_factor_ratings", {
   };
 });
 
+// New table for personal heuristics
+export const personalHeuristics = pgTable("personal_heuristics", {
+  id: uuid("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  favourite: boolean("favourite").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    projectIdIdx: index("project_id_idx").on(table.projectId),
+  };
+});
+
 // Outcomes table - standard outcomes from the framework + custom user outcomes
 export const outcomes = pgTable("outcomes", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -199,6 +214,7 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
   plans: many(plans),
   outcomeProgress: many(outcomeProgress),
   successFactorRatings: many(successFactorRatings),
+  personalHeuristics: many(personalHeuristics),
   
   // Add relationship to organisation
   organisation: one(organisations, {
@@ -224,6 +240,13 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
 export const successFactorRatingsRelations = relations(successFactorRatings, ({ one }) => ({
   project: one(projects, {
     fields: [successFactorRatings.projectId],
+    references: [projects.id]
+  }),
+}));
+
+export const personalHeuristicsRelations = relations(personalHeuristics, ({ one }) => ({
+  project: one(projects, {
+    fields: [personalHeuristics.projectId],
     references: [projects.id]
   }),
 }));
@@ -300,6 +323,12 @@ export const successFactorRatingInsertSchema = createInsertSchema(successFactorR
 });
 export const successFactorRatingSelectSchema = createSelectSchema(successFactorRatings);
 
+// Personal heuristics schemas
+export const personalHeuristicInsertSchema = createInsertSchema(personalHeuristics, {
+  name: (schema) => schema.min(1, "Name is required"),
+});
+export const personalHeuristicSelectSchema = createSelectSchema(personalHeuristics);
+
 // Enhance user schema with validations
 export const userInsertSchema = createInsertSchema(users, {
   username: (schema) => schema.min(3, "Username must be at least 3 characters"),
@@ -372,6 +401,10 @@ export type InsertPlan = z.infer<typeof planInsertSchema>;
 // Success factor rating types
 export type SuccessFactorRating = z.infer<typeof successFactorRatingSelectSchema>;
 export type InsertSuccessFactorRating = z.infer<typeof successFactorRatingInsertSchema>;
+
+// Personal heuristic types
+export type PersonalHeuristic = z.infer<typeof personalHeuristicSelectSchema>;
+export type InsertPersonalHeuristic = z.infer<typeof personalHeuristicInsertSchema>;
 
 // Add organisation types
 export type Organisation = z.infer<typeof organisationSelectSchema>;
