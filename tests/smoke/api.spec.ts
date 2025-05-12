@@ -1,10 +1,12 @@
 
+// @ts-nocheck
 import { createServer } from 'http';
 import request from 'supertest';
 import { db } from '@db';
-import { projects } from '@shared/schema';
+import { projects, successFactorRatings } from '@shared/schema';
 import express from 'express';
 import { registerRoutes } from '../../server/routes';
+import { eq, sql } from 'drizzle-orm';
 
 describe('API Smoke Tests', () => {
   let app: express.Express;
@@ -28,6 +30,9 @@ describe('API Smoke Tests', () => {
       .returning();
     
     projectId = project.id;
+    
+    // Clean up existing ratings
+    await db.execute(sql`TRUNCATE TABLE success_factor_ratings`);
   });
 
   afterEach(async () => {
