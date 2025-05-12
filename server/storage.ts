@@ -511,9 +511,6 @@ export const storage = {
     cynefinSelectionId: number | null, 
     tcofJourneyId: number | null
   ) {
-    // Use SQL template for direct database operation
-    const { sql } = db;
-    
     try {
       const result = await db.execute(sql`
         INSERT INTO "projects" 
@@ -549,88 +546,67 @@ export const storage = {
   ) {
     console.log("Updating project with data:", JSON.stringify(data, null, 2));
     
-    // Use SQL template for direct database operation
-    const { sql } = db;
-    
     try {
-      // Convert camelCase keys to snake_case for SQL query
-      const updateFields = [];
-      const updateValues = [];
+      // Build a simple UPDATE statement with dynamic fields
+      let queryParts = [];
       
       if (data.name !== undefined) {
-        updateFields.push("name");
-        updateValues.push(data.name);
+        queryParts.push(sql`name = ${data.name}`);
       }
       
       if (data.description !== undefined) {
-        updateFields.push("description");
-        updateValues.push(data.description);
+        queryParts.push(sql`description = ${data.description}`);
       }
       
       if (data.sector !== undefined) {
-        updateFields.push("sector");
-        updateValues.push(data.sector);
+        queryParts.push(sql`sector = ${data.sector}`);
       }
       
       if (data.customSector !== undefined) {
-        updateFields.push("custom_sector");
-        updateValues.push(data.customSector);
+        queryParts.push(sql`custom_sector = ${data.customSector}`);
       }
       
       if (data.orgType !== undefined) {
-        updateFields.push("org_type");
-        updateValues.push(data.orgType);
+        queryParts.push(sql`org_type = ${data.orgType}`);
       }
       
       if (data.teamSize !== undefined) {
-        updateFields.push("team_size");
-        updateValues.push(data.teamSize);
+        queryParts.push(sql`team_size = ${data.teamSize}`);
       }
       
       if (data.currentStage !== undefined) {
-        updateFields.push("current_stage");
-        updateValues.push(data.currentStage);
+        queryParts.push(sql`current_stage = ${data.currentStage}`);
       }
       
       if (data.goalMapId !== undefined) {
-        updateFields.push("goal_map_id");
-        updateValues.push(data.goalMapId);
+        queryParts.push(sql`goal_map_id = ${data.goalMapId}`);
       }
       
       if (data.cynefinSelectionId !== undefined) {
-        updateFields.push("cynefin_selection_id");
-        updateValues.push(data.cynefinSelectionId);
+        queryParts.push(sql`cynefin_selection_id = ${data.cynefinSelectionId}`);
       }
       
       if (data.tcofJourneyId !== undefined) {
-        updateFields.push("tcof_journey_id");
-        updateValues.push(data.tcofJourneyId);
+        queryParts.push(sql`tcof_journey_id = ${data.tcofJourneyId}`);
       }
       
       if (data.isProfileComplete !== undefined) {
-        updateFields.push("is_profile_complete");
-        updateValues.push(data.isProfileComplete);
+        queryParts.push(sql`is_profile_complete = ${data.isProfileComplete}`);
       }
       
       // Always update last_updated field
-      updateFields.push("last_updated");
-      updateValues.push(new Date());
+      queryParts.push(sql`last_updated = NOW()`);
       
-      // Build dynamic SET clause
-      const setClauses = updateFields.map((field, index) => `${field} = $${index + 2}`).join(", ");
+      // Combine all parts with commas
+      const setClause = sql.join(queryParts, sql`, `);
       
-      // Build and execute the full UPDATE query
-      const query = `
+      // Execute the update query
+      const result = await db.execute(sql`
         UPDATE projects 
-        SET ${setClauses}
-        WHERE id = $1
+        SET ${setClause}
+        WHERE id = ${Number(id)}
         RETURNING *
-      `;
-      
-      const result = await db.execute({
-        text: query,
-        values: [Number(id), ...updateValues]
-      });
+      `);
       
       return result.rows[0];
     } catch (error) {
