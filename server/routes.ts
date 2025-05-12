@@ -7,6 +7,9 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { factorsDb, type FactorTask } from './factorsDb';
+
+// Define the Stage type for canonical checklist tasks
+type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 import { projectsDb } from './projectsDb';
 import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation, RelationType } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
@@ -303,7 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             successFactorRatings: {},
             personalHeuristics: [],
             mappings: [],
-            tasks: [],
+            tasks: [] as any[], // explicitly define as arrays to avoid type issues
             policyTasks: [],
             goodPractice: {
               zone: null,
@@ -318,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             successFactorRatings: {},
             personalHeuristics: [],
             mappings: [],
-            tasks: [],
+            tasks: [] as any[],
             policyTasks: [],
             goodPractice: {
               zone: null,
@@ -333,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             successFactorRatings: {},
             personalHeuristics: [],
             mappings: [],
-            tasks: [],
+            tasks: [] as any[],
             policyTasks: [],
             goodPractice: {
               zone: null,
@@ -348,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             successFactorRatings: {},
             personalHeuristics: [],
             mappings: [],
-            tasks: [],
+            tasks: [] as any[],
             policyTasks: [],
             goodPractice: {
               zone: null,
@@ -362,10 +365,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add tasks from success factors to each stage
       successFactors.forEach(factor => {
         if (factor.tasks) {
-          Object.entries(factor.tasks).forEach(([stage, tasks]) => {
-            if (canonicalChecklist.stages[stage as Stage] && Array.isArray(tasks)) {
+          Object.entries(factor.tasks).forEach(([stageName, tasks]) => {
+            // Check if the stage name is one of our valid stages
+            if (['Identification', 'Definition', 'Delivery', 'Closure'].includes(stageName) && Array.isArray(tasks)) {
+              const stage = stageName as Stage;
               tasks.forEach(task => {
-                canonicalChecklist.stages[stage as Stage].tasks.push({
+                canonicalChecklist.stages[stage].tasks.push({
                   id: `${factor.id}-${uuidv4().substring(0, 8)}`,
                   text: task,
                   stage: stage,
