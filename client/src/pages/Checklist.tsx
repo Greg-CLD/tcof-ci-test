@@ -202,7 +202,8 @@ export default function Checklist({ projectId }: ChecklistProps) {
     };
     
     // 1. Add tasks from plan stages
-    Object.entries(plan.stages).forEach(([stageName, stageData]) => {
+    if (plan) {
+      Object.entries(plan.stages).forEach(([stageName, stageData]) => {
       const stage = stageName as Stage;
       
       // Regular tasks
@@ -242,6 +243,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
         addTasksToStage(goodPracticeTasks);
       }
     });
+    }
     
     // 2. Add framework tasks if not already included
     if (frameworkTasks?.savedTasks && frameworkTasks.savedTasks.length > 0) {
