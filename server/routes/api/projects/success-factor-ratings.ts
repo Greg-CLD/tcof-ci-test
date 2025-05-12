@@ -33,17 +33,14 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
   try {
     const { projectId } = req.params;
 
-    // Check if table exists
-    const [result] = await db.execute(sql`SELECT to_regclass('public.success_factor_ratings') as tbl`);
-    console.log('Table existence check result:', {
-      tableName: 'success_factor_ratings',
-      exists: result.tbl,
-      timestamp: new Date().toISOString()
-    });
-
-    if (!result.tbl) {
+    // ----- table-existence check (safe) -----
+    const { rows } = await db.execute(
+      sql`SELECT to_regclass('public.success_factor_ratings') AS tbl`
+    );
+    if (!rows?.[0]?.tbl) {
       return res.status(500).json({ error: true, message: 'Table success_factor_ratings not found' });
     }
+    // ----------------------------------------
 
     // Ensure req.body is treated as an array
     const inputData = Array.isArray(req.body) ? req.body : [req.body];
