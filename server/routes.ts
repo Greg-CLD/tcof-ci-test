@@ -1294,12 +1294,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const selections = await storage.getCynefinSelections(userId);
 
         // Format the response
-        const formattedSelections = selections.map(selection => ({
-          id: selection.id,
-          name: selection.data?.name || selection.name,
-          lastUpdated: selection.data?.lastUpdated || (selection.lastModified ? selection.lastModified.getTime() : Date.now()),
-          projectId: selection.data?.projectId || null
-        }));
+        const formattedSelections = selections.map(selection => {
+          const selectionData = selection.data as any;
+          return {
+            id: selection.id,
+            name: selectionData?.name || selection.name,
+            lastUpdated: selectionData?.lastUpdated || (selection.lastUpdated ? new Date(selection.lastUpdated).getTime() : Date.now()),
+            projectId: selectionData?.projectId || null
+          };
+        });
 
         res.json(formattedSelections);
       }
@@ -1431,8 +1434,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Filter journeys for this project - checking relations and embedded projectId
         const projectJourneys = journeys.filter(journey => {
           // Check project ID in the journey's embedded data
-          if (journey.data && journey.data.projectId) {
-            const journeyProjectId = journey.data.projectId.toString();
+          const journeyData = journey.data as any;
+          if (journey.data && journeyData.projectId) {
+            const journeyProjectId = journeyData.projectId.toString();
             const compareId = project.id.toString();
 
             if (journeyProjectId === compareId) {
@@ -1461,18 +1465,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (projectJourneys.length > 0) {
           // Sort by lastUpdated to get the most recent
           projectJourneys.sort((a, b) => {
-            const aTime = a.data?.lastUpdated || (a.lastModified ? a.lastModified.getTime() : 0);
-            const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
+            const aData = a.data as any;
+            const bData = b.data as any;
+            const aTime = aData?.lastUpdated || (a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0);
+            const bTime = bData?.lastUpdated || (b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0);
             return bTime - aTime;
           });
 
           // Format response with normalized data structure
           const latestJourney = projectJourneys[0];
+          const latestJourneyData = latestJourney.data as any;
           return res.json({
             id: latestJourney.id,
-            name: latestJourney.data?.name || latestJourney.name,
+            name: latestJourneyData?.name || latestJourney.name,
             data: latestJourney.data,
-            lastUpdated: latestJourney.data?.lastUpdated || (latestJourney.lastModified ? latestJourney.lastModified.getTime() : Date.now()),
+            lastUpdated: latestJourneyData?.lastUpdated || (latestJourney.lastUpdated ? new Date(latestJourney.lastUpdated).getTime() : Date.now()),
             projectId: project.id // Always use the actual project ID
           });
         } else {
@@ -1483,12 +1490,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const journeys = await storage.getTCOFJourneys(userId);
 
         // Format the response
-        const formattedJourneys = journeys.map(journey => ({
-          id: journey.id,
-          name: journey.data?.name || journey.name,
-          lastUpdated: journey.data?.lastUpdated || (journey.lastModified ? journey.lastModified.getTime() : Date.now()),
-          projectId: journey.data?.projectId || null
-        }));
+        const formattedJourneys = journeys.map(journey => {
+          const journeyData = journey.data as any;
+          return {
+            id: journey.id,
+            name: journeyData?.name || journey.name,
+            lastUpdated: journeyData?.lastUpdated || (journey.lastUpdated ? new Date(journey.lastUpdated).getTime() : Date.now()),
+            projectId: journeyData?.projectId || null
+          };
+        });
 
         res.json(formattedJourneys);
       }
