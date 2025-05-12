@@ -407,7 +407,12 @@ export default function Block1Discover() {
 
     // Persist to server
     try {
-      const payloadItem = { factorId, resonance: value };
+      interface RatingPayload {
+        factorId: string;
+        resonance: number;
+        id?: string;
+      }
+      const payloadItem: RatingPayload = { factorId, resonance: value };
       if (existingRating?.id) payloadItem.id = existingRating.id;
       await updateEvaluations([payloadItem]);
       console.log('🔄 Single rating PATCH succeeded');
@@ -722,35 +727,22 @@ export default function Block1Discover() {
         }
       }
 
-      // Get existing heuristics safely
-      const existingHeuristics = plan?.blocks?.block1?.personalHeuristics || [];
-      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Current heuristics count: ${existingHeuristics.length}`);
+      // We don't need to get existing heuristics as we're using server-side persistence
+      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Deleting heuristic directly from server`);
 
-      // Deep clone to avoid reference issues
-      const clonedHeuristics = JSON.parse(JSON.stringify(existingHeuristics));
+      // Delete the heuristic using the server hook
+      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Deleting heuristic with server hook: ${heuristicId}`);
+      await deleteHeuristic(heuristicId);
+      
+      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Heuristic deleted successfully`);
 
-      // Filter out the one to remove
-      const updatedHeuristics = clonedHeuristics
-        .filter((h: { id: string }) => {
-          const matches = h.id !== heuristicId;
-          if (!matches) {
-            console.info(`[SAVE] Block1Discover.removeHeuristicMutation - Found and removing heuristic: ${JSON.stringify(h)}`);
-          }
-          return matches;
-        });
-
-      console.info(`[SAVE] Block1Discover.removeHeuristicMutation - New heuristics count: ${updatedHeuristics.length}`);
-
-      // Update local state immediately for optimistic UI
-      setPersonalHeuristics(updatedHeuristics);
-
-      // Log the updated heuristics array after removal
-      console.log(`%c[HEURISTIC REMOVE] Updated personalHeuristics after removal (${updatedHeuristics.length}):`, 'color: #059669; font-weight: bold;');
-      console.log(JSON.stringify(updatedHeuristics, null, 2));
+      // Log the server-persisted heuristics array after removal
+      console.log(`%c[HEURISTIC REMOVE] Server-persisted personalHeuristics:`, 'color: #059669; font-weight: bold;');
+      console.log(JSON.stringify(personalHeuristics, null, 2));
 
       // Build the block data with consistent structure
       const blockData = {
-        personalHeuristics: updatedHeuristics,
+        personalHeuristics: personalHeuristics,
         // Maintain any existing data to avoid overwriting
         successFactorRatings: ratings || {},
         successCriteria: successCriteria || "",
