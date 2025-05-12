@@ -352,9 +352,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
     if (!plan) {
       // If no plan exists, show a message about creating a plan first
       toast({
-        title: "No Plan Available",
-        description: "Please create a plan first before updating tasks.",
-        variant: "destructive"
+        title: "Read-Only Checklist",
+        description: "Please initialize a plan to save changes to this checklist.",
+        variant: "warning"
       });
       return;
     }
@@ -424,9 +424,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
   const handleExportPDF = () => {
     if (!plan) {
       toast({
-        title: "No Plan Available",
-        description: "Please create a plan first before exporting.",
-        variant: "destructive"
+        title: "Read-Only Checklist",
+        description: "Please initialize a plan first to export to PDF.",
+        variant: "warning"
       });
       return;
     }
@@ -442,9 +442,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
   const handleExportCSV = () => {
     if (!plan) {
       toast({
-        title: "No Plan Available",
-        description: "Please create a plan first before exporting.",
-        variant: "destructive"
+        title: "Read-Only Checklist",
+        description: "Please initialize a plan first to export to CSV.",
+        variant: "warning"
       });
       return;
     }
@@ -555,15 +555,16 @@ export default function Checklist({ projectId }: ChecklistProps) {
                 <CircleX className="h-5 w-5 text-amber-600" />
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium">Project Plan Required</h3>
+                <h3 className="text-sm font-medium">Read-Only Checklist</h3>
                 <div className="mt-2 text-sm">
                   <p>
                     {getSelectedProject() ? (
                       <>
-                        The plan for <span className="font-semibold">{getSelectedProject()?.name}</span> needs to be initialized.
+                        You're viewing a standard checklist for <span className="font-semibold">{getSelectedProject()?.name}</span>. 
+                        To save changes or customize tasks, you need to initialize a project plan.
                         <Button 
                           variant="link" 
-                          className="text-amber-800 underline p-0 h-auto font-semibold"
+                          className="ml-2 text-amber-800 underline p-0 h-auto font-semibold"
                           onClick={async () => {
                             try {
                               setLoading(true);
@@ -587,7 +588,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
                             }
                           }}
                         >
-                          Click here to initialize it.
+                          Initialize Plan
                         </Button>
                       </>
                     ) : (
