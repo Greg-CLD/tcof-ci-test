@@ -8,6 +8,7 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "migrate": "NODE_OPTIONS='--loader ts-node/esm' ts-node -O '{\"module\":\"commonjs\"}' -r tsconfig-paths/register ./db/migrations/*.ts",
+    "smoke": "npm run migrate && npm run test:smoke",
     "check": "tsc",
     "test:smoke": "jest --runInBand tests/smoke/api.spec.ts",
     "db:push": "drizzle-kit push --force --config=./drizzle.config.ts",
