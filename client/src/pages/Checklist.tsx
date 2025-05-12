@@ -26,6 +26,7 @@ import { useFrameworkTasks } from '@/hooks/useFrameworkTasks';
 import { useFactors } from '@/hooks/useFactors';
 import { Badge } from '@/components/ui/badge';
 import { TaskCard, TaskUpdates } from '@/components/checklist/TaskCard';
+import { useQuery } from '@tanstack/react-query';
 
 interface ChecklistProps {
   projectId?: string;
@@ -73,6 +74,19 @@ export default function Checklist({ projectId }: ChecklistProps) {
   const [plan, setPlan] = useState<PlanRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
+  
+  // Query for the canonical checklist (when no plan exists)
+  const { data: canonicalChecklist, isLoading: isLoadingCanonical } = useQuery({
+    queryKey: [`/api/checklist/${currentProjectId}`],
+    queryFn: async () => {
+      if (!currentProjectId) return null;
+      const response = await fetch(`/api/checklist/${currentProjectId}`);
+      if (!response.ok) throw new Error('Failed to fetch canonical checklist');
+      return response.json();
+    },
+    // Only fetch the canonical checklist if no plan exists
+    enabled: !plan && !!currentProjectId,
+  });
   
   // All tasks combined from different sources
   const [allTasks, setAllTasks] = useState<Record<Stage, UnifiedTask[]>>({
@@ -186,8 +200,34 @@ export default function Checklist({ projectId }: ChecklistProps) {
       Closure: []
     };
     
-    // If no plan, still initialize the task array but with empty data
-    if (!plan) {
+    // If no plan but we have canonical checklist data, use that instead
+    if (!plan && canonicalChecklist) {
+      // Add tasks from canonical checklist
+      Object.entries(canonicalChecklist.stages).forEach(([stageName, stageData]) => {
+        const stage = stageName as Stage;
+        if (stageData && stageData.tasks && Array.isArray(stageData.tasks)) {
+          const canonicalTasks = stageData.tasks.map((task: any) => ({
+            id: task.id,
+            text: task.text,
+            completed: task.completed || false,
+            stage,
+            source: task.origin as 'heuristic' | 'factor' | 'custom' | 'framework',
+            sourceName: task.origin === 'factor' ? 'Success Factor' : undefined,
+            notes: task.notes,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            owner: task.owner,
+            order: task.order
+          }));
+          combined[stage].push(...canonicalTasks);
+        }
+      });
+      setAllTasks(combined);
+      return;
+    }
+    
+    // If no plan and no canonical data, initialize with empty data
+    if (!plan && !canonicalChecklist) {
       setAllTasks(combined);
       return;
     }
@@ -288,7 +328,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
     
     // Update state with combined tasks
     setAllTasks(combined);
-  }, [plan, frameworkTasks, getTaskDetails]);
+  }, [plan, frameworkTasks, getTaskDetails, canonicalChecklist]);
   
   // Handle plan update
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
@@ -418,12 +458,12 @@ export default function Checklist({ projectId }: ChecklistProps) {
   };
   
   // Loading state
-  if (loading) {
+  if (loading || isLoadingCanonical) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 text-tcof-teal animate-spin" />
-          <p className="text-tcof-dark font-medium">Loading your plan...</p>
+          <p className="text-tcof-dark font-medium">Loading your checklist...</p>
         </div>
       </div>
     );
