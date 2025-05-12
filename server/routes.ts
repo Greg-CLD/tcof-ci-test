@@ -1012,8 +1012,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter for this project
       const projectSelections = allSelections.filter(selection => {
         // Check embedded projectId in data
-        if (selection.data && selection.data.projectId) {
-          const selectionProjectId = selection.data.projectId.toString();
+        const selectionData = selection.data as any;
+        if (selection.data && selectionData.projectId) {
+          const selectionProjectId = selectionData.projectId.toString();
           const compareId = project.id.toString();
 
           if (selectionProjectId === compareId) {
@@ -1067,8 +1068,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter journeys for this project - checking relations and embedded projectId
       const projectJourneys = allJourneys.filter(journey => {
         // Check project ID in the journey's embedded data
-        if (journey.data && journey.data.projectId) {
-          const journeyProjectId = journey.data.projectId.toString();
+        const journeyData = journey.data as any;
+        if (journey.data && journeyData.projectId) {
+          const journeyProjectId = journeyData.projectId.toString();
           const compareId = project.id.toString();
 
           if (journeyProjectId === compareId) {
@@ -1148,8 +1150,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter for this project
       const projectJourneys = allJourneys.filter(journey => {
         // Check embedded projectId in data
-        if (journey.data && journey.data.projectId) {
-          const journeyProjectId = journey.data.projectId.toString();
+        const journeyData = journey.data as any;
+        if (journey.data && journeyData.projectId) {
+          const journeyProjectId = journeyData.projectId.toString();
           const compareId = project.id.toString();
 
           if (journeyProjectId === compareId) {
@@ -1235,8 +1238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Filter selections for this project - checking relations
         const projectSelections = selections.filter(selection => {
           // Check project ID in the selection's embedded data
-          if (selection.data && selection.data.projectId) {
-            const selectionProjectId = selection.data.projectId.toString();
+          const selectionData = selection.data as any;
+          if (selection.data && selectionData.projectId) {
+            const selectionProjectId = selectionData.projectId.toString();
             const compareId = project.id.toString();
 
             if (selectionProjectId === compareId) {
@@ -1265,18 +1269,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (projectSelections.length > 0) {
           // Sort by lastUpdated to get the most recent
           projectSelections.sort((a, b) => {
-            const aTime = a.data?.lastUpdated || (a.lastModified ? a.lastModified.getTime() : 0);
-            const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
+            const aData = a.data as any;
+            const bData = b.data as any;
+            const aTime = aData?.lastUpdated || (a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0);
+            const bTime = bData?.lastUpdated || (b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0);
             return bTime - aTime;
           });
 
           // Format response with normalized data structure
           const latestSelection = projectSelections[0];
+          const latestSelectionData = latestSelection.data as any;
           return res.json({
             id: latestSelection.id,
-            name: latestSelection.data?.name || latestSelection.name,
+            name: latestSelectionData?.name || latestSelection.name,
             data: latestSelection.data,
-            lastUpdated: latestSelection.data?.lastUpdated || (latestSelection.lastModified ? latestSelection.lastModified.getTime() : Date.now()),
+            lastUpdated: latestSelectionData?.lastUpdated || (latestSelection.lastUpdated ? new Date(latestSelection.lastUpdated).getTime() : Date.now()),
             projectId: project.id // Always use the actual project ID
           });
         } else {
