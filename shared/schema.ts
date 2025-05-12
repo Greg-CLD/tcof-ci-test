@@ -115,7 +115,7 @@ export const projects = pgTable("projects", {
 
 // New table for success factor ratings
 export const successFactorRatings = pgTable("success_factor_ratings", {
-  id: integer("id").primaryKey(),
+  id: uuid("id").primaryKey(),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   factorId: varchar("factor_id", { length: 255 }).notNull(),
   resonance: integer("resonance").notNull(), // Rating from 1-5
