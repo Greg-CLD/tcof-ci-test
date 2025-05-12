@@ -45,11 +45,19 @@ router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: R
       return res.status(500).json({ error: true, message: 'Table success_factor_ratings not found' });
     }
 
+    // Ensure req.body is treated as an array
+    const inputData = Array.isArray(req.body) ? req.body : [req.body];
+    
     // Validate input array
-    const validatedRatings = resonanceRatingsArraySchema.parse(req.body);
-
-    // Ensure validatedRatings is an array and map the values
-    const ratingsToInsert = Array.isArray(validatedRatings) ? validatedRatings : [validatedRatings];
+    const validatedRatings = resonanceRatingsArraySchema.parse(inputData);
+    
+    // Map the validated ratings for insertion
+    const ratingsToInsert = validatedRatings.map(rating => ({
+      projectId,
+      factorId: rating.factorId,
+      resonance: rating.resonance,
+      notes: rating.notes || ''
+    }));
     
     // Insert new ratings
     const newRatings = await db.insert(successFactorRatings)
