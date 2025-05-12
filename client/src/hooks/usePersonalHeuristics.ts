@@ -136,6 +136,7 @@ export function usePersonalHeuristics(projectId?: string) {
     createHeuristic,
     updateHeuristic,
     deleteHeuristic,
+    toggleFavorite,
     isCreating: createHeuristicMutation.isPending,
     isUpdating: updateHeuristicMutation.isPending,
     isDeleting: deleteHeuristicMutation.isPending,

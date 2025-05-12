@@ -20,6 +20,7 @@ import { PlanProvider, usePlan } from "@/contexts/PlanContext";
 import { useSuccessFactors } from "@/hooks/useSuccessFactors";
 import { useResonanceRatings } from "@/hooks/useResonanceRatings";
 import { useBlockSave } from "@/hooks/useBlockSave";
+import { usePersonalHeuristics } from "@/hooks/usePersonalHeuristics";
 import ProjectBanner from "@/components/ProjectBanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
