@@ -429,8 +429,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (projectGoalMaps.length > 0) {
           // Sort by lastUpdated to get the most recent
           projectGoalMaps.sort((a, b) => {
-            const aTime = a.data?.lastUpdated || (a.lastModified ? a.lastModified.getTime() : 0);
-            const bTime = b.data?.lastUpdated || (b.lastModified ? b.lastModified.getTime() : 0);
+            const aData = a.data as any;
+            const bData = b.data as any;
+            const aTime = aData?.lastUpdated || (a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0);
+            const bTime = bData?.lastUpdated || (b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0);
             return bTime - aTime;
           });
 
@@ -438,19 +440,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const latestMap = projectGoalMaps[0];
 
           // First, extract all relevant data from the stored map
+          const latestMapData = latestMap.data as any;
           let responseData: any = {
             id: latestMap.id,
-            name: latestMap.data?.name || latestMap.name,
-            nodes: latestMap.data?.nodes || [],
-            connections: latestMap.data?.connections || [],
-            lastUpdated: latestMap.data?.lastUpdated || (latestMap.lastModified ? latestMap.lastModified.getTime() : Date.now()),
+            name: latestMapData?.name || latestMap.name,
+            nodes: latestMapData?.nodes || [],
+            connections: latestMapData?.connections || [],
+            lastUpdated: latestMapData?.lastUpdated || (latestMap.lastUpdated ? new Date(latestMap.lastUpdated).getTime() : Date.now()),
             projectId: project.id // Always use the actual project ID
           };
 
           // Include goals if they exist in the data
-          if (latestMap.data?.goals && latestMap.data.goals.length > 0) {
-            console.log(`Including ${latestMap.data.goals.length} goals from stored data`);
-            responseData.goals = latestMap.data.goals;
+          if (latestMapData?.goals && latestMapData.goals.length > 0) {
+            console.log(`Including ${latestMapData.goals.length} goals from stored data`);
+            responseData.goals = latestMapData.goals;
           } else if (responseData.nodes && responseData.nodes.length > 0 && !responseData.goals) {
             // Generate goals from nodes if nodes exist but goals don't
             console.log('Converting nodes to goals format for backward compatibility');
@@ -500,12 +503,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const goalMaps = await storage.getGoalMaps(userId);
 
         // Format the response
-        const formattedMaps = goalMaps.map(map => ({
-          id: map.id,
-          name: map.data?.name || map.name,
-          lastUpdated: map.data?.lastUpdated || (map.lastModified ? map.lastModified.getTime() : Date.now()),
-          projectId: map.data?.projectId || null
-        }));
+        const formattedMaps = goalMaps.map(map => {
+          const mapData = map.data as any;
+          return {
+            id: map.id,
+            name: mapData?.name || map.name,
+            lastUpdated: mapData?.lastUpdated || (map.lastUpdated ? new Date(map.lastUpdated).getTime() : Date.now()),
+            projectId: mapData?.projectId || null
+          };
+        });
 
         res.json(formattedMaps);
       }
@@ -924,8 +930,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter for this project - using both embedded projectId and relations
       const projectSelections = allSelections.filter(selection => {
         // Check embedded projectId in data
-        if (selection.data && selection.data.projectId) {
-          const selectionProjectId = selection.data.projectId.toString();
+        const selectionData = selection.data as any;
+        if (selection.data && selectionData.projectId) {
+          const selectionProjectId = selectionData.projectId.toString();
           const compareId = project.id.toString();
 
           if (selectionProjectId === compareId) {
