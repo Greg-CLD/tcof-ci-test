@@ -511,20 +511,24 @@ export const storage = {
     cynefinSelectionId: number | null, 
     tcofJourneyId: number | null
   ) {
-    // Use the project schema fields directly
-    const [project] = await db.insert(projects)
-      .values({
-        name,
-        description,
-        userId: Number(userId),
-        goalMapId,
-        cynefinSelectionId,
-        tcofJourneyId,
-        lastUpdated: new Date()
-      })
-      .returning();
+    // Use SQL template for direct database operation
+    const { sql } = db;
     
-    return project;
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO "projects" 
+          (name, description, user_id, goal_map_id, cynefin_selection_id, tcof_journey_id, last_updated) 
+        VALUES 
+          (${name}, ${description}, ${Number(userId)}, ${goalMapId}, ${cynefinSelectionId}, ${tcofJourneyId}, NOW())
+        RETURNING *
+      `);
+      
+      // Return the first row of the result
+      return result.rows[0];
+    } catch (error) {
+      console.error("Error creating project:", error);
+      throw error;
+    }
   },
 
   async updateProject(
@@ -544,18 +548,95 @@ export const storage = {
     }
   ) {
     console.log("Updating project with data:", JSON.stringify(data, null, 2));
-    const updateValues = {
-      ...data,
-      lastUpdated: new Date()
-    };
-
-    const [updatedProject] = await db
-      .update(projects)
-      .set(updateValues)
-      .where(eq(projects.id, Number(id)))
-      .returning();
     
-    return updatedProject;
+    // Use SQL template for direct database operation
+    const { sql } = db;
+    
+    try {
+      // Convert camelCase keys to snake_case for SQL query
+      const updateFields = [];
+      const updateValues = [];
+      
+      if (data.name !== undefined) {
+        updateFields.push("name");
+        updateValues.push(data.name);
+      }
+      
+      if (data.description !== undefined) {
+        updateFields.push("description");
+        updateValues.push(data.description);
+      }
+      
+      if (data.sector !== undefined) {
+        updateFields.push("sector");
+        updateValues.push(data.sector);
+      }
+      
+      if (data.customSector !== undefined) {
+        updateFields.push("custom_sector");
+        updateValues.push(data.customSector);
+      }
+      
+      if (data.orgType !== undefined) {
+        updateFields.push("org_type");
+        updateValues.push(data.orgType);
+      }
+      
+      if (data.teamSize !== undefined) {
+        updateFields.push("team_size");
+        updateValues.push(data.teamSize);
+      }
+      
+      if (data.currentStage !== undefined) {
+        updateFields.push("current_stage");
+        updateValues.push(data.currentStage);
+      }
+      
+      if (data.goalMapId !== undefined) {
+        updateFields.push("goal_map_id");
+        updateValues.push(data.goalMapId);
+      }
+      
+      if (data.cynefinSelectionId !== undefined) {
+        updateFields.push("cynefin_selection_id");
+        updateValues.push(data.cynefinSelectionId);
+      }
+      
+      if (data.tcofJourneyId !== undefined) {
+        updateFields.push("tcof_journey_id");
+        updateValues.push(data.tcofJourneyId);
+      }
+      
+      if (data.isProfileComplete !== undefined) {
+        updateFields.push("is_profile_complete");
+        updateValues.push(data.isProfileComplete);
+      }
+      
+      // Always update last_updated field
+      updateFields.push("last_updated");
+      updateValues.push(new Date());
+      
+      // Build dynamic SET clause
+      const setClauses = updateFields.map((field, index) => `${field} = $${index + 2}`).join(", ");
+      
+      // Build and execute the full UPDATE query
+      const query = `
+        UPDATE projects 
+        SET ${setClauses}
+        WHERE id = $1
+        RETURNING *
+      `;
+      
+      const result = await db.execute({
+        text: query,
+        values: [Number(id), ...updateValues]
+      });
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error("Error updating project:", error);
+      throw error;
+    }
   },
   
   // Tool progress tracking methods
