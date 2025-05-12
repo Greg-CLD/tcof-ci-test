@@ -29,7 +29,7 @@ router.get('/:projectId/success-factor-ratings', isAuthenticated, async (req: Re
 });
 
 // POST /api/projects/:projectId/success-factor-ratings
-router.post('/:projectId/success-factor-ratings', isAuthenticated, async (req: Request, res: Response) => {
+router.post('/:projectId/success-factor-ratings', async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     console.log('→ HIT POST /api/projects/' + projectId + '/success-factor-ratings');
