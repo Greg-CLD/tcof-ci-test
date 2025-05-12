@@ -1371,10 +1371,7 @@ export default function Block1Discover() {
                 </Card>
               </TabsContent>
 
-              {/* Summary tab content */}
-              <TabsContent value="summary" className="mt-6">
-                <Card>
-                  <CardContent className="p-6">
+              {/* Summary tab content removed */}
                     <div className="flex items-center mb-6">
                       <Button
                         variant="outline"
