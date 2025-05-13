@@ -6,7 +6,27 @@ import { factorsDb, type FactorTask } from './factorsDbNew';
 import fs from 'fs';
 import path from 'path';
 import { ensureCanonicalFactors } from './ensureCanonicalFactorsNew';
-import { isAdmin } from './auth-simple';
+// Import auth middleware
+import { isAuthenticated } from './auth-simple';
+
+// Define the admin middleware
+function isAdmin(req: Request, res: Response, next: any) {
+  // First check if the user is authenticated
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  // Get the user from the request
+  const user = req.user as any;
+  
+  // Only allow the admin user (greg@confluity.co.uk)
+  if (user && user.username && user.username.toLowerCase() === 'greg@confluity.co.uk') {
+    return next();
+  }
+  
+  // Otherwise reject with forbidden status
+  return res.status(403).json({ message: "Admin access required" });
+}
 
 export async function registerSuccessFactorsRoutes(app: Express) {
   // Initialize the factors database

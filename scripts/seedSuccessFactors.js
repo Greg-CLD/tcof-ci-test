@@ -2,9 +2,14 @@
  * Script to seed success factors from JSON into the database
  * This reads from data/successFactors.json and inserts the data into the PostgreSQL tables
  */
-const { Client } = require('pg');
-const fs = require('fs');
-const path = require('path');
+import pkg from 'pg';
+const { Client } = pkg;
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function seedSuccessFactors() {
   const client = new Client({
@@ -108,8 +113,6 @@ async function run() {
 }
 
 // Run if called directly (not imported)
-if (require.main === module) {
-  run();
-}
+run();
 
-module.exports = { seedSuccessFactors };
+export { seedSuccessFactors };
