@@ -723,7 +723,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
         
         {/* Summary bar */}
         <div className="mb-6">
-          <SummaryBar plan={plan} />
+          <SummaryBar plan={plan} canonicalChecklist={canonicalChecklist} />
         </div>
         
         {/* View toggle button */}

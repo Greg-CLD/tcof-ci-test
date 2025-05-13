@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 
 interface SummaryBarProps {
   plan: PlanRecord | null;
+  canonicalChecklist?: any; // Fallback canonical checklist data
 }
 
 interface StageMetrics {
@@ -15,7 +16,7 @@ interface StageMetrics {
 
 type StageMetricsMap = Record<Stage, StageMetrics>;
 
-export default function SummaryBar({ plan }: SummaryBarProps) {
+export default function SummaryBar({ plan, canonicalChecklist }: SummaryBarProps) {
   // Create default empty metrics
   const defaultMetrics = (): StageMetricsMap => {
     return {
@@ -28,31 +29,49 @@ export default function SummaryBar({ plan }: SummaryBarProps) {
 
   // Calculate metrics for each stage
   const calculateStageMetrics = (): StageMetricsMap => {
-    // If no plan exists, return default empty metrics
-    if (!plan) {
-      return defaultMetrics();
-    }
-
     const metrics: Partial<StageMetricsMap> = {};
     
-    Object.entries(plan.stages).forEach(([stageName, stageData]) => {
-      const stage = stageName as Stage;
-      
-      // Count regular tasks
-      const regularTasks = stageData.tasks || [];
-      const regularCompleted = regularTasks.filter(t => t.completed).length;
-      
-      // Count good practice tasks
-      const gpTasks = stageData.goodPractice?.tasks || [];
-      const gpCompleted = gpTasks.filter(t => t.completed).length;
-      
-      // Calculate totals
-      const total = regularTasks.length + gpTasks.length;
-      const completed = regularCompleted + gpCompleted;
-      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-      
-      metrics[stage] = { total, completed, percentage };
-    });
+    // If we have a plan, use that
+    if (plan) {
+      Object.entries(plan.stages).forEach(([stageName, stageData]) => {
+        const stage = stageName as Stage;
+        
+        // Count regular tasks
+        const regularTasks = stageData.tasks || [];
+        const regularCompleted = regularTasks.filter(t => t.completed).length;
+        
+        // Count good practice tasks
+        const gpTasks = stageData.goodPractice?.tasks || [];
+        const gpCompleted = gpTasks.filter(t => t.completed).length;
+        
+        // Calculate totals
+        const total = regularTasks.length + gpTasks.length;
+        const completed = regularCompleted + gpCompleted;
+        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+        
+        metrics[stage] = { total, completed, percentage };
+      });
+    } 
+    // If we don't have a plan but we have canonical checklist data, use that
+    else if (canonicalChecklist && canonicalChecklist.stages) {
+      Object.entries(canonicalChecklist.stages).forEach(([stageName, stageData]) => {
+        const stage = stageName as Stage;
+        
+        // Count tasks from canonical checklist
+        const tasks = stageData && Array.isArray(stageData.tasks) ? stageData.tasks : [];
+        const completed = tasks.filter((t: any) => t.completed).length;
+        
+        // Calculate percentage
+        const total = tasks.length;
+        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+        
+        metrics[stage] = { total, completed, percentage };
+      });
+    } 
+    // If we don't have either, return default empty metrics
+    else {
+      return defaultMetrics();
+    }
     
     return metrics as StageMetricsMap;
   };
