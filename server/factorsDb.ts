@@ -1,103 +1,86 @@
-interface StagedTasks {
-  Identification: string[];
-  Definition: string[];
-  Delivery: string[];
-  Closure: string[];
-}
+import { db } from './db';
+import { sql } from 'drizzle-orm';
+import type { FactorTask } from '../scripts/factorUtils';
 
-export interface FactorTask {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  tasks: StagedTasks;
-  // Optional properties for client-side data
-  projectId?: string;
-  nodes?: any[];
-  connections?: any[];
-  lastUpdated?: string | number;
-  // Track changes
-  createdAt?: string;
-  updatedAt?: string;
-}
+export async function getFactors(): Promise<FactorTask[]> {
+  try {
+    const result = await db.execute(sql`
+      SELECT f.id, f.title, f.description,
+             ft.stage, ft.task_text
+      FROM success_factors f
+      LEFT JOIN success_factor_tasks ft ON f.id = ft.factor_id
+      ORDER BY f.id, ft.stage
+    `);
 
-// Database operations
-const factorsArray: FactorTask[] = [];
+    if (!result.rows || result.rows.length === 0) {
+      return [];
+    }
 
-export const factorsDb = {
-  length: 0,
-  getAll(): FactorTask[] {
-    return factorsArray;
-  },
-  setAll: function(factors: FactorTask[]): void {
-    // Clear existing array
-    factorsArray.length = 0;
-    // Add normalized factors
-    factors.forEach(factor => {
-      factorsArray.push({
-        id: factor.id,
-        title: factor.title,
-        description: factor.description || '',
-        category: factor.category || 'Uncategorized',
-        tasks: {
-          Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
-          Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],
-          Delivery: Array.isArray(factor.tasks?.Delivery) ? factor.tasks.Delivery : [],
-          Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
-        }
-      });
-    });
-    this.length = factorsArray.length;
-  },
-  add: function(factor: FactorTask): void {
-    factorsArray.push({
-      id: factor.id,
-      title: factor.title,
-      description: factor.description || '',
-      category: factor.category || 'Uncategorized',
-      tasks: {
-        Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
-        Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],
-        Delivery: Array.isArray(factor.tasks?.Delivery) ? factor.tasks.Delivery : [],
-        Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
+    // Group tasks by factor and stage
+    const factorMap = new Map<string, FactorTask>();
+
+    result.rows.forEach((row: any) => {
+      if (!factorMap.has(row.id)) {
+        factorMap.set(row.id, {
+          id: row.id,
+          title: row.title,
+          tasks: {
+            Identification: [],
+            Definition: [],
+            Delivery: [],
+            Closure: []
+          }
+        });
+      }
+
+      const factor = factorMap.get(row.id)!;
+      if (row.stage && row.task_text) {
+        factor.tasks[row.stage as keyof typeof factor.tasks].push(row.task_text);
       }
     });
-    this.length = factorsArray.length;
-  },
-  findById: function(id: string): FactorTask | undefined {
-    const factor = factorsArray.find(f => f.id === id);
-    return factor ? factor : undefined;
-  },
-  removeById: function(id: string): boolean {
-    const index = factorsArray.findIndex(f => f.id === id);
-    if (index !== -1) {
-      factorsArray.splice(index, 1);
-      this.length = factorsArray.length;
-      return true;
-    }
-    return false;
-  },
-  updateById: function(id: string, updatedFactor: FactorTask): boolean {
-    const index = factorsArray.findIndex(f => f.id === id);
-    if (index !== -1) {
-      factorsArray[index] = {
-        id: updatedFactor.id,
-        title: updatedFactor.title,
-        description: updatedFactor.description || '',
-        category: updatedFactor.category || 'Uncategorized',
-        tasks: {
-          Identification: Array.isArray(updatedFactor.tasks?.Identification) ? updatedFactor.tasks.Identification : [],
-          Definition: Array.isArray(updatedFactor.tasks?.Definition) ? updatedFactor.tasks.Definition : [],
-          Delivery: Array.isArray(updatedFactor.tasks?.Delivery) ? updatedFactor.tasks.Delivery : [],
-          Closure: Array.isArray(updatedFactor.tasks?.Closure) ? updatedFactor.tasks.Closure : []
-        }
-      };
-      return true;
-    }
-    return false;
-  },
-  clear: function(): void {
-    factorsArray.length = 0;
-    this.length = factorsArray.length;
+
+    return Array.from(factorMap.values());
+  } catch (error) {
+    console.error('Error loading factors from database:', error);
+    throw error;
   }
-};
+}
+
+export async function getFactor(id: string): Promise<FactorTask | null> {
+  try {
+    const result = await db.execute(sql`
+      SELECT f.id, f.title, f.description,
+             ft.stage, ft.task_text
+      FROM success_factors f
+      LEFT JOIN success_factor_tasks ft ON f.id = ft.factor_id
+      WHERE f.id = ${id}
+      ORDER BY ft.stage
+    `);
+
+    if (!result.rows || result.rows.length === 0) {
+      return null;
+    }
+
+    const factor: FactorTask = {
+      id: result.rows[0].id,
+      title: result.rows[0].title,
+      tasks: {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      }
+    };
+
+    result.rows.forEach((row: any) => {
+      if (row.stage && row.task_text) {
+        factor.tasks[row.stage as keyof typeof factor.tasks].push(row.task_text);
+      }
+    });
+
+    return factor;
+  } catch (error) {
+    console.error(`Error loading factor ${id} from database:`, error);
+    throw error;
+  }
+}

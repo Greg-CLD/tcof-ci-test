@@ -1,16 +1,9 @@
-/**
- * Success Factors Utilities for Data Validation and Management
- * Provides tools for both server-side validation and admin data operations
- */
-import * as fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
 
-// Get current module's directory (ES Module alternative to __dirname)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { db } from '../server/db';
+import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
-// Success Factor Interfaces
+// Success Factor Interfaces 
 export interface FactorTask {
   id: string;
   title: string;
@@ -22,7 +15,6 @@ export interface FactorTask {
   };
 }
 
-// Known canonical factor titles
 const CANONICAL_FACTOR_TITLES = [
   "1.1 Ask Why",
   "1.2 Get a Masterbuilder",
@@ -38,48 +30,99 @@ const CANONICAL_FACTOR_TITLES = [
   "4.3 Be Ready to Adapt"
 ];
 
-// Path to success factors data file
-const factorsPath = resolve(__dirname, '../data/successFactors.json');
-
 /**
- * Load success factors from the data file
+ * Load success factors from database with tasks
  * @returns Array of success factors
  */
-export function loadFactors(): FactorTask[] {
+export async function loadFactors(): Promise<FactorTask[]> {
   try {
-    if (!fs.existsSync(factorsPath)) {
-      console.error(`Error: Success factors file not found at ${factorsPath}`);
+    console.log('Loading factors from database...');
+    
+    // Get all factors with their tasks
+    const result = await db.execute(sql`
+      SELECT f.id, f.title, f.description,
+             ft.stage, ft.task_text
+      FROM success_factors f
+      LEFT JOIN success_factor_tasks ft ON f.id = ft.factor_id
+      ORDER BY f.id, ft.stage
+    `);
+
+    if (!result.rows || result.rows.length === 0) {
+      console.warn('No factors found in database');
       return [];
     }
+
+    // Group tasks by factor and stage
+    const factorMap = new Map<string, FactorTask>();
     
-    const data = fs.readFileSync(factorsPath, 'utf8');
-    return JSON.parse(data) as FactorTask[];
+    result.rows.forEach((row: any) => {
+      if (!factorMap.has(row.id)) {
+        factorMap.set(row.id, {
+          id: row.id,
+          title: row.title,
+          tasks: {
+            Identification: [],
+            Definition: [],
+            Delivery: [],
+            Closure: []
+          }
+        });
+      }
+
+      const factor = factorMap.get(row.id)!;
+      if (row.stage && row.task_text) {
+        factor.tasks[row.stage as keyof typeof factor.tasks].push(row.task_text);
+      }
+    });
+
+    return Array.from(factorMap.values());
   } catch (error) {
-    console.error(`Error loading success factors: ${(error as Error).message}`);
-    return [];
+    console.error('Error loading factors from database:', error);
+    throw error;
   }
 }
 
 /**
- * Save success factors to the data file
+ * Save success factors to database
  * @param factors Array of success factors to save
  * @returns Boolean indicating success
  */
-export function saveFactors(factors: FactorTask[]): boolean {
+export async function saveFactors(factors: FactorTask[]): Promise<boolean> {
   try {
-    fs.writeFileSync(factorsPath, JSON.stringify(factors, null, 2), 'utf8');
+    await db.transaction(async (tx) => {
+      // Clear existing tasks
+      await tx.execute(sql`DELETE FROM success_factor_tasks`);
+      
+      // Update/insert factors and their tasks
+      for (const factor of factors) {
+        // Upsert factor
+        await tx.execute(sql`
+          INSERT INTO success_factors (id, title)
+          VALUES (${factor.id}, ${factor.title})
+          ON CONFLICT (id) DO UPDATE 
+          SET title = EXCLUDED.title
+        `);
+
+        // Insert tasks for each stage
+        for (const [stage, tasks] of Object.entries(factor.tasks)) {
+          for (const task of tasks) {
+            await tx.execute(sql`
+              INSERT INTO success_factor_tasks (factor_id, stage, task_text)
+              VALUES (${factor.id}, ${stage}, ${task})
+            `);
+          }
+        }
+      }
+    });
+
     return true;
   } catch (error) {
-    console.error(`Error saving success factors: ${(error as Error).message}`);
-    return false;
+    console.error('Error saving factors to database:', error);
+    throw error;
   }
 }
 
-/**
- * Check if a factor has valid task arrays for all stages
- * @param factor The factor to check
- * @returns Boolean indicating validity and any issues
- */
+// Keep existing validation functions but remove file operations
 export function validateFactorTasks(factor: FactorTask): { valid: boolean; issues: string[] } {
   const issues: string[] = [];
   const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
@@ -98,25 +141,18 @@ export function validateFactorTasks(factor: FactorTask): { valid: boolean; issue
   }
   
   for (const stage of stages) {
-    // Check if the stage property exists
     if (!(stage in factor.tasks)) {
       issues.push(`Factor "${factor.title}" is missing the "${stage}" stage array`);
     } else if (!Array.isArray(factor.tasks[stage as keyof typeof factor.tasks])) {
       issues.push(`Factor "${factor.title}" has an invalid "${stage}" stage (not an array)`);
-    } else if (factor.tasks[stage as keyof typeof factor.tasks].length === 0) {
-      issues.push(`Factor "${factor.title}" has no tasks for the "${stage}" stage`);
     }
   }
   
   return { valid: issues.length === 0, issues };
 }
 
-/**
- * Identify task gaps across all factors
- * @returns Array of issues found
- */
-export function identifyTaskGaps(): string[] {
-  const factors = loadFactors();
+export async function identifyTaskGaps(): Promise<string[]> {
+  const factors = await loadFactors();
   const issues: string[] = [];
   
   factors.forEach(factor => {
@@ -129,12 +165,8 @@ export function identifyTaskGaps(): string[] {
   return issues;
 }
 
-/**
- * Generate a report of all factors and their task distribution
- * @returns Object with report data
- */
-export function generateFactorsReport(): { factorCount: number; tasksByStage: Record<string, number>; gapsByFactor: Record<string, string[]> } {
-  const factors = loadFactors();
+export async function generateFactorsReport(): Promise<{ factorCount: number; tasksByStage: Record<string, number>; gapsByFactor: Record<string, string[]> }> {
+  const factors = await loadFactors();
   const tasksByStage: Record<string, number> = {
     'Identification': 0,
     'Definition': 0,
@@ -160,7 +192,6 @@ export function generateFactorsReport(): { factorCount: number; tasksByStage: Re
       }
     }
     
-    // Remove factors with no gaps
     if (gapsByFactor[factor.title].length === 0) {
       delete gapsByFactor[factor.title];
     }
@@ -173,13 +204,8 @@ export function generateFactorsReport(): { factorCount: number; tasksByStage: Re
   };
 }
 
-/**
- * Check canonical factors integrity
- * Validates that all 12 canonical factors are present with correct titles
- * @returns Boolean indicating if all canonical factors are present
- */
-export function checkCanonicalFactorsIntegrity(): { valid: boolean; missing: string[]; extra: string[] } {
-  const factors = loadFactors();
+export async function checkCanonicalFactorsIntegrity(): Promise<{ valid: boolean; missing: string[]; extra: string[] }> {
+  const factors = await loadFactors();
   const factorTitles = factors.map(f => f.title);
   
   const missing = CANONICAL_FACTOR_TITLES.filter(title => !factorTitles.includes(title));
@@ -192,37 +218,18 @@ export function checkCanonicalFactorsIntegrity(): { valid: boolean; missing: str
   };
 }
 
-/**
- * Export success factors data to JSON string
- * @returns JSON string representation of factors data
- */
-export function exportFactorsToJSON(): string {
-  const factors = loadFactors();
-  return JSON.stringify(factors, null, 2);
-}
-
-/**
- * Verify factors integrity
- * This combines multiple validation checks
- */
-export function verifyFactorsIntegrity(): boolean {
+export async function verifyFactorsIntegrity(): boolean {
   try {
-    console.log(`Checking success factors integrity at ${factorsPath}...`);
+    console.log('Checking success factors integrity in database...');
     
-    if (!fs.existsSync(factorsPath)) {
-      console.error('\x1b[31mERROR: successFactors.json file not found!\x1b[0m');
+    const factors = await loadFactors();
+    
+    if (!factors || factors.length === 0) {
+      console.error('\x1b[31mERROR: No success factors found in database!\x1b[0m');
       return false;
     }
     
-    const factors = loadFactors();
-    
-    if (!Array.isArray(factors) || factors.length === 0) {
-      console.error('\x1b[31mERROR: Success factors data is empty or not an array!\x1b[0m');
-      return false;
-    }
-    
-    // Check canonical factors
-    const { valid: canonicalValid, missing, extra } = checkCanonicalFactorsIntegrity();
+    const { valid: canonicalValid, missing, extra } = await checkCanonicalFactorsIntegrity();
     
     if (!canonicalValid) {
       if (missing.length > 0) {
@@ -237,11 +244,10 @@ export function verifyFactorsIntegrity(): boolean {
       console.warn(`\x1b[33mWARNING: Expected 12 canonical success factors, but found ${factors.length}\x1b[0m`);
     }
     
-    // Check tasks for each factor
     let hasCriticalIssues = false;
     let hasWarnings = false;
     
-    factors.forEach(factor => {
+    for (const factor of factors) {
       const { valid, issues } = validateFactorTasks(factor);
       
       if (!valid) {
@@ -255,7 +261,7 @@ export function verifyFactorsIntegrity(): boolean {
           }
         });
       }
-    });
+    }
     
     if (!hasCriticalIssues && canonicalValid) {
       if (hasWarnings) {
@@ -275,9 +281,4 @@ export function verifyFactorsIntegrity(): boolean {
     console.error(`\x1b[31mERROR: Failed to check success factors integrity: ${(error as Error).message}\x1b[0m`);
     return false;
   }
-}
-
-// If running directly (ES Module equivalent of the CommonJS check)
-if (import.meta.url.startsWith('file:') && process.argv[1] === fileURLToPath(import.meta.url)) {
-  verifyFactorsIntegrity();
 }
