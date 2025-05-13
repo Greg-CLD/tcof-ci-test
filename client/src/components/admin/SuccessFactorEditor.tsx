@@ -183,7 +183,6 @@ export default function SuccessFactorEditor() {
       });
       
       setIsDeleteDialogOpen(false);
-      if (onUpdate) onUpdate();
     } catch (error) {
       console.error('Error deleting success factor:', error);
       toast({
