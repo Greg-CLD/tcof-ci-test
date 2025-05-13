@@ -90,5 +90,13 @@
     "orgType": "nonprofit",
     "teamSize": "small",
     "currentStage": "define"
+  },
+  {
+    "id": "1492a9d4-5d66-4906-b999-6dae2eb11b2d",
+    "userId": 3,
+    "name": "Quick Start Project",
+    "description": "A pre-configured project with default success factor tasks",
+    "createdAt": "2025-05-13T05:14:38.335Z",
+    "updatedAt": "2025-05-13T05:14:38.335Z"
   }
 ]
