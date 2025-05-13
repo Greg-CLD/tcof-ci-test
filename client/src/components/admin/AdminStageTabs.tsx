@@ -38,6 +38,7 @@ export default function AdminStageTabs({
   onAddTask, 
   onRemoveTask 
 }: AdminStageTabsProps) {
+  console.log("[PROPS → AdminStageTabs]", factor.id, factor.tasks);
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
   
   {logData('[ADMIN_TABS] Rendering AdminStageTabs with factor:', factor)}

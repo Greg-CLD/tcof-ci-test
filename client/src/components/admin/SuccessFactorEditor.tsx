@@ -42,6 +42,7 @@ function logData(message: string, data: any) {
 export default function SuccessFactorEditor() {
   // Use our custom admin hook for success factors with tasks
   const { factors = [], isLoading, error, invalidateCache } = useAdminSuccessFactors();
+console.log("[NETWORK RESPONSE] Factors:", factors);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);

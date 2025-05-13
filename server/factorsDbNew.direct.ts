@@ -49,6 +49,7 @@ export interface FactorTask {
 
 // Helper function to transform database rows to the FactorTask interface
 const transformFactorWithTasks = (factor: any, tasks: any[]): FactorTask => {
+  console.log("[TRANSFORM] Starting transform for factor:", factor.id);
   // Group tasks by stage
   const stagedTasks: { [key: string]: string[] } = {
     Identification: [],
