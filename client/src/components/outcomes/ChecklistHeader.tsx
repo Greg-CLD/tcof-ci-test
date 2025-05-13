@@ -29,7 +29,7 @@ export function ChecklistHeader({ projectId, title, description }: ChecklistHead
   const [isExporting, setIsExporting] = useState(false);
   const [isEmailingTaskList, setIsEmailingTaskList] = useState(false);
   const radarChartRef = useRef<OutcomeRadarChartRef>(null);
-  const { selectedPlanId } = usePlan();
+  const { plan } = usePlan();
   
   // Get project details for the PDF header
   const { data: projectData } = useQuery<{ id: string; name: string; description: string }>({
@@ -125,41 +125,32 @@ export function ChecklistHeader({ projectId, title, description }: ChecklistHead
     }
   };
   
-  // Check if there are any tasks in the plan
+  // Check if there are any tasks for the project
   const checkForTasks = async (): Promise<boolean> => {
-    if (!selectedPlanId) return false;
+    if (!projectId) return false;
     
-    // Load the current plan
-    const plan = await loadPlan(selectedPlanId);
-    if (!plan) return false;
-    
-    // Check if there are any tasks in any stage
-    let hasTasks = false;
-    Object.keys(plan.stages).forEach((stageName) => {
-      const stage = stageName as Stage;
-      const stageData = plan.stages[stage];
+    try {
+      // Get tasks directly from the API
+      const response = await fetch(`/api/projects/${projectId}/tasks`);
+      if (!response.ok) return false;
       
-      // Regular tasks
-      if (stageData.tasks && stageData.tasks.length > 0) {
-        hasTasks = true;
-      }
+      const tasks = await response.json();
       
-      // Good practice tasks
-      if (stageData.goodPractice?.tasks && stageData.goodPractice.tasks.length > 0) {
-        hasTasks = true;
-      }
-    });
-    
-    return hasTasks;
+      // Check if there are any tasks
+      return Array.isArray(tasks) && tasks.length > 0;
+    } catch (error) {
+      console.error('Error checking for tasks:', error);
+      return false;
+    }
   };
   
   // Track if there are tasks in the plan
   const [hasTasks, setHasTasks] = useState<boolean | null>(null);
   
-  // Check for tasks when the plan changes
+  // Check for tasks when the project changes
   useEffect(() => {
     const checkTasks = async () => {
-      if (selectedPlanId) {
+      if (projectId) {
         const result = await checkForTasks();
         setHasTasks(result);
       } else {
@@ -168,28 +159,28 @@ export function ChecklistHeader({ projectId, title, description }: ChecklistHead
     };
     
     checkTasks();
-  }, [selectedPlanId]);
+  }, [projectId]);
   
   // Handle Email Task List
   const handleEmailTaskList = async () => {
     try {
       setIsEmailingTaskList(true);
       
-      if (!selectedPlanId) {
+      if (!projectId) {
         toast({
-          title: "No plan selected",
-          description: "Please select a project plan first.",
+          title: "No project selected",
+          description: "Please select a project first.",
           variant: "destructive",
         });
         return;
       }
       
-      // Check again if there are tasks
+      // Check if there are tasks
       const tasksExist = await checkForTasks();
       if (!tasksExist) {
         toast({
           title: "No tasks to email",
-          description: "Please add some tasks to your plan first.",
+          description: "Please add some tasks to your project first.",
           variant: "destructive",
         });
         return;
@@ -200,40 +191,38 @@ export function ChecklistHeader({ projectId, title, description }: ChecklistHead
         ? projectData.name 
         : 'Project';
       
-      // Load the current plan
-      const plan = await loadPlan(selectedPlanId);
-      if (!plan) {
+      // Fetch tasks directly from the API
+      const response = await fetch(`/api/projects/${projectId}/tasks`);
+      if (!response.ok) {
         toast({
-          title: "Plan not found",
-          description: "Unable to load the current project plan.",
+          title: "Failed to fetch tasks",
+          description: "Unable to load the current project tasks.",
           variant: "destructive",
         });
         return;
       }
       
-      // Collect all tasks across stages
-      const tasksByStage: Record<Stage, Array<TaskItem | GoodPracticeTask>> = {
+      const tasks = await response.json();
+      
+      // Collect all tasks by stage
+      const tasksByStage: Record<Stage, Array<any>> = {
         'Identification': [],
         'Definition': [],
         'Delivery': [],
         'Closure': []
       };
       
-      // Process tasks for each stage
-      Object.keys(plan.stages).forEach((stageName) => {
-        const stage = stageName as Stage;
-        const stageData = plan.stages[stage];
-        
-        // Regular tasks
-        if (stageData.tasks && stageData.tasks.length > 0) {
-          tasksByStage[stage].push(...stageData.tasks);
-        }
-        
-        // Good practice tasks
-        if (stageData.goodPractice?.tasks && stageData.goodPractice.tasks.length > 0) {
-          tasksByStage[stage].push(...stageData.goodPractice.tasks);
-        }
-      });
+      // Process tasks and group by stage
+      if (Array.isArray(tasks)) {
+        tasks.forEach(task => {
+          const stage = task.stage as Stage || 'Identification';
+          if (tasksByStage[stage]) {
+            tasksByStage[stage].push(task);
+          } else {
+            tasksByStage['Identification'].push({...task, stage: 'Identification'});
+          }
+        });
+      }
       
       // Format email body
       const currentDate = format(new Date(), 'yyyy-MM-dd');
@@ -249,8 +238,8 @@ export function ChecklistHeader({ projectId, title, description }: ChecklistHead
           
           stageTasks.forEach((task) => {
             const checkbox = task.completed ? '[x]' : '[ ]';
-            const taskText = task.text;
-            const owner = 'owner' in task ? task.owner || 'Unassigned' : 'Unassigned';
+            const taskText = task.text || task.sourceText || 'Untitled Task';
+            const owner = task.owner || 'Unassigned';
             const status = task.completed ? 'Done' : 'To Do';
             
             emailBody += ` • ${checkbox} ${taskText} — Owner: ${owner} — Status: ${status}\n`;
@@ -482,7 +471,7 @@ export function ChecklistHeader({ projectId, title, description }: ChecklistHead
                         size="default"
                         className="flex items-center gap-2"
                         onClick={handleEmailTaskList}
-                        disabled={isEmailingTaskList || !selectedPlanId || hasTasks === false}
+                        disabled={isEmailingTaskList || !projectId || hasTasks === false}
                         data-testid="email-task-list-button"
                         aria-label="Email task list to collaborators"
                       >
@@ -495,14 +484,14 @@ export function ChecklistHeader({ projectId, title, description }: ChecklistHead
                       </Button>
                     </div>
                   </TooltipTrigger>
-                  {!selectedPlanId && (
+                  {!projectId && (
                     <TooltipContent>
-                      <p>Please select a project plan first</p>
+                      <p>Please select a project first</p>
                     </TooltipContent>
                   )}
-                  {selectedPlanId && hasTasks === false && (
+                  {projectId && hasTasks === false && (
                     <TooltipContent>
-                      <p>No tasks to email. Add tasks to your plan first.</p>
+                      <p>No tasks to email. Add tasks to your project first.</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
