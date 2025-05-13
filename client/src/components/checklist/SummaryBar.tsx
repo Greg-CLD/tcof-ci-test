@@ -3,9 +3,19 @@ import { PlanRecord, Stage } from '@/lib/plan-db';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
+// Task type (simplified from Checklist.tsx)
+interface TaskItem {
+  id: string;
+  stage: Stage;
+  completed: boolean;
+  text?: string;
+  [key: string]: any;
+}
+
 interface SummaryBarProps {
-  plan: PlanRecord | null;
+  plan?: PlanRecord | null;
   canonicalChecklist?: any; // Fallback canonical checklist data
+  tasks?: TaskItem[]; // New prop for direct task list
 }
 
 interface StageMetrics {
@@ -16,7 +26,7 @@ interface StageMetrics {
 
 type StageMetricsMap = Record<Stage, StageMetrics>;
 
-export default function SummaryBar({ plan, canonicalChecklist }: SummaryBarProps) {
+export default function SummaryBar({ plan, canonicalChecklist, tasks }: SummaryBarProps) {
   // Create default empty metrics
   const defaultMetrics = (): StageMetricsMap => {
     return {
@@ -31,8 +41,22 @@ export default function SummaryBar({ plan, canonicalChecklist }: SummaryBarProps
   const calculateStageMetrics = (): StageMetricsMap => {
     const metrics: Partial<StageMetricsMap> = {};
     
+    // If we have direct tasks array, use that (highest priority)
+    if (tasks && tasks.length > 0) {
+      // Initialize metrics for all stages
+      const stageNames: Stage[] = ['Identification', 'Definition', 'Delivery', 'Closure'];
+      stageNames.forEach(stage => {
+        // Filter tasks for this stage
+        const stageTasks = tasks.filter(t => t.stage === stage);
+        const completed = stageTasks.filter(t => t.completed).length;
+        const total = stageTasks.length;
+        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+        
+        metrics[stage] = { total, completed, percentage };
+      });
+    }
     // If we have a plan, use that
-    if (plan) {
+    else if (plan && plan.stages) {
       Object.entries(plan.stages).forEach(([stageName, stageData]) => {
         const stage = stageName as Stage;
         
@@ -58,17 +82,17 @@ export default function SummaryBar({ plan, canonicalChecklist }: SummaryBarProps
         const stage = stageName as Stage;
         
         // Count tasks from canonical checklist
-        const tasks = stageData && Array.isArray(stageData.tasks) ? stageData.tasks : [];
-        const completed = tasks.filter((t: any) => t.completed).length;
+        const taskList = stageData && Array.isArray(stageData.tasks) ? stageData.tasks : [];
+        const completed = taskList.filter((t: any) => t.completed).length;
         
         // Calculate percentage
-        const total = tasks.length;
+        const total = taskList.length;
         const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
         
         metrics[stage] = { total, completed, percentage };
       });
     } 
-    // If we don't have either, return default empty metrics
+    // If we don't have any data source, return default empty metrics
     else {
       return defaultMetrics();
     }
