@@ -34,6 +34,8 @@ import { Save, Trash2, Plus, Edit, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import AdminStageTabs, { Stage } from './AdminStageTabs';
+import SiteHeader from '@/components/SiteHeader';
+import { useAuth } from '@/hooks/useAuth';
 
 // Define the structure of a success factor
 // Using the Stage type from AdminStageTabs
@@ -49,12 +51,8 @@ interface FactorTask {
   };
 }
 
-// Props for the SuccessFactorEditor component
-interface SuccessFactorEditorProps {
-  onUpdate?: () => void;
-}
-
-export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorProps) {
+// We don't need props for a standalone page component
+export default function SuccessFactorEditor() {
   // State for success factors and editing
   const [factors, setFactors] = useState<FactorTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -334,7 +332,6 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
       });
       
       setIsDialogOpen(false);
-      if (onUpdate) onUpdate();
     } catch (error) {
       console.error(`Error ${isCreating ? 'creating' : 'updating'} success factor:`, error);
       toast({
@@ -347,16 +344,21 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
     }
   };
 
+  // Get user for auth check
+  const { user } = useAuth();
+  
   return (
-    <div className="container py-6">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Success Factor Editor</CardTitle>
-          <CardDescription>
-            Manage all TCOF success factors and their associated tasks by stage. 
-            Changes made here will be used in the planning process.
-          </CardDescription>
-        </CardHeader>
+    <>
+      <SiteHeader />
+      <main className="container py-6">
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Success Factor Editor</CardTitle>
+            <CardDescription>
+              Manage all TCOF success factors and their associated tasks by stage. 
+              Changes made here will be used in the planning process.
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <div className="flex justify-between mb-4">
             <Button 
@@ -556,6 +558,7 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </main>
+    </>
   );
 }
