@@ -6,7 +6,8 @@ import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { factorsDb, type FactorTask } from './factorsDb';
+import { getFactors as getDbFactors, getFactor as getDbFactor } from './factorsDb';
+import type { FactorTask } from '../scripts/factorUtils';
 
 // Define the Stage type for canonical checklist tasks
 type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
@@ -2420,7 +2421,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize the database with default success factors
   async function initializeFactorsDatabase(): Promise<boolean> {
     try {
-      // First check if we already have factors file
+      // First, check if we already have factors in the database
+      const existingFactors = await getDbFactors();
+      if (existingFactors && existingFactors.length > 0) {
+        console.log(`Database already initialized with ${existingFactors.length} success factors`);
+        return true;
+      }
+
+      // No existing factors in DB, check if we have factors JSON file
       const factorsPath = path.join(process.cwd(), 'data', 'successFactors.json');
       if (fs.existsSync(factorsPath)) {
         try {
@@ -2428,9 +2436,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const parsed = JSON.parse(data) as FactorTask[];
           if (parsed && parsed.length > 0) {
             // Update the database
-            factorsDb.setAll(parsed);
-            console.log(`Database already initialized with ${parsed.length} success factors`);
-            return true;
+            const result = await saveFactors(parsed);
+            console.log(`Database initialized with ${parsed.length} success factors from successFactors.json`);
+            return result;
           }
         } catch (error) {
           console.warn('Error reading existing success factors:', error);
@@ -2447,6 +2455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const transformedFactors: FactorTask[] = v2Factors.map(factor => ({
           id: factor.id,
           title: factor.title,
+          description: factor.description || '',
           tasks: {
             Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
             Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],
@@ -2470,109 +2479,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Get factors from database or file system with guaranteed task structure
+  // Get factors from database with guaranteed task structure
   async function getFactors(forceRefresh: boolean = false): Promise<FactorTask[]> {
-    // If we're forcing a refresh, or the database is empty
-    if (forceRefresh || factorsDb.length === 0) {
-      try {
-        // Try to load from successFactors.json
-        const factorsPath = path.join(process.cwd(), 'data', 'successFactors.json');
-        if (fs.existsSync(factorsPath)) {
-          const data = fs.readFileSync(factorsPath, 'utf8');
-          const parsed = JSON.parse(data) as FactorTask[];
-
-          // Update database (normalization happens in factorsDb.setAll)
-          factorsDb.setAll(parsed);
-
-          console.log(`Loaded ${parsed.length} factors from disk${forceRefresh ? ' (forced refresh)' : ''}`);
-          return factorsDb.getAll();
-        }
-      } catch (error: unknown) {
-        console.error('Error refreshing factors from disk:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load success factors from disk';
-        console.error(errorMessage);
-      }
+    // Always use the database directly
+    try {
+      return await getDbFactors();
+    } catch (error: unknown) {
+      console.error('Error getting factors from database:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load success factors from database';
+      console.error(errorMessage);
+      // Return empty array if db fetch fails
+      return [];
     }
-
-    // If no refresh needed or refresh failed, return current data
-    // Note: factorsDb.getAll() already normalizes task structure
-    return factorsDb.getAll();
   }
 
-  // Legacy function kept for backward compatibility
+  // Legacy function kept for backward compatibility, now just uses the database
   async function _getFactorsLegacy(): Promise<FactorTask[]> {
-    if (factorsDb.length > 0) {
-      return factorsDb.getAll();
-    }
-
     try {
-      // Try to load from successFactors.json first
-      const factorsPath = path.join(process.cwd(), 'data', 'successFactors.json');
-      if (fs.existsSync(factorsPath)) {
-        const data = fs.readFileSync(factorsPath, 'utf8');
-        const parsed = JSON.parse(data) as FactorTask[];
-
-        // Update database
-        factorsDb.setAll(parsed);
-
-        return factorsDb.getAll();
-      }
-
-      // Fall back to tcofTasks.json if needed
-      const tasksPath = path.join(process.cwd(), 'data', 'tcofTasks.json');
-      if (fs.existsSync(tasksPath)) {
-        const data = fs.readFileSync(tasksPath, 'utf8');
-        const parsed = JSON.parse(data) as FactorTask[];
-
-        // Update database
-        factorsDb.setAll(parsed);
-
-        return factorsDb.getAll();
-      }
-
-      // Fall back to tcof_success_factors_v2.json if needed
-      const v2FactorsPath = path.join(process.cwd(), 'data', 'tcof_success_factors_v2.json');
-      if (fs.existsSync(v2FactorsPath)) {
-        // Direct load from v2 JSON to avoid circular references
-        const rawData = fs.readFileSync(v2FactorsPath, 'utf8');
-        const v2Factors = JSON.parse(rawData);
-
-        // Transform the data to match our expected format if needed
-        const transformedFactors: FactorTask[] = v2Factors.map((factor: any) => ({
-          id: factor.id,
-          title: factor.title,
-          tasks: {
-            Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
-            Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],
-            Delivery: Array.isArray(factor.tasks?.Delivery) ? factor.tasks.Delivery : [],
-            Closure: Array.isArray(factor.tasks?.Closure) ? factor.tasks.Closure : []
-          }
-        }));
-
-        // Save to file
-        const dataDir = path.join(process.cwd(), 'data');
-        if (!fs.existsSync(dataDir)) {
-          fs.mkdirSync(dataDir, { recursive: true });
-        }
-
-        fs.writeFileSync(
-          path.join(dataDir, 'successFactors.json'), 
-          JSON.stringify(transformedFactors, null, 2),
-          'utf8'
-        );
-
-        // Update database
-        factorsDb.setAll(transformedFactors);
-
-        return factorsDb.getAll();
-      }
-
-      return factorsDb.getAll();
+      return await getDbFactors();
     } catch (error: unknown) {
-      console.error('Error loading factors:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load factors';
-      console.error(errorMessage);
-      return factorsDb.getAll();
+      console.error('Error getting factors from database:', error);
+      return [];
     }
   }
 
@@ -2588,6 +2515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const normalizedFactors = factors.map(factor => ({
         id: factor.id,
         title: factor.title,
+        description: factor.description || '',
         tasks: {
           Identification: Array.isArray(factor.tasks?.Identification) ? factor.tasks.Identification : [],
           Definition: Array.isArray(factor.tasks?.Definition) ? factor.tasks.Definition : [],
@@ -2596,15 +2524,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }));
 
-      // Save to file system
+      // Save to file system for backup
       fs.writeFileSync(
         path.join(dataDir, 'successFactors.json'), 
         JSON.stringify(normalizedFactors, null, 2),
         'utf8'
       );
 
-      // Update the database - factorsDb.setAll also normalizes the data
-      factorsDb.setAll(normalizedFactors);
+      // Update the database using the imported saveFactors function from factorDb.ts
+      const result = await import('./factorsDb').then(module => module.saveFactors(normalizedFactors));
 
       console.log(`Saved ${normalizedFactors.length} factors with normalized task structure`);
       return true;
@@ -2683,7 +2611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      const factors = await getFactors();
+      const factors = await getDbFactors();
       res.json(factors || []);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
@@ -2832,13 +2760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/success-factors/:id', isAdmin, async (req: Request, res: Response) => {
     try {
       const factorId = req.params.id;
-      const factors = await getFactors();
-
-      if (!factors || factors.length === 0) {
-        return res.status(404).json({ message: 'No success factors found' });
-      }
-
-      const factor = factors.find((f: FactorTask) => f.id === factorId);
+      const factor = await getDbFactor(factorId);
 
       if (!factor) {
         return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
@@ -2854,7 +2776,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-
       const newFactor = req.body;
 
       // Validate the new factor
@@ -2872,21 +2793,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newFactor.description = '';
       }
 
-      // Get existing factors
-      const factors = await getFactors() || [];
-
-      // Check if factor with this ID already exists
-      if (factors.some((f: FactorTask) => f.id === newFactor.id)) {
-        return res.status(409).json({ message: `Factor with ID ${newFactor.id} already exists` });
+      try {
+        // Try to directly create the factor in the database
+        const createdFactor = await import('./factorsDb').then(module => 
+          module.createFactor(newFactor)
+        );
+        
+        res.status(201).json(createdFactor);
+      } catch (dbError: any) {
+        // If error is about duplicate, return 409 Conflict
+        if (dbError.message && dbError.message.includes('duplicate')) {
+          return res.status(409).json({ message: `Factor with ID ${newFactor.id} already exists` });
+        }
+        throw dbError; // Re-throw for the outer catch block
       }
-
-      // Add the new factor
-      factors.push(newFactor);
-
-      // Save updated factors
-      await saveFactors(factors);
-
-      res.status(201).json(newFactor);
     } catch (error: unknown) {
       console.error('Error creating success factor:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to create success factor';

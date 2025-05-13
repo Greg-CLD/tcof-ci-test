@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 export interface FactorTask {
   id: string;
   title: string;
+  description?: string;
   tasks: {
     Identification: string[];
     Definition: string[];
@@ -60,6 +61,7 @@ export async function loadFactors(): Promise<FactorTask[]> {
         factorMap.set(row.id, {
           id: row.id,
           title: row.title,
+          description: row.description || '',
           tasks: {
             Identification: [],
             Definition: [],
