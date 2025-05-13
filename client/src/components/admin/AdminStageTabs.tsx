@@ -103,58 +103,66 @@ export default function AdminStageTabs({
       </TabsList>
       
       {/* Tab content for each stage */}
-      {(['Identification', 'Definition', 'Delivery', 'Closure'] as Stage[]).map((stage) => (
-        <TabsContent key={stage} value={stage}>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">{stage} Tasks</h3>
-              <Button
-                size="sm"
-                onClick={() => onAddTask(stage)}
-                className="flex items-center gap-1"
-              >
-                <Plus className="h-3 w-3" />
-                Add Task
-              </Button>
-            </div>
-            
-            {!factor.tasks[stage as keyof typeof factor.tasks] || factor.tasks[stage as keyof typeof factor.tasks].length === 0 ? (
-              <div className="text-center py-6 text-gray-500 border border-dashed rounded-md">
-                No tasks defined for this stage. Click "Add Task" to create one.
+      {(['Identification', 'Definition', 'Delivery', 'Closure'] as Stage[]).map((stage) => {
+        // Debug logging outside of JSX
+        console.log(`[ADMIN_TABS] Rendering stage ${stage}. Active tab: ${activeTab}`);
+        console.log(`[ADMIN_TABS] Tasks for ${stage}:`, factor.tasks[stage as keyof typeof factor.tasks]);
+        
+        // Get tasks array safely
+        const stageTasksArray = Array.isArray(factor.tasks[stage as keyof typeof factor.tasks]) 
+          ? factor.tasks[stage as keyof typeof factor.tasks] 
+          : [];
+        
+        const hasTasks = stageTasksArray.length > 0;
+        
+        return (
+          <TabsContent key={stage} value={stage}>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">{stage} Tasks</h3>
+                <Button
+                  size="sm"
+                  onClick={() => onAddTask(stage)}
+                  className="flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Task
+                </Button>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {/* Use a function that returns null for logging to avoid type issues */}
-                {logData(`[ADMIN_TABS] Mapping tasks for ${stage}:`, factor.tasks[stage as keyof typeof factor.tasks])}
-                {logData(`[ADMIN_TABS] Active tab is: ${activeTab}, current stage is: ${stage}`, null)}
-                {/* Only render the tasks when this tab is active */}
-                {activeTab === stage && Array.isArray(factor.tasks[stage as keyof typeof factor.tasks]) && 
-                  factor.tasks[stage as keyof typeof factor.tasks].map((taskText, index) => (
-                  <div
-                    key={`${stage}-task-${index}`}
-                    className="flex items-start gap-3"
-                  >
-                    <Textarea
-                      value={taskText}
-                      onChange={(e) => onTaskChange(stage, index, e.target.value)}
-                      placeholder={`Enter ${stage} task...`}
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onRemoveTask(stage, index)}
-                      className="mt-1 text-red-500 hover:text-red-700 hover:bg-red-50"
+              
+              {!hasTasks ? (
+                <div className="text-center py-6 text-gray-500 border border-dashed rounded-md">
+                  No tasks defined for this stage. Click "Add Task" to create one.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {stageTasksArray.map((taskText, index) => (
+                    <div
+                      key={`${stage}-task-${index}`}
+                      className="flex items-start gap-3"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      ))}
+                      <Textarea
+                        value={taskText}
+                        onChange={(e) => onTaskChange(stage, index, e.target.value)}
+                        placeholder={`Enter ${stage} task...`}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onRemoveTask(stage, index)}
+                        className="mt-1 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        );
+      })}
     </Tabs>
   );
 }

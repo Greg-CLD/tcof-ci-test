@@ -6,7 +6,7 @@ import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { getFactors as getDbFactors, getFactor as getDbFactor } from './factorsDb';
+import * as factorsDb from './factorsDb';
 import type { FactorTask } from '../scripts/factorUtils';
 
 // Define the Stage type for canonical checklist tasks
@@ -264,10 +264,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public endpoint to get success factors
-  app.get('/api/success-factors', (req, res) => {
+  app.get('/api/success-factors', async (req, res) => {
     try {
       // Get success factors from the factorsDb
-      const successFactors = factorsDb.getAll();
+      const successFactors = await factorsDb.getFactors();
 
       // Transform the data to match the structure needed by the client
       const formattedFactors = successFactors.map(factor => ({
@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: factor.description || (factor.tasks 
           ? `Tasks for various project stages (${Object.keys(factor.tasks).length} stages available)`
           : 'No description available'),
-        category: factor.category || 'Uncategorized'
+        category: 'Uncategorized' // Default category since it may not be in the type
       }));
 
       res.status(200).json(formattedFactors);
@@ -286,11 +286,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public endpoint to get canonical checklist data with tasks
-  app.get('/api/checklist/:projectId', (req, res) => {
+  app.get('/api/checklist/:projectId', async (req, res) => {
     try {
       const { projectId } = req.params;
       // Get success factors from the factorsDb
-      const successFactors = factorsDb.getAll();
+      const successFactors = await factorsDb.getFactors();
       
       // Create a canonical checklist with all tasks organized by stage
       const canonicalChecklist = {
@@ -2422,7 +2422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function initializeFactorsDatabase(): Promise<boolean> {
     try {
       // First, check if we already have factors in the database
-      const existingFactors = await getDbFactors();
+      const existingFactors = await factorsDb.getFactors();
       if (existingFactors && existingFactors.length > 0) {
         console.log(`Database already initialized with ${existingFactors.length} success factors`);
         return true;
