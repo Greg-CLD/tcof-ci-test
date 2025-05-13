@@ -229,12 +229,11 @@ export default function ProjectPage() {
 
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="mb-6">
+                <TabsTrigger value="introduction">Introduction</TabsTrigger>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="getYourBearings">Get Your Bearings</TabsTrigger>
+                <TabsTrigger value="makeYourPlan">Make A Plan</TabsTrigger>
                 <TabsTrigger value="checklist">Checklist</TabsTrigger>
-                <Button variant="outline" onClick={() => setShowHelp(true)}>
-                  Make A Plan – Intro
-                </Button>
               </TabsList>
 
               {/* Help Dialog */}
@@ -366,6 +365,23 @@ export default function ProjectPage() {
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="makeYourPlan" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Make a Decision</CardTitle>
+                    <CardDescription>Do you want to start with TCOF or create your customised plan?</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p>Option A: No – I just want the 12 core Success Factors</p>
+                    <p>Option B: Yes – I want to add my success factors, policies and ways of working</p>
+                    <p>
+                      If you selected Option A, go straight to Part C (Checklist).<br/>
+                      If you selected Option B, it's time to make your plan (Block 1).
+                    </p>
                   </CardContent>
                 </Card>
               </TabsContent>
