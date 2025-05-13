@@ -348,45 +348,47 @@ export default function Checklist({ projectId }: ChecklistProps) {
   };
   
   // Handle task update
-  const handleTaskUpdate = (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
+  const handleTaskUpdate = async (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
+    // If no plan exists, automatically create one
     if (!plan) {
-      // If trying to update a task in read-only mode, show a toast that will prompt the user to create a plan
-      toast({
-        title: "Read-Only Mode",
-        description: "Create a plan to save changes",
-        action: (
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="bg-white"
-            onClick={async () => {
-              if (!getSelectedProject()?.id) return;
-              
-              try {
-                setLoading(true);
-                const planId = await ensurePlanForProject(getSelectedProject()?.id as string);
-                setSelectedPlanId(planId);
-                const loadedPlan = await loadPlan(planId);
-                setPlan(loadedPlan || null);
-                
-                toast({
-                  title: "Plan Created",
-                  description: "You can now save changes to tasks"
-                });
-              } catch (err) {
-                console.error("Error creating plan:", err);
-              } finally {
-                setLoading(false);
-              }
-            }}
-          >
-            Create Plan
-          </Button>
-        ),
-        variant: "default",
-        duration: 5000
-      });
-      return;
+      if (!currentProjectId) {
+        toast({
+          title: "No Project Selected",
+          description: "Please select a project first.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        
+        // Create a plan for the project
+        const planId = await ensurePlanForProject(currentProjectId);
+        setSelectedPlanId(planId);
+        const loadedPlan = await loadPlan(planId);
+        setPlan(loadedPlan || null);
+        
+        toast({
+          title: "Plan Created",
+          description: "Changes will now be saved automatically",
+          variant: "default"
+        });
+        
+        // Since we created the plan, we need to wait for the next render cycle to update the task
+        // We'll return and let the user try again
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.error("Error creating plan:", err);
+        toast({
+          title: "Error Creating Plan",
+          description: "Could not create a plan for this project",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
     }
     
     const updatedPlan = { ...plan };
@@ -487,6 +489,18 @@ export default function Checklist({ projectId }: ChecklistProps) {
     });
   };
   
+  // Basic render guards
+  if (!currentProjectId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-3">
+          <CircleX className="h-8 w-8 text-red-500" />
+          <p className="text-tcof-dark font-medium">No project selected</p>
+        </div>
+      </div>
+    );
+  }
+  
   // Loading state
   if (loading || isLoadingCanonical) {
     return (
@@ -494,6 +508,18 @@ export default function Checklist({ projectId }: ChecklistProps) {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 text-tcof-teal animate-spin" />
           <p className="text-tcof-dark font-medium">Loading your checklist...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Check if we have any data to display
+  if (!plan && !canonicalChecklist) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-3">
+          <CircleX className="h-8 w-8 text-red-500" />
+          <p className="text-tcof-dark font-medium">Could not load checklist data</p>
         </div>
       </div>
     );
