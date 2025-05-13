@@ -32,6 +32,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdminSuccessFactors } from '@/hooks/useAdminSuccessFactors';
 import { Link } from 'wouter';
 
+// Enhanced logging function that won't cause React rendering issues
+function logData(message: string, data: any) {
+  console.log(message, data);
+  return null;
+}
+
 // We don't need props for a standalone page component
 export default function SuccessFactorEditor() {
   // Use our custom admin hook for success factors with tasks
@@ -418,21 +424,14 @@ export default function SuccessFactorEditor() {
                     </CardHeader>
                     
                     <CardContent>
-                      {/* Diagnostic logs are executing here */}
-                      {/* Hidden diagnostic code that executes but doesn't render */}
-                      <div className="hidden">
-                        {(() => {
-                          // Log the selected factor tasks for debugging
-                          console.log('[ADMIN] Selected factor tasks before rendering:', selectedFactor.tasks);
-                          console.log('[ADMIN] Tasks by stage:', {
-                            Identification: selectedFactor.tasks.Identification?.length || 0, 
-                            Definition: selectedFactor.tasks.Definition?.length || 0,
-                            Delivery: selectedFactor.tasks.Delivery?.length || 0, 
-                            Closure: selectedFactor.tasks.Closure?.length || 0
-                          });
-                          return null;
-                        })()}
-                      </div>
+                      {/* Using our helper function for diagnostic logs */}
+                      {logData('[ADMIN] Selected factor tasks before rendering:', selectedFactor.tasks)}
+                      {logData('[ADMIN] Tasks by stage:', {
+                        Identification: selectedFactor.tasks.Identification?.length || 0, 
+                        Definition: selectedFactor.tasks.Definition?.length || 0,
+                        Delivery: selectedFactor.tasks.Delivery?.length || 0, 
+                        Closure: selectedFactor.tasks.Closure?.length || 0
+                      })}
                       
                       {/* Tabbed interface */}
                       <AdminStageTabs

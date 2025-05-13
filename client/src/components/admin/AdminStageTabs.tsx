@@ -4,6 +4,12 @@ import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 
+// Helper function for diagnostic logging
+function logData(message: string, data: any) {
+  console.log(message, data);
+  return null;
+}
+
 // Types
 export interface FactorTask {
   id: string;
@@ -34,8 +40,8 @@ export default function AdminStageTabs({
 }: AdminStageTabsProps) {
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
   
-  console.log('[ADMIN_TABS] Rendering AdminStageTabs with factor:', factor);
-  console.log('[ADMIN_TABS] Tasks structure:', factor.tasks);
+  {logData('[ADMIN_TABS] Rendering AdminStageTabs with factor:', factor)}
+  {logData('[ADMIN_TABS] Tasks structure:', factor.tasks)}
   
   // Count tasks for badge display
   const getTaskCount = (stage: Stage) => {
