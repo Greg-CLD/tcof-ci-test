@@ -1,0 +1,326 @@
+[
+  {
+    "id": "b664ab6d-f87a-47dd-b6ae-29e4bc8efad4",
+    "factor_id": "sf-1",
+    "stage": "Identification",
+    "text": "Talk to 3 to 5 key stakeholders",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:17.087478",
+    "updated_at": "2025-05-13T15:37:17.087478"
+  },
+  {
+    "id": "5ac0a594-5b35-4bb9-931f-b6a5b1e0e4a9",
+    "factor_id": "sf-1",
+    "stage": "Identification",
+    "text": "Ask what frustrates them and what a win looks like",
+    "order": 1,
+    "created_at": "2025-05-13T15:37:17.171549",
+    "updated_at": "2025-05-13T15:37:17.171549"
+  },
+  {
+    "id": "37aef215-8475-4851-ba7e-088bc6be2c62",
+    "factor_id": "sf-1",
+    "stage": "Identification",
+    "text": "Probe beyond technical requirements to uncover unstated needs",
+    "order": 2,
+    "created_at": "2025-05-13T15:37:17.215687",
+    "updated_at": "2025-05-13T15:37:17.215687"
+  },
+  {
+    "id": "186fe179-e185-4c85-9cd6-3a3a1c9f5785",
+    "factor_id": "sf-1",
+    "stage": "Identification",
+    "text": "Ask 'why' at least five times to reach root motivations",
+    "order": 3,
+    "created_at": "2025-05-13T15:37:17.254979",
+    "updated_at": "2025-05-13T15:37:17.254979"
+  },
+  {
+    "id": "7d36464b-fc8c-4225-aef8-79dd838facd4",
+    "factor_id": "sf-1",
+    "stage": "Identification",
+    "text": "Set expectations for iterative discovery",
+    "order": 4,
+    "created_at": "2025-05-13T15:37:17.33433",
+    "updated_at": "2025-05-13T15:37:17.33433"
+  },
+  {
+    "id": "a6b08d15-29e4-450a-a0f3-478c0222cd14",
+    "factor_id": "sf-1",
+    "stage": "Identification",
+    "text": "Capture 'why' answers for later reference",
+    "order": 5,
+    "created_at": "2025-05-13T15:37:17.424849",
+    "updated_at": "2025-05-13T15:37:17.424849"
+  },
+  {
+    "id": "6e113774-0ad2-4551-a529-0583192533f0",
+    "factor_id": "sf-10",
+    "stage": "Identification",
+    "text": "Apply a 30% delivery buffer in estimates",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:18.493882",
+    "updated_at": "2025-05-13T15:37:18.493882"
+  },
+  {
+    "id": "b8587c12-7e56-4667-b28d-e0b6d3b770fe",
+    "factor_id": "sf-10",
+    "stage": "Identification",
+    "text": "Validate estimates against historical data",
+    "order": 1,
+    "created_at": "2025-05-13T15:37:18.533679",
+    "updated_at": "2025-05-13T15:37:18.533679"
+  },
+  {
+    "id": "2c279889-789d-4409-bba5-ee4436d04a1a",
+    "factor_id": "sf-10",
+    "stage": "Identification",
+    "text": "Engage the team to calibrate effort",
+    "order": 2,
+    "created_at": "2025-05-13T15:37:18.580734",
+    "updated_at": "2025-05-13T15:37:18.580734"
+  },
+  {
+    "id": "caf19b46-1e84-4a39-a8b1-b5df724c3a94",
+    "factor_id": "sf-10",
+    "stage": "Identification",
+    "text": "Use relative sizing for complex tasks",
+    "order": 3,
+    "created_at": "2025-05-13T15:37:18.617119",
+    "updated_at": "2025-05-13T15:37:18.617119"
+  },
+  {
+    "id": "c30ccadc-d2c2-4ecf-a0ee-7c79c9d76be8",
+    "factor_id": "sf-12",
+    "stage": "Identification",
+    "text": "Plan for iterative scope changes",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:18.664591",
+    "updated_at": "2025-05-13T15:37:18.664591"
+  },
+  {
+    "id": "1a7e6efc-4164-481a-98e4-226c112f883f",
+    "factor_id": "sf-12",
+    "stage": "Identification",
+    "text": "Design flexible architectures",
+    "order": 1,
+    "created_at": "2025-05-13T15:37:18.708752",
+    "updated_at": "2025-05-13T15:37:18.708752"
+  },
+  {
+    "id": "7b6093e1-e06a-4ec0-9618-aecd6ffcc32e",
+    "factor_id": "sf-12",
+    "stage": "Identification",
+    "text": "Implement feature toggles",
+    "order": 2,
+    "created_at": "2025-05-13T15:37:18.753411",
+    "updated_at": "2025-05-13T15:37:18.753411"
+  },
+  {
+    "id": "76376c62-9a2b-4f60-9573-5f50a43b7486",
+    "factor_id": "sf-12",
+    "stage": "Identification",
+    "text": "Set up regular meetings with key people to adapt to a changing world",
+    "order": 3,
+    "created_at": "2025-05-13T15:37:18.791759",
+    "updated_at": "2025-05-13T15:37:18.791759"
+  },
+  {
+    "id": "43342645-e423-4e80-9e76-fec6d2b80fb8",
+    "factor_id": "sf-12",
+    "stage": "Definition",
+    "text": "Adapt the requirements / plan / scope based as new information comes to light.",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:18.828189",
+    "updated_at": "2025-05-13T15:37:18.828189"
+  },
+  {
+    "id": "11f692e1-ae15-4a76-9649-e377e6d5b4c1",
+    "factor_id": "sf-12",
+    "stage": "Delivery",
+    "text": "Adapt the requirements / plan / scope based as new information comes to light.",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:18.906689",
+    "updated_at": "2025-05-13T15:37:18.906689"
+  },
+  {
+    "id": "afd41483-36e1-4efd-9fdc-46e8641b79e3",
+    "factor_id": "sf-5",
+    "stage": "Identification",
+    "text": "Identify similar past projects internally",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:17.501846",
+    "updated_at": "2025-05-13T15:37:17.501846"
+  },
+  {
+    "id": "e8e56893-5c0a-489e-a653-d9ce7e6f2167",
+    "factor_id": "sf-5",
+    "stage": "Identification",
+    "text": "Research industry case studies for similar initiatives",
+    "order": 1,
+    "created_at": "2025-05-13T15:37:17.555696",
+    "updated_at": "2025-05-13T15:37:17.555696"
+  },
+  {
+    "id": "3c3b2395-327c-461b-af94-571ccc1fc4b9",
+    "factor_id": "sf-5",
+    "stage": "Identification",
+    "text": "Document lessons learned from analogous efforts",
+    "order": 2,
+    "created_at": "2025-05-13T15:37:17.60867",
+    "updated_at": "2025-05-13T15:37:17.60867"
+  },
+  {
+    "id": "be8b60c7-053f-4201-ac1b-e1178badaf71",
+    "factor_id": "sf-5",
+    "stage": "Identification",
+    "text": "Validate your assumptions against known patterns",
+    "order": 3,
+    "created_at": "2025-05-13T15:37:17.659015",
+    "updated_at": "2025-05-13T15:37:17.659015"
+  },
+  {
+    "id": "3172a99d-00bb-468d-8000-cebf5bc16731",
+    "factor_id": "sf-6",
+    "stage": "Identification",
+    "text": "Catalogue existing solutions within your organisation",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:17.71323",
+    "updated_at": "2025-05-13T15:37:17.71323"
+  },
+  {
+    "id": "ac7ce6c0-bb9e-49c1-b3e1-f55c4105ab45",
+    "factor_id": "sf-6",
+    "stage": "Identification",
+    "text": "Evaluate open source or commercial off-the-shelf tools",
+    "order": 1,
+    "created_at": "2025-05-13T15:37:17.755948",
+    "updated_at": "2025-05-13T15:37:17.755948"
+  },
+  {
+    "id": "a7e605db-3c88-4394-ab57-81d2647e41dc",
+    "factor_id": "sf-6",
+    "stage": "Identification",
+    "text": "Assess support and maintenance overheads",
+    "order": 2,
+    "created_at": "2025-05-13T15:37:17.798936",
+    "updated_at": "2025-05-13T15:37:17.798936"
+  },
+  {
+    "id": "0ab89183-e14e-4201-9954-b9024ccf8b73",
+    "factor_id": "sf-6",
+    "stage": "Identification",
+    "text": "Pilot a small proof of concept with shortlisted options",
+    "order": 3,
+    "created_at": "2025-05-13T15:37:17.879532",
+    "updated_at": "2025-05-13T15:37:17.879532"
+  },
+  {
+    "id": "6dc67713-439a-44c7-be54-a7ac98f62ba3",
+    "factor_id": "sf-7",
+    "stage": "Identification",
+    "text": "Define the broad end-state vision",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:17.925711",
+    "updated_at": "2025-05-13T15:37:17.925711"
+  },
+  {
+    "id": "5dc80bb8-f04b-4cb2-8a5f-a7edc0457790",
+    "factor_id": "sf-7",
+    "stage": "Identification",
+    "text": "Break the vision into minimal viable increments",
+    "order": 1,
+    "created_at": "2025-05-13T15:37:17.983342",
+    "updated_at": "2025-05-13T15:37:17.983342"
+  },
+  {
+    "id": "51c739a5-6143-4267-811b-9eb0773d6c88",
+    "factor_id": "sf-7",
+    "stage": "Identification",
+    "text": "Prioritise the first increment for fastest feedback",
+    "order": 2,
+    "created_at": "2025-05-13T15:37:18.029147",
+    "updated_at": "2025-05-13T15:37:18.029147"
+  },
+  {
+    "id": "c784c3d3-9664-44fc-865f-7f32973865e9",
+    "factor_id": "sf-7",
+    "stage": "Identification",
+    "text": "Validate the increment before scaling",
+    "order": 3,
+    "created_at": "2025-05-13T15:37:18.097858",
+    "updated_at": "2025-05-13T15:37:18.097858"
+  },
+  {
+    "id": "e3bfd7fe-6de7-44ac-95d1-f014b395b395",
+    "factor_id": "sf-8",
+    "stage": "Identification",
+    "text": "Design experiments to test key assumptions",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:18.150853",
+    "updated_at": "2025-05-13T15:37:18.150853"
+  },
+  {
+    "id": "9f5ff195-7ebe-4649-b068-2330b6d6aa77",
+    "factor_id": "sf-8",
+    "stage": "Identification",
+    "text": "Capture metrics to measure outcomes",
+    "order": 1,
+    "created_at": "2025-05-13T15:37:18.195449",
+    "updated_at": "2025-05-13T15:37:18.195449"
+  },
+  {
+    "id": "1a05312a-f5b7-4e7d-8017-5a888d7b4eb4",
+    "factor_id": "sf-8",
+    "stage": "Identification",
+    "text": "Iterate based on experimental results",
+    "order": 2,
+    "created_at": "2025-05-13T15:37:18.232977",
+    "updated_at": "2025-05-13T15:37:18.232977"
+  },
+  {
+    "id": "5704a7a3-75ba-48b8-a0c7-fb7ed361631a",
+    "factor_id": "sf-8",
+    "stage": "Identification",
+    "text": "Document failures as well as successes",
+    "order": 3,
+    "created_at": "2025-05-13T15:37:18.277423",
+    "updated_at": "2025-05-13T15:37:18.277423"
+  },
+  {
+    "id": "ffaca8de-d72c-42fb-8f51-7bfa0e037269",
+    "factor_id": "sf-9",
+    "stage": "Identification",
+    "text": "Maintain a risk register updated weekly",
+    "order": 0,
+    "created_at": "2025-05-13T15:37:18.322076",
+    "updated_at": "2025-05-13T15:37:18.322076"
+  },
+  {
+    "id": "967f75ee-29dc-4a0f-b75c-07c8a1167d90",
+    "factor_id": "sf-9",
+    "stage": "Identification",
+    "text": "Assign owners and mitigation steps",
+    "order": 1,
+    "created_at": "2025-05-13T15:37:18.374141",
+    "updated_at": "2025-05-13T15:37:18.374141"
+  },
+  {
+    "id": "f47b795f-842b-4576-8243-ff7c949328a2",
+    "factor_id": "sf-9",
+    "stage": "Identification",
+    "text": "Review risk status at each stand-up",
+    "order": 2,
+    "created_at": "2025-05-13T15:37:18.416063",
+    "updated_at": "2025-05-13T15:37:18.416063"
+  },
+  {
+    "id": "be0b53ad-be51-4f7d-9a0d-ffc12c438ae5",
+    "factor_id": "sf-9",
+    "stage": "Identification",
+    "text": "Alert stakeholders on critical changes",
+    "order": 3,
+    "created_at": "2025-05-13T15:37:18.456088",
+    "updated_at": "2025-05-13T15:37:18.456088"
+  }
+]
