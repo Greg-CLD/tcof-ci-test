@@ -18,9 +18,11 @@ import { usePlan } from "@/contexts/PlanContext";
 
 interface ChecklistHeaderProps {
   projectId: string;
+  title?: string;
+  description?: string;
 }
 
-export function ChecklistHeader({ projectId }: ChecklistHeaderProps) {
+export function ChecklistHeader({ projectId, title, description }: ChecklistHeaderProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSelectingOutcomes, setIsSelectingOutcomes] = useState(false);

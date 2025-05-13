@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Stage } from '@/lib/plan-db';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, PlusSquare } from 'lucide-react';
+import { Download, FileText, Loader2, PlusSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SummaryBar from '@/components/checklist/SummaryBar';
 import { ChecklistHeader } from '@/components/outcomes/ChecklistHeader';
@@ -19,7 +19,7 @@ import { useProjects } from '@/hooks/useProjects';
 import { useFactors } from '@/hooks/useFactors';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface ChecklistProps {
   projectId?: string;
@@ -61,7 +61,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
   const { factors } = useFactors();
 
   // Local state
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
   const [tasks, setTasks] = useState<UnifiedTask[]>([]);
   const [tasksByStage, setTasksByStage] = useState<Record<Stage, UnifiedTask[]>>({
@@ -256,52 +256,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
     }
   };
 
-  // Initialize a full plan
-  const handleInitializePlan = async () => {
-    if (!currentProjectId) return;
-    
-    try {
-      setLoading(true);
-      
-      // Create a basic plan with current tasks
-      const newPlan = {
-        projectId: currentProjectId,
-        blocks: {
-          block2: {
-            tasks: tasks.map(task => ({
-              id: task.id,
-              completed: task.completed,
-              stage: task.stage,
-              source: task.source
-            })),
-            stakeholders: [],
-            completed: false
-          }
-        }
-      };
-      
-      // Create plan on server
-      await apiRequest("POST", "/api/plans", newPlan);
-      
-      // Refresh data
-      queryClient.invalidateQueries({ queryKey: ["plan", currentProjectId] });
-      
-      toast({
-        title: "Plan Created",
-        description: "A custom plan has been created for this project.",
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('[CHECKLIST] Error creating plan:', error);
-      toast({
-        title: "Error Creating Plan",
-        description: "Failed to create custom plan. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   // Helper function for source labels
   const getSourceLabel = (source: string) => {
@@ -318,7 +273,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
   return (
     <div className="container mx-auto px-4 py-8">
       <ChecklistHeader 
-        projectId={currentProjectId} 
+        projectId={currentProjectId || ""} 
         title="Task Checklist" 
         description="Track your project's progress through recommended tasks."
       />
@@ -346,21 +301,6 @@ export default function Checklist({ projectId }: ChecklistProps) {
         </div>
         
         <div className="flex gap-2">
-          {!plan && (
-            <Button 
-              variant="outline" 
-              onClick={handleInitializePlan}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <PlusCircle className="mr-2 h-4 w-4" />
-              )}
-              Initialize Custom Plan
-            </Button>
-          )}
-          
           <Button variant="outline">
             <FileText className="mr-2 h-4 w-4" />
             Export PDF
