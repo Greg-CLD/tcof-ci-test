@@ -385,44 +385,29 @@ export default function Checklist({ projectId }: ChecklistProps) {
                         </h3>
                         <div className="space-y-2">
                           {tasks.map(task => (
-                            <div 
-                              key={`${task.source}-${task.id}`} 
-                              className="flex items-start gap-3 p-3 border rounded-md hover:bg-gray-50"
-                            >
-                              <div className="flex-shrink-0 pt-0.5">
-                                <input
-                                  type="checkbox"
-                                  checked={task.completed}
-                                  onChange={() => {
-                                    handleTaskUpdate(
-                                      task.id, 
-                                      { completed: !task.completed }, 
-                                      task.stage, 
-                                      task.source
-                                    );
-                                  }}
-                                  className="rounded-sm h-5 w-5 border-gray-300 text-tcof-teal focus:ring-tcof-teal"
-                                  title="Click to mark complete"
-                                />
-                              </div>
-                              <div className="flex-grow min-w-0">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
-                                  <p className={`text-sm ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                                    {task.text}
-                                  </p>
-                                  {task.sourceName && (
-                                    <span className="text-xs text-gray-500 mt-1 sm:mt-0">
-                                      {factors?.find(f => f.id === task.sourceName)?.title || task.sourceName}
-                                    </span>
-                                  )}
-                                </div>
-                                {task.notes && (
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {task.notes}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
+                            <TaskCard
+                              key={`${task.source}-${task.id}`}
+                              id={task.id}
+                              text={task.text}
+                              completed={task.completed}
+                              notes={task.notes}
+                              priority={task.priority}
+                              dueDate={task.dueDate}
+                              owner={task.owner}
+                              status={task.completed ? 'Done' : task.status || 'To Do'}
+                              stage={task.stage}
+                              source={task.source}
+                              sourceName={task.sourceName}
+                              isGoodPractice={false}
+                              onUpdate={(id, updates) => {
+                                handleTaskUpdate(
+                                  id,
+                                  updates,
+                                  task.stage,
+                                  task.source
+                                );
+                              }}
+                            />
                           ))}
                         </div>
                       </div>
