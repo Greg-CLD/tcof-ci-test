@@ -385,20 +385,17 @@ export default function Checklist({ projectId }: ChecklistProps) {
     // If no plan exists, automatically create one
     if (!workingPlan) {
       if (!currentProjectId) {
-        toast({
-          title: "No Project Selected",
-          description: "Please select a project first.",
-          variant: "destructive"
-        });
+        console.error('Cannot update task: No project selected');
         return;
       }
 
       try {
         setLoading(true);
-        console.log('Creating plan for project:', currentProjectId);
+        console.log('[CHECKLIST] Auto-creating plan for project:', currentProjectId);
 
         // Create a plan for the project
         const planId = await ensurePlanForProject(currentProjectId);
+        console.log('[CHECKLIST] plan created', { projectId: currentProjectId, planId });
         setSelectedPlanId(planId);
         const loadedPlan = await loadPlan(planId);
 
@@ -406,22 +403,13 @@ export default function Checklist({ projectId }: ChecklistProps) {
           throw new Error('Failed to load plan after creation');
         }
 
-        console.log('New plan created and loaded successfully:', planId);
+        console.log('[CHECKLIST] plan loaded', { projectId: currentProjectId, planId });
         workingPlan = loadedPlan;
         setPlan(loadedPlan);
-
-        toast({
-          title: "Plan Created",
-          description: "Changes will now be saved automatically",
-          variant: "default"
-        });
+        
+        // No toast message needed - plan creation should be seamless
       } catch (err) {
-        console.error("Error creating plan:", err);
-        toast({
-          title: "Error Creating Plan",
-          description: "Could not create a plan for this project",
-          variant: "destructive"
-        });
+        console.error("[CHECKLIST] Error creating plan:", err);
         setLoading(false);
         return;
       } finally {
@@ -429,9 +417,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
       }
     }
 
-    // If we still don't have a plan, return
+    // Extra safety check - if we still couldn't create a plan
     if (!workingPlan) {
-      console.error('Failed to create or load plan');
+      console.error('[CHECKLIST] Failed to create or load plan');
       return;
     }
 
@@ -900,8 +888,8 @@ export default function Checklist({ projectId }: ChecklistProps) {
                                               task.source
                                             );
                                           }}
-                                          className={`rounded-sm h-5 w-5 border-gray-300 ${!plan ? 'opacity-70 cursor-not-allowed' : 'text-tcof-teal'} focus:ring-tcof-teal`}
-                                          title={!plan ? "Read-only mode" : "Click to mark complete"}
+                                          className="rounded-sm h-5 w-5 border-gray-300 text-tcof-teal focus:ring-tcof-teal"
+                                          title="Click to mark complete"
                                         />
                                       </div>
                                       <div className="flex-grow min-w-0">
