@@ -54,9 +54,35 @@ const transformFactorWithTasks = (factor: any, tasks: any[]): FactorTask => {
     Closure: []
   };
 
+  // Stage name normalization mapping
+  const normalizeStage = (stageName: string): string => {
+    // Convert to lowercase for case-insensitive comparison
+    const stage = stageName.toLowerCase();
+    
+    // Map different stage name formats to canonical names
+    if (stage === 'stage 1' || stage === 'stage1' || stage === 'identification') {
+      return 'Identification';
+    } else if (stage === 'stage 2' || stage === 'stage2' || stage === 'definition') {
+      return 'Definition';
+    } else if (stage === 'stage 3' || stage === 'stage3' || stage === 'delivery') {
+      return 'Delivery';
+    } else if (stage === 'stage 4' || stage === 'stage4' || stage === 'closure') {
+      return 'Closure';
+    }
+    
+    // If no match found, use the original name with proper capitalization
+    return stageName;
+  };
+
+  // Process all tasks with stage normalization
   tasks.forEach(task => {
-    if (stagedTasks[task.stage]) {
-      stagedTasks[task.stage].push(task.text);
+    const normalizedStage = normalizeStage(task.stage);
+    
+    if (stagedTasks[normalizedStage]) {
+      stagedTasks[normalizedStage].push(task.text);
+    } else {
+      // Only log warnings when we encounter unknown stage values
+      console.warn(`Unknown stage "${task.stage}" (normalized to "${normalizedStage}") for task "${task.text}" in factor ${factor.id}`);
     }
   });
 
