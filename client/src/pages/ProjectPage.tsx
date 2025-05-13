@@ -42,6 +42,7 @@ export default function ProjectPage() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId: string }>();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [showHelp, setShowHelp] = useState(true);
   const { progress } = useProgress();
 
   // Fetch project details
@@ -231,6 +232,69 @@ export default function ProjectPage() {
                 <TabsTrigger value="getYourBearings">Get Your Bearings</TabsTrigger>
                 <TabsTrigger value="checklist">Checklist</TabsTrigger>
               </TabsList>
+              
+              {/* Help Dialog */}
+              <AlertDialog open={showHelp} onOpenChange={setShowHelp}>
+                <AlertDialogContent className="max-w-4xl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-2xl text-tcof-teal">Make A Plan Flow</AlertDialogTitle>
+                  </AlertDialogHeader>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                    {/* Left column with instructions */}
+                    <div className="space-y-4">
+                      <p className="font-medium">To Make a Plan, follow this journey.</p>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="font-bold text-lg">Get Your Bearings</h3>
+                          <ul className="list-disc pl-6 mt-2 space-y-1">
+                            <li>Set Your Direction, Identify the goal</li>
+                            <li>Plot Your Position, figure out where you are on the Delivery Journey.</li>
+                          </ul>
+                        </div>
+                        
+                        <div>
+                          <h3 className="font-bold text-lg">Make A Decision</h3>
+                          <p>Option A) Start with TCOF or Option B) Create Your Customised Plan</p>
+                          <ul className="list-disc pl-6 mt-2 space-y-1">
+                            <li>If Option A, Start with TCOF, Go straight to Checklist</li>
+                            <li>If Option B, Customised, go to Make Your Plan</li>
+                          </ul>
+                        </div>
+                        
+                        <div>
+                          <h3 className="font-bold text-lg">Checklist</h3>
+                          <p>Both Options take you to the checklist, you may skip any step and return at a later date.</p>
+                        </div>
+                      </div>
+                      
+                      <p className="mt-6 italic">
+                        TCOF and the companion application are designed to help guide you through this journey.
+                        To your success.
+                      </p>
+                    </div>
+                    
+                    {/* Right column with flowchart */}
+                    <div className="flex justify-center items-start">
+                      <img 
+                        src="/assets/make-a-plan-flow.png" 
+                        alt="Make A Plan Flow Chart" 
+                        className="max-w-full h-auto rounded-md border shadow-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  <AlertDialogFooter>
+                    <AlertDialogAction 
+                      onClick={() => setShowHelp(false)}
+                      className="bg-tcof-teal hover:bg-tcof-teal/90"
+                    >
+                      Got it
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               <TabsContent value="overview" className="space-y-6">
                 <Card>
