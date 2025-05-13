@@ -1,0 +1,218 @@
+[
+  {
+    "stage": "Stage 1",
+    "factorId": 1.1,
+    "successFactor": "Ask Why",
+    "task": "Talk to 3 to 5 key stakeholders"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 1.1,
+    "successFactor": "Ask Why",
+    "task": "Ask what frustrates them and what a win looks like"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 1.1,
+    "successFactor": "Ask Why",
+    "task": "Probe beyond technical requirements to uncover unstated needs"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 1.1,
+    "successFactor": "Ask Why",
+    "task": "Ask “why” at least five times to reach root motivations"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 1.1,
+    "successFactor": "Ask Why",
+    "task": "Set expectations for iterative discovery"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 1.1,
+    "successFactor": "Ask Why",
+    "task": "Capture “why” answers for later reference"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 2.1,
+    "successFactor": "Recognise that your project is not unique",
+    "task": "Identify similar past projects internally"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 2.1,
+    "successFactor": "Recognise that your project is not unique",
+    "task": "Research industry case studies for similar initiatives"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 2.1,
+    "successFactor": "Recognise that your project is not unique",
+    "task": "Document lessons learned from analogous efforts"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 2.1,
+    "successFactor": "Recognise that your project is not unique",
+    "task": "Validate your assumptions against known patterns"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 2.2,
+    "successFactor": "Look for Tried & Tested Options",
+    "task": "Catalogue existing solutions within your organisation"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 2.2,
+    "successFactor": "Look for Tried & Tested Options",
+    "task": "Evaluate open source or commercial off-the-shelf tools"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 2.2,
+    "successFactor": "Look for Tried & Tested Options",
+    "task": "Assess support and maintenance overheads"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 2.2,
+    "successFactor": "Look for Tried & Tested Options",
+    "task": "Pilot a small proof of concept with shortlisted options"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.1,
+    "successFactor": "Think Big, Start Small",
+    "task": "Define the broad end-state vision"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.1,
+    "successFactor": "Think Big, Start Small",
+    "task": "Break the vision into minimal viable increments"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.1,
+    "successFactor": "Think Big, Start Small",
+    "task": "Prioritise the first increment for fastest feedback"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.1,
+    "successFactor": "Think Big, Start Small",
+    "task": "Validate the increment before scaling"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.2,
+    "successFactor": "Learn by Experimenting",
+    "task": "Design experiments to test key assumptions"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.2,
+    "successFactor": "Learn by Experimenting",
+    "task": "Capture metrics to measure outcomes"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.2,
+    "successFactor": "Learn by Experimenting",
+    "task": "Iterate based on experimental results"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.2,
+    "successFactor": "Learn by Experimenting",
+    "task": "Document failures as well as successes"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.3,
+    "successFactor": "Keep on top of risks",
+    "task": "Maintain a risk register updated weekly"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.3,
+    "successFactor": "Keep on top of risks",
+    "task": "Assign owners and mitigation steps"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.3,
+    "successFactor": "Keep on top of risks",
+    "task": "Review risk status at each stand-up"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 3.3,
+    "successFactor": "Keep on top of risks",
+    "task": "Alert stakeholders on critical changes"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 4.1,
+    "successFactor": "Adjust for optimism",
+    "task": "Apply a 30% delivery buffer in estimates"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 4.1,
+    "successFactor": "Adjust for optimism",
+    "task": "Validate estimates against historical data"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 4.1,
+    "successFactor": "Adjust for optimism",
+    "task": "Engage the team to calibrate effort"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 4.1,
+    "successFactor": "Adjust for optimism",
+    "task": "Use relative sizing for complex tasks"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 4.3,
+    "successFactor": "Be Ready to Adapt",
+    "task": "Plan for iterative scope changes"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 4.3,
+    "successFactor": "Be Ready to Adapt",
+    "task": "Design flexible architectures"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 4.3,
+    "successFactor": "Be Ready to Adapt",
+    "task": "Implement feature toggles"
+  },
+  {
+    "stage": "Stage 1",
+    "factorId": 4.3,
+    "successFactor": "Be Ready to Adapt",
+    "task": "Set up regular meetings with key people to adapt to a changing world"
+  },
+  {
+    "stage": "Stage 2",
+    "factorId": 4.3,
+    "successFactor": "Be Ready to Adapt",
+    "task": "Adapt the requirements / plan / scope based as new information comes to light."
+  },
+  {
+    "stage": "Stage 3",
+    "factorId": 4.3,
+    "successFactor": "Be Ready to Adapt",
+    "task": "Adapt the requirements / plan / scope based as new information comes to light."
+  }
+]
