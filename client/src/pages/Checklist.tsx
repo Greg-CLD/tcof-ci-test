@@ -263,7 +263,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       />
       
       <div className="mb-8">
-        <SummaryBar tasks={tasks} />
+        <SummaryBar tasks={tasks} plan={plan} />
       </div>
       
       <div className="flex flex-col lg:flex-row gap-4 mb-6">

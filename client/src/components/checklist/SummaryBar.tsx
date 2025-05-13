@@ -12,9 +12,21 @@ interface TaskItem {
   [key: string]: any;
 }
 
+// Type for stage data that might be used in canonicalChecklist
+interface StageData {
+  tasks?: Array<{ completed?: boolean; [key: string]: any }>;
+  goodPractice?: {
+    tasks?: Array<{ completed?: boolean; [key: string]: any }>;
+  };
+  [key: string]: any;
+}
+
 interface SummaryBarProps {
   plan?: PlanRecord | null;
-  canonicalChecklist?: any; // Fallback canonical checklist data
+  canonicalChecklist?: {
+    stages?: Record<string, StageData>;
+    [key: string]: any;
+  }; 
   tasks?: TaskItem[]; // New prop for direct task list
 }
 
@@ -81,9 +93,9 @@ export default function SummaryBar({ plan, canonicalChecklist, tasks }: SummaryB
       Object.entries(canonicalChecklist.stages).forEach(([stageName, stageData]) => {
         const stage = stageName as Stage;
         
-        // Count tasks from canonical checklist
-        const taskList = stageData && Array.isArray(stageData.tasks) ? stageData.tasks : [];
-        const completed = taskList.filter((t: any) => t.completed).length;
+        // Count tasks from canonical checklist - with type safety
+        const taskList = stageData && stageData.tasks ? stageData.tasks : [];
+        const completed = taskList.filter(t => !!t.completed).length;
         
         // Calculate percentage
         const total = taskList.length;
