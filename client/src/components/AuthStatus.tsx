@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, CheckCircle, AlertCircle, LogIn } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -61,15 +61,5 @@ export function AuthStatus() {
   }
 
   // Not authenticated state
-  return (
-    <Button 
-      variant="ghost" 
-      size="sm" 
-      className="text-amber-500 hover:text-amber-700 flex items-center space-x-1 h-7 px-2"
-      onClick={() => loginMutation.mutate()}
-    >
-      <LogIn className="h-3 w-3" />
-      <span>Log In</span>
-    </Button>
-  );
+  return null;
 }
