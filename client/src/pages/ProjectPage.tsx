@@ -19,7 +19,8 @@ import {
   Route,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -42,7 +43,7 @@ export default function ProjectPage() {
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId: string }>();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [showHelp, setShowHelp] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
   const { progress } = useProgress();
 
   // Fetch project details
