@@ -3,15 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
   Card,
   CardContent,
   CardHeader,
@@ -26,30 +17,29 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { Save, Trash2, Plus, Edit, AlertTriangle } from 'lucide-react';
+import { Loader2, Trash2, Plus, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import AdminStageTabs, { Stage } from './AdminStageTabs';
+import AdminStageTabs, { Stage, FactorTask } from './AdminStageTabs';
+import FactorSidebar from './FactorSidebar';
 import SiteHeader from '@/components/SiteHeader';
 import { useAuth } from '@/hooks/useAuth';
 
-// Define the structure of a success factor
-// Using the Stage type from AdminStageTabs
-interface FactorTask {
-  id: string;
-  title: string;
-  description: string;
-  tasks: {
-    Identification: string[];
-    Definition: string[];
-    Delivery: string[];
-    Closure: string[];
-  };
-}
+// We'll use the FactorTask type from AdminStageTabs.tsx
 
 // We don't need props for a standalone page component
 export default function SuccessFactorEditor() {
