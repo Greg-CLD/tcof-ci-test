@@ -4,6 +4,7 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, Loader2, PlusSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import TaskCard from '@/components/checklist/TaskCard';
 import SummaryBar from '@/components/checklist/SummaryBar';
 import { ChecklistHeader } from '@/components/outcomes/ChecklistHeader';
 import ChecklistFilterBar, {
