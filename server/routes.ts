@@ -2835,28 +2835,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedFactor.description = '';
       }
 
-      // Get existing factors
-      const factors = await getFactors() || [];
-
-      // Find the factor to update
-      const factorIndex = factors.findIndex((f: FactorTask) => f.id === factorId);
-
-      if (factorIndex === -1) {
-        return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
-      }
-
       // Ensure the ID in the body matches the URL parameter
       if (updatedFactor.id !== factorId) {
         return res.status(400).json({ message: 'Factor ID in body must match ID in URL' });
       }
 
-      // Update the factor
-      factors[factorIndex] = updatedFactor;
-
-      // Save updated factors
-      await saveFactors(factors);
-
-      res.json(updatedFactor);
+      try {
+        // Directly update the factor in the database
+        const updatedData = await import('./factorsDb').then(module => 
+          module.updateFactor(factorId, updatedFactor)
+        );
+        
+        res.json(updatedData);
+      } catch (dbError: any) {
+        // Factor might not exist
+        if (dbError.message && dbError.message.includes('not found')) {
+          return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
+        }
+        throw dbError; // Re-throw for the outer catch block
+      }
     } catch (error: unknown) {
       console.error('Error updating success factor:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update success factor';
@@ -2869,21 +2866,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const factorId = req.params.id;
 
-      // Get existing factors
-      const factors = await getFactors() || [];
-
-      // Find the factor to delete
-      const factorIndex = factors.findIndex(f => f.id === factorId);
-
-      if (factorIndex === -1) {
-        return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
+      try {
+        // Delete the factor directly from the database
+        const result = await import('./factorsDb').then(module => 
+          module.deleteFactor(factorId)
+        );
+        
+        if (!result) {
+          return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
+        }
+      } catch (dbError: any) {
+        // Handle specific error cases
+        if (dbError.message && dbError.message.includes('not found')) {
+          return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
+        }
+        throw dbError; // Re-throw for the outer catch block
       }
-
-      // Remove the factor
-      factors.splice(factorIndex, 1);
-
-      // Save updated factors
-      await saveFactors(factors);
 
       res.json({ success: true, message: `Success factor with ID ${factorId} deleted` });
     } catch (error: unknown) {
