@@ -90,23 +90,38 @@ export default function Checklist({ projectId }: ChecklistProps) {
     }
   });
 
-  // Load and process tasks
-  useEffect(() => {
-    if (!currentProjectId || !canonicalTasks) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    console.log('[CHECKLIST] Building task list for project', currentProjectId);
+  // Helper function to refresh task state
+  const refreshTasksState = async () => {
+    if (!currentProjectId || !canonicalTasks) return;
     
     try {
+      // Get existing task statuses from the server
+      const response = await apiRequest(
+        "GET", 
+        `/api/projects/${currentProjectId}/tasks`
+      );
+      
+      // Create a lookup table for completed statuses
+      const taskStatusMap: Record<string, boolean> = {};
+      if (Array.isArray(response)) {
+        response.forEach((task: any) => {
+          if (task.sourceId) {
+            taskStatusMap[task.sourceId] = !!task.completed;
+          }
+        });
+      }
+      
       // Start with canonical tasks
       const allTasks: UnifiedTask[] = canonicalTasks.map((task: any) => {
-        // Check if this task exists in the plan (if we have one)
+        // Check if this task exists in our status map or the plan
         let completed = false;
         
-        if (plan?.blocks?.block2?.tasks) {
+        // First check direct task status
+        if (taskStatusMap[task.id]) {
+          completed = true;
+        }
+        // Then fallback to plan if it exists (for backward compatibility)
+        else if (plan?.blocks?.block2?.tasks) {
           const existingTask = plan.blocks.block2.tasks.find(
             (t: any) => t.id === task.id
           );
@@ -145,19 +160,32 @@ export default function Checklist({ projectId }: ChecklistProps) {
       
       setTasks(allTasks);
       setTasksByStage(byStage);
-      setLoading(false);
     } catch (error) {
-      console.error('[CHECKLIST] Error building tasks list:', error);
+      console.error('[CHECKLIST] Error refreshing tasks:', error);
       toast({
-        title: "Error loading tasks",
+        title: "Error refreshing tasks",
         description: "There was a problem loading the task list.",
         variant: "destructive"
       });
-      setLoading(false);
     }
-  }, [currentProjectId, canonicalTasks, plan]);
+  };
 
-  // Handle task updates - this is the key function we need to fix
+  // Load and process tasks
+  useEffect(() => {
+    if (!currentProjectId || !canonicalTasks) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    console.log('[CHECKLIST] Building task list for project', currentProjectId);
+    
+    refreshTasksState()
+      .finally(() => setLoading(false));
+      
+  }, [currentProjectId, canonicalTasks]);
+
+  // Handle task updates - now always plan-free
   const handleTaskUpdate = async (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
     if (!currentProjectId) return;
     
@@ -189,65 +217,21 @@ export default function Checklist({ projectId }: ChecklistProps) {
       
       setTasksByStage(byStage);
       
-      // If we have a plan, update it
-      if (plan?.id) {
-        // Prepare the plan update
-        const updatedPlan = { ...plan };
-        
-        // Initialize block2 if needed
-        if (!updatedPlan.blocks.block2) {
-          updatedPlan.blocks.block2 = {
-            tasks: [],
-            stakeholders: [],
-            completed: false
-          };
-        }
-        
-        // Initialize tasks array if needed
-        if (!updatedPlan.blocks.block2.tasks) {
-          updatedPlan.blocks.block2.tasks = [];
-        }
-        
-        // Find if the task already exists
-        const taskIndex = updatedPlan.blocks.block2.tasks.findIndex(
-          (t: any) => t.id === taskId
-        );
-        
-        if (taskIndex >= 0) {
-          // Update existing task
-          updatedPlan.blocks.block2.tasks[taskIndex] = {
-            ...updatedPlan.blocks.block2.tasks[taskIndex],
-            ...updates
-          };
-        } else {
-          // Add new task
-          updatedPlan.blocks.block2.tasks.push({
-            id: taskId,
-            ...updates,
-            stage,
-            source
-          });
-        }
-        
-        // Save to server
-        await apiRequest(
-          "PATCH",
-          `/api/plans/${plan.id}/block/block2`,
-          { tasks: updatedPlan.blocks.block2.tasks }
-        );
-        
-        // Refresh data
-        queryClient.invalidateQueries({ queryKey: ["plan", currentProjectId] });
-      } else {
-        // IMPORTANT CHANGE: If no plan, save directly using a task API
-        await apiRequest(
-          "POST",
-          `/api/projects/${currentProjectId}/tasks`,
-          { taskId, updates, stage, source }
-        );
-      }
+      // Always save directly using the task API - no plan dependency
+      const response = await apiRequest(
+        "POST",
+        `/api/projects/${currentProjectId}/tasks`,
+        { taskId, updates, stage, source }
+      );
+      
+      console.log('[CHECKLIST] Task update sent successfully', response);
+      
     } catch (error) {
       console.error('[CHECKLIST] Error updating task:', error);
+      
+      // Revert local state on error by refreshing from server
+      refreshTasksState();
+      
       toast({
         title: "Error updating task",
         description: "Failed to update task. Please try again.",
