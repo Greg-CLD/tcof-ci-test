@@ -70,86 +70,46 @@ router.post("/:projectId/tasks", isAuthenticated, async (req, res) => {
       }
       
       try {
-        // Import the plans module to work with the plan system
-        const plansDb = await import("../plansDb.js");
+        // Find existing task record or create a new one
+        const existingTasks = await projectsDb.getProjectTasksBySourceId(projectId, taskId);
+        const existingTask = existingTasks.find(t => t.id === taskId || t.sourceId === taskId);
         
-        // Get or create a minimal plan
-        let plan = await plansDb.getPlanByProjectId(projectId);
-        
-        if (plan) {
-          // Make sure the blocks structure exists
-          if (!plan.blocks) plan.blocks = {};
-          if (!plan.blocks.block2) {
-            plan.blocks.block2 = {
-              tasks: [],
-              stakeholders: [],
-              completed: false
-            };
-          }
-          
-          if (!plan.blocks.block2.tasks) {
-            plan.blocks.block2.tasks = [];
-          }
-          
-          // Check if task exists in the plan
-          const taskIndex = plan.blocks.block2.tasks.findIndex(t => t.id === taskId);
-          
-          if (taskIndex >= 0) {
-            // Update existing task
-            plan.blocks.block2.tasks[taskIndex] = {
-              ...plan.blocks.block2.tasks[taskIndex],
-              ...updates
-            };
-          } else {
-            // Add new task to plan
-            plan.blocks.block2.tasks.push({
-              id: taskId,
-              completed: updates.completed || false,
-              stage,
-              source
-            });
-          }
-          
-          // Save the updated plan
-          await plansDb.savePlan(plan);
-          
-          return res.status(200).json({
-            message: "Task updated in existing plan",
-            success: true
-          });
-        } else {
-          // Create a minimal plan with just this task
-          const newPlan = {
-            projectId: projectId,
-            userId: userId,
-            blocks: {
-              block2: {
-                tasks: [{
-                  id: taskId,
-                  completed: updates.completed || false,
-                  stage,
-                  source
-                }],
-                stakeholders: [],
-                completed: false
-              }
-            }
+        if (existingTask) {
+          // Update the existing task
+          const updateData = {
+            ...updates,
+            sourceId: taskId,
+            stage,
           };
           
-          // Save the new plan
-          const savedPlan = await plansDb.savePlan(newPlan);
+          const updatedTask = await projectsDb.updateProjectTask(existingTask.id, updateData);
+          
+          return res.status(200).json({
+            message: "Task updated successfully",
+            success: true,
+            task: updatedTask
+          });
+        } else {
+          // Create a new task record
+          const newTask = await projectsDb.createProjectTask({
+            projectId,
+            text: `Task for ${source} ${taskId}`, // Generic text as placeholder
+            stage,
+            origin: source,
+            sourceId: taskId,
+            completed: updates.completed || false
+          });
           
           return res.status(201).json({
-            message: "Created minimal plan with task",
+            message: "Task created successfully",
             success: true,
-            planId: savedPlan.id
+            task: newTask
           });
         }
       } catch (error) {
-        console.error("Error updating task in plan:", error);
-        // Fall back to storing the task directly if plan operations fail
+        console.error("Error updating task:", error);
         return res.status(500).json({ 
-          message: "Failed to update task in plan system", 
+          message: "Failed to update task", 
           error: error.message 
         });
       }
