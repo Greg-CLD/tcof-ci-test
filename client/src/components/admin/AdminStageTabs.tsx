@@ -123,7 +123,8 @@ export default function AdminStageTabs({
               </div>
             ) : (
               <div className="space-y-2">
-                {factor.tasks[stage as keyof typeof factor.tasks].map((taskText, index) => (
+                {console.log(`[ADMIN_TABS] Mapping tasks for ${stage}:`, factor.tasks[stage as keyof typeof factor.tasks])}
+{factor.tasks[stage as keyof typeof factor.tasks].map((taskText, index) => (
                   <div
                     key={`${stage}-task-${index}`}
                     className="flex items-start gap-3"
