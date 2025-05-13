@@ -535,12 +535,38 @@ export default function Checklist({ projectId }: ChecklistProps) {
 
   // Debug information about current state - top-level position before any returns
   useEffect(() => {
-    console.log('Checklist component state:', { 
+    console.log('[CHECKLIST] component state:', { 
       currentProjectId, 
       planId: selectedPlanId,
       hasCanonical: !!canonicalChecklist 
     });
   }, [currentProjectId, selectedPlanId, canonicalChecklist]);
+
+  // Auto-create plan when we have canonical checklist but no plan
+  useEffect(() => {
+    async function createPlanFromCanonical() {
+      if (!currentProjectId) return;
+      if (canonicalChecklist && !plan && !loading) {
+        console.log('[CHECKLIST] Auto-creating plan from canonical checklist');
+        try {
+          const planId = await ensurePlanForProject(currentProjectId);
+          console.log('[CHECKLIST] plan created', { projectId: currentProjectId, planId });
+          setSelectedPlanId(planId);
+          
+          // Explicitly fetch the plan to update state
+          const newPlan = await loadPlan(planId);
+          if (newPlan) {
+            console.log('[CHECKLIST] plan loaded', { projectId: currentProjectId, planId });
+            setPlan(newPlan);
+          }
+        } catch (err) {
+          console.error('[CHECKLIST] Failed to auto-create plan:', err);
+        }
+      }
+    }
+    
+    createPlanFromCanonical();
+  }, [currentProjectId, canonicalChecklist, plan, loading, setSelectedPlanId]);
   
   // Basic render guards
   if (!currentProjectId) {
