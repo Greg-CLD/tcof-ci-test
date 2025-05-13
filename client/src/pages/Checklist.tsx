@@ -533,6 +533,15 @@ export default function Checklist({ projectId }: ChecklistProps) {
     });
   };
 
+  // Debug information about current state - top-level position before any returns
+  useEffect(() => {
+    console.log('Checklist component state:', { 
+      currentProjectId, 
+      planId: selectedPlanId,
+      hasCanonical: !!canonicalChecklist 
+    });
+  }, [currentProjectId, selectedPlanId, canonicalChecklist]);
+  
   // Basic render guards
   if (!currentProjectId) {
     return (
@@ -569,14 +578,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
     );
   }
 
-  // Debug information about current state
-  useEffect(() => {
-    console.log('Checklist component state:', { 
-      currentProjectId, 
-      plan: plan ? plan.id : null, 
-      canonicalChecklist: canonicalChecklist ? 'loaded' : 'not loaded'
-    });
-  }, [currentProjectId, plan, canonicalChecklist]);
+
 
   // Always display the checklist UI regardless of plan status
   // Always display the checklist UI regardless of plan status
@@ -917,8 +919,6 @@ export default function Checklist({ projectId }: ChecklistProps) {
                               </div>
                             );
                           })}
-```python
-                          })}
                         </div>
                       )}
                     </div>
@@ -949,12 +949,3 @@ export default function Checklist({ projectId }: ChecklistProps) {
     </div>
   );
 }
-
-// Debug information about current state
-useEffect(() => {
-  console.log('Checklist component state:', { 
-    currentProjectId, 
-    plan: plan ? plan.id : null, 
-    canonicalChecklist: canonicalChecklist ? 'loaded' : 'not loaded'
-  });
-}, [currentProjectId, plan, canonicalChecklist]);
