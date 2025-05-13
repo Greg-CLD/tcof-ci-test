@@ -343,17 +343,30 @@ export default function BasicProjectEditPage() {
                   {isEditMode ? "Edit" : "View"} Project Details: {project.name}
                 </CardTitle>
               </div>
-              {!isEditMode && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-tcof-teal hover:text-tcof-teal-dark" 
-                  onClick={() => setIsEditMode(true)}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {!isEditMode && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-tcof-teal hover:text-tcof-teal-dark" 
+                    onClick={() => setIsEditMode(true)}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+                {isEditMode && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="flex items-center gap-1 text-red-600 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Project
+                  </Button>
+                )}
+              </div>
             </div>
             <CardDescription>
               {isEditMode 

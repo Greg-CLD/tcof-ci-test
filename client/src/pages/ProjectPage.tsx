@@ -176,14 +176,6 @@ export default function ProjectPage() {
                   >
                     <Edit className="h-4 w-4" /> Edit
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className="flex items-center gap-1 text-red-600 hover:text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" /> Delete
-                  </Button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-3 items-center text-sm text-gray-500">
