@@ -12,41 +12,47 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
-import { ArrowDownNarrowWide, ArrowUpNarrowWide, FilterX, HelpCircle } from 'lucide-react';
+import { ArrowDownNarrowWide, ArrowUpNarrowWide, FilterX, HelpCircle, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Export types for filters
 export type StageFilter = 'all' | 'Identification' | 'Definition' | 'Delivery' | 'Closure';
-export type StatusFilter = 'all' | 'open' | 'completed';
-export type SourceFilter = 'all' | 'heuristic' | 'factor' | 'framework';
-export type SortOption = 'none' | 'priority' | 'dueDate' | 'source';
+export type StatusFilter = 'all' | 'completed' | 'incomplete';
+export type SourceFilter = 'all' | 'heuristic' | 'factor' | 'framework' | 'custom';
+export type SortOption = 'stage' | 'status' | 'source';
 export type SortDirection = 'asc' | 'desc';
 
+// Props interface for the component
 interface ChecklistFilterBarProps {
   stageFilter: StageFilter;
+  setStageFilter: React.Dispatch<React.SetStateAction<StageFilter>>;
   statusFilter: StatusFilter;
+  setStatusFilter: React.Dispatch<React.SetStateAction<StatusFilter>>;
   sourceFilter: SourceFilter;
-  sortBy: SortOption;
+  setSourceFilter: React.Dispatch<React.SetStateAction<SourceFilter>>;
+  sortOption: SortOption;
+  setSortOption: React.Dispatch<React.SetStateAction<SortOption>>;
   sortDirection: SortDirection;
-  onStageFilterChange: (value: StageFilter) => void;
-  onStatusFilterChange: (value: StatusFilter) => void;
-  onSourceFilterChange: (value: SourceFilter) => void;
-  onSortChange: (value: SortOption) => void;
-  onSortDirectionChange: (value: SortDirection) => void;
+  setSortDirection: React.Dispatch<React.SetStateAction<SortDirection>>;
+  searchQuery: string;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export default function ChecklistFilterBar({
   stageFilter,
+  setStageFilter,
   statusFilter,
+  setStatusFilter,
   sourceFilter,
-  sortBy,
+  setSourceFilter,
+  sortOption,
+  setSortOption,
   sortDirection,
-  onStageFilterChange,
-  onStatusFilterChange,
-  onSourceFilterChange,
-  onSortChange,
-  onSortDirectionChange
+  setSortDirection,
+  searchQuery,
+  setSearchQuery
 }: ChecklistFilterBarProps) {
   
   // Check if any filters are active
@@ -54,26 +60,59 @@ export default function ChecklistFilterBar({
     stageFilter !== 'all' || 
     statusFilter !== 'all' || 
     sourceFilter !== 'all' || 
-    sortBy !== 'none';
+    searchQuery !== '';
   
   // Reset all filters to default values
   const handleResetFilters = () => {
-    onStageFilterChange('all');
-    onStatusFilterChange('all');
-    onSourceFilterChange('all');
-    onSortChange('none');
-    onSortDirectionChange('asc');
+    setStageFilter('all');
+    setStatusFilter('all');
+    setSourceFilter('all');
+    setSortOption('stage');
+    setSortDirection('asc');
+    setSearchQuery('');
   };
   
   // Toggle sort direction
   const handleToggleSortDirection = () => {
-    onSortDirectionChange(sortDirection === 'asc' ? 'desc' : 'asc');
+    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
   };
   
   return (
     <div className="bg-white rounded-lg mb-6 p-4 border shadow-sm">
-      <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:items-center md:justify-between">
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col md:flex-row gap-4 items-start">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+          {/* Search Field */}
+          <div className="w-full sm:w-auto">
+            <div className="flex items-center mb-1">
+              <label htmlFor="search" className="text-sm font-medium mr-1">Search</label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" className="p-0 h-5 w-5">
+                      <HelpCircle className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="w-[200px] text-xs">
+                      Search tasks by name or description
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="relative">
+              <Input
+                id="search"
+                type="text"
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-9 w-full sm:w-[240px]"
+              />
+              <Search className="absolute left-2 top-2 h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+          
           {/* Filter by Stage */}
           <div>
             <div className="flex items-center mb-1">
@@ -87,7 +126,7 @@ export default function ChecklistFilterBar({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="w-[200px] text-xs">
-                      Filter tasks by their project stage (Identification, Definition, etc.)
+                      Filter tasks by their project stage
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -95,7 +134,7 @@ export default function ChecklistFilterBar({
             </div>
             <Select
               value={stageFilter} 
-              onValueChange={(value) => onStageFilterChange(value as StageFilter)}
+              onValueChange={(value) => setStageFilter(value as StageFilter)}
             >
               <SelectTrigger id="stage-filter" className="w-[160px] h-9">
                 <SelectValue placeholder="All Stages" />
@@ -123,7 +162,7 @@ export default function ChecklistFilterBar({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="w-[200px] text-xs">
-                      Filter tasks by completion status (Open or Completed)
+                      Filter tasks by completion status
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -131,15 +170,15 @@ export default function ChecklistFilterBar({
             </div>
             <Select
               value={statusFilter} 
-              onValueChange={(value) => onStatusFilterChange(value as StatusFilter)}
+              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
             >
               <SelectTrigger id="status-filter" className="w-[160px] h-9">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="open">Open Tasks</SelectItem>
-                <SelectItem value="completed">Completed Tasks</SelectItem>
+                <SelectItem value="incomplete">Incomplete</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -157,7 +196,7 @@ export default function ChecklistFilterBar({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="w-[200px] text-xs">
-                      Filter tasks by source (Heuristic, Success Factor, or Framework)
+                      Filter tasks by source
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -165,7 +204,7 @@ export default function ChecklistFilterBar({
             </div>
             <Select
               value={sourceFilter} 
-              onValueChange={(value) => onSourceFilterChange(value as SourceFilter)}
+              onValueChange={(value) => setSourceFilter(value as SourceFilter)}
             >
               <SelectTrigger id="source-filter" className="w-[160px] h-9">
                 <SelectValue placeholder="All Sources" />
@@ -175,6 +214,7 @@ export default function ChecklistFilterBar({
                 <SelectItem value="heuristic">Heuristics</SelectItem>
                 <SelectItem value="factor">Success Factors</SelectItem>
                 <SelectItem value="framework">Frameworks</SelectItem>
+                <SelectItem value="custom">Custom Tasks</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -194,7 +234,7 @@ export default function ChecklistFilterBar({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="w-[200px] text-xs">
-                      Sort tasks by priority, due date, or source
+                      Choose how to sort tasks
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -202,35 +242,32 @@ export default function ChecklistFilterBar({
             </div>
             <div className="flex items-center gap-2">
               <Select
-                value={sortBy} 
-                onValueChange={(value) => onSortChange(value as SortOption)}
+                value={sortOption} 
+                onValueChange={(value) => setSortOption(value as SortOption)}
               >
                 <SelectTrigger id="sort-by" className="w-[160px] h-9">
-                  <SelectValue placeholder="No Sorting" />
+                  <SelectValue placeholder="Sort by..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No Sorting</SelectItem>
-                  <SelectItem value="priority">Priority</SelectItem>
-                  <SelectItem value="dueDate">Due Date</SelectItem>
+                  <SelectItem value="stage">Stage</SelectItem>
+                  <SelectItem value="status">Status</SelectItem>
                   <SelectItem value="source">Source</SelectItem>
                 </SelectContent>
               </Select>
               
               {/* Sort Direction Toggle */}
-              {sortBy !== 'none' && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={handleToggleSortDirection}
-                >
-                  {sortDirection === 'asc' ? (
-                    <ArrowUpNarrowWide className="h-4 w-4" />
-                  ) : (
-                    <ArrowDownNarrowWide className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleToggleSortDirection}
+              >
+                {sortDirection === 'asc' ? (
+                  <ArrowUpNarrowWide className="h-4 w-4" />
+                ) : (
+                  <ArrowDownNarrowWide className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
           
