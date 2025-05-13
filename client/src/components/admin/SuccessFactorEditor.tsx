@@ -33,8 +33,10 @@ import { Label } from '@/components/ui/label';
 import { Save, Trash2, Plus, Edit, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import AdminStageTabs, { Stage } from './AdminStageTabs';
 
 // Define the structure of a success factor
+// Using the Stage type from AdminStageTabs
 interface FactorTask {
   id: string;
   title: string;
