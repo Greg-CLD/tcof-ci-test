@@ -11,15 +11,6 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -31,40 +22,26 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { Loader2, Trash2, Plus, Save } from 'lucide-react';
+import { Loader2, Trash2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import AdminStageTabs, { Stage, FactorTask } from './AdminStageTabs';
 import FactorSidebar from './FactorSidebar';
 import SiteHeader from '@/components/SiteHeader';
 import { useAuth } from '@/hooks/useAuth';
-
-// We'll use the FactorTask type from AdminStageTabs.tsx
+import { Link } from 'wouter';
 
 // We don't need props for a standalone page component
 export default function SuccessFactorEditor() {
   // State for success factors and editing
   const [factors, setFactors] = useState<FactorTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedFactor, setSelectedFactor] = useState<FactorTask | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
-  // Create editable factor state
-  const [editableFactor, setEditableFactor] = useState<FactorTask>({
-    id: '',
-    title: '',
-    description: '',
-    tasks: {
-      Identification: [''],
-      Definition: [''],
-      Delivery: [''],
-      Closure: ['']
-    }
-  });
-  
+  // Get user for auth check
+  const { user } = useAuth();
   const { toast } = useToast();
 
   // Load success factors on component mount
@@ -85,6 +62,11 @@ export default function SuccessFactorEditor() {
       const data = await response.json();
       setFactors(data);
       
+      // Select the first factor by default if none is selected
+      if (data.length > 0 && !selectedFactorId) {
+        setSelectedFactorId(data[0].id);
+      }
+      
       toast({
         title: "Success Factors Loaded",
         description: `Loaded ${data.length} success factors.`
@@ -101,453 +83,423 @@ export default function SuccessFactorEditor() {
     }
   };
 
-  // Handle creating a new factor
+  // Get the currently selected factor
+  const selectedFactor = selectedFactorId
+    ? factors.find(f => f.id === selectedFactorId)
+    : null;
+
+  // Create a new factor
   const handleCreateFactor = () => {
-    // Generate a new ID based on existing factors
-    let maxId = 0;
-    factors.forEach(factor => {
-      const idParts = factor.id.split('.');
-      if (idParts.length === 2) {
-        const categoryNum = parseInt(idParts[0]);
-        const itemNum = parseInt(idParts[1]);
-        
-        if (!isNaN(categoryNum) && !isNaN(itemNum)) {
-          // For simplicity, we'll just track the highest item number across all categories
-          if (itemNum > maxId) {
-            maxId = itemNum;
-          }
-        }
-      }
-    });
-    
-    // Create a new factor with a unique ID
+    // Default empty factor with tasks arrays
     const newFactor: FactorTask = {
-      id: `1.${maxId + 1}`, // Default to category 1, but user can change it
-      title: 'New Success Factor',
-      description: 'Provide a description of this success factor.',
+      id: `sf-${factors.length + 1}`,  // Generate a default ID (will be editable)
+      title: "New Success Factor",
+      description: "Add a description for this success factor",
       tasks: {
-        Identification: [''],
-        Definition: [''],
-        Delivery: [''],
-        Closure: ['']
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
       }
     };
     
-    setEditableFactor(newFactor);
-    setIsCreating(true);
-    setIsDialogOpen(true);
+    // Create a factor on the server
+    setIsSaving(true);
+    apiRequest('POST', '/api/admin/success-factors', newFactor)
+      .then(response => response.json())
+      .then(data => {
+        // Add the new factor to our list
+        setFactors([...factors, data]);
+        
+        // Select the new factor
+        setSelectedFactorId(data.id);
+        
+        toast({
+          title: 'Success Factor Created',
+          description: 'New success factor has been created.',
+        });
+      })
+      .catch(error => {
+        console.error('Error creating factor:', error);
+        toast({
+          title: 'Error Creating Factor',
+          description: 'Could not create new success factor.',
+          variant: 'destructive',
+        });
+      })
+      .finally(() => {
+        setIsSaving(false);
+      });
   };
 
-  // Handle editing an existing factor
-  const handleEditFactor = (factor: FactorTask) => {
-    setSelectedFactor(factor);
-    setEditableFactor({ ...factor });
-    setIsCreating(false);
-    setIsDialogOpen(true);
+  // Update an existing task
+  const handleUpdateTask = async (factorId: string, stage: Stage, taskIndex: number, newText: string) => {
+    if (!selectedFactor) return;
+    
+    setIsSaving(true);
+    
+    const updatedFactor = { ...selectedFactor };
+    const updatedTasks = [...(updatedFactor.tasks[stage] || [])];
+    
+    updatedTasks[taskIndex] = newText;
+    
+    updatedFactor.tasks = {
+      ...updatedFactor.tasks,
+      [stage]: updatedTasks
+    };
+    
+    try {
+      // Update in the API
+      const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+      const updatedFactorData = await response.json();
+      
+      // Update local state
+      setFactors(prev => 
+        prev.map(f => f.id === factorId ? updatedFactorData : f)
+      );
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: 'Error updating task',
+        description: 'Could not update task on the server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Add a new task to a factor
+  const handleAddTask = async (factorId: string, stage: Stage) => {
+    if (!selectedFactor) return;
+    
+    setIsSaving(true);
+    
+    const updatedFactor = { ...selectedFactor };
+    const updatedTasks = [...(updatedFactor.tasks[stage] || []), ''];
+    
+    updatedFactor.tasks = {
+      ...updatedFactor.tasks,
+      [stage]: updatedTasks
+    };
+    
+    try {
+      // Update in the API
+      const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+      const updatedFactorData = await response.json();
+      
+      // Update local state
+      setFactors(prev => 
+        prev.map(f => f.id === factorId ? updatedFactorData : f)
+      );
+      
+      toast({
+        title: 'Task added',
+        description: `Added new task to ${stage} stage`,
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+      toast({
+        title: 'Error adding task',
+        description: 'Could not add task to the server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Delete a task
+  const handleDeleteTask = async (factorId: string, stage: Stage, taskIndex: number) => {
+    if (!selectedFactor) return;
+    
+    setIsSaving(true);
+    
+    const updatedFactor = { ...selectedFactor };
+    const updatedTasks = [...(updatedFactor.tasks[stage] || [])];
+    
+    // Remove the task at the specified index
+    updatedTasks.splice(taskIndex, 1);
+    
+    updatedFactor.tasks = {
+      ...updatedFactor.tasks,
+      [stage]: updatedTasks
+    };
+    
+    try {
+      // Update in the API
+      const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+      const updatedFactorData = await response.json();
+      
+      // Update local state
+      setFactors(prev => 
+        prev.map(f => f.id === factorId ? updatedFactorData : f)
+      );
+      
+      toast({
+        title: 'Task deleted',
+        description: `Removed task from ${stage} stage`,
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: 'Error deleting task',
+        description: 'Could not delete task from the server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Handle deleting a factor
-  const handleDeletePrompt = (factor: FactorTask) => {
-    setSelectedFactor(factor);
-    setIsDeleteDialogOpen(true);
+  // Update factor title
+  const handleUpdateFactorTitle = async (factorId: string, newTitle: string) => {
+    if (!selectedFactor) return;
+    
+    setIsSaving(true);
+    
+    const updatedFactor = { ...selectedFactor, title: newTitle };
+    
+    try {
+      // Update in the API
+      const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+      const updatedFactorData = await response.json();
+      
+      // Update local state
+      setFactors(prev => 
+        prev.map(f => f.id === factorId ? updatedFactorData : f)
+      );
+    } catch (error) {
+      console.error('Error updating factor title:', error);
+      toast({
+        title: 'Error updating title',
+        description: 'Could not update factor title on the server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Execute the delete
+  // Update factor description
+  const handleUpdateFactorDescription = async (factorId: string, newDescription: string) => {
+    if (!selectedFactor) return;
+    
+    setIsSaving(true);
+    
+    const updatedFactor = { ...selectedFactor, description: newDescription };
+    
+    try {
+      // Update in the API
+      const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+      const updatedFactorData = await response.json();
+      
+      // Update local state
+      setFactors(prev => 
+        prev.map(f => f.id === factorId ? updatedFactorData : f)
+      );
+    } catch (error) {
+      console.error('Error updating factor description:', error);
+      toast({
+        title: 'Error updating description',
+        description: 'Could not update factor description on the server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Delete a factor
   const handleDeleteFactor = async () => {
     if (!selectedFactor) return;
     
-    setIsLoading(true);
     try {
-      const response = await apiRequest('DELETE', `/api/admin/success-factors/${selectedFactor.id}`);
+      setIsSaving(true);
       
-      if (!response.ok) {
-        throw new Error('Failed to delete success factor');
-      }
+      // Delete from the API
+      await apiRequest('DELETE', `/api/admin/success-factors/${selectedFactor.id}`);
       
       // Update local state
-      setFactors(factors.filter(f => f.id !== selectedFactor.id));
+      const updatedFactors = factors.filter(f => f.id !== selectedFactor.id);
+      setFactors(updatedFactors);
+      
+      // Select another factor if available
+      if (updatedFactors.length > 0) {
+        setSelectedFactorId(updatedFactors[0].id);
+      } else {
+        setSelectedFactorId(null);
+      }
+      
+      setShowDeleteDialog(false);
       
       toast({
-        title: "Success Factor Deleted",
-        description: `Success factor "${selectedFactor.title}" was deleted.`
+        title: 'Factor deleted',
+        description: 'Successfully deleted the success factor.',
+        variant: 'default',
       });
-      
-      setIsDeleteDialogOpen(false);
     } catch (error) {
-      console.error('Error deleting success factor:', error);
+      console.error('Error deleting factor:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete success factor. Please try again.",
-        variant: "destructive"
+        title: 'Error deleting factor',
+        description: 'Could not delete factor from the server.',
+        variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  // Handle ID change in the form
-  const handleIdChange = (value: string) => {
-    setEditableFactor({ ...editableFactor, id: value });
-  };
+  // If user is not authorized, show access denied
+  if (!user || user.username.toLowerCase() !== 'greg@confluity.co.uk') {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <SiteHeader />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center h-full">
+            <h1 className="text-3xl font-bold text-tcof-dark mb-6">Access Denied</h1>
+            <p className="text-lg text-gray-600 mb-6">
+              You do not have permission to access this admin area. 
+              This page is restricted to authorized personnel only.
+            </p>
+            <Link href="/">
+              <Button className="bg-tcof-teal hover:bg-tcof-teal/90">
+                Return to Home
+              </Button>
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-  // Handle title change in the form
-  const handleTitleChange = (value: string) => {
-    setEditableFactor({ ...editableFactor, title: value });
-  };
-  
-  // Handle description change in the form
-  const handleDescriptionChange = (value: string) => {
-    setEditableFactor({ ...editableFactor, description: value });
-  };
-
-  // Handle task change
-  const handleTaskChange = (stage: Stage, index: number, value: string) => {
-    const updatedTasks = { ...editableFactor.tasks };
-    
-    if (index >= updatedTasks[stage].length) {
-      // Extend the array if needed
-      updatedTasks[stage] = [...updatedTasks[stage], value];
-    } else {
-      // Update existing element
-      updatedTasks[stage] = updatedTasks[stage].map((task, i) => 
-        i === index ? value : task
-      );
-    }
-    
-    setEditableFactor({ ...editableFactor, tasks: updatedTasks });
-  };
-
-  // Add a new task to a stage
-  const handleAddTask = (stage: Stage) => {
-    const updatedTasks = { ...editableFactor.tasks };
-    updatedTasks[stage] = [...updatedTasks[stage], ''];
-    setEditableFactor({ ...editableFactor, tasks: updatedTasks });
-  };
-
-  // Remove a task from a stage
-  const handleRemoveTask = (stage: Stage, index: number) => {
-    const updatedTasks = { ...editableFactor.tasks };
-    updatedTasks[stage] = updatedTasks[stage].filter((_, i) => i !== index);
-    
-    // Ensure at least one empty task
-    if (updatedTasks[stage].length === 0) {
-      updatedTasks[stage] = [''];
-    }
-    
-    setEditableFactor({ ...editableFactor, tasks: updatedTasks });
-  };
-
-  // Save the factor (create or update)
-  const handleSaveFactor = async () => {
-    // Validate the form data
-    if (!editableFactor.id.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Factor ID is required.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!editableFactor.title.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Factor title is required.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!editableFactor.description.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Factor description is required.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Filter out empty task entries
-    const cleanedTasks = {
-      Identification: editableFactor.tasks.Identification.filter(t => t.trim()),
-      Definition: editableFactor.tasks.Definition.filter(t => t.trim()),
-      Delivery: editableFactor.tasks.Delivery.filter(t => t.trim()),
-      Closure: editableFactor.tasks.Closure.filter(t => t.trim())
-    };
-    
-    // Ensure at least one task in each stage
-    if (Object.values(cleanedTasks).some(tasks => tasks.length === 0)) {
-      toast({
-        title: "Validation Error",
-        description: "Each stage must have at least one task.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const factorToSave = {
-        ...editableFactor,
-        tasks: cleanedTasks
-      };
-      
-      let response;
-      
-      if (isCreating) {
-        // Create new factor
-        response = await apiRequest('POST', '/api/admin/success-factors', factorToSave);
-      } else {
-        // Update existing factor
-        response = await apiRequest('PUT', `/api/admin/success-factors/${selectedFactor?.id}`, factorToSave);
-      }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to ${isCreating ? 'create' : 'update'} success factor`);
-      }
-      
-      const savedFactor = await response.json();
-      
-      // Update the local state
-      if (isCreating) {
-        setFactors([...factors, savedFactor]);
-      } else {
-        setFactors(factors.map(f => f.id === savedFactor.id ? savedFactor : f));
-      }
-      
-      toast({
-        title: isCreating ? "Success Factor Created" : "Success Factor Updated",
-        description: `Success factor "${savedFactor.title}" was ${isCreating ? 'created' : 'updated'} successfully.`
-      });
-      
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error(`Error ${isCreating ? 'creating' : 'updating'} success factor:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to ${isCreating ? 'create' : 'update'} success factor. Please try again.`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Get user for auth check
-  const { user } = useAuth();
-  
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <SiteHeader />
-      <main className="container py-6">
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Success Factor Editor</CardTitle>
-            <CardDescription>
-              Manage all TCOF success factors and their associated tasks by stage. 
-              Changes made here will be used in the planning process.
-            </CardDescription>
-          </CardHeader>
-        <CardContent>
-          <div className="flex justify-between mb-4">
-            <Button 
-              onClick={handleCreateFactor} 
-              className="flex items-center gap-2 bg-tcof-teal hover:bg-tcof-teal/90"
-            >
-              <Plus className="h-4 w-4" />
-              Add New Factor
-            </Button>
-            <Button 
-              onClick={loadFactors} 
-              variant="outline" 
-              disabled={isLoading}
-            >
-              Refresh Factors
-            </Button>
+      
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-tcof-dark">Success Factor Editor</h1>
+          <Link href="/make-a-plan/admin">
+            <Button variant="outline">Back to Admin</Button>
+          </Link>
+        </div>
+        
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-tcof-teal" />
+            <span className="ml-2">Loading success factors...</span>
           </div>
-          
-          <div className="overflow-x-auto">
-            <Table>
-              <TableCaption>
-                TCOF Success Factors and their associated tasks by stage
-              </TableCaption>
-              <TableHeader>
-                <TableRow className="bg-gray-100">
-                  <TableHead className="w-1/12">ID</TableHead>
-                  <TableHead className="w-2/12">Factor Title</TableHead>
-                  <TableHead className="w-3/12">Description</TableHead>
-                  <TableHead className="w-4/12">Tasks</TableHead>
-                  <TableHead className="w-2/12 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {factors.map((factor) => (
-                  <TableRow key={factor.id}>
-                    <TableCell className="font-medium align-top">{factor.id}</TableCell>
-                    <TableCell className="align-top">{factor.title}</TableCell>
-                    <TableCell className="align-top text-sm">
-                      {factor.description || <span className="text-gray-400 italic">No description provided</span>}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                        {Object.entries(factor.tasks).map(([stage, tasks]) => (
-                          <div key={stage} className="mb-2">
-                            <span className="font-medium">{stage}: </span>
-                            <ul className="list-disc pl-5">
-                              {tasks.map((task, idx) => (
-                                <li key={`${stage}-${idx}`}>{task}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right align-top">
-                      <div className="flex flex-col space-y-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditFactor(factor)}
-                          className="flex items-center gap-2 justify-end"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeletePrompt(factor)}
-                          className="flex items-center gap-2 justify-end text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {factors.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
-                      No success factors found. Click "Add New Factor" to create one.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Dialog for editing a success factor */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{isCreating ? 'Create New Success Factor' : 'Edit Success Factor'}</DialogTitle>
-            <DialogDescription>
-              {isCreating 
-                ? 'Add a new success factor and its tasks for each stage.'
-                : 'Update the details of this success factor and its tasks.'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 gap-4">
-              <div className="col-span-1">
-                <Label htmlFor="factor-id">Factor ID</Label>
-                <Input
-                  id="factor-id"
-                  value={editableFactor.id}
-                  onChange={(e) => handleIdChange(e.target.value)}
-                  placeholder="e.g., 1.1"
-                  className="mt-1"
-                />
-              </div>
-              <div className="col-span-3">
-                <Label htmlFor="factor-title">Factor Title</Label>
-                <Input
-                  id="factor-title"
-                  value={editableFactor.title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  placeholder="Success Factor Title"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="factor-description" className="text-base font-medium">
-                Description 
-                <span className="text-red-500 ml-1">*</span>
-              </Label>
-              <p className="text-gray-500 text-sm mb-2">
-                Provide a clear, concise description of this success factor and its purpose.
-              </p>
-              <Textarea
-                id="factor-description"
-                value={editableFactor.description}
-                onChange={(e) => handleDescriptionChange(e.target.value)}
-                placeholder="Describe what this success factor means and why it's important..."
-                className="mt-1 h-32 focus:border-tcof-teal focus:ring-tcof-teal"
-                required
+        ) : (
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Left sidebar with factors list - 25% width */}
+            <div className="w-full md:w-1/4">
+              <FactorSidebar
+                factors={factors}
+                selectedFactorId={selectedFactorId}
+                onSelectFactor={(id) => setSelectedFactorId(id)}
+                onCreateFactor={handleCreateFactor}
               />
             </div>
             
-            {/* Task management with tabbed interface */}
-            <AdminStageTabs
-              factor={editableFactor}
-              onTaskChange={handleTaskChange}
-              onAddTask={handleAddTask}
-              onRemoveTask={handleRemoveTask}
-            />
+            {/* Main content panel with task tabs - 75% width */}
+            <div className="w-full md:w-3/4">
+              <Card className="h-full">
+                {selectedFactor ? (
+                  <>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <Input
+                              value={selectedFactor.id}
+                              className="w-24 font-mono text-sm"
+                              readOnly
+                            />
+                            <Input
+                              value={selectedFactor.title}
+                              onChange={(e) => handleUpdateFactorTitle(selectedFactor.id, e.target.value)}
+                              className="flex-1 text-xl font-bold"
+                            />
+                          </div>
+                          <Textarea
+                            value={selectedFactor.description}
+                            onChange={(e) => handleUpdateFactorDescription(selectedFactor.id, e.target.value)}
+                            className="mt-2 resize-none"
+                            placeholder="Enter factor description..."
+                          />
+                        </div>
+                        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Success Factor</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{selectedFactor.title}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteFactor} className="bg-destructive text-destructive-foreground">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent>
+                      {/* Tabbed interface */}
+                      <AdminStageTabs
+                        factor={selectedFactor}
+                        onTaskChange={(stage, index, value) => 
+                          handleUpdateTask(selectedFactor.id, stage as Stage, index, value)
+                        }
+                        onAddTask={(stage) => 
+                          handleAddTask(selectedFactor.id, stage as Stage)
+                        }
+                        onRemoveTask={(stage, index) => 
+                          handleDeleteTask(selectedFactor.id, stage as Stage, index)
+                        }
+                      />
+                    </CardContent>
+                    
+                    <CardFooter className="flex justify-end text-sm text-gray-500">
+                      <div className="flex-1">
+                        {isSaving ? (
+                          <span className="flex items-center">
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            Saving...
+                          </span>
+                        ) : (
+                          <span>Last changes saved automatically</span>
+                        )}
+                      </div>
+                    </CardFooter>
+                  </>
+                ) : (
+                  <CardContent className="flex flex-col items-center justify-center h-64">
+                    <p className="text-gray-500 mb-4">No success factor selected</p>
+                    <p className="text-gray-400 mb-4 text-sm">Select a factor from the list or create a new one</p>
+                    <Button onClick={handleCreateFactor}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create New Factor
+                    </Button>
+                  </CardContent>
+                )}
+              </Card>
+            </div>
           </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveFactor}
-              className="bg-tcof-teal hover:bg-tcof-teal/90"
-              disabled={isLoading}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isCreating ? 'Create Factor' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation dialog for deleting a factor */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Confirm Deletion
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the success factor "{selectedFactor?.title}"? 
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteFactor}
-              disabled={isLoading}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Factor
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
       </main>
-    </>
+    </div>
   );
 }
