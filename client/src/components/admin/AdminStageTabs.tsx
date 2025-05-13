@@ -38,11 +38,12 @@ export default function AdminStageTabs({
   onAddTask, 
   onRemoveTask 
 }: AdminStageTabsProps) {
-  console.log("[PROPS → AdminStageTabs]", factor.id, factor.tasks);
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
   
-  {logData('[ADMIN_TABS] Rendering AdminStageTabs with factor:', factor)}
-  {logData('[ADMIN_TABS] Tasks structure:', factor.tasks)}
+  // Use console.log directly outside JSX
+  console.log("[PROPS → AdminStageTabs]", factor.id, factor.tasks);
+  console.log('[ADMIN_TABS] Rendering AdminStageTabs with factor:', factor);
+  console.log('[ADMIN_TABS] Tasks structure:', factor.tasks);
   
   // Count tasks for badge display
   const getTaskCount = (stage: Stage) => {
@@ -123,8 +124,12 @@ export default function AdminStageTabs({
               </div>
             ) : (
               <div className="space-y-2">
-                {console.log(`[ADMIN_TABS] Mapping tasks for ${stage}:`, factor.tasks[stage as keyof typeof factor.tasks])}
-{factor.tasks[stage as keyof typeof factor.tasks].map((taskText, index) => (
+                {/* Use a function that returns null for logging to avoid type issues */}
+                {logData(`[ADMIN_TABS] Mapping tasks for ${stage}:`, factor.tasks[stage as keyof typeof factor.tasks])}
+                {logData(`[ADMIN_TABS] Active tab is: ${activeTab}, current stage is: ${stage}`, null)}
+                {/* Only render the tasks when this tab is active */}
+                {activeTab === stage && Array.isArray(factor.tasks[stage as keyof typeof factor.tasks]) && 
+                  factor.tasks[stage as keyof typeof factor.tasks].map((taskText, index) => (
                   <div
                     key={`${stage}-task-${index}`}
                     className="flex items-start gap-3"
