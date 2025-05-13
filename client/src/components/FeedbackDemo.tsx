@@ -12,7 +12,18 @@ export default function FeedbackDemo() {
     showInfo, 
     showWarning, 
     showLoading,
-    removeFeedback
+    removeFeedback,
+    notifyFormSuccess,
+    notifyFormError,
+    notifySaveSuccess,
+    notifySaveError,
+    notifyCreateSuccess,
+    notifyCreateError,
+    notifyUpdateSuccess,
+    notifyUpdateError,
+    notifyDeleteSuccess,
+    notifyDeleteError,
+    withLoadingFeedback
   } = useFeedback();
 
   // Simulates an async operation
@@ -243,6 +254,111 @@ export default function FeedbackDemo() {
                   This card has both click and selection feedback.
                 </p>
               </FeedbackCard>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="helpers" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contextual Feedback Helpers</CardTitle>
+              <CardDescription>
+                Specialized feedback methods for common operations
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="border-dashed">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Form Operations</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-2">
+                  <Button onClick={() => notifyFormSuccess()}>
+                    Form Success
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => notifyFormError()}
+                  >
+                    Form Error
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-dashed">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Save Operations</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-2">
+                  <Button onClick={() => notifySaveSuccess()}>
+                    Save Success
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => notifySaveError()}
+                  >
+                    Save Error
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-dashed">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">CRUD Operations</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-2">
+                  <Button onClick={() => notifyCreateSuccess()}>
+                    Create Success
+                  </Button>
+                  <Button onClick={() => notifyUpdateSuccess()}>
+                    Update Success
+                  </Button>
+                  <Button onClick={() => notifyDeleteSuccess()}>
+                    Delete Success
+                  </Button>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Promise Integration</CardTitle>
+              <CardDescription>
+                Automatically show loading, success, and error states for asynchronous operations
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Button 
+                onClick={() => {
+                  withLoadingFeedback(
+                    simulateAsyncOperation(true), 
+                    {
+                      loadingMessage: 'Processing request...',
+                      successMessage: 'Operation completed successfully!',
+                      errorMessage: 'Operation failed'
+                    }
+                  );
+                }}
+              >
+                Successful Async Operation
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  withLoadingFeedback(
+                    simulateAsyncOperation(false), 
+                    {
+                      loadingMessage: 'Processing request...',
+                      successMessage: 'Operation completed successfully!',
+                      errorMessage: 'Operation failed'
+                    }
+                  ).catch(err => {
+                    console.error('Error caught in component:', err);
+                  });
+                }}
+              >
+                Failed Async Operation
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

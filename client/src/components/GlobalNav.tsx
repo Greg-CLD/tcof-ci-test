@@ -25,7 +25,8 @@ const GlobalNav = () => {
     { path: '/organisations', label: 'Organisations', show: !!user },
     { path: '/all-projects', label: 'All Projects', show: !!user },
     { path: '/settings', label: 'Account', show: !!user },
-    { path: '/make-a-plan/admin', label: 'Admin', show: admin }
+    { path: '/make-a-plan/admin', label: 'Admin', show: admin },
+    { path: '/feedback-demo', label: 'Feedback Demo', show: true }
   ];
 
   // Filter only the items that should be shown
