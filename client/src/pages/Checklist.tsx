@@ -54,27 +54,27 @@ export default function Checklist({ projectId }: ChecklistProps) {
   const { selectedPlanId, setSelectedPlanId } = usePlan();
   const { getSelectedProject } = useProjects();
   const queryClient = useQueryClient();
-  
+
   // Current project ID
   const currentProjectId = projectId || getSelectedProject()?.id;
-  
+
   // Hook to get framework tasks
   const { frameworkTasks, getTaskDetails } = useFrameworkTasks(currentProjectId);
-  
+
   // Hook to get heuristic links
   const { links } = useHeuristicLinks(currentProjectId);
-  
+
   // Hook to get personal heuristics
   const { heuristics } = usePersonalHeuristics(currentProjectId);
-  
+
   // Hook to get success factors
   const { factors } = useFactors();
-  
+
   // Plan state
   const [plan, setPlan] = useState<PlanRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
-  
+
   // Query for the canonical checklist (when no plan exists)
   const { data: canonicalChecklist, isLoading: isLoadingCanonical } = useQuery({
     queryKey: [`/api/checklist/${currentProjectId}`],
@@ -90,7 +90,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
     // Enable whenever we have a valid project ID, regardless of plan status
     enabled: !!currentProjectId,
   });
-  
+
   // All tasks combined from different sources
   const [allTasks, setAllTasks] = useState<Record<Stage, UnifiedTask[]>>({
     Identification: [],
@@ -98,24 +98,24 @@ export default function Checklist({ projectId }: ChecklistProps) {
     Delivery: [],
     Closure: []
   });
-  
+
   // Check if the project still exists (for handling deletion cases)
   useEffect(() => {
     const checkProjectExists = async () => {
       const projectId = localStorage.getItem('selectedProjectId');
       if (!projectId) return;
-      
+
       try {
         // Try to get the projects list
         const projects = await queryClient.fetchQuery({ 
           queryKey: ['/api/projects'],
           staleTime: 0 // Force a fresh fetch
         });
-        
+
         // Check if the current project exists in the list
         const projectExists = Array.isArray(projects) && 
           projects.some((project: any) => project.id === projectId);
-        
+
         // If the project doesn't exist anymore (i.e., it was deleted)
         if (!projectExists) {
           console.log('Selected project no longer exists, redirecting to home');
@@ -135,17 +135,17 @@ export default function Checklist({ projectId }: ChecklistProps) {
         console.error('Error checking if project exists:', error);
       }
     };
-    
+
     checkProjectExists();
   }, [queryClient, setLocation, toast, setSelectedPlanId]);
-  
+
   // Filter and sort state
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('none');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  
+
   // Ensure a plan exists for the current project
   useEffect(() => {
     async function ensurePlan() {
@@ -153,20 +153,20 @@ export default function Checklist({ projectId }: ChecklistProps) {
         setLoading(true);
         // Use the projectId prop if provided, otherwise get the selected project
         const projectToUse = projectId ? { id: projectId } : getSelectedProject();
-        
+
         if (projectToUse) {
           // Always create or load a plan for the project
           console.log('Ensuring plan exists for project:', projectToUse.id);
           const planId = await ensurePlanForProject(projectToUse.id);
           console.log('ensurePlanForProject →', planId);
-          
+
           // If we got a valid plan ID back, set it as selected and load the plan data
           if (planId) {
             if (!selectedPlanId || selectedPlanId !== planId) {
               console.log('Setting new plan ID:', planId);
               setSelectedPlanId(planId);
             }
-            
+
             // Explicitly fetch the plan again to ensure we have the most up-to-date data
             const newPlan = await loadPlan(planId);
             if (newPlan) {
@@ -210,17 +210,17 @@ export default function Checklist({ projectId }: ChecklistProps) {
         setLoading(false);
       }
     }
-    
+
     // Debug - log project ID on mount
     console.log('Checklist useEffect running with:', { 
       currentProjectId, 
       selectedPlanId,
       projectId
     });
-    
+
     ensurePlan();
   }, [selectedPlanId, setSelectedPlanId, getSelectedProject, toast, projectId, currentProjectId]);
-  
+
   // Combine all tasks from different sources
   useEffect(() => {
     // Initialize the combined tasks object
@@ -230,7 +230,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       Delivery: [],
       Closure: []
     };
-    
+
     // If no plan but we have canonical checklist data, use that instead
     if (!plan && canonicalChecklist) {
       // Add tasks from canonical checklist
@@ -256,13 +256,13 @@ export default function Checklist({ projectId }: ChecklistProps) {
       setAllTasks(combined);
       return;
     }
-    
+
     // If no plan and no canonical data, initialize with empty data
     if (!plan && !canonicalChecklist) {
       setAllTasks(combined);
       return;
     }
-    
+
     // Helper function to add tasks to the combined object
     const addTasksToStage = (tasks: UnifiedTask[]) => {
       tasks.forEach(task => {
@@ -271,12 +271,12 @@ export default function Checklist({ projectId }: ChecklistProps) {
         }
       });
     };
-    
+
     // 1. Add tasks from plan stages
     if (plan) {
       Object.entries(plan.stages).forEach(([stageName, stageData]) => {
       const stage = stageName as Stage;
-      
+
       // Regular tasks
       if (stageData.tasks && stageData.tasks.length > 0) {
         const stageTasks = stageData.tasks.map(task => ({
@@ -294,7 +294,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
         }));
         addTasksToStage(stageTasks);
       }
-      
+
       // Good practice tasks
       if (stageData.goodPractice?.tasks && stageData.goodPractice.tasks.length > 0) {
         const goodPracticeTasks = stageData.goodPractice.tasks.map(task => ({
@@ -315,7 +315,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       }
     });
     }
-    
+
     // 2. Add framework tasks if not already included
     if (frameworkTasks?.savedTasks && frameworkTasks.savedTasks.length > 0) {
       const frameworkTasksList = frameworkTasks.savedTasks
@@ -333,19 +333,19 @@ export default function Checklist({ projectId }: ChecklistProps) {
             notes: taskDetails?.description
           } as UnifiedTask;
         });
-      
+
       // Only add tasks that aren't already in the combined list
       frameworkTasksList.forEach(task => {
         const existingTaskIndex = combined[task.stage].findIndex(t => 
           t.id === task.id && t.source === 'framework' && t.frameworkCode === task.frameworkCode
         );
-        
+
         if (existingTaskIndex === -1) {
           combined[task.stage].push(task);
         }
       });
     }
-    
+
     // Sort tasks within each stage by order
     Object.keys(combined).forEach(stageName => {
       const stage = stageName as Stage;
@@ -356,11 +356,11 @@ export default function Checklist({ projectId }: ChecklistProps) {
         return orderA - orderB;
       });
     });
-    
+
     // Update state with combined tasks
     setAllTasks(combined);
   }, [plan, frameworkTasks, getTaskDetails, canonicalChecklist]);
-  
+
   // Handle plan update
   const handlePlanUpdate = (updatedPlan: PlanRecord) => {
     setPlan(updatedPlan);
@@ -377,11 +377,11 @@ export default function Checklist({ projectId }: ChecklistProps) {
         });
     }
   };
-  
+
   // Handle task update
   const handleTaskUpdate = async (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
     let workingPlan = plan;
-    
+
     // If no plan exists, automatically create one
     if (!workingPlan) {
       if (!currentProjectId) {
@@ -392,24 +392,24 @@ export default function Checklist({ projectId }: ChecklistProps) {
         });
         return;
       }
-      
+
       try {
         setLoading(true);
         console.log('Creating plan for project:', currentProjectId);
-        
+
         // Create a plan for the project
         const planId = await ensurePlanForProject(currentProjectId);
         setSelectedPlanId(planId);
         const loadedPlan = await loadPlan(planId);
-        
+
         if (!loadedPlan) {
           throw new Error('Failed to load plan after creation');
         }
-        
+
         console.log('New plan created and loaded successfully:', planId);
         workingPlan = loadedPlan;
         setPlan(loadedPlan);
-        
+
         toast({
           title: "Plan Created",
           description: "Changes will now be saved automatically",
@@ -428,25 +428,25 @@ export default function Checklist({ projectId }: ChecklistProps) {
         setLoading(false);
       }
     }
-    
+
     // If we still don't have a plan, return
     if (!workingPlan) {
       console.error('Failed to create or load plan');
       return;
     }
-    
+
     const updatedPlan = { ...workingPlan };
-    
+
     // Determine if the task is a regular task or good practice task based on source
     const isGoodPractice = source === 'framework';
-    
+
     if (isGoodPractice) {
       // Update good practice task
       const taskIndex = updatedPlan.stages[stage].goodPractice?.tasks?.findIndex(t => t.id === taskId) ?? -1;
       if (taskIndex === -1 || !updatedPlan.stages[stage].goodPractice?.tasks) return;
-      
+
       const task = updatedPlan.stages[stage].goodPractice.tasks[taskIndex];
-      
+
       // Update task properties
       if (updates.completed !== undefined) task.completed = updates.completed;
       if (updates.notes !== undefined) task.notes = updates.notes;
@@ -465,9 +465,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
       // Update regular task
       const taskIndex = updatedPlan.stages[stage].tasks?.findIndex(t => t.id === taskId) ?? -1;
       if (taskIndex === -1 || !updatedPlan.stages[stage].tasks) return;
-      
+
       const task = updatedPlan.stages[stage].tasks[taskIndex];
-      
+
       // Update task properties
       if (updates.completed !== undefined) task.completed = updates.completed;
       if (updates.notes !== undefined) task.notes = updates.notes;
@@ -483,19 +483,19 @@ export default function Checklist({ projectId }: ChecklistProps) {
         task.owner = updates.owner;
       }
     }
-    
+
     // Save plan and update UI
     if (selectedPlanId) {
       savePlan(selectedPlanId, updatedPlan);
       setPlan(updatedPlan);
-      
+
       toast({
         title: "Task updated",
         description: "Your changes have been saved.",
       });
     }
   };
-  
+
   // Handle exporting the plan
   const handleExportPDF = () => {
     if (!plan) {
@@ -506,15 +506,15 @@ export default function Checklist({ projectId }: ChecklistProps) {
       });
       return;
     }
-    
+
     exportPlanPDF(plan);
-    
+
     toast({
       title: "Checklist Exported",
       description: "Your checklist has been exported as a PDF.",
     });
   };
-  
+
   const handleExportCSV = () => {
     if (!plan) {
       toast({
@@ -524,15 +524,15 @@ export default function Checklist({ projectId }: ChecklistProps) {
       });
       return;
     }
-    
+
     exportCSV(plan);
-    
+
     toast({
       title: "Checklist Exported",
       description: "Your checklist has been exported as a CSV file.",
     });
   };
-  
+
   // Basic render guards
   if (!currentProjectId) {
     return (
@@ -544,7 +544,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       </div>
     );
   }
-  
+
   // Loading state
   if (loading || isLoadingCanonical) {
     return (
@@ -556,7 +556,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       </div>
     );
   }
-  
+
   // Check if we have any data to display
   if (!plan && !canonicalChecklist) {
     return (
@@ -568,7 +568,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       </div>
     );
   }
-  
+
   // Debug information about current state
   useEffect(() => {
     console.log('Checklist component state:', { 
@@ -577,48 +577,49 @@ export default function Checklist({ projectId }: ChecklistProps) {
       canonicalChecklist: canonicalChecklist ? 'loaded' : 'not loaded'
     });
   }, [currentProjectId, plan, canonicalChecklist]);
-  
+
   // Always display the checklist UI regardless of plan status
-  
+  // Always display the checklist UI regardless of plan status
+
   // Calculate total tasks and completed tasks
   const getTotalAndCompleted = () => {
     let total = 0;
     let completed = 0;
-    
+
     Object.values(allTasks).forEach(stageTasks => {
       total += stageTasks.length;
       completed += stageTasks.filter(t => t.completed).length;
     });
-    
+
     return { total, completed };
   };
-  
+
   const { total: totalTasks, completed: completedTasks } = getTotalAndCompleted();
-  
+
   // Filter tasks based on the current filters
   const getFilteredTasks = (tasks: UnifiedTask[], stage: Stage) => {
     let filtered = [...tasks];
-    
+
     // Apply stage filter
     if (stageFilter !== 'all' && stageFilter !== stage) {
       return [];
     }
-    
+
     // Apply status filter
     if (statusFilter === 'completed') {
       filtered = filtered.filter(task => task.completed);
     } else if (statusFilter === 'open') {
       filtered = filtered.filter(task => !task.completed);
     }
-    
+
     // Apply source filter
     if (sourceFilter !== 'all') {
       filtered = filtered.filter(task => task.source === sourceFilter);
     }
-    
+
     return filtered;
   };
-  
+
   // Group tasks by source
   const getTasksBySource = (tasks: UnifiedTask[]) => {
     const grouped: Record<string, UnifiedTask[]> = {
@@ -627,14 +628,14 @@ export default function Checklist({ projectId }: ChecklistProps) {
       framework: [],
       custom: []
     };
-    
+
     tasks.forEach(task => {
       grouped[task.source].push(task);
     });
-    
+
     return grouped;
   };
-  
+
   // Return the source group label
   const getSourceLabel = (source: string) => {
     switch (source) {
@@ -650,7 +651,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
         return 'Other Tasks';
     }
   };
-  
+
   return (
     <div className="bg-gray-50 min-h-screen py-6 px-4 md:px-6">
       <div className="max-w-6xl mx-auto">
@@ -689,10 +690,10 @@ export default function Checklist({ projectId }: ChecklistProps) {
             </Button>
           </div>
         )}
-      
+
         {/* Outcome Progress Tracking */}
         {currentProjectId && <ChecklistHeader projectId={currentProjectId} />}
-        
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <div>
@@ -708,7 +709,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
               </div>
             </div>
           </div>
-          
+
           <div className="flex gap-3 mt-4 md:mt-0">
             {!plan && (
               <>
@@ -718,14 +719,14 @@ export default function Checklist({ projectId }: ChecklistProps) {
                 <Button 
                   onClick={async () => {
                     if (!getSelectedProject()?.id) return;
-                    
+
                     try {
                       setLoading(true);
                       const planId = await ensurePlanForProject(getSelectedProject()?.id as string);
                       setSelectedPlanId(planId);
                       const loadedPlan = await loadPlan(planId);
                       setPlan(loadedPlan || null);
-                      
+
                       toast({
                         title: "Plan Created",
                         description: "You can now save changes to tasks",
@@ -773,12 +774,12 @@ export default function Checklist({ projectId }: ChecklistProps) {
             </Button>
           </div>
         </div>
-        
+
         {/* Summary bar */}
         <div className="mb-6">
           <SummaryBar plan={plan} canonicalChecklist={canonicalChecklist} />
         </div>
-        
+
         {/* View toggle button */}
         <div className="mb-4">
           <Button asChild variant="outline">
@@ -787,7 +788,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
             </Link>
           </Button>
         </div>
-        
+
         {/* Filters */}
         <ChecklistFilterBar
           stageFilter={stageFilter}
@@ -801,7 +802,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
           onSortChange={setSortBy}
           onSortDirectionChange={setSortDirection}
         />
-        
+
         {/* Task list by stage tabs */}
         <div className="mt-8">
           <Tabs 
@@ -815,17 +816,17 @@ export default function Checklist({ projectId }: ChecklistProps) {
               <TabsTrigger value="Delivery">Delivery</TabsTrigger>
               <TabsTrigger value="Closure">Closure</TabsTrigger>
             </TabsList>
-            
+
             {/* Render each stage's tab content */}
             {(['Identification', 'Definition', 'Delivery', 'Closure'] as Stage[]).map(stageName => {
               const filteredTasks = getFilteredTasks(allTasks[stageName], stageName);
               const groupedTasks = getTasksBySource(filteredTasks);
-              
+
               // Skip empty tabs based on filter
               if (filteredTasks.length === 0 && stageFilter !== 'all' && stageFilter !== stageName) {
                 return null;
               }
-              
+
               return (
                 <TabsContent key={stageName} value={stageName} className="mt-0">
                   <div className="border rounded-md bg-white shadow-sm overflow-hidden">
@@ -838,7 +839,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
                         {stageName === 'Closure' && 'Conclude project, capture lessons, and transition to operations'}
                       </p>
                     </div>
-                    
+
                     <div className="p-4">
                       {/* Display message if no tasks for this stage */}
                       {filteredTasks.length === 0 ? (
@@ -850,7 +851,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
                           {/* Display tasks grouped by source */}
                           {Object.entries(groupedTasks).map(([source, tasks]) => {
                             if (tasks.length === 0) return null;
-                            
+
                             return (
                               <div key={source} className="space-y-2">
                                 <h3 className="text-sm font-semibold text-tcof-dark border-b pb-2">
@@ -897,7 +898,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
                                                 {task.sourceName}
                                               </Badge>
                                             )}
-                                            
+
                                             {task.owner && (
                                               <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300 text-xs">
                                                 Owner: {task.owner}
@@ -905,7 +906,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
                                             )}
                                           </div>
                                         </div>
-                                        
+
                                         {task.notes && (
                                           <p className="mt-1 text-xs text-gray-500">{task.notes}</p>
                                         )}
@@ -916,6 +917,8 @@ export default function Checklist({ projectId }: ChecklistProps) {
                               </div>
                             );
                           })}
+```python
+                          })}
                         </div>
                       )}
                     </div>
@@ -925,7 +928,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
             })}
           </Tabs>
         </div>
-        
+
         {/* Legacy stage accordions (hidden but still updated for export) */}
         {plan && (
           <div className="hidden">
@@ -946,3 +949,12 @@ export default function Checklist({ projectId }: ChecklistProps) {
     </div>
   );
 }
+
+// Debug information about current state
+useEffect(() => {
+  console.log('Checklist component state:', { 
+    currentProjectId, 
+    plan: plan ? plan.id : null, 
+    canonicalChecklist: canonicalChecklist ? 'loaded' : 'not loaded'
+  });
+}, [currentProjectId, plan, canonicalChecklist]);
