@@ -39,7 +39,7 @@ export default function AdminStageTabs({
   
   // Count tasks for badge display
   const getTaskCount = (stage: Stage) => {
-    const tasks = factor.tasks[stage];
+    const tasks = factor.tasks[stage as keyof typeof factor.tasks];
     return tasks ? tasks.length : 0;
   };
   
@@ -110,13 +110,13 @@ export default function AdminStageTabs({
               </Button>
             </div>
             
-            {!factor.tasks[stage] || factor.tasks[stage].length === 0 ? (
+            {!factor.tasks[stage as keyof typeof factor.tasks] || factor.tasks[stage as keyof typeof factor.tasks].length === 0 ? (
               <div className="text-center py-6 text-gray-500 border border-dashed rounded-md">
                 No tasks defined for this stage. Click "Add Task" to create one.
               </div>
             ) : (
               <div className="space-y-2">
-                {factor.tasks[stage].map((taskText, index) => (
+                {factor.tasks[stage as keyof typeof factor.tasks].map((taskText, index) => (
                   <div
                     key={`${stage}-task-${index}`}
                     className="flex items-start gap-3"
