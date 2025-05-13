@@ -578,9 +578,6 @@ export default function Checklist({ projectId }: ChecklistProps) {
     );
   }
 
-
-
-  // Always display the checklist UI regardless of plan status
   // Always display the checklist UI regardless of plan status
 
   // Calculate total tasks and completed tasks
