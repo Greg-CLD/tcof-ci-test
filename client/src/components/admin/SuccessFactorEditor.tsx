@@ -214,7 +214,7 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
   };
 
   // Handle task change
-  const handleTaskChange = (stage: keyof FactorTask['tasks'], index: number, value: string) => {
+  const handleTaskChange = (stage: Stage, index: number, value: string) => {
     const updatedTasks = { ...editableFactor.tasks };
     
     if (index >= updatedTasks[stage].length) {
@@ -231,14 +231,14 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
   };
 
   // Add a new task to a stage
-  const handleAddTask = (stage: keyof FactorTask['tasks']) => {
+  const handleAddTask = (stage: Stage) => {
     const updatedTasks = { ...editableFactor.tasks };
     updatedTasks[stage] = [...updatedTasks[stage], ''];
     setEditableFactor({ ...editableFactor, tasks: updatedTasks });
   };
 
   // Remove a task from a stage
-  const handleRemoveTask = (stage: keyof FactorTask['tasks'], index: number) => {
+  const handleRemoveTask = (stage: Stage, index: number) => {
     const updatedTasks = { ...editableFactor.tasks };
     updatedTasks[stage] = updatedTasks[stage].filter((_, i) => i !== index);
     
@@ -502,46 +502,13 @@ export default function SuccessFactorEditor({ onUpdate }: SuccessFactorEditorPro
               />
             </div>
             
-            {/* Task sections */}
-            {Object.entries(editableFactor.tasks).map(([stage, tasks]) => (
-              <div key={stage} className="border rounded-md p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <Label className="text-lg font-medium">{stage} Tasks</Label>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleAddTask(stage as keyof FactorTask['tasks'])}
-                    className="flex items-center gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Add Task
-                  </Button>
-                </div>
-                
-                {tasks.map((task, idx) => (
-                  <div key={`edit-${stage}-${idx}`} className="flex items-start gap-2 mb-2">
-                    <Textarea
-                      value={task}
-                      onChange={(e) => handleTaskChange(
-                        stage as keyof FactorTask['tasks'],
-                        idx,
-                        e.target.value
-                      )}
-                      placeholder={`Enter ${stage} task...`}
-                      className="flex-1"
-                    />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleRemoveTask(stage as keyof FactorTask['tasks'], idx)}
-                      className="mt-1"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ))}
+            {/* Task management with tabbed interface */}
+            <AdminStageTabs
+              factor={editableFactor}
+              onTaskChange={handleTaskChange}
+              onAddTask={handleAddTask}
+              onRemoveTask={handleRemoveTask}
+            />
           </div>
           
           <DialogFooter>
