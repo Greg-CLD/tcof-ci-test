@@ -2483,7 +2483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function getFactors(forceRefresh: boolean = false): Promise<FactorTask[]> {
     // Always use the database directly
     try {
-      return await getDbFactors();
+      return await factorsDb.getFactors();
     } catch (error: unknown) {
       console.error('Error getting factors from database:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load success factors from database';
@@ -2496,7 +2496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Legacy function kept for backward compatibility, now just uses the database
   async function _getFactorsLegacy(): Promise<FactorTask[]> {
     try {
-      return await getDbFactors();
+      return await factorsDb.getFactors();
     } catch (error: unknown) {
       console.error('Error getting factors from database:', error);
       return [];
@@ -2611,7 +2611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      const factors = await getDbFactors();
+      const factors = await factorsDb.getFactors();
       res.json(factors || []);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
@@ -2760,7 +2760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/success-factors/:id', isAdmin, async (req: Request, res: Response) => {
     try {
       const factorId = req.params.id;
-      const factor = await getDbFactor(factorId);
+      const factor = await factorsDb.getFactor(factorId);
 
       if (!factor) {
         return res.status(404).json({ message: `Success factor with ID ${factorId} not found` });
