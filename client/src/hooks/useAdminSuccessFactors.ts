@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 export interface AdminSuccessFactor {
   id: string;
@@ -25,7 +26,14 @@ export function useAdminSuccessFactors() {
     queryKey: ['/api/admin/success-factors'],
     staleTime: 0, // No caching - always fetch fresh data
     refetchOnWindowFocus: true,
+    refetchOnMount: true, // Always fetch fresh data on mount
   });
+
+  // Force a refetch when the hook is initialized (on component mount)
+  useEffect(() => {
+    console.log('[ADMIN] Forcing initial refetch of success factors');
+    refetch();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Log diagnostic info
   if (factors) {
@@ -33,7 +41,16 @@ export function useAdminSuccessFactors() {
     if (factors.length > 0) {
       console.log('[ADMIN] First factor tasks', factors[0].tasks);
       // Smoke test to verify task data structure across all factors
-      let taskCounts = {};
+      const taskCounts: Record<string, {
+        total: number;
+        byStage: {
+          Identification: number;
+          Definition: number;
+          Delivery: number;
+          Closure: number;
+        }
+      }> = {};
+      
       factors.forEach(factor => {
         const totalTasks = 
           (factor.tasks.Identification?.length || 0) + 

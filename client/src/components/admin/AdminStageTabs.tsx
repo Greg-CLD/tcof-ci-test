@@ -34,6 +34,9 @@ export default function AdminStageTabs({
 }: AdminStageTabsProps) {
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
   
+  console.log('[ADMIN_TABS] Rendering AdminStageTabs with factor:', factor);
+  console.log('[ADMIN_TABS] Tasks structure:', factor.tasks);
+  
   // Count tasks for badge display
   const getTaskCount = (stage: Stage) => {
     const tasks = factor.tasks[stage];
@@ -107,7 +110,7 @@ export default function AdminStageTabs({
               </Button>
             </div>
             
-            {factor.tasks[stage].length === 0 ? (
+            {!factor.tasks[stage] || factor.tasks[stage].length === 0 ? (
               <div className="text-center py-6 text-gray-500 border border-dashed rounded-md">
                 No tasks defined for this stage. Click "Add Task" to create one.
               </div>

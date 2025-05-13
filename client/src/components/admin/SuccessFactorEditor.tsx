@@ -418,6 +418,22 @@ export default function SuccessFactorEditor() {
                     </CardHeader>
                     
                     <CardContent>
+                      {/* Diagnostic logs are executing here */}
+                      {/* Hidden diagnostic code that executes but doesn't render */}
+                      <div className="hidden">
+                        {(() => {
+                          // Log the selected factor tasks for debugging
+                          console.log('[ADMIN] Selected factor tasks before rendering:', selectedFactor.tasks);
+                          console.log('[ADMIN] Tasks by stage:', {
+                            Identification: selectedFactor.tasks.Identification?.length || 0, 
+                            Definition: selectedFactor.tasks.Definition?.length || 0,
+                            Delivery: selectedFactor.tasks.Delivery?.length || 0, 
+                            Closure: selectedFactor.tasks.Closure?.length || 0
+                          });
+                          return null;
+                        })()}
+                      </div>
+                      
                       {/* Tabbed interface */}
                       <AdminStageTabs
                         factor={selectedFactor}
