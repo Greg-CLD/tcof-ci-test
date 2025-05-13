@@ -25,9 +25,8 @@ export function useSuccessFactors() {
     refetch
   } = useQuery<SuccessFactor[]>({
     queryKey: ['/api/success-factors'],
-    staleTime: 1000, // 1 second cache
+    staleTime: 0, // No caching - always fetch fresh data
     refetchOnWindowFocus: true,
-    refetchInterval: 2000, // Poll every 2 seconds
   });
 
   // Log diagnostic info but directly without effects

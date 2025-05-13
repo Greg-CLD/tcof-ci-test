@@ -24,18 +24,18 @@ import {
 import { Label } from '@/components/ui/label';
 import { Loader2, Trash2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import AdminStageTabs, { Stage, FactorTask } from './AdminStageTabs';
 import FactorSidebar from './FactorSidebar';
 import SiteHeader from '@/components/SiteHeader';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminSuccessFactors } from '@/hooks/useAdminSuccessFactors';
 import { Link } from 'wouter';
 
 // We don't need props for a standalone page component
 export default function SuccessFactorEditor() {
-  // State for success factors and editing
-  const [factors, setFactors] = useState<FactorTask[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Use our custom admin hook for success factors with tasks
+  const { factors = [], isLoading, error, invalidateCache } = useAdminSuccessFactors();
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -44,44 +44,13 @@ export default function SuccessFactorEditor() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load success factors on component mount
+  // Set selected factor when data loads
   useEffect(() => {
-    loadFactors();
-  }, []);
-
-  // Load factors from the server
-  const loadFactors = async () => {
-    setIsLoading(true);
-    try {
-      // Load success factors through API
-      const response = await apiRequest('GET', '/api/admin/success-factors');
-      if (!response.ok) {
-        throw new Error('Failed to load success factors');
-      }
-      
-      const data = await response.json();
-      setFactors(data);
-      
-      // Select the first factor by default if none is selected
-      if (data.length > 0 && !selectedFactorId) {
-        setSelectedFactorId(data[0].id);
-      }
-      
-      toast({
-        title: "Success Factors Loaded",
-        description: `Loaded ${data.length} success factors.`
-      });
-    } catch (error) {
-      console.error('Error loading success factors:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load success factors. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+    if (factors && factors.length > 0 && !selectedFactorId) {
+      setSelectedFactorId(factors[0].id);
+      console.log('[ADMIN] Selected first factor:', factors[0].id);
     }
-  };
+  }, [factors, selectedFactorId]);
 
   // Get the currently selected factor
   const selectedFactor = selectedFactorId
@@ -92,7 +61,7 @@ export default function SuccessFactorEditor() {
   const handleCreateFactor = () => {
     // Default empty factor with tasks arrays
     const newFactor: FactorTask = {
-      id: `sf-${factors.length + 1}`,  // Generate a default ID (will be editable)
+      id: `sf-${factors?.length ? factors.length + 1 : 1}`,  // Generate a default ID (will be editable)
       title: "New Success Factor",
       description: "Add a description for this success factor",
       tasks: {
@@ -108,8 +77,8 @@ export default function SuccessFactorEditor() {
     apiRequest('POST', '/api/admin/success-factors', newFactor)
       .then(response => response.json())
       .then(data => {
-        // Add the new factor to our list
-        setFactors([...factors, data]);
+        // Invalidate the cache to refresh data
+        invalidateCache();
         
         // Select the new factor
         setSelectedFactorId(data.id);
@@ -151,12 +120,12 @@ export default function SuccessFactorEditor() {
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
-      const updatedFactorData = await response.json();
+      await response.json();
       
-      // Update local state
-      setFactors(prev => 
-        prev.map(f => f.id === factorId ? updatedFactorData : f)
-      );
+      // Invalidate the cache to refresh data
+      invalidateCache();
+      
+      console.log('[ADMIN] Updated task and invalidated cache');
     } catch (error) {
       console.error('Error updating task:', error);
       toast({
@@ -186,12 +155,10 @@ export default function SuccessFactorEditor() {
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
-      const updatedFactorData = await response.json();
+      await response.json();
       
-      // Update local state
-      setFactors(prev => 
-        prev.map(f => f.id === factorId ? updatedFactorData : f)
-      );
+      // Invalidate the cache to refresh data
+      invalidateCache();
       
       toast({
         title: 'Task added',
@@ -230,12 +197,10 @@ export default function SuccessFactorEditor() {
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
-      const updatedFactorData = await response.json();
+      await response.json();
       
-      // Update local state
-      setFactors(prev => 
-        prev.map(f => f.id === factorId ? updatedFactorData : f)
-      );
+      // Invalidate the cache to refresh data
+      invalidateCache();
       
       toast({
         title: 'Task deleted',
@@ -265,12 +230,10 @@ export default function SuccessFactorEditor() {
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
-      const updatedFactorData = await response.json();
+      await response.json();
       
-      // Update local state
-      setFactors(prev => 
-        prev.map(f => f.id === factorId ? updatedFactorData : f)
-      );
+      // Invalidate the cache to refresh data
+      invalidateCache();
     } catch (error) {
       console.error('Error updating factor title:', error);
       toast({
@@ -294,12 +257,10 @@ export default function SuccessFactorEditor() {
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
-      const updatedFactorData = await response.json();
+      await response.json();
       
-      // Update local state
-      setFactors(prev => 
-        prev.map(f => f.id === factorId ? updatedFactorData : f)
-      );
+      // Invalidate the cache to refresh data
+      invalidateCache();
     } catch (error) {
       console.error('Error updating factor description:', error);
       toast({
