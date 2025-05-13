@@ -78,34 +78,8 @@ const transformFactorWithTasks = (factor: any, tasks: any[]): FactorTask => {
 // Function to load success factors from JSON file (fallback)
 const loadFactorsFromJson = (): FactorTask[] => {
   try {
-    // Try multiple possible filenames
-    const possiblePaths = [
-      path.join(__dirname, '..', '..', 'data', 'successFactors.json'),
-      path.join(__dirname, '..', '..', 'data', 'tcof_success_factors_v2.json'),
-      path.join(__dirname, '..', '..', 'data', 'tcofFactors.json')
-    ];
-    
-    // Try each path
-    let factorsData;
-    let usedPath;
-    
-    for (const dataPath of possiblePaths) {
-      try {
-        if (fs.existsSync(dataPath)) {
-          factorsData = fs.readFileSync(dataPath, 'utf8');
-          usedPath = dataPath;
-          break;
-        }
-      } catch (e) {
-        // Continue to next path
-      }
-    }
-    
-    if (!factorsData) {
-      throw new Error('None of the expected success factors JSON files were found');
-    }
-    
-    console.log(`Loaded success factors from ${usedPath}`);
+    const dataPath = path.join(__dirname, '..', '..', 'data', 'success-factors.json');
+    const factorsData = fs.readFileSync(dataPath, 'utf8');
     return JSON.parse(factorsData);
   } catch (error) {
     console.error('Error loading factors from JSON file:', error);
