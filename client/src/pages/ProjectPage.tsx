@@ -232,20 +232,23 @@ export default function ProjectPage() {
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="getYourBearings">Get Your Bearings</TabsTrigger>
                 <TabsTrigger value="checklist">Checklist</TabsTrigger>
+                <Button variant="outline" onClick={() => setShowHelp(true)}>
+                  Make A Plan – Intro
+                </Button>
               </TabsList>
-              
+
               {/* Help Dialog */}
               <AlertDialog open={showHelp} onOpenChange={setShowHelp}>
                 <AlertDialogContent className="max-w-4xl">
                   <AlertDialogHeader>
                     <AlertDialogTitle className="text-2xl text-tcof-teal">Make A Plan Flow</AlertDialogTitle>
                   </AlertDialogHeader>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                     {/* Left column with instructions */}
                     <div className="space-y-4">
                       <p className="font-medium">To Make a Plan, follow this journey.</p>
-                      
+
                       <div className="space-y-4">
                         <div>
                           <h3 className="font-bold text-lg">Get Your Bearings</h3>
@@ -254,7 +257,7 @@ export default function ProjectPage() {
                             <li>Plot Your Position, figure out where you are on the Delivery Journey.</li>
                           </ul>
                         </div>
-                        
+
                         <div>
                           <h3 className="font-bold text-lg">Make A Decision</h3>
                           <p>Option A) Start with TCOF or Option B) Create Your Customised Plan</p>
@@ -263,19 +266,19 @@ export default function ProjectPage() {
                             <li>If Option B, Customised, go to Make Your Plan</li>
                           </ul>
                         </div>
-                        
+
                         <div>
                           <h3 className="font-bold text-lg">Checklist</h3>
                           <p>Both Options take you to the checklist, you may skip any step and return at a later date.</p>
                         </div>
                       </div>
-                      
+
                       <p className="mt-6 italic">
                         TCOF and the companion application are designed to help guide you through this journey.
                         To your success.
                       </p>
                     </div>
-                    
+
                     {/* Right column with flowchart */}
                     <div className="flex justify-center items-start">
                       <img 
@@ -285,7 +288,7 @@ export default function ProjectPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <AlertDialogFooter>
                     <AlertDialogAction 
                       onClick={() => setShowHelp(false)}
@@ -323,7 +326,7 @@ export default function ProjectPage() {
                           <span className="font-medium">{project?.description || 'N/A'}</span>
                         </div>
                       </div>
-                      
+
                       <div className="pt-4 border-t">
                         <h3 className="font-semibold mb-4">Project Tools</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -394,7 +397,7 @@ export default function ProjectPage() {
                                   : <><Clock className="h-3 w-3 mr-1" /> Not Started</>}
                               </Badge>
                             </div>
-                            
+
                             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
                               <div className="flex items-center">
                                 <Compass className="h-5 w-5 text-slate-700 mr-2" />
@@ -410,7 +413,7 @@ export default function ProjectPage() {
                                   : <><Clock className="h-3 w-3 mr-1" /> Not Started</>}
                               </Badge>
                             </div>
-                            
+
                             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
                               <div className="flex items-center">
                                 <Route className="h-5 w-5 text-slate-700 mr-2" />
@@ -429,7 +432,7 @@ export default function ProjectPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="border-t pt-6">
                         <h3 className="font-semibold mb-4">Available Tools</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -472,7 +475,7 @@ export default function ProjectPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="checklist">
                 <Checklist projectId={projectId} />
               </TabsContent>
@@ -492,7 +495,7 @@ export default function ProjectPage() {
           </Card>
         )}
       </main>
-      
+
     </div>
   );
 }
