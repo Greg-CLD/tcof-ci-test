@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Stage } from '@/lib/plan-db';
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { CircleX, Download, FileText, Loader2, PlusCircle, PlusSquare } from 'lucide-react';
+import { Download, FileText, Loader2, PlusCircle, PlusSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SummaryBar from '@/components/checklist/SummaryBar';
 import { ChecklistHeader } from '@/components/outcomes/ChecklistHeader';
@@ -26,7 +26,7 @@ interface ChecklistProps {
   projectId?: string;
 }
 
-// Define a task type
+// Task type
 interface UnifiedTask {
   id: string;
   text: string;
@@ -40,7 +40,7 @@ interface UnifiedTask {
   owner?: string;
 }
 
-// Updates that can be made to a task
+// Task updates
 interface TaskUpdates {
   completed?: boolean;
   notes?: string;
@@ -80,7 +80,8 @@ export default function Checklist({ projectId }: ChecklistProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Get canonical tasks
+  // Get canonical tasks - this is the core of our solution
+  // We use these tasks even without a plan
   const { data: canonicalTasks } = useQuery({
     queryKey: ['/api/admin/tcof-tasks'],
     queryFn: async () => {
@@ -103,10 +104,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
     try {
       // Start with canonical tasks
       const allTasks: UnifiedTask[] = canonicalTasks.map((task: any) => {
-        // Check if this task exists in the plan
+        // Check if this task exists in the plan (if we have one)
         let completed = false;
         
-        // If we have a plan, look for the task in it
         if (plan?.blocks?.block2?.tasks) {
           const existingTask = plan.blocks.block2.tasks.find(
             (t: any) => t.id === task.id
@@ -136,10 +136,11 @@ export default function Checklist({ projectId }: ChecklistProps) {
       };
       
       allTasks.forEach(task => {
-        if (byStage[task.stage]) {
-          byStage[task.stage].push(task);
+        const stage = task.stage as Stage;
+        if (byStage[stage]) {
+          byStage[stage].push(task);
         } else {
-          byStage.Identification.push(task);
+          byStage.Identification.push({...task, stage: 'Identification'});
         }
       });
       
@@ -157,7 +158,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
     }
   }, [currentProjectId, canonicalTasks, plan]);
 
-  // Handle task updates
+  // Handle task updates - this is the key function we need to fix
   const handleTaskUpdate = async (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
     if (!currentProjectId) return;
     
@@ -170,7 +171,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       );
       setTasks(updatedTasks);
       
-      // Organize tasks by stage again
+      // Update tasksByStage for UI
       const byStage: Record<Stage, UnifiedTask[]> = {
         Identification: [],
         Definition: [],
@@ -179,10 +180,11 @@ export default function Checklist({ projectId }: ChecklistProps) {
       };
       
       updatedTasks.forEach(task => {
-        if (byStage[task.stage]) {
-          byStage[task.stage].push(task);
+        const stage = task.stage as Stage;
+        if (byStage[stage]) {
+          byStage[stage].push(task);
         } else {
-          byStage.Identification.push(task);
+          byStage.Identification.push({...task, stage: 'Identification'});
         }
       });
       
@@ -238,7 +240,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
         // Refresh data
         queryClient.invalidateQueries({ queryKey: ["plan", currentProjectId] });
       } else {
-        // If no plan, save directly to a task API
+        // IMPORTANT CHANGE: If no plan, save directly using a task API
         await apiRequest(
           "POST",
           `/api/projects/${currentProjectId}/tasks`,
@@ -313,7 +315,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
     }
   };
 
-  // Render the checklist
+  // Render UI
   return (
     <div className="container mx-auto px-4 py-8">
       <ChecklistHeader 
@@ -438,10 +440,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
                 {stageTasks.length === 0 ? (
                   <div className="text-center py-8 border border-dashed rounded-md">
                     <p className="text-gray-500">No tasks found for this stage</p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-4"
-                    >
+                    <Button variant="outline" className="mt-4">
                       <PlusSquare className="mr-2 h-4 w-4" />
                       Add Custom Task
                     </Button>
@@ -505,14 +504,6 @@ export default function Checklist({ projectId }: ChecklistProps) {
                         </div>
                       </div>
                     ))}
-                    
-                    <Button 
-                      variant="outline" 
-                      className="mt-4 ml-auto block"
-                    >
-                      <PlusSquare className="mr-2 h-4 w-4" />
-                      Add Custom Task
-                    </Button>
                   </div>
                 )}
               </TabsContent>
