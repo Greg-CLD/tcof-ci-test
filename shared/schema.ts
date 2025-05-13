@@ -10,7 +10,8 @@ import {
   boolean,
   real,
   uuid,
-  index
+  index,
+  pgEnum
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
@@ -414,4 +415,70 @@ export type OrganisationMembership = z.infer<typeof organisationMembershipSelect
 export type InsertOrganisationMembership = z.infer<typeof organisationMembershipInsertSchema>;
 
 export type OrganisationHeuristic = z.infer<typeof organisationHeuristicSelectSchema>;
+
+// Success Factors - Define stage enum
+export const stageEnum = pgEnum('success_factor_stage', [
+  'Identification',
+  'Definition',
+  'Delivery',
+  'Closure'
+]);
+
+// Success Factors - Main table
+export const successFactors = pgTable('success_factors', {
+  id: varchar('id', { length: 36 }).primaryKey().notNull(), // Using varchar rather than uuid to match existing sf-X format
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+// Success Factors - Tasks table
+export const successFactorTasks = pgTable('success_factor_tasks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  factorId: varchar('factor_id', { length: 36 }).notNull()
+    .references(() => successFactors.id, { onDelete: 'cascade' }),
+  stage: stageEnum('stage').notNull(),
+  text: text('text').notNull(),
+  order: integer('order').notNull(), // To preserve ordering within each stage
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+// Define relations for success factors
+export const successFactorsRelations = relations(successFactors, ({ many }) => ({
+  tasks: many(successFactorTasks)
+}));
+
+export const successFactorTasksRelations = relations(successFactorTasks, ({ one }) => ({
+  factor: one(successFactors, {
+    fields: [successFactorTasks.factorId],
+    references: [successFactors.id]
+  })
+}));
+
+// Create Zod schemas for success factors
+export const successFactorsInsertSchema = createInsertSchema(successFactors);
+export const successFactorsSelectSchema = createSelectSchema(successFactors);
+
+export const successFactorTasksInsertSchema = createInsertSchema(successFactorTasks);
+export const successFactorTasksSelectSchema = createSelectSchema(successFactorTasks);
+
+export type SuccessFactorInsert = z.infer<typeof successFactorsInsertSchema>;
+export type SuccessFactorSelect = z.infer<typeof successFactorsSelectSchema>;
+export type SuccessFactorTaskInsert = z.infer<typeof successFactorTasksInsertSchema>;
+export type SuccessFactorTaskSelect = z.infer<typeof successFactorTasksSelectSchema>;
+
+// Custom type for the expected API response format
+export type SuccessFactorWithTasks = {
+  id: string;
+  title: string;
+  description: string;
+  tasks: {
+    Identification: string[];
+    Definition: string[];
+    Delivery: string[];
+    Closure: string[];
+  };
+};
 export type InsertOrganisationHeuristic = z.infer<typeof organisationHeuristicInsertSchema>;

@@ -38,9 +38,20 @@ app.use((req, res, next) => {
   next();
 });
 
+// Global error handler for unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Global error handler for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
 (async () => {
   // Run the factors integrity check using improved utilities
   try {
+    console.log('Starting server initialization...');
     log('Running success factors integrity check...');
     
     // Use the improved factor utilities
@@ -103,6 +114,12 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`Server started successfully on port ${port}`);
+  }).on('error', (error) => {
+    log(`Failed to start server: ${error.message}`);
+    console.error('Server startup error:', error);
   });
-})();
+})().catch(error => {
+  console.error('Fatal server initialization error:', error);
+  process.exit(1);
+});
