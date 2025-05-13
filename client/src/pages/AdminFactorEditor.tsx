@@ -22,12 +22,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import SiteHeader from '@/components/SiteHeader';
 import { Loader2, Plus, Save, Trash2 } from 'lucide-react';
-import TaskList from '@/components/admin/TaskList';
 import { apiRequest } from '@/lib/queryClient';
+import FactorSidebar from '@/components/admin/FactorSidebar';
+import AdminStageTabs, { Stage } from '@/components/admin/AdminStageTabs';
 
 // Define types
 type StageType = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
@@ -289,6 +288,45 @@ export default function AdminFactorEditor() {
     } finally {
       setIsSaving(false);
     }
+  };
+  
+  // Function to handle creating a new factor
+  const handleCreateFactor = () => {
+    // Default empty factor with tasks arrays
+    const newFactor: SuccessFactor = {
+      id: `sf-${factors.length + 1}`,  // Generate a default ID (will be editable)
+      title: "New Success Factor",
+      tasks: {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      }
+    };
+    
+    // Create a factor on the server
+    apiRequest('POST', '/api/admin/success-factors', newFactor)
+      .then(response => response.json())
+      .then(data => {
+        // Add the new factor to our list
+        setFactors([...factors, data]);
+        
+        // Select the new factor
+        setSelectedFactorId(data.id);
+        
+        toast({
+          title: 'Success Factor Created',
+          description: 'New success factor has been created.',
+        });
+      })
+      .catch(error => {
+        console.error('Error creating factor:', error);
+        toast({
+          title: 'Error Creating Factor',
+          description: 'Could not create new success factor.',
+          variant: 'destructive',
+        });
+      });
   };
 
   return (
