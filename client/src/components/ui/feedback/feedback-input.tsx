@@ -4,7 +4,11 @@ import { Label } from '@/components/ui/label';
 import { Check, X, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface FeedbackInputProps extends Omit<InputProps, 'onChange'> {
+// Create a type that doesn't include onChange and onBlur from InputProps
+type OmitProps = 'onChange' | 'onBlur';
+type InputPropsWithoutHandlers = Omit<InputProps, OmitProps>;
+
+interface FeedbackInputProps extends InputPropsWithoutHandlers {
   label?: string;
   helperText?: string;
   errorText?: string;

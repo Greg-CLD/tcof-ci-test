@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-interface FeedbackCardProps extends React.HTMLAttributes<HTMLDivElement> {
+// Create a new type for the HTML div element attributes but exclude onSelect
+type DivPropsWithoutOnSelect = Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'>;
+
+interface FeedbackCardProps extends DivPropsWithoutOnSelect {
   title?: string;
   description?: string;
   footer?: React.ReactNode;
