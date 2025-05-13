@@ -31,7 +31,26 @@ export function useAdminSuccessFactors() {
   if (factors) {
     console.log(`[ADMIN] Success factors loaded: ${factors.length}`);
     if (factors.length > 0) {
-      console.log('[ADMIN] factor tasks', factors);
+      console.log('[ADMIN] First factor tasks', factors[0].tasks);
+      // Smoke test to verify task data structure across all factors
+      let taskCounts = {};
+      factors.forEach(factor => {
+        const totalTasks = 
+          (factor.tasks.Identification?.length || 0) + 
+          (factor.tasks.Definition?.length || 0) + 
+          (factor.tasks.Delivery?.length || 0) + 
+          (factor.tasks.Closure?.length || 0);
+        taskCounts[factor.id] = {
+          total: totalTasks,
+          byStage: {
+            Identification: factor.tasks.Identification?.length || 0,
+            Definition: factor.tasks.Definition?.length || 0,
+            Delivery: factor.tasks.Delivery?.length || 0,
+            Closure: factor.tasks.Closure?.length || 0
+          }
+        };
+      });
+      console.log('[ADMIN] Task counts by factor:', taskCounts);
     }
   }
 

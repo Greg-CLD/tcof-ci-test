@@ -283,13 +283,13 @@ export default function SuccessFactorEditor() {
       // Delete from the API
       await apiRequest('DELETE', `/api/admin/success-factors/${selectedFactor.id}`);
       
-      // Update local state
-      const updatedFactors = factors.filter(f => f.id !== selectedFactor.id);
-      setFactors(updatedFactors);
+      // Invalidate the cache to refresh data
+      invalidateCache();
       
       // Select another factor if available
-      if (updatedFactors.length > 0) {
-        setSelectedFactorId(updatedFactors[0].id);
+      const remainingFactors = factors.filter(f => f.id !== selectedFactor.id);
+      if (remainingFactors.length > 0) {
+        setSelectedFactorId(remainingFactors[0].id);
       } else {
         setSelectedFactorId(null);
       }
