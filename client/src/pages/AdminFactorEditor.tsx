@@ -347,150 +347,107 @@ export default function AdminFactorEditor() {
             <span className="ml-2">Loading success factors...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Factor list */}
-            <Card className="md:col-span-1">
-              <CardHeader>
-                <CardTitle>Success Factors</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[500px] pr-4">
-                  {factors.map((factor) => (
-                    <div
-                      key={factor.id}
-                      className={`p-3 mb-2 rounded cursor-pointer ${
-                        selectedFactorId === factor.id
-                          ? 'bg-tcof-teal/10 border-l-4 border-tcof-teal'
-                          : 'hover:bg-gray-100 border-l-4 border-transparent'
-                      }`}
-                      onClick={() => setSelectedFactorId(factor.id)}
-                    >
-                      <h3 className="font-medium">{factor.title}</h3>
-                      <div className="text-sm text-gray-500">ID: {factor.id}</div>
-                    </div>
-                  ))}
-                </ScrollArea>
-              </CardContent>
-            </Card>
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Left sidebar with factors list - 25% width */}
+            <div className="w-full md:w-1/4">
+              <FactorSidebar
+                factors={factors}
+                selectedFactorId={selectedFactorId}
+                onSelectFactor={(id) => setSelectedFactorId(id)}
+                onCreateFactor={handleCreateFactor}
+              />
+            </div>
             
-            {/* Factor details */}
-            <Card className="md:col-span-2">
-              {selectedFactor ? (
-                <>
-                  <CardHeader>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1">
-                        <Input
-                          value={selectedFactor.title}
-                          onChange={(e) => handleUpdateFactorTitle(selectedFactor.id, e.target.value)}
-                          className="text-xl font-bold"
-                        />
-                      </div>
-                      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm">
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Success Factor</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{selectedFactor.title}"? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteFactor} className="bg-destructive text-destructive-foreground">
+            {/* Main content panel with task tabs - 75% width */}
+            <div className="w-full md:w-3/4">
+              <Card className="h-full">
+                {selectedFactor ? (
+                  <>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <Input
+                              value={selectedFactor.id}
+                              className="w-24 font-mono text-sm"
+                              readOnly
+                            />
+                            <Input
+                              value={selectedFactor.title}
+                              onChange={(e) => handleUpdateFactorTitle(selectedFactor.id, e.target.value)}
+                              className="flex-1 text-xl font-bold"
+                            />
+                          </div>
+                        </div>
+                        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 className="h-4 w-4 mr-1" />
                               Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <Accordion type="multiple" defaultValue={["Identification", "Definition", "Delivery", "Closure"]}>
-                      <AccordionItem value="Identification">
-                        <AccordionTrigger>Identification</AccordionTrigger>
-                        <AccordionContent>
-                          <TaskList
-                            title="Identification Tasks"
-                            tasks={selectedFactor.tasks.Identification || []}
-                            onAddTask={() => handleAddTask(selectedFactor.id, 'Identification')}
-                            onUpdateTask={(index, newText) => handleUpdateTask(selectedFactor.id, 'Identification', index, newText)}
-                            onDeleteTask={(index) => handleDeleteTask(selectedFactor.id, 'Identification', index)}
-                          />
-                        </AccordionContent>
-                      </AccordionItem>
-                      
-                      <AccordionItem value="Definition">
-                        <AccordionTrigger>Definition</AccordionTrigger>
-                        <AccordionContent>
-                          <TaskList
-                            title="Definition Tasks"
-                            tasks={selectedFactor.tasks.Definition || []}
-                            onAddTask={() => handleAddTask(selectedFactor.id, 'Definition')}
-                            onUpdateTask={(index, newText) => handleUpdateTask(selectedFactor.id, 'Definition', index, newText)}
-                            onDeleteTask={(index) => handleDeleteTask(selectedFactor.id, 'Definition', index)}
-                          />
-                        </AccordionContent>
-                      </AccordionItem>
-                      
-                      <AccordionItem value="Delivery">
-                        <AccordionTrigger>Delivery</AccordionTrigger>
-                        <AccordionContent>
-                          <TaskList
-                            title="Delivery Tasks"
-                            tasks={selectedFactor.tasks.Delivery || []}
-                            onAddTask={() => handleAddTask(selectedFactor.id, 'Delivery')}
-                            onUpdateTask={(index, newText) => handleUpdateTask(selectedFactor.id, 'Delivery', index, newText)}
-                            onDeleteTask={(index) => handleDeleteTask(selectedFactor.id, 'Delivery', index)}
-                          />
-                        </AccordionContent>
-                      </AccordionItem>
-                      
-                      <AccordionItem value="Closure">
-                        <AccordionTrigger>Closure</AccordionTrigger>
-                        <AccordionContent>
-                          <TaskList
-                            title="Closure Tasks"
-                            tasks={selectedFactor.tasks.Closure || []}
-                            onAddTask={() => handleAddTask(selectedFactor.id, 'Closure')}
-                            onUpdateTask={(index, newText) => handleUpdateTask(selectedFactor.id, 'Closure', index, newText)}
-                            onDeleteTask={(index) => handleDeleteTask(selectedFactor.id, 'Closure', index)}
-                          />
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Success Factor</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{selectedFactor.title}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteFactor} className="bg-destructive text-destructive-foreground">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent>
+                      {/* Tabbed interface */}
+                      <AdminStageTabs
+                        factor={selectedFactor}
+                        onTaskChange={(stage, index, value) => 
+                          handleUpdateTask(selectedFactor.id, stage as StageType, index, value)
+                        }
+                        onAddTask={(stage) => 
+                          handleAddTask(selectedFactor.id, stage as StageType)
+                        }
+                        onRemoveTask={(stage, index) => 
+                          handleDeleteTask(selectedFactor.id, stage as StageType, index)
+                        }
+                      />
+                    </CardContent>
+                    
+                    <CardFooter className="flex justify-end text-sm text-gray-500">
+                      <div className="flex-1">
+                        {isSaving ? (
+                          <span className="flex items-center">
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            Saving...
+                          </span>
+                        ) : (
+                          <span>Last changes saved automatically</span>
+                        )}
+                      </div>
+                    </CardFooter>
+                  </>
+                ) : (
+                  <CardContent className="flex flex-col items-center justify-center h-64">
+                    <p className="text-gray-500 mb-4">No success factor selected</p>
+                    <p className="text-gray-400 mb-4 text-sm">Select a factor from the list or create a new one</p>
+                    <Button onClick={handleCreateFactor}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create New Factor
+                    </Button>
                   </CardContent>
-                  
-                  <CardFooter className="border-t pt-4 flex justify-between">
-                    <div className="text-sm text-gray-500">
-                      {isSaving ? (
-                        <span className="flex items-center">
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                          Saving...
-                        </span>
-                      ) : (
-                        <span>Last changes saved automatically</span>
-                      )}
-                    </div>
-                  </CardFooter>
-                </>
-              ) : (
-                <CardContent className="flex flex-col items-center justify-center h-64">
-                  <p className="text-gray-500 mb-4">No success factor selected</p>
-                  <p className="text-gray-400 mb-4 text-sm">Select a factor from the list or create a new one</p>
-                </CardContent>
-              )}
-            </Card>
+                )}
+              </Card>
+            </div>
           </div>
         )}
       </main>
-      
     </div>
   );
 }
