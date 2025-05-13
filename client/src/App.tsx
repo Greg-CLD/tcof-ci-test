@@ -14,7 +14,8 @@ import MakeAPlanLanding from "@/pages/MakeAPlanLanding";
 import MakeAPlanFullIntro from "@/pages/MakeAPlanFullIntro";
 import MakeAPlanFull from "@/pages/MakeAPlanFull";
 import AdminPresetEditor from "@/pages/AdminPresetEditor";
-import AdminFactorEditor from "@/pages/AdminFactorEditor";
+// Using the enhanced SuccessFactorEditor with tabbed interface
+import SuccessFactorEditor from "@/components/admin/SuccessFactorEditor";
 import GraphExplorer from "@/pages/GraphExplorer";
 import Block1Discover from "@/pages/make-a-plan/Block1Discover";
 import Block1Step1 from "@/pages/make-a-plan/Block1Step1";
@@ -315,7 +316,7 @@ function Router() {
         <Redirect to="/organisations" />
       </Route>
       {/* Make a Plan routes - most specific first */}
-      <Route path="/make-a-plan/admin/factors" component={AdminFactorEditor} />
+      <Route path="/make-a-plan/admin/factors" component={SuccessFactorEditor} />
       <Route path="/make-a-plan/admin/graph-explorer" component={GraphExplorer} />
       <Route path="/make-a-plan/admin" component={AdminPresetEditor} />
       <Route path="/make-a-plan/full/intro">

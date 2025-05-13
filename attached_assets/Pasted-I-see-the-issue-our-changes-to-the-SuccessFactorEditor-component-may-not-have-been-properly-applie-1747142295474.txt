@@ -1,0 +1,75 @@
+I see the issue - our changes to the SuccessFactorEditor component may not have been properly applied in the dialog portion where the content is rendered. Let's fix this by looking at the exact location of the accordion in the dialog and replacing it with our AdminStageTabs component.
+
+Let's examine and modify the dialog content in SuccessFactorEditor.tsx:
+
+
+Opened client/src/components/admin/SuccessFactorEditor.tsx
+Now let's create a new version of the SuccessFactorEditor.tsx file to properly include the AdminStageTabs component:
+
+
+Executed cd /home/runner/workspace && cat client/src/components/admin/SuccessFactorEditor.tsx | grep -n "Task sections"
+Let's get a larger portion of the editor file to see the dialog content:
+
+
+Executed cd /home/runner/workspace && head -n 550 client/src/components/admin/SuccessFactorEditor.tsx | tail -n 100
+I can see the issue. Our changes are correct in the code, but there might be another version of the SuccessFactorEditor component that's being used. Let's restart the application workflow to make sure the changes are properly applied:
+
+
+Restarted Start application
+Since the application has restarted, I want to check for any issues in the implementation of the AdminStageTabs component. Let's make sure there are no typos or errors. I'll look at the component:
+
+
+Opened client/src/components/admin/AdminStageTabs.tsx
+
+Opened client/src/components/admin/AdminStageTabs.tsx
+Next, I need to check how and where this component is being imported and used within the SuccessFactorEditor:
+
+
+Opened client/src/components/admin/SuccessFactorEditor.tsx
+I'm analyzing the current status of implementing the tabbed interface in the Admin Success-Factor Editor.
+
+Based on my review:
+✓ Created AdminStageTabs component
+✓ Added import in SuccessFactorEditor.tsx
+✓ Implemented the component to replace accordion UI
+→ Working on fixing TypeScript errors in AdminStageTabs.tsx
+
+I'm making progress but need to fix TypeScript errors in the AdminStageTabs component. These include import path issues and JSX rendering errors. I'll continue fixing these issues to get the tabbed interface working properly.
+
+
+Restarted Start application
+
+Took a screenshot
+3 minutes ago
+•
+Replace accordion interface with new tabbed interface in admin section
+Screenshot
+I need to fix the AdminStageTabs component and make sure it's correctly integrated. Let's address the TypeScript errors first:
+
+
+Edited client/src/components/admin/AdminStageTabs.tsx
+Now, let's check if the SuccessFactorEditor properly imports our AdminStageTabs component:
+
+
+Opened client/src/components/admin/SuccessFactorEditor.tsx
+Now let's find where in the SuccessFactorEditor we need to replace the existing accordion UI with our new AdminStageTabs component:
+
+
+Executed cd /home/runner/workspace && grep -n "Accordion" client/src/components/admin/SuccessFactorEditor.tsx
+Let's search for related terms to find where the accordion might be:
+
+
+Executed cd /home/runner/workspace && grep -n "handleAddTask" client/src/components/admin/SuccessFactorEditor.tsx
+Let's look at the section where our AdminStageTabs component is being used:
+
+
+Opened client/src/components/admin/SuccessFactorEditor.tsx
+Now let's check the handler functions to make sure they're properly defined and implemented:
+
+
+Opened client/src/components/admin/SuccessFactorEditor.tsx
+Let's also check the task change handler:
+
+
+Opened client/src/components/admin/SuccessFactorEditor.tsx
+All the handlers look good. Let's check the UI to see if the tabbed interface is now working:
