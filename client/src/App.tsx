@@ -43,6 +43,7 @@ import OrganisationHeuristicsPage from "@/pages/OrganisationHeuristicsPage";
 import ProjectPage from "@/pages/ProjectPage";
 import BasicProjectEditPage from "@/pages/BasicProjectEditPage";
 import TestAuth from "@/pages/TestAuth";
+import FeedbackDemo from "@/components/FeedbackDemo";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthProvider } from "@/hooks/auth-hook";
@@ -297,6 +298,7 @@ function Router() {
       <Route path="/test-auth" component={TestAuth} />
       <Route path="/tools/starter-access" component={StarterAccess} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/feedback-demo" component={FeedbackDemo} />
       <Route path="/history" component={UserHistory} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/settings">
@@ -678,6 +680,7 @@ function Router() {
 import A11yAuditProvider from '@/components/A11yAuditProvider';
 import { PlanProvider } from '@/contexts/PlanContext';
 import { ProjectProvider } from '@/contexts/ProjectContext';
+import { FeedbackProvider, FeedbackContainer } from '@/components/ui/feedback';
 
 function App() {
   // Check if we're in development mode
@@ -689,15 +692,19 @@ function App() {
         <AuthProtectionProvider>
           {/* Only enable accessibility audits in development */}
           <A11yAuditProvider disabled={!isDev}>
-            <ProgressProvider>
-              <PlanProvider>
-                <ProjectProvider>
-                  <AppLayout>
-                    <Router />
-                  </AppLayout>
-                </ProjectProvider>
-              </PlanProvider>
-            </ProgressProvider>
+            <FeedbackProvider>
+              <ProgressProvider>
+                <PlanProvider>
+                  <ProjectProvider>
+                    <AppLayout>
+                      <Router />
+                      {/* Add the feedback container to display notifications */}
+                      <FeedbackContainer />
+                    </AppLayout>
+                  </ProjectProvider>
+                </PlanProvider>
+              </ProgressProvider>
+            </FeedbackProvider>
           </A11yAuditProvider>
         </AuthProtectionProvider>
       </AuthProvider>
