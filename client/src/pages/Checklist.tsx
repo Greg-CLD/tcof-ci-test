@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Stage } from '@/lib/plan-db';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Loader2, PlusCircle, PlusSquare } from 'lucide-react';
+import { Download, FileText, PlusSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SummaryBar from '@/components/checklist/SummaryBar';
 import { ChecklistHeader } from '@/components/outcomes/ChecklistHeader';
@@ -16,7 +16,6 @@ import ChecklistFilterBar, {
 import { useToast } from '@/hooks/use-toast';
 import { usePlan } from '@/contexts/PlanContext';
 import { useProjects } from '@/hooks/useProjects';
-import { useQueryClient } from '@tanstack/react-query';
 import { useFactors } from '@/hooks/useFactors';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
