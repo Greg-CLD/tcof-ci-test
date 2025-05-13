@@ -80,12 +80,15 @@ export default function Checklist({ projectId }: ChecklistProps) {
     queryKey: [`/api/checklist/${currentProjectId}`],
     queryFn: async () => {
       if (!currentProjectId) return null;
+      console.log('Fetching canonical checklist for project:', currentProjectId);
       const response = await fetch(`/api/checklist/${currentProjectId}`);
       if (!response.ok) throw new Error('Failed to fetch canonical checklist');
-      return response.json();
+      const data = await response.json();
+      console.log('Canonical checklist data received:', data ? 'yes' : 'no');
+      return data;
     },
-    // Only fetch the canonical checklist if no plan exists
-    enabled: !plan && !!currentProjectId,
+    // Enable whenever we have a valid project ID, regardless of plan status
+    enabled: !!currentProjectId,
   });
   
   // All tasks combined from different sources
@@ -152,24 +155,42 @@ export default function Checklist({ projectId }: ChecklistProps) {
         const projectToUse = projectId ? { id: projectId } : getSelectedProject();
         
         if (projectToUse) {
-          // If we have a project but no plan, ensure one exists
+          // Always create or load a plan for the project
           console.log('Ensuring plan exists for project:', projectToUse.id);
           const planId = await ensurePlanForProject(projectToUse.id);
           console.log('ensurePlanForProject →', planId);
           
-          if (!selectedPlanId || selectedPlanId !== planId) {
-            console.log('Setting new plan ID:', planId);
-            setSelectedPlanId(planId);
+          // If we got a valid plan ID back, set it as selected and load the plan data
+          if (planId) {
+            if (!selectedPlanId || selectedPlanId !== planId) {
+              console.log('Setting new plan ID:', planId);
+              setSelectedPlanId(planId);
+            }
+            
+            // Explicitly fetch the plan again to ensure we have the most up-to-date data
+            const newPlan = await loadPlan(planId);
+            if (newPlan) {
+              console.log('New plan created/loaded:', newPlan.id);
+              setPlan(newPlan);
+            } else {
+              console.error('Failed to load plan after ensuring it exists');
+              setPlan(null);
+            }
+          } else {
+            console.error('No plan ID returned from ensurePlanForProject');
+            setPlan(null);
           }
-          
-          // Load the plan
-          const pl = await loadPlan(planId);
-          setPlan(pl || null);
         } else if (selectedPlanId) {
           // If we have a planId but no project, just load the plan
           console.log('Loading plan with ID:', selectedPlanId);
           const pl = await loadPlan(selectedPlanId);
-          setPlan(pl || null);
+          if (pl) {
+            console.log('Loaded existing plan:', pl.id);
+            setPlan(pl);
+          } else {
+            console.error('Failed to load plan with ID:', selectedPlanId);
+            setPlan(null);
+          }
         } else {
           // No project and no plan ID
           console.log('No project or plan ID found');
@@ -177,18 +198,28 @@ export default function Checklist({ projectId }: ChecklistProps) {
         }
       } catch (err) {
         console.error('Error ensuring plan exists:', err);
-        toast({
-          title: 'Error loading plan',
-          description: 'Please try again or select a different project.',
-          variant: 'destructive'
-        });
+        // Only show toast for serious errors, not just when plan doesn't exist yet
+        if (err instanceof Error && !err.message.includes('not found')) {
+          toast({
+            title: 'Error loading plan',
+            description: 'Please try again or select a different project.',
+            variant: 'destructive'
+          });
+        }
       } finally {
         setLoading(false);
       }
     }
     
+    // Debug - log project ID on mount
+    console.log('Checklist useEffect running with:', { 
+      currentProjectId, 
+      selectedPlanId,
+      projectId
+    });
+    
     ensurePlan();
-  }, [selectedPlanId, setSelectedPlanId, getSelectedProject, toast, projectId]);
+  }, [selectedPlanId, setSelectedPlanId, getSelectedProject, toast, projectId, currentProjectId]);
   
   // Combine all tasks from different sources
   useEffect(() => {
@@ -349,8 +380,10 @@ export default function Checklist({ projectId }: ChecklistProps) {
   
   // Handle task update
   const handleTaskUpdate = async (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
+    let workingPlan = plan;
+    
     // If no plan exists, automatically create one
-    if (!plan) {
+    if (!workingPlan) {
       if (!currentProjectId) {
         toast({
           title: "No Project Selected",
@@ -362,23 +395,26 @@ export default function Checklist({ projectId }: ChecklistProps) {
       
       try {
         setLoading(true);
+        console.log('Creating plan for project:', currentProjectId);
         
         // Create a plan for the project
         const planId = await ensurePlanForProject(currentProjectId);
         setSelectedPlanId(planId);
         const loadedPlan = await loadPlan(planId);
-        setPlan(loadedPlan || null);
+        
+        if (!loadedPlan) {
+          throw new Error('Failed to load plan after creation');
+        }
+        
+        console.log('New plan created and loaded successfully:', planId);
+        workingPlan = loadedPlan;
+        setPlan(loadedPlan);
         
         toast({
           title: "Plan Created",
           description: "Changes will now be saved automatically",
           variant: "default"
         });
-        
-        // Since we created the plan, we need to wait for the next render cycle to update the task
-        // We'll return and let the user try again
-        setLoading(false);
-        return;
       } catch (err) {
         console.error("Error creating plan:", err);
         toast({
@@ -388,10 +424,18 @@ export default function Checklist({ projectId }: ChecklistProps) {
         });
         setLoading(false);
         return;
+      } finally {
+        setLoading(false);
       }
     }
     
-    const updatedPlan = { ...plan };
+    // If we still don't have a plan, return
+    if (!workingPlan) {
+      console.error('Failed to create or load plan');
+      return;
+    }
+    
+    const updatedPlan = { ...workingPlan };
     
     // Determine if the task is a regular task or good practice task based on source
     const isGoodPractice = source === 'framework';
@@ -524,6 +568,15 @@ export default function Checklist({ projectId }: ChecklistProps) {
       </div>
     );
   }
+  
+  // Debug information about current state
+  useEffect(() => {
+    console.log('Checklist component state:', { 
+      currentProjectId, 
+      plan: plan ? plan.id : null, 
+      canonicalChecklist: canonicalChecklist ? 'loaded' : 'not loaded'
+    });
+  }, [currentProjectId, plan, canonicalChecklist]);
   
   // Always display the checklist UI regardless of plan status
   
