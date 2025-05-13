@@ -2,8 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorLogger } from "./middlewares/errorLogger";
-import { ensureCanonicalFactors } from "./ensureCanonicalFactorsNew";
-import { registerSuccessFactorsRoutes } from "./routes.factorsDb";
+import { ensureCanonicalFactors } from "./ensureCanonicalFactors";
 
 const app = express();
 app.use(express.json());
@@ -84,10 +83,14 @@ process.on('uncaughtException', (error) => {
     log(`Error running success factors integrity check: ${errorMessage}`);
   }
 
-  // Register our database-backed success factors routes
-  await registerSuccessFactorsRoutes(app);
-
-  // Register main routes
+  // Initialize the canonical factors on startup
+  const factorsUpdated = await ensureCanonicalFactors();
+  if (factorsUpdated) {
+    log('Canonical factors updated on server startup');
+  } else {
+    log('Canonical factors check completed - no updates needed');
+  }
+  
   const server = await registerRoutes(app);
 
   // Add centralized error logging middleware
@@ -95,18 +98,28 @@ process.on('uncaughtException', (error) => {
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
-  // doesn't interfere with the API routes and static files
-  if (process.env.NODE_ENV !== "production") {
-    await setupVite(app);
+  // doesn't interfere with the other routes
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
   } else {
-    app.use(serveStatic);
-    app.get("*", (_req, res) => {
-      res.sendFile("index.html", { root: "./dist/public" });
-    });
+    serveStatic(app);
   }
 
-  const port = process.env.PORT || 5000;
-  server.listen(port, "0.0.0.0", () => {
+  // ALWAYS serve the app on port 5000
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const port = 5000;
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
     log(`Server started successfully on port ${port}`);
+  }).on('error', (error) => {
+    log(`Failed to start server: ${error.message}`);
+    console.error('Server startup error:', error);
   });
-})();
+})().catch(error => {
+  console.error('Fatal server initialization error:', error);
+  process.exit(1);
+});
