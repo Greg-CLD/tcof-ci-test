@@ -1,0 +1,32 @@
+We’ve spent enough cycles on the admin editor. Ignore it.
+Focus only on the Project Checklist screen.
+
+Current pain
+	• “Failed to load success factors” toast still fires because the checklist tries /api/factors; that endpoint now 500s.
+	• Adding a task (POST /api/projects/:id/tasks) returns 201, yet the immediate GET …/tasks is empty → tasks not persisted / not returned.
+	• On refresh, all tasks vanish (then canonical ones re-appear) and any new ones are lost.
+
+Desired behaviour
+	1. Copy-on-first-access:
+		○ When a project opens its checklist for the first time, seed project_tasks by copying rows from success_factor_tasks (and other sources).
+		○ After seeding, the checklist must only read/write project_tasks. No more calls to /api/factors from this screen.
+	2. Full CRUD persistence:
+		○ POST/PUT/DELETE for /api/projects/:id/tasks must update project_tasks so that a following GET (or page refresh) returns the new state.
+	3. UX cleanup:
+		○ Replace the failing toast text with “Failed to load project tasks”.
+		○ Remove any useSuccessFactors//api/factors fetch from the Checklist code path.
+
+Tasks (≤3, goal-oriented)
+	1. Seed & Query
+		○ Implement/verify a seeding helper (ensureProjectTasksSeeded(projectId)) called at the start of GET /api/projects/:id/tasks.
+		○ Seed by copying canonical tasks (success_factor_tasks, personal_heuristic_tasks, policy_tasks, good_practice_tasks) into project_tasks, mapping fields (text, stage, origin, sourceId, completed:false).
+	2. Fix CRUD & Cache
+		○ Ensure createProjectTask, updateProjectTask, deleteProjectTask insert/update the DB with consistent projectId type (string) and the query in getProjectTasks filters by projectId correctly (no casing mismatch on stage).
+		○ In useProjectTasks invalidate ['api','projects',projectId,'tasks'] after every mutation.
+	3. Verify with an Integration Test
+		○ Add tests/checklist-persistence.js that:
+			1. Seeds by GET tasks (should get canonical copy).
+			2. POST a new task.
+			3. GET again → asserts new task exists.
+		○ Paste the test run output in your reply and remove temporary console.logs.
+No admin-area changes, no schema changes. Deliver only the files touched and the test output.
