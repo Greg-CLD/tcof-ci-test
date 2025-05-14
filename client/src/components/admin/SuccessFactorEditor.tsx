@@ -485,20 +485,35 @@ export default function SuccessFactorEditor() {
 
                     <CardContent>
                       {/* Using our helper function for diagnostic logs */}
-                      {logData('[ADMIN] Selected factor tasks before rendering:', selectedFactor.tasks)}
+                      {logData('[ADMIN] Selected factor tasks before rendering:', selectedFactor.tasks || {})}
                       {logData('[ADMIN] Tasks by stage:', {
-                        Identification: selectedFactor.tasks.Identification?.length || 0,
-                        Definition: selectedFactor.tasks.Definition?.length || 0,
-                        Delivery: selectedFactor.tasks.Delivery?.length || 0,
-                        Closure: selectedFactor.tasks.Closure?.length || 0
+                        Identification: selectedFactor.tasks?.Identification?.length || 0,
+                        Definition: selectedFactor.tasks?.Definition?.length || 0,
+                        Delivery: selectedFactor.tasks?.Delivery?.length || 0,
+                        Closure: selectedFactor.tasks?.Closure?.length || 0
                       })}
 
-                      <AdminStageTabs
-                        factor={selectedFactor}
-                        onTaskChange={handleUpdateTask}
-                        onAddTask={handleAddTask}
-                        onRemoveTask={handleDeleteTask}
-                      />
+                      {/* Make sure factor has a valid tasks object */}
+                      {selectedFactor && selectedFactor.tasks ? (
+                        <AdminStageTabs
+                          factor={{
+                            ...selectedFactor,
+                            tasks: {
+                              Identification: selectedFactor.tasks?.Identification || [],
+                              Definition: selectedFactor.tasks?.Definition || [],
+                              Delivery: selectedFactor.tasks?.Delivery || [],
+                              Closure: selectedFactor.tasks?.Closure || []
+                            }
+                          }}
+                          onTaskChange={(stage, index, value) => handleUpdateTask(selectedFactor.id, stage, index, value)}
+                          onAddTask={(stage) => handleAddTask(selectedFactor.id, stage)}
+                          onRemoveTask={(stage, index) => handleDeleteTask(selectedFactor.id, stage, index)}
+                        />
+                      ) : (
+                        <div className="p-4 text-center text-gray-500">
+                          Tasks data is not available. Please try refreshing the page.
+                        </div>
+                      )}
                     </CardContent>
                   </>
                 ) : (
