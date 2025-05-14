@@ -331,6 +331,13 @@ export const plansRelations = relations(plans, ({ one }) => ({
   }),
 }));
 
+export const projectTasksRelations = relations(projectTasks, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectTasks.projectId],
+    references: [projects.id]
+  }),
+}));
+
 // Define validation schemas
 export const projectInsertSchema = createInsertSchema(projects);
 export const projectSelectSchema = createSelectSchema(projects);
@@ -393,6 +400,15 @@ export const userSelectSchema = createSelectSchema(users);
 
 export const planInsertSchema = createInsertSchema(plans);
 export const planSelectSchema = createSelectSchema(plans);
+
+// Project tasks schemas
+export const projectTaskInsertSchema = createInsertSchema(projectTasks, {
+  text: (schema) => schema.min(1, "Task text is required"),
+  stage: (schema) => schema.min(1, "Stage is required"),
+  origin: (schema) => schema.min(1, "Origin is required"),
+  sourceId: (schema) => schema.min(1, "Source ID is required"),
+});
+export const projectTaskSelectSchema = createSelectSchema(projectTasks);
 
 // Add organisation schemas
 export const organisationInsertSchema = createInsertSchema(organisations);
@@ -505,3 +521,6 @@ export type SuccessFactorWithTasks = {
   };
 };
 export type InsertOrganisationHeuristic = z.infer<typeof organisationHeuristicInsertSchema>;
+
+export type ProjectTask = z.infer<typeof projectTaskSelectSchema>;
+export type InsertProjectTask = z.infer<typeof projectTaskInsertSchema>;
