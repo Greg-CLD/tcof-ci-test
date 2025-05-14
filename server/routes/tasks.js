@@ -72,14 +72,20 @@ router.post("/:projectId/tasks", isAuthenticated, async (req, res) => {
       try {
         // Find existing task record or create a new one
         const existingTasks = await projectsDb.getProjectTasksBySourceId(projectId, taskId);
-        const existingTask = existingTasks.find(t => t.id === taskId || t.sourceId === taskId);
+        const existingTask = existingTasks.length > 0 ? existingTasks[0] : null;
         
         if (existingTask) {
           // Update the existing task
           const updateData = {
             ...updates,
             sourceId: taskId,
-            stage,
+            stage: stage.toLowerCase(),
+            // Make sure we handle all possible fields
+            notes: updates.notes,
+            priority: updates.priority,
+            dueDate: updates.dueDate,
+            owner: updates.owner,
+            status: updates.status
           };
           
           const updatedTask = await projectsDb.updateProjectTask(existingTask.id, updateData);
@@ -94,10 +100,15 @@ router.post("/:projectId/tasks", isAuthenticated, async (req, res) => {
           const newTask = await projectsDb.createProjectTask({
             projectId,
             text: `Task for ${source} ${taskId}`, // Generic text as placeholder
-            stage,
+            stage: stage.toLowerCase(),
             origin: source,
             sourceId: taskId,
-            completed: updates.completed || false
+            completed: updates.completed || false,
+            notes: updates.notes || '',
+            priority: updates.priority || 'medium',
+            dueDate: updates.dueDate,
+            owner: updates.owner || '',
+            status: updates.status || 'To Do'
           });
           
           return res.status(201).json({

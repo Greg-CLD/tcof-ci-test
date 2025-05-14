@@ -77,6 +77,7 @@ interface TaskUpdates {
   priority?: 'low' | 'medium' | 'high';
   dueDate?: string;
   owner?: string;
+  status?: 'To Do' | 'Working On It' | 'Done';
 }
 
 export default function Checklist({ projectId }: ChecklistProps) {
@@ -430,7 +431,11 @@ export default function Checklist({ projectId }: ChecklistProps) {
           stage: newTaskStage.toLowerCase(),
           origin: newTaskSource === 'all' ? 'custom' : newTaskSource,
           sourceId: taskId,
-          completed: false
+          completed: false,
+          notes: '', // Initialize with empty notes
+          priority: 'medium', // Default priority
+          status: 'To Do', // Default status
+          owner: '' // Initialize with empty owner
         }
       );
       console.log('[CHECKLIST] Task created successfully', response);

@@ -695,6 +695,32 @@ export const projectsDb = {
   },
 
   /**
+   * Get project tasks by source ID
+   * @param projectId Project ID
+   * @param sourceId Source ID
+   * @returns Array of matching tasks
+   */
+  getProjectTasksBySourceId: async (projectId: string, sourceId: string): Promise<ProjectTask[]> => {
+    try {
+      // Load all tasks
+      const tasks = loadProjectTasks();
+      
+      // Filter tasks by project ID and source ID
+      const projectTasks = tasks.filter(t => 
+        t.projectId === projectId && 
+        t.sourceId === sourceId
+      );
+      
+      console.log(`Found ${projectTasks.length} tasks for project ${projectId} with sourceId ${sourceId}`);
+      
+      return projectTasks;
+    } catch (error) {
+      console.error('Error getting project tasks by sourceId:', error);
+      return [];
+    }
+  },
+  
+  /**
    * Get all policies for a project
    * @param projectId Project ID
    * @returns Array of policies for the project
