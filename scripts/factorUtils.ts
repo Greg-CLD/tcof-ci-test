@@ -42,7 +42,7 @@ export async function loadFactors(): Promise<FactorTask[]> {
     // Get all factors with their tasks
     const result = await db.execute(sql`
       SELECT f.id, f.title, f.description,
-             ft.stage, ft.task_text
+             ft.stage, ft.text
       FROM success_factors f
       LEFT JOIN success_factor_tasks ft ON f.id = ft.factor_id
       ORDER BY f.id, ft.stage
@@ -72,8 +72,8 @@ export async function loadFactors(): Promise<FactorTask[]> {
       }
 
       const factor = factorMap.get(row.id)!;
-      if (row.stage && row.task_text) {
-        factor.tasks[row.stage as keyof typeof factor.tasks].push(row.task_text);
+      if (row.stage && row.text) {
+        factor.tasks[row.stage as keyof typeof factor.tasks].push(row.text);
       }
     });
 

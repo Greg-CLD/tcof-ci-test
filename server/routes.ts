@@ -2618,27 +2618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         SELECT 
           sf.id, 
           sf.title, 
-          sf.description,
-          (
-            SELECT jsonb_build_object(
-              'Identification', COALESCE(jsonb_agg(task_text) FILTER (WHERE stage = 'Identification'), '[]'::jsonb),
-              'Definition', COALESCE(jsonb_agg(task_text) FILTER (WHERE stage = 'Definition'), '[]'::jsonb),
-              'Delivery', COALESCE(jsonb_agg(task_text) FILTER (WHERE stage = 'Delivery'), '[]'::jsonb),
-              'Closure', COALESCE(jsonb_agg(task_text) FILTER (WHERE stage = 'Closure'), '[]'::jsonb)
-            )
-            FROM (
-              SELECT 
-                sft.factor_id, 
-                sft.stage, 
-                sft.text as task_text
-              FROM 
-                success_factor_tasks sft
-              WHERE 
-                sft.factor_id = sf.id
-              ORDER BY 
-                sft.order
-            ) t
-          ) as tasks
+          sf.description
         FROM 
           success_factors sf
         ORDER BY 
@@ -2648,40 +2628,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db.execute(query);
       console.log(`API: Found ${result.rows.length} factors in the database`);
       
-      // Process each factor
-      const formattedFactors = result.rows.map((row: any) => {
-        let tasksObj = row.tasks;
-        
-        // Ensure tasks is an object with arrays for each stage
-        if (!tasksObj) {
-          tasksObj = {
+      // Get tasks for each factor from the tasks table directly
+      const taskResults = await Promise.all(
+        result.rows.map(async (row: any) => {
+          // Query tasks for each factor
+          const tasksQuery = `
+            SELECT stage, text 
+            FROM success_factor_tasks 
+            WHERE factor_id = $1
+            ORDER BY stage, "order"
+          `;
+          
+          const tasksResult = await db.execute(tasksQuery, [row.id]);
+          
+          // Create a map of stage -> tasks
+          const tasksByStage = {
             Identification: [],
             Definition: [],
             Delivery: [],
             Closure: []
           };
-        }
-        
-        // Make sure each stage has a non-null array
-        const formattedTasks = {
-          Identification: Array.isArray(tasksObj.Identification) ? tasksObj.Identification.filter(Boolean) : [],
-          Definition: Array.isArray(tasksObj.Definition) ? tasksObj.Definition.filter(Boolean) : [],
-          Delivery: Array.isArray(tasksObj.Delivery) ? tasksObj.Delivery.filter(Boolean) : [],
-          Closure: Array.isArray(tasksObj.Closure) ? tasksObj.Closure.filter(Boolean) : []
-        };
-        
-        return {
-          id: String(row.id),
-          title: String(row.title),
-          description: row.description ? String(row.description) : '',
-          category: "Uncategorized", // Add category to match the format expected by the client
-          tasks: formattedTasks
-        };
-      });
+          
+          // Populate the tasks for each stage
+          tasksResult.rows.forEach((taskRow: any) => {
+            if (taskRow.stage && taskRow.text) {
+              if (Array.isArray(tasksByStage[taskRow.stage as keyof typeof tasksByStage])) {
+                tasksByStage[taskRow.stage as keyof typeof tasksByStage].push(taskRow.text);
+              }
+            }
+          });
+          
+          return {
+            id: String(row.id),
+            title: String(row.title),
+            description: row.description ? String(row.description) : '',
+            category: "Uncategorized", // Add category to match the format expected by the client
+            tasks: tasksByStage
+          };
+        })
+      );
       
       // Log detailed data for debugging
-      if (formattedFactors.length > 0) {
-        const sample = formattedFactors[0];
+      if (taskResults.length > 0) {
+        const sample = taskResults[0];
         console.log(`First factor has ${sample.tasks.Identification.length} identification tasks`);
         
         if (sample.tasks.Identification.length > 0) {
@@ -2692,8 +2681,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Return the correctly formatted factors
-      console.log(`API: Returning ${formattedFactors.length} formatted factors`);
-      res.json(formattedFactors);
+      console.log(`API: Returning ${taskResults.length} formatted factors`);
+      res.json(taskResults);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
