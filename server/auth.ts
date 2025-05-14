@@ -92,22 +92,22 @@ export function setupAuth(app: Express) {
     })
   );
   
-  // Debug middleware to track session data
+  // Initialize passport - must come after session but before our own middleware
+  app.use(passport.initialize());
+  app.use(passport.session());
+  
+  // Debug middleware to track session data - important: this comes AFTER passport initialization
   app.use((req, res, next) => {
     const sessionData = req.session as any;
     console.log('Session debug:', { 
       hasSession: !!req.session,
       sessionID: req.sessionID,
-      isAuthenticated: req.isAuthenticated(),
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
       passport: sessionData?.passport,
       cookie: sessionData?.cookie
     });
     next();
   });
-
-  // Initialize passport
-  app.use(passport.initialize());
-  app.use(passport.session());
 
   // Configure local strategy
   passport.use(

@@ -66,7 +66,7 @@ export function useProjectTasks(projectId?: string) {
     error,
     refetch
   } = useQuery<ProjectTask[]>({
-    queryKey: ['api', 'projects', projectId, 'tasks'],
+    queryKey: projectId ? [`/api/projects/${projectId}/tasks`] : [],
     queryFn: async () => {
       if (!projectId) return [];
       
@@ -134,11 +134,11 @@ export function useProjectTasks(projectId?: string) {
     },
     onSuccess: async (newTask) => {
       console.log('Invalidating task cache after create');
-      // First invalidate the query cache
-      await queryClient.invalidateQueries({ queryKey: ['api', 'projects', projectId, 'tasks'] });
+      // First invalidate the query cache with the correct query key format
+      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       
       // Then optimistically update the cache to avoid waiting for refetch
-      queryClient.setQueryData(['api', 'projects', projectId, 'tasks'], (oldData: ProjectTask[] | undefined) => {
+      queryClient.setQueryData([`/api/projects/${projectId}/tasks`], (oldData: ProjectTask[] | undefined) => {
         if (!oldData) return [newTask];
         return [...oldData, newTask];
       });
@@ -180,11 +180,11 @@ export function useProjectTasks(projectId?: string) {
     },
     onSuccess: async (updatedTask) => {
       console.log('Invalidating task cache after update');
-      // First invalidate the query cache
-      await queryClient.invalidateQueries({ queryKey: ['api', 'projects', projectId, 'tasks'] });
+      // First invalidate the query cache with the correct query key format
+      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       
       // Then optimistically update the cache to avoid waiting for refetch
-      queryClient.setQueryData(['api', 'projects', projectId, 'tasks'], (oldData: ProjectTask[] | undefined) => {
+      queryClient.setQueryData([`/api/projects/${projectId}/tasks`], (oldData: ProjectTask[] | undefined) => {
         if (!oldData) return [updatedTask];
         return oldData.map(task => task.id === updatedTask.id ? updatedTask : task);
       });
@@ -207,7 +207,7 @@ export function useProjectTasks(projectId?: string) {
     },
     onSuccess: async () => {
       // Use consistent query key format for invalidation
-      await queryClient.invalidateQueries({ queryKey: ['api', 'projects', projectId, 'tasks'] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       // Manually refetch to get fresh data
       const freshData = await refetch();
       console.log('Refetched list after delete:', freshData.data);
