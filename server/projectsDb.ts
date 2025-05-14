@@ -988,6 +988,7 @@ export const projectsDb = {
    * @returns The updated task or null if update failed
    */
   updateProjectTask: async (
+    projectId: string,
     taskId: string,
     data: {
       text?: string;

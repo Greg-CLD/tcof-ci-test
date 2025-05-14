@@ -1,9 +1,16 @@
+import { v4 as uuidv4 } from 'uuid';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 
 import { ProjectTask as DBProjectTask } from '@shared/schema';
 
+
+// Validate UUID format
+function isValidUUID(uuid: string) {
+  const regexExp = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return regexExp.test(uuid);
+}
 // Local interface for client-side project tasks
 interface ProjectTask {
   id: string;
