@@ -90,8 +90,15 @@ export function useProjects() {
       return response.json();
     },
     onSuccess: (newProject) => {
+      // Store the new project ID in localStorage for easy access
+      localStorage.setItem('currentProjectId', newProject.id);
+      localStorage.setItem('selectedProjectId', newProject.id);
+      
+      console.log('Created new project, ID stored:', newProject.id);
+      
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
       // Also add the new project to the query cache
       queryClient.setQueryData(['/api/projects', newProject.id], newProject);
     },
@@ -119,15 +126,18 @@ export function useProjects() {
     },
     onSuccess: (updatedProject) => {
       // Ensure localStorage is updated with the correct project ID
-      const selectedProjectId = localStorage.getItem('selectedProjectId');
-      if (!selectedProjectId || selectedProjectId === updatedProject.id) {
+      const storedProjectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
+      if (!storedProjectId || storedProjectId === updatedProject.id) {
+        // Use consistent key for project ID
+        localStorage.setItem('currentProjectId', updatedProject.id);
+        // Keep old key for backward compatibility
         localStorage.setItem('selectedProjectId', updatedProject.id);
       }
 
       // Invalidate projects query to force a refetch
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
 
-      // Also invalidate the specific project query to update ProjectContext
+      // Also invalidate the specific project query
       queryClient.invalidateQueries({ queryKey: ['/api/projects', updatedProject.id] });
 
       // Update the project in the cache directly to ensure immediate consistency
@@ -281,30 +291,16 @@ export function useProjects() {
   };
 
   /**
-   * Get the currently selected project from ProjectContext
+   * Get the currently selected project using a combination of context and localStorage
    * @returns The selected project or undefined if none selected
    */
   const getSelectedProject = (): Project | undefined => {
-    const { currentProjectId } = useProject();
+    // Get the project ID from localStorage directly
+    const projectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
+    if (!projectId) return undefined;
     
-    // First check from our centralized ProjectContext
-    if (currentProjectId) {
-      const projectFromContext = projects.find(p => p.id === currentProjectId);
-      if (projectFromContext) return projectFromContext;
-    }
-    
-    // Fallback for backward compatibility - check from localStorage using the old key
-    const oldStoredProjectId = localStorage.getItem('selectedProjectId');
-    if (oldStoredProjectId) {
-      console.log('Migrating from old selectedProjectId key:', oldStoredProjectId);
-      // Migrate to the new context
-      if (currentProjectId !== oldStoredProjectId) {
-        localStorage.setItem('currentProjectId', oldStoredProjectId);
-      }
-      return projects.find(p => p.id === oldStoredProjectId);
-    }
-    
-    return undefined;
+    // Find the project in the projects list
+    return projects.find(p => p.id === projectId);
   };
 
   /**
@@ -319,18 +315,15 @@ export function useProjects() {
   };
 
   /**
-   * Sets the currently selected project ID in ProjectContext and localStorage
+   * Sets the currently selected project ID in localStorage
    * @param id The project ID to set as selected
    */
   const setSelectedProjectId = (id: string) => {
-    // Get the project context's update function
-    const { setCurrentProjectId } = useProject();
-    
-    // Update the project context (this will also update localStorage)
-    setCurrentProjectId(id);
-    
-    // For backward compatibility, maintain the old key too
+    // Store in both keys for backward compatibility
+    localStorage.setItem('currentProjectId', id);
     localStorage.setItem('selectedProjectId', id);
+    
+    console.log('Project selection updated:', id);
     
     // Invalidate projects query to ensure we have fresh data
     queryClient.invalidateQueries({ queryKey: ['/api/projects'] });

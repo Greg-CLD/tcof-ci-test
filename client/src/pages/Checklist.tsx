@@ -97,25 +97,32 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
   // 3. Selected project from localStorage
   const urlProjectId = params.projectId;
   const selectedProject = getSelectedProject();
+  const storedProjectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
   
   // Set the final project ID using priority order
-  const currentProjectId = urlProjectId || propProjectId || selectedProject?.id;
+  const currentProjectId = urlProjectId || propProjectId || selectedProject?.id || storedProjectId;
   
   // Store the project ID in localStorage for consistency across refreshes
   useEffect(() => {
     if (currentProjectId) {
-      console.log('Setting selected project ID to:', currentProjectId);
+      console.log('Checklist: Setting project ID to localStorage and state:', currentProjectId);
+      
+      // Always keep storage consistent - use both keys for backward compatibility
+      localStorage.setItem('currentProjectId', currentProjectId);
+      localStorage.setItem('selectedProjectId', currentProjectId);
+      
+      // Also update the selected project in our hook
       setSelectedProjectId(currentProjectId);
       
       // If we're on the non-specific /checklist route but have a project ID, 
       // update URL to include project ID for better persistence on refresh
       if (!urlProjectId && window.location.pathname === '/checklist') {
-        console.log('Updating URL to include project ID:', currentProjectId);
+        console.log('Checklist: Updating URL to include project ID:', currentProjectId);
         navigate(`/projects/${currentProjectId}/checklist`, { replace: true });
       }
     } else if (isAuthenticated && !currentProjectId) {
       // If no project ID available but user is logged in, redirect to projects page
-      console.log('No project ID available, redirecting to projects');
+      console.log('Checklist: No project ID available, redirecting to organisations');
       navigate('/organisations');
     }
   }, [currentProjectId, urlProjectId, isAuthenticated, navigate, setSelectedProjectId]);
