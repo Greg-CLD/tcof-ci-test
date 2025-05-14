@@ -89,7 +89,7 @@ export default function FactorAccordion({ selectedProjectId }: FactorAccordionPr
   if (error) {
     return (
       <ErrorMessage 
-        title="Failed to load success factors" 
+        title="Failed to load project tasks" 
         message={error} 
         onRetry={() => window.location.reload()}
       />

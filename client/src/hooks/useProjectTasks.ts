@@ -52,14 +52,14 @@ interface UpdateTaskParams {
 export function useProjectTasks(projectId?: string) {
   const queryClient = useQueryClient();
   
-  // Query to fetch tasks for the project
+  // Query to fetch tasks for the project directly from database
   const { 
     data: tasks,
     isLoading,
     error,
     refetch
   } = useQuery<ProjectTask[]>({
-    queryKey: [`/api/projects/${projectId}/tasks`],
+    queryKey: ['/api/projects', projectId, 'tasks'],
     enabled: !!projectId,
   });
   
@@ -79,7 +79,7 @@ export function useProjectTasks(projectId?: string) {
       return resJson;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'tasks'] });
       // Manually refetch to get fresh data
       const freshData = await refetch();
       console.log('Refetched list after create:', freshData.data);
@@ -99,7 +99,7 @@ export function useProjectTasks(projectId?: string) {
       return resJson;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'tasks'] });
       // Manually refetch to get fresh data
       const freshData = await refetch();
       console.log('Refetched list after update:', freshData.data);
@@ -117,7 +117,7 @@ export function useProjectTasks(projectId?: string) {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'tasks'] });
     },
     onError: (error) => {
       console.error('Error deleting task:', error);
