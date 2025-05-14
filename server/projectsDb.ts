@@ -494,11 +494,22 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         paramsLength: insertParams.length
       });
       
-      // Execute query directly with proper parameters
-      const insertResult = await db.execute(insertSql, insertParams);
+      // Create a variable for the result outside the try block
+      let insertResult;
       
-      if (!insertResult.rows || insertResult.rows.length === 0) {
-        throw new Error('Failed to create new task');
+      try {
+        // Execute query directly with proper parameters
+        console.log(`SQL insert query: ${insertSql.replace(/\s+/g, ' ')}`);
+        console.log(`Parameter count: ${insertParams.length}, expected 14`);
+        
+        insertResult = await db.execute(insertSql, insertParams);
+        
+        if (!insertResult.rows || insertResult.rows.length === 0) {
+          throw new Error('Failed to create new task');
+        }
+      } catch (sqlError) {
+        console.error('SQL error executing insert:', sqlError);
+        throw sqlError;
       }
       
       const newTask = insertResult.rows[0];
@@ -979,12 +990,25 @@ export const projectsDb = {
         updatedAt: new Date().toISOString(), // Will be set by database
       };
       
-      // Save to database
-      const savedTask = await saveProjectTask(task);
+      console.log('About to save task to database:', {
+        projectId: task.projectId,
+        text: task.text,
+        stage: task.stage,
+        origin: task.origin,
+        taskId: task.id
+      });
       
-      if (savedTask) {
-        console.log(`Task saved to database → ${savedTask.id}`);
-        return savedTask;
+      // Save to database
+      try {
+        const savedTask = await saveProjectTask(task);
+        
+        if (savedTask) {
+          console.log(`Task saved to database → ${savedTask.id}`);
+          return savedTask;
+        }
+      } catch (error) {
+        console.error('Error saving task:', error);
+        throw error;
       }
       
       return null;

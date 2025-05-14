@@ -336,6 +336,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { projectId } = req.params;
       const taskData = req.body;
+      
+      console.log(`Creating tasks for project ${projectId}, isAuthenticated: ${req.isAuthenticated()}`);
+      console.log('Task data:', JSON.stringify(taskData));
 
       // If an array is passed, handle each task individually
       if (Array.isArray(taskData)) {
