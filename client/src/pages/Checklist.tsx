@@ -180,18 +180,42 @@ export default function Checklist({ projectId }: ChecklistProps) {
         `/api/projects/${currentProjectId}/tasks`
       );
       
-      // Create a lookup table for completed statuses
+      // Store both custom tasks and task status map
+      const projectTasks: UnifiedTask[] = [];
       const taskStatusMap: Record<string, boolean> = {};
+      
       if (Array.isArray(response)) {
         response.forEach((task: any) => {
+          // Track completion status by source ID for referencing canonical tasks
           if (task.sourceId) {
             taskStatusMap[task.sourceId] = !!task.completed;
           }
+          
+          // Create unified task object for custom tasks and factor tasks
+          const unifiedTask: UnifiedTask = {
+            id: task.id,
+            text: task.text,
+            completed: !!task.completed,
+            stage: (task.stage.charAt(0).toUpperCase() + task.stage.slice(1)) as Stage,
+            source: task.origin as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
+            sourceId: task.sourceId
+          };
+          
+          // Add source name based on origin
+          if (task.origin === 'factor' && task.sourceId) {
+            const factor = factors?.find(f => f.id === task.sourceId.split('-')[0]);
+            if (factor) {
+              unifiedTask.sourceName = factor.title.split(' ')[0];
+            }
+          }
+          
+          // Add to project tasks array (will be merged with canonical tasks later)
+          projectTasks.push(unifiedTask);
         });
       }
       
       // Start with canonical tasks
-      const allTasks: UnifiedTask[] = canonicalTasks.map((task: any) => {
+      const canonicalTasksList: UnifiedTask[] = canonicalTasks.map((task: any) => {
         // Check if this task exists in our status map or the plan
         let completed = false;
         
@@ -216,9 +240,18 @@ export default function Checklist({ projectId }: ChecklistProps) {
           completed,
           stage: task.stage || 'Identification',
           source: 'factor',
-          sourceName: task.factorCode || task.factorId
+          sourceName: task.factorCode || task.factorId,
+          sourceId: task.id
         };
       });
+      
+      // Merge canonical tasks with custom tasks from project_tasks table
+      // Filter out canonical tasks that already exist in project tasks to avoid duplicates
+      const existingTaskIds = new Set(projectTasks.map(task => task.sourceId).filter(Boolean));
+      const filteredCanonicalTasks = canonicalTasksList.filter(task => !existingTaskIds.has(task.id));
+      
+      // Combine both task types
+      const allTasks: UnifiedTask[] = [...filteredCanonicalTasks, ...projectTasks];
       
       // Organize tasks by stage
       const byStage: Record<Stage, UnifiedTask[]> = {
@@ -371,11 +404,17 @@ export default function Checklist({ projectId }: ChecklistProps) {
         return updatedTasks;
       });
       
-      // Send to server
+      // Send to server - Use the correct endpoint path and format
       const response = await apiRequest(
         "POST",
-        `/api/project-tasks`,
-        taskData
+        `/api/projects/${currentProjectId}/tasks`,
+        {
+          text: newTaskText,
+          stage: newTaskStage.toLowerCase(),
+          origin: newTaskSource === 'all' ? 'custom' : newTaskSource,
+          sourceId: taskId,
+          completed: false
+        }
       );
       console.log('[CHECKLIST] Task created successfully', response);
       
