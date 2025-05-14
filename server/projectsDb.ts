@@ -40,13 +40,13 @@ export interface ProjectTask {
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
   origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
-  sourceId: string;
-  completed?: boolean;
-  notes?: string;
-  priority?: string;
-  dueDate?: string;
-  owner?: string;
-  status?: string;
+  sourceId: string;   // Required for consistent tracking
+  completed: boolean; // Default to false, not nullable
+  notes: string;      // Default to empty string, not nullable
+  priority: string;   // Default to empty string, not nullable
+  dueDate: string;    // Default to empty string, not nullable
+  owner: string;      // Default to empty string, not nullable
+  status: string;     // Default to 'pending', not nullable
   createdAt: string;  // String format for client side compatibility
   updatedAt: string;  // String format for client side compatibility
 }
@@ -337,18 +337,18 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
         console.log(`Loaded ${result.rows.length} tasks from database for project ${projectId}`);
         
         return result.rows.map(task => ({
-          id: String(task.id),
-          projectId: String(task.project_id),
-          text: String(task.text),
-          stage: String(task.stage).toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure',
-          origin: String(task.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+          id: String(task.id || ''),
+          projectId: String(task.project_id || ''),
+          text: String(task.text || ''),
+          stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
+          origin: (String(task.origin || 'custom') as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
           sourceId: String(task.source_id || ''),
-          completed: Boolean(task.completed),
-          notes: task.notes ? String(task.notes) : '',
-          priority: task.priority ? String(task.priority) : '',
-          dueDate: task.due_date ? String(task.due_date) : '',
-          owner: task.owner ? String(task.owner) : '',
-          status: task.status ? String(task.status) : '',
+          completed: Boolean(task.completed || false),
+          notes: String(task.notes || ''),
+          priority: String(task.priority || ''),
+          dueDate: String(task.due_date || ''),
+          owner: String(task.owner || ''),
+          status: String(task.status || 'pending'),
           createdAt: task.created_at ? new Date(String(task.created_at)).toISOString() : new Date().toISOString(),
           updatedAt: task.updated_at ? new Date(String(task.updated_at)).toISOString() : new Date().toISOString()
         }));
@@ -1254,22 +1254,22 @@ export const projectsDb = {
       
       console.log(`Found ${projectTasks.length} tasks for project ${projectId} with sourceId ${sourceId}`);
       
-      // Convert to ProjectTask interface with proper type handling
+      // Convert to ProjectTask interface with proper type handling and defaults
       return projectTasks.map(task => ({
-        id: task.id,
-        projectId: String(task.projectId), // Ensure consistent string type
-        text: task.text,
-        stage: task.stage as 'identification' | 'definition' | 'delivery' | 'closure',
-        origin: task.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
-        sourceId: task.sourceId,
-        completed: task.completed === null ? false : task.completed,
-        notes: task.notes || '',
-        priority: task.priority || '',
-        dueDate: task.dueDate || '',
-        owner: task.owner || '',
-        status: task.status || '',
-        createdAt: task.createdAt ? task.createdAt.toISOString() : new Date().toISOString(),
-        updatedAt: task.updatedAt ? task.updatedAt.toISOString() : new Date().toISOString()
+        id: String(task.id || ''),
+        projectId: String(task.projectId || ''), // Ensure consistent string type
+        text: String(task.text || ''),
+        stage: (String(task.stage || 'identification') as 'identification' | 'definition' | 'delivery' | 'closure'),
+        origin: (String(task.origin || 'custom') as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
+        sourceId: String(task.sourceId || ''),
+        completed: Boolean(task.completed || false),
+        notes: String(task.notes || ''),
+        priority: String(task.priority || ''),
+        dueDate: String(task.dueDate || ''),
+        owner: String(task.owner || ''),
+        status: String(task.status || 'pending'),
+        createdAt: String(task.createdAt || new Date().toISOString()),
+        updatedAt: String(task.updatedAt || new Date().toISOString())
       }));
     } catch (error) {
       console.error('Error getting project tasks by sourceId:', error);
