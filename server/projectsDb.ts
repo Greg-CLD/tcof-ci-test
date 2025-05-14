@@ -36,7 +36,7 @@ export interface Project {
 // Project task data type
 export interface ProjectTask {
   id: string;
-  projectId: string;
+  projectId: number;  // Changed to number to match the schema
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
   origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
@@ -47,8 +47,8 @@ export interface ProjectTask {
   dueDate?: string;
   owner?: string;
   status?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;    // Changed to Date to match the schema
+  updatedAt: Date;    // Changed to Date to match the schema
 }
 
 // Project policy data type
@@ -145,7 +145,7 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
     let query = db.select().from(projectTasksTable);
     
     if (projectId) {
-      query = query.where(eq(projectTasksTable.projectId, parseInt(projectId)));
+      query = query.where(eq(projectTasksTable.projectId, projectId));
     }
     
     const tasks = await query;
