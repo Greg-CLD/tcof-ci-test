@@ -47,31 +47,33 @@ async function importOrganisationRoutes() {
 async function importProjectRoutes() {
   try {
     const module = await import('./routes/projects.js');
-
-    // Test endpoints
-    app.get('/api/success-factors/test-empty', (_, res) => {
-      res.json([]);
-    });
-
-    app.get('/api/success-factors/test-error', (_, res) => {
-      res.status(500).json({ error: 'Test error' });
-    });
-
-    app.get('/api/success-factors/test-mock', (_, res) => {
-      res.json([
-        { id: '1', factor: 'Test Factor 1', description: 'Description 1' },
-        { id: '2', factor: 'Test Factor 2', description: 'Description 2' },
-        { id: '3', factor: 'Test Factor 3', description: 'Description 3' },
-        { id: '4', factor: 'Test Factor 4', description: 'Description 4' },
-        { id: '5', factor: 'Test Factor 5', description: 'Description 5' }
-      ]);
-    });
-
     return module.default;
   } catch (error) {
     console.error('Failed to import project routes:', error);
     return null;
   }
+}
+
+// Add test API endpoints for debugging success factors
+function registerTestSuccessFactorsEndpoints(app: Express) {
+  // Test endpoints for success factors diagnostics
+  app.get('/api/success-factors/test-empty', (req: Request, res: Response) => {
+    res.json([]);
+  });
+
+  app.get('/api/success-factors/test-error', (req: Request, res: Response) => {
+    res.status(500).json({ error: 'Test error' });
+  });
+
+  app.get('/api/success-factors/test-mock', (req: Request, res: Response) => {
+    res.json([
+      { id: '1', factor: 'Test Factor 1', description: 'Description 1' },
+      { id: '2', factor: 'Test Factor 2', description: 'Description 2' },
+      { id: '3', factor: 'Test Factor 3', description: 'Description 3' },
+      { id: '4', factor: 'Test Factor 4', description: 'Description 4' },
+      { id: '5', factor: 'Test Factor 5', description: 'Description 5' }
+    ]);
+  });
 }
 
 // Store success factors in memory for faster access with fallback to DB
@@ -147,6 +149,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up auth routes and middleware
   setupAuth(app);
 
+  // Register test endpoints for debugging success factors
+  registerTestSuccessFactorsEndpoints(app);
+
   // Register organization routes
   try {
     const organisationRoutes = await importOrganisationRoutes();
@@ -176,6 +181,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Debug endpoint
   app.get('/api/debug', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+  
+  // Success factors endpoint for frontend use
+  app.get('/api/success-factors', async (req: Request, res: Response) => {
+    try {
+      console.log('Getting success factors for frontend...');
+      const factors = await getFactors();
+      console.log(`Found ${factors.length} success factors`);
+      res.json(factors);
+    } catch (error) {
+      console.error('Error fetching success factors:', error);
+      res.status(500).json({ message: 'Failed to load success factors' });
+    }
   });
 
   // Completely public endpoint for getting tasks for the checklist - no auth check with special path
