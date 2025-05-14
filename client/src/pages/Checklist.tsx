@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Stage } from '@/lib/plan-db';
-import { useLocation } from 'wouter';
+import { useLocation, useParams } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePlan } from '@/contexts/PlanContext';
 import { useProjects } from '@/hooks/useProjects';
 import { useFactors } from '@/hooks/useFactors';
+import { useAuth } from '@/hooks/auth-hook';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
@@ -81,14 +82,43 @@ interface TaskUpdates {
   status?: 'To Do' | 'Working On It' | 'Done';
 }
 
-export default function Checklist({ projectId }: ChecklistProps) {
+export default function Checklist({ projectId: propProjectId }: ChecklistProps) {
   const { toast } = useToast();
   const { plan } = usePlan() as { plan: any };
-  const { getSelectedProject } = useProjects();
+  const { getSelectedProject, setSelectedProjectId } = useProjects();
+  const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
+  const params = useParams<{ projectId: string }>();
+  const [_, navigate] = useLocation();
 
-  // Current project ID
-  const currentProjectId = projectId || getSelectedProject()?.id;
+  // Determine the current project ID with this priority: 
+  // 1. URL parameter (highest priority)
+  // 2. Prop passed to component
+  // 3. Selected project from localStorage
+  const urlProjectId = params.projectId;
+  const selectedProject = getSelectedProject();
+  
+  // Set the final project ID using priority order
+  const currentProjectId = urlProjectId || propProjectId || selectedProject?.id;
+  
+  // Store the project ID in localStorage for consistency across refreshes
+  useEffect(() => {
+    if (currentProjectId) {
+      console.log('Setting selected project ID to:', currentProjectId);
+      setSelectedProjectId(currentProjectId);
+      
+      // If we're on the non-specific /checklist route but have a project ID, 
+      // update URL to include project ID for better persistence on refresh
+      if (!urlProjectId && window.location.pathname === '/checklist') {
+        console.log('Updating URL to include project ID:', currentProjectId);
+        navigate(`/projects/${currentProjectId}/checklist`, { replace: true });
+      }
+    } else if (isAuthenticated && !currentProjectId) {
+      // If no project ID available but user is logged in, redirect to projects page
+      console.log('No project ID available, redirecting to projects');
+      navigate('/organisations');
+    }
+  }, [currentProjectId, urlProjectId, isAuthenticated, navigate, setSelectedProjectId]);
 
   // Success factors
   const { factors } = useFactors();
