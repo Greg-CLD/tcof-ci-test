@@ -80,16 +80,46 @@ export default function Checklist({ projectId }: ChecklistProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Get canonical tasks - this is the core of our solution
+  // Get success factors with tasks - this is the core of our solution
   // We use these tasks even without a plan
-  const { data: canonicalTasks } = useQuery({
-    queryKey: ['/api/admin/tcof-tasks'],
+  const { data: successFactors } = useQuery({
+    queryKey: ['/api/tcof-tasks'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/tcof-tasks');
+      const res = await fetch('/api/tcof-tasks');
       if (!res.ok) throw new Error('Failed to load canonical tasks');
       return res.json();
     }
   });
+  
+  // Transform success factors into a flat list of tasks for the checklist
+  const canonicalTasks = React.useMemo(() => {
+    if (!successFactors) return [];
+    
+    const tasks: any[] = [];
+    
+    // Process each factor and its tasks by stage
+    successFactors.forEach((factor: any) => {
+      if (!factor.tasks) return;
+      
+      // Process tasks for each stage
+      Object.entries(factor.tasks).forEach(([stageName, stageTasks]) => {
+        if (!Array.isArray(stageTasks)) return;
+        
+        // Add each task to our flat list with metadata
+        (stageTasks as string[]).forEach((taskText: string) => {
+          tasks.push({
+            id: `${factor.id}-${uuidv4().substring(0, 8)}`,
+            title: taskText,
+            stage: stageName,
+            factorId: factor.id,
+            factorCode: factor.title.split(' ')[0],
+          });
+        });
+      });
+    });
+    
+    return tasks;
+  }, [successFactors]);
 
   // Helper function to refresh task state
   const refreshTasksState = async () => {

@@ -2582,6 +2582,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint for getting tasks for the checklist - no admin required
+  app.get('/api/tcof-tasks', async (req: Request, res: Response) => {
+    try {
+      // Get success factors from database
+      const factors = await getFactors();
+
+      if (factors && factors.length > 0) {
+        return res.json(factors);
+      }
+
+      // Fall back to file-based storage if database fails
+      try {
+        const successFactorsData = fs.readFileSync(path.join(process.cwd(), 'data', 'successFactors.json'), 'utf8');
+        const parsedFactors = JSON.parse(successFactorsData);
+        return res.json(parsedFactors);
+      } catch (sfError: unknown) {
+        console.warn('successFactors.json not found, falling back to tcofTasks.json');
+      }
+
+      // Last resort fallback
+      const coreTasksData = fs.readFileSync(path.join(process.cwd(), 'data', 'tcofTasks.json'), 'utf8');
+      res.json(JSON.parse(coreTasksData));
+    } catch (error: unknown) {
+      console.error('Error loading tasks data for checklist:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load tasks data';
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+
   app.post('/api/admin/tcof-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
 
