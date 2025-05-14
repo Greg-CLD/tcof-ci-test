@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FeedbackItem as FeedbackItemType } from './feedback-context';
 import { X, CheckCircle, AlertTriangle, Info, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Import the type directly
+import type { FeedbackItem as FeedbackItemType } from './feedback-context';
 
 interface FeedbackItemProps {
   item: FeedbackItemType;

@@ -3,6 +3,7 @@ import { useFeedback } from '@/hooks/use-feedback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { FeedbackButton, FeedbackInput, FeedbackCard } from '@/components/ui/feedback';
+import { FeedbackItem } from '@/components/ui/feedback/feedback-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export default function FeedbackDemo() {

@@ -1,4 +1,6 @@
-import { useFeedback as useContextFeedback, FeedbackType } from '@/components/ui/feedback/feedback-context';
+// Import directly from the source file to avoid circular dependencies
+import { useFeedback as useContextFeedback } from '@/components/ui/feedback/feedback-context';
+import type { FeedbackType } from '@/components/ui/feedback/feedback-context';
 
 /**
  * Custom hook for easier access to feedback functionality across the application

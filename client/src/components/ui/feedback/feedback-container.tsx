@@ -2,6 +2,7 @@ import React from 'react';
 import { useFeedback } from './feedback-context';
 import { FeedbackItem } from './feedback-item';
 import { createPortal } from 'react-dom';
+import type { FeedbackItem as FeedbackItemType } from './feedback-context';
 
 export function FeedbackContainer() {
   const { feedbackItems, removeFeedback } = useFeedback();
@@ -12,7 +13,7 @@ export function FeedbackContainer() {
   }
   
   // Group feedbacks by position
-  const groupedByPosition: Record<string, typeof feedbackItems> = {
+  const groupedByPosition: Record<string, FeedbackItemType[]> = {
     'top': [],
     'right': [],
     'bottom': [],
