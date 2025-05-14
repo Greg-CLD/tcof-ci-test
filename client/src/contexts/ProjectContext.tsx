@@ -9,17 +9,12 @@ export type ProjectContextType = {
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  // Initialize state from localStorage if available
+  // Initialize state from localStorage if available - checking both keys for backward compatibility
   const [currentProjectId, setProjectId] = useState<string | null>(() => {
-    const saved = localStorage.getItem('currentProjectId');
+    // Try the primary key first, then fall back to the legacy key
+    const saved = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
     console.log('ProjectContext: Initial load from localStorage:', saved);
-    if (saved) {
-      // Ensure consistency by setting both keys
-      localStorage.setItem('currentProjectId', saved);
-      localStorage.setItem('selectedProjectId', saved);
-      return saved;
-    }
-    return null;
+    return saved || null;
   });
 
   // Update localStorage whenever currentProjectId changes
