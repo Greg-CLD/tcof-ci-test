@@ -8,6 +8,8 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as factorsDb from './factorsDb';
 import type { FactorTask } from '../scripts/factorUtils';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 
 // Define the Stage type for canonical checklist tasks
 type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
@@ -2612,12 +2614,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Admin API: Getting all success factors individually...');
+      console.log('Admin API: Getting all success factors from view directly...');
       
-      // Get the IDs of all factors first
+      // Query the same view that getFactor uses, but without a WHERE clause
       const result = await db.execute(sql`
-        SELECT id 
-        FROM success_factors 
+        SELECT id, title, description, tasks
+        FROM v_success_factors_full
         ORDER BY id
       `);
       
@@ -2626,37 +2628,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      console.log(`Found ${result.rows.length} factor IDs`);
+      console.log(`Found ${result.rows.length} factors from view`);
       
-      // Fetch each factor individually using the same method as the single-factor endpoint
-      const factorPromises = result.rows.map(async (row: any) => {
-        const factorId = row.id;
-        return await factorsDb.getFactor(factorId);
+      // Process each factor row the same way getFactor does
+      const factors = result.rows.map((row: any) => {
+        return {
+          id: String(row.id),
+          title: String(row.title),
+          description: row.description ? String(row.description) : '',
+          tasks: row.tasks as {
+            Identification: string[];
+            Definition: string[];
+            Delivery: string[];
+            Closure: string[];
+          }
+        };
       });
       
-      // Wait for all promises to resolve
-      const factors = await Promise.all(factorPromises);
-      
-      // Filter out any null responses (in case a factor was deleted during the operation)
-      const validFactors = factors.filter(f => f !== null);
-      
-      console.log(`Successfully retrieved ${validFactors.length} factors with full task data`);
-      
-      // Sample check on the first factor
-      if (validFactors.length > 0) {
-        const sample = validFactors[0];
-        console.log('Admin API: Sample of properly structured factor:', JSON.stringify({
-          id: sample!.id,
-          taskCount: {
-            Identification: sample!.tasks.Identification.length,
-            Definition: sample!.tasks.Definition.length,
-            Delivery: sample!.tasks.Delivery.length,
-            Closure: sample!.tasks.Closure.length
+      // Verify the data structure for the first factor
+      if (factors.length > 0) {
+        const sample = factors[0];
+        console.log('Admin API: First factor tasks sample:', {
+          id: sample.id,
+          title: sample.title,
+          taskCounts: {
+            Identification: Array.isArray(sample.tasks.Identification) ? sample.tasks.Identification.length : 'NOT ARRAY',
+            Definition: Array.isArray(sample.tasks.Definition) ? sample.tasks.Definition.length : 'NOT ARRAY',
+            Delivery: Array.isArray(sample.tasks.Delivery) ? sample.tasks.Delivery.length : 'NOT ARRAY',
+            Closure: Array.isArray(sample.tasks.Closure) ? sample.tasks.Closure.length : 'NOT ARRAY'
           }
-        }));
+        });
+        
+        // Also log first few tasks if they exist
+        const idTasks = sample.tasks.Identification;
+        if (Array.isArray(idTasks) && idTasks.length > 0) {
+          console.log('Sample Identification tasks:', idTasks.slice(0, 3));
+        }
       }
       
-      res.json(validFactors);
+      res.json(factors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
