@@ -2611,104 +2611,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Admin API: Getting all success factors...');
+      console.log('Admin API: Getting all success factors with detailed debugging...');
       
-      // Let's simplify and call the single factor endpoint for each factor ID
-      // This ensures we use the same exact code path that is known to work
+      // Let's try a step-by-step approach to identify exactly where the issue is happening
       
-      // Get all factor IDs
-      const idsQuery = `SELECT id FROM success_factors ORDER BY title`;
-      const idsResult = await db.execute(idsQuery);
-      const factorIds = idsResult.rows.map((row: any) => row.id);
+      // First, let's directly get the SQL output and thoroughly examine it
+      const rawQuery = `
+        SELECT 
+          id, 
+          title, 
+          description, 
+          tasks::text as tasks_json 
+        FROM 
+          v_success_factors_full 
+        WHERE 
+          id = 'sf-1'
+        ORDER BY 
+          title;
+      `;
       
-      console.log(`Found ${factorIds.length} factor IDs`);
+      console.log('Executing raw SQL query against the view for a single factor');
+      const rawResult = await db.execute(rawQuery);
       
-      // Array to hold the results
-      const allFactors = [];
-      
-      // Process each factor ID one at a time
-      for (const factorId of factorIds) {
+      if (rawResult.rows.length > 0) {
+        console.log('RAW SQL OUTPUT FOR SF-1:');
+        console.log(JSON.stringify(rawResult.rows[0], null, 2));
+        
+        // Check the JSON structure explicitly
+        const rawTasksJson = rawResult.rows[0].tasks_json;
+        console.log('TASKS JSON STRING (direct from DB):');
+        console.log(rawTasksJson);
+        
+        // Try parsing the JSON manually
         try {
-          // This is the same SQL query from the single factor endpoint which we know works correctly
-          const query = `
-            SELECT 
-              sf.id, 
-              sf.title, 
-              sf.description,
-              jsonb_build_object(
-                'Identification', (
-                  SELECT jsonb_agg(t.text)
-                  FROM success_factor_tasks t
-                  WHERE t.factor_id = sf.id AND t.stage = 'Identification'
-                  ORDER BY t."order"
-                ),
-                'Definition', (
-                  SELECT jsonb_agg(t.text)
-                  FROM success_factor_tasks t
-                  WHERE t.factor_id = sf.id AND t.stage = 'Definition'
-                  ORDER BY t."order"
-                ),
-                'Delivery', (
-                  SELECT jsonb_agg(t.text)
-                  FROM success_factor_tasks t
-                  WHERE t.factor_id = sf.id AND t.stage = 'Delivery'
-                  ORDER BY t."order"
-                ),
-                'Closure', (
-                  SELECT jsonb_agg(t.text)
-                  FROM success_factor_tasks t
-                  WHERE t.factor_id = sf.id AND t.stage = 'Closure'
-                  ORDER BY t."order"
-                )
-              ) as tasks
-            FROM 
-              success_factors sf
-            WHERE 
-              sf.id = $1;
-          `;
+          const parsed = JSON.parse(rawTasksJson);
+          console.log('PARSED JSON OBJECT:');
+          console.log(JSON.stringify(parsed, null, 2));
           
-          const result = await db.execute(query, [factorId]);
-          
-          if (result.rows.length === 0) {
-            console.log(`No data found for factor ${factorId}`);
-            continue;
+          // Check if the identification tasks exist and are not null
+          if (parsed.Identification) {
+            console.log('IDENTIFICATION TASKS ARRAY:');
+            console.log(JSON.stringify(parsed.Identification, null, 2));
+            
+            // Check each task
+            if (Array.isArray(parsed.Identification)) {
+              parsed.Identification.forEach((task: any, index: number) => {
+                console.log(`Task ${index}: ${task === null ? 'NULL' : `"${task}"`}`);
+              });
+              
+              // Filter out nulls to see what we get
+              const filtered = parsed.Identification.filter(Boolean);
+              console.log(`After filtering nulls: ${filtered.length} tasks remain:`);
+              filtered.forEach((task: string, index: number) => {
+                console.log(`  ${index}: "${task}"`);
+              });
+            }
           }
-          
-          const row = result.rows[0];
-          
-          // Process the tasks to handle nulls and empty arrays
-          let taskData = typeof row.tasks === 'string' ? JSON.parse(row.tasks) : row.tasks;
-          
-          // Clean up the task arrays
-          const cleanedTasks = {
-            Identification: Array.isArray(taskData.Identification) ? taskData.Identification.filter(Boolean) : [],
-            Definition: Array.isArray(taskData.Definition) ? taskData.Definition.filter(Boolean) : [],
-            Delivery: Array.isArray(taskData.Delivery) ? taskData.Delivery.filter(Boolean) : [],
-            Closure: Array.isArray(taskData.Closure) ? taskData.Closure.filter(Boolean) : []
-          };
-          
-          // Format the factor with clean task structure
-          const formattedFactor = {
-            id: String(row.id),
-            title: String(row.title),
-            description: row.description ? String(row.description) : '',
-            category: "Uncategorized",
-            tasks: cleanedTasks
-          };
-          
-          allFactors.push(formattedFactor);
-        } catch (error) {
-          console.error(`Error processing factor ${factorId}:`, error);
-          // Continue with next factor
+        } catch (e) {
+          console.error('Failed to parse JSON tasks:', e);
         }
       }
       
-      console.log(`Returning ${allFactors.length} formatted factors`);
-      if (allFactors.length > 0) {
-        console.log("Sample factor:", JSON.stringify(allFactors[0], null, 2));
+      // Now let's use a completely different approach for the list endpoint
+      // Instead of using the view, let's directly query tasks table and build the structure manually
+      console.log('Fetching factors and tasks directly from tables...');
+      
+      // First get all factors
+      const factorsQuery = `SELECT id, title, description FROM success_factors ORDER BY title`;
+      const factorsResult = await db.execute(factorsQuery);
+      
+      // Then get all tasks for all factors
+      const tasksQuery = `
+        SELECT 
+          factor_id, 
+          stage, 
+          text,
+          "order"
+        FROM 
+          success_factor_tasks 
+        ORDER BY 
+          factor_id, 
+          stage, 
+          "order"
+      `;
+      const tasksResult = await db.execute(tasksQuery);
+      
+      // Build a map of tasks by factor ID and stage
+      const tasksByFactor: Record<string, Record<string, string[]>> = {};
+      
+      tasksResult.rows.forEach((task: any) => {
+        const factorId = task.factor_id;
+        const stage = task.stage;
+        const text = task.text;
+        
+        // Initialize nested structure if needed
+        if (!tasksByFactor[factorId]) {
+          tasksByFactor[factorId] = {
+            'Identification': [],
+            'Definition': [],
+            'Delivery': [],
+            'Closure': []
+          };
+        }
+        
+        // Add task to the appropriate stage array
+        if (tasksByFactor[factorId][stage] && text) {
+          tasksByFactor[factorId][stage].push(text);
+        }
+      });
+      
+      // Now build the final factors list
+      const formattedFactors = factorsResult.rows.map((factor: any) => {
+        const factorId = factor.id;
+        
+        // Get tasks for this factor or use empty structure
+        const factorTasks = tasksByFactor[factorId] || {
+          'Identification': [],
+          'Definition': [],
+          'Delivery': [],
+          'Closure': []
+        };
+        
+        // Return the formatted factor
+        return {
+          id: String(factorId),
+          title: String(factor.title),
+          description: factor.description ? String(factor.description) : '',
+          category: "Uncategorized",
+          tasks: factorTasks
+        };
+      });
+      
+      // Log the first factor to verify
+      if (formattedFactors.length > 0) {
+        const sample = formattedFactors[0];
+        console.log(`First factor ${sample.id} has tasks:`, JSON.stringify(sample.tasks, null, 2));
       }
       
-      res.json(allFactors);
+      console.log(`Returning ${formattedFactors.length} factors with manually constructed tasks`);
+      res.json(formattedFactors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
