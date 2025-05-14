@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 // Define the types of micro-interactions we'll support
 export type FeedbackType = 'success' | 'error' | 'loading' | 'info' | 'warning';
+export type { FeedbackContextType };
 
 // Define the feedback item structure
 export interface FeedbackItem {
