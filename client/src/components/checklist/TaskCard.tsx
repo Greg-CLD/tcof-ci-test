@@ -61,7 +61,7 @@ interface TaskCardProps {
   owner?: string;
   status?: 'To Do' | 'Working On It' | 'Done';
   stage: string;
-  source: 'heuristic' | 'factor' | 'custom' | 'framework';
+  source: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceName?: string;
   frameworkCode?: string;
   isGoodPractice?: boolean;
@@ -175,22 +175,24 @@ export default function TaskCard({
   
   const getSourceBadgeColor = (): string => {
     if (isGoodPractice || source === 'framework') {
-      return 'bg-purple-100 text-purple-800 border-purple-200';
+      return 'bg-purple-100 text-purple-800 border-purple-200'; // Good Practice (purple)
     }
     
     switch (source) {
       case 'heuristic':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border-blue-200'; // Personal Heuristic (blue)
       case 'factor':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 text-green-800 border-green-200'; // Success Factor (green)
+      case 'policy':
+        return 'bg-amber-100 text-amber-800 border-amber-200'; // Company Policy (amber/yellow)
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 text-gray-800 border-gray-200'; // Custom Task (gray)
     }
   };
   
   const getSourceLabel = (): string => {
     if (isGoodPractice) {
-      return frameworkCode ? `Framework: ${frameworkCode}` : 'Framework';
+      return frameworkCode ? `Good Practice: ${frameworkCode}` : 'Good Practice';
     }
     
     switch (source) {
@@ -198,8 +200,12 @@ export default function TaskCard({
         return 'Personal Heuristic';
       case 'factor':
         return sourceName ? `Success Factor: ${sourceName}` : 'Success Factor';
+      case 'policy':
+        return 'Company Policy';
+      case 'framework':
+        return 'Good Practice';
       default:
-        return 'Task';
+        return 'Custom Task';
     }
   };
   

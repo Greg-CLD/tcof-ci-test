@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 // Export types for filters
 export type StageFilter = 'all' | 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 export type StatusFilter = 'all' | 'completed' | 'incomplete';
-export type SourceFilter = 'all' | 'heuristic' | 'factor' | 'framework' | 'custom';
+export type SourceFilter = 'all' | 'heuristic' | 'factor' | 'policy' | 'framework' | 'custom';
 export type SortOption = 'stage' | 'status' | 'source';
 export type SortDirection = 'asc' | 'desc';
 
@@ -211,9 +211,10 @@ export default function ChecklistFilterBar({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sources</SelectItem>
-                <SelectItem value="heuristic">Heuristics</SelectItem>
+                <SelectItem value="heuristic">Personal Heuristics</SelectItem>
                 <SelectItem value="factor">Success Factors</SelectItem>
-                <SelectItem value="framework">Frameworks</SelectItem>
+                <SelectItem value="policy">Company Policy</SelectItem>
+                <SelectItem value="framework">Good Practice</SelectItem>
                 <SelectItem value="custom">Custom Tasks</SelectItem>
               </SelectContent>
             </Select>

@@ -33,12 +33,13 @@ interface UnifiedTask {
   text: string;
   completed: boolean;
   stage: Stage;
-  source: 'heuristic' | 'factor' | 'custom' | 'framework';
+  source: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceName?: string;
   notes?: string;
   priority?: 'low' | 'medium' | 'high';
   dueDate?: string;
   owner?: string;
+  status?: 'To Do' | 'Working On It' | 'Done';
 }
 
 // Task updates
