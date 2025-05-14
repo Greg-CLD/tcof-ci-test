@@ -62,6 +62,7 @@ interface UnifiedTask {
   stage: Stage;
   source: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceName?: string;
+  sourceId?: string;
   notes?: string;
   priority?: 'low' | 'medium' | 'high';
   dueDate?: string;
@@ -225,7 +226,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
         }
         // Then fallback to plan if it exists (for backward compatibility)
         else if (plan?.blocks?.block2?.tasks) {
-          const existingTask = plan.blocks.block2.tasks.find(
+          // Use type assertion to handle possible type mismatch
+          const planData = plan as any;
+          const existingTask = planData.blocks.block2.tasks.find(
             (t: any) => t.id === task.id
           );
           
@@ -329,11 +332,11 @@ export default function Checklist({ projectId }: ChecklistProps) {
       
       setTasksByStage(byStage);
       
-      // Always save directly using the task API - no plan dependency
+      // Use the proper REST API endpoint for updates
       const response = await apiRequest(
-        "POST",
-        `/api/projects/${currentProjectId}/tasks`,
-        { taskId, updates, stage, source }
+        "PUT",
+        `/api/projects/${currentProjectId}/tasks/${taskId}`,
+        updates
       );
       
       console.log('[CHECKLIST] Task update sent successfully', response);
