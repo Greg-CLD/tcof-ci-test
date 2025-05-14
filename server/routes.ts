@@ -3335,7 +3335,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update success factor tasks from CSV
+  // Get a simple list of all success factors (no tasks) - used by SimpleFactorEditor
+  app.get('/api/admin/success-factors/list', isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Just get the basic factor data without tasks
+      const query = `
+        SELECT id, title, description
+        FROM success_factors
+        ORDER BY id
+      `;
+      
+      const result = await db.execute(query);
+      
+      if (!result.rows) {
+        return res.status(500).json({ error: 'Failed to fetch success factors' });
+      }
+      
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error fetching success factors list:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch success factors list',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Get all tasks for all factors - used by SimpleFactorEditor
+  app.get('/api/admin/success-factor-tasks', isAdmin, async (req: Request, res: Response) => {
+    try {
+      const query = `
+        SELECT 
+          id,
+          factor_id, 
+          stage, 
+          text, 
+          "order"
+        FROM 
+          success_factor_tasks
+        ORDER BY 
+          factor_id, stage, "order"
+      `;
+      
+      const result = await db.execute(query);
+      
+      if (!result.rows) {
+        return res.status(500).json({ error: 'Failed to fetch factor tasks' });
+      }
+      
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error fetching success factor tasks:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch success factor tasks',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+// Update success factor tasks from CSV
   app.post('/api/admin/update-factor-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
       // Import dynamically to avoid circular dependencies - using dynamic import for ES modules
