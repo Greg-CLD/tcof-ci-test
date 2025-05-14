@@ -36,7 +36,7 @@ export interface Project {
 // Project task data type
 export interface ProjectTask {
   id: string;
-  projectId: number;  // Number to match the schema 
+  projectId: string | number;  // Can be either string or number for flexibility
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
   origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
