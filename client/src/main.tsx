@@ -80,11 +80,94 @@ import * as ReactDOM from "react-dom";
 import App from "./App";
 import "./index.css";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { apiRequest } from "./lib/queryClient";
 
 // Initialize accessibility testing in development mode
 if (import.meta.env.DEV) {
   // Log that we have accessibility features
   console.log('%c🔍 Accessibility testing enabled via A11yAuditProvider', 'color: #0984e3; font-weight: bold;');
+}
+
+// Add the test task creation function to the window object for manual testing
+if (import.meta.env.DEV) {
+  interface CreateTestTaskOptions {
+    projectId: string;
+    text?: string;
+    stage?: 'identification' | 'definition' | 'delivery' | 'closure';
+    origin?: 'heuristic' | 'factor' | 'policy';
+    sourceId?: string;
+    completed?: boolean;
+  }
+
+  // @ts-ignore - Adding to window object for manual testing
+  window.listProjects = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/projects');
+      const projects = await response.json();
+      console.table(projects.map((p: any) => ({ 
+        id: p.id, 
+        name: p.name,
+        organisation: p.organisationName || 'N/A'
+      })));
+      console.log('Use one of these project IDs with createTestTask()');
+      return projects;
+    } catch (error) {
+      console.error('Failed to list projects:', error);
+      console.log('You might need to be logged in to access projects');
+    }
+  };
+
+  // @ts-ignore - Adding to window object for manual testing
+  window.createTestTask = async (options: CreateTestTaskOptions) => {
+    try {
+      const { 
+        projectId, 
+        text = 'Test Task ' + new Date().toLocaleTimeString(), 
+        stage = 'identification',
+        origin = 'factor',
+        sourceId = 'sf-1',
+        completed = false 
+      } = options;
+      
+      if (!projectId) {
+        console.error('Error: projectId is required');
+        return;
+      }
+      
+      console.log(`Creating test task for project: ${projectId}`);
+      
+      // First create the task
+      const taskData = {
+        projectId,
+        text,
+        stage,
+        origin,
+        sourceId,
+      };
+      
+      const createRes = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
+      const newTask = await createRes.json();
+      console.log('Created task:', newTask);
+      
+      // If completed flag is true, update the task to completed
+      if (completed && newTask.id) {
+        const updateRes = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${newTask.id}`, {
+          completed: true
+        });
+        const updatedTask = await updateRes.json();
+        console.log('Task marked as completed:', updatedTask);
+      }
+      
+      return newTask;
+    } catch (error) {
+      console.error('Failed to create test task:', error);
+    }
+  };
+  
+  console.log('%c🧪 Test utilities available in console:', 'color: #00b894; font-weight: bold;');
+  console.log('%c- window.listProjects() - Lists all your projects with IDs', 'color: #00b894;');
+  console.log('%c- window.createTestTask({projectId: "your-project-id"}) - Create a test task', 'color: #00b894;');
+  console.log('%c- Example workflow: window.listProjects().then(p => window.createTestTask({projectId: p[0].id}))', 'color: #00b894;');
 }
 
 createRoot(document.getElementById("root")!).render(
