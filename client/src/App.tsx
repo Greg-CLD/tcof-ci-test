@@ -7,6 +7,15 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import AllProjects from "@/pages/AllProjects";
 import ProTools from "@/pages/ProTools";
+
+import SuccessFactorsTest from './components/test/SuccessFactorsTest';
+
+// Add to your routes array:
+{
+  path: "/test-factors",
+  element: <SuccessFactorsTest />
+},
+
 import StarterAccess from "@/pages/StarterAccess";
 import GetYourBearings from "@/pages/GetYourBearings";
 import MakeAPlan from "@/pages/MakeAPlan";

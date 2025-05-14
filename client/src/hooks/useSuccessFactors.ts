@@ -2,32 +2,38 @@ import { useQuery } from '@tanstack/react-query';
 
 export interface SuccessFactor {
   id: string;
-  factor: string; // This is the title/name in the API
+  factor: string;
   description: string;
   category?: string;
 }
 
-// Create a normalized interface that's consistent with our UI
 export interface NormalizedSuccessFactor {
   id: string;
-  title: string; // Renamed from 'factor' for UI consistency
+  title: string;
   description: string;
   category?: string;
 }
 
 export function useSuccessFactors() {
   console.log('📊 useSuccessFactors hook initialized');
-  
+
+  const queryKey = ['/api/success-factors'];
+  console.log('Query key:', queryKey);
+
   const {
     data: rawSuccessFactors,
     isLoading,
     error,
     refetch
   } = useQuery<SuccessFactor[]>({
-    queryKey: ['/api/success-factors'],
-    staleTime: 0, // No caching - always fetch fresh data
+    queryKey,
+    staleTime: 0, // For testing: force fresh network calls
     refetchOnWindowFocus: true,
   });
+
+  console.log('Fetching...', isLoading);
+  console.log('Data:', rawSuccessFactors);
+  console.log('Error:', error);
 
   // Log diagnostic info but directly without effects
   if (rawSuccessFactors) {
@@ -41,23 +47,21 @@ export function useSuccessFactors() {
     console.error('📊 useSuccessFactors - Error fetching success factors:', error);
   }
 
-  // Normalize the data to match our UI expectations
+
   const successFactors: NormalizedSuccessFactor[] = [];
-  
+
   if (rawSuccessFactors) {
     rawSuccessFactors.forEach((factor: SuccessFactor) => {
       if (!factor.id || !factor.factor) {
         console.warn('📊 useSuccessFactors - Malformed factor data:', factor);
       }
-      
       successFactors.push({
         id: factor.id,
-        title: factor.factor, // Map 'factor' to 'title'
-        description: factor.description || '', // Ensure description has a default
+        title: factor.factor,
+        description: factor.description || '',
         category: factor.category
       });
     });
-    
     console.log(`📊 useSuccessFactors - Normalized ${successFactors.length} success factors`);
     
     if (successFactors.length > 0 && rawSuccessFactors && successFactors.length !== rawSuccessFactors.length) {

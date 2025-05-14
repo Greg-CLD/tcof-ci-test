@@ -47,6 +47,26 @@ async function importOrganisationRoutes() {
 async function importProjectRoutes() {
   try {
     const module = await import('./routes/projects.js');
+
+// Test endpoints
+app.get('/api/success-factors/test-empty', (_, res) => {
+  res.json([]);
+});
+
+app.get('/api/success-factors/test-error', (_, res) => {
+  res.status(500).json({ error: 'Test error' });
+});
+
+app.get('/api/success-factors/test-mock', (_, res) => {
+  res.json([
+    { id: '1', factor: 'Test Factor 1', description: 'Description 1' },
+    { id: '2', factor: 'Test Factor 2', description: 'Description 2' },
+    { id: '3', factor: 'Test Factor 3', description: 'Description 3' },
+    { id: '4', factor: 'Test Factor 4', description: 'Description 4' },
+    { id: '5', factor: 'Test Factor 5', description: 'Description 5' }
+  ]);
+});
+
     return module.default;
   } catch (error) {
     console.error('Failed to import project routes:', error);
