@@ -82,12 +82,15 @@ export default function Checklist({ projectId }: ChecklistProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Get success factors with tasks - this is the core of our solution
-  // We use these tasks even without a plan
+  // We use these tasks even without a plan - using public endpoint that doesn't require auth
   const { data: successFactors } = useQuery({
-    queryKey: ['/api/tcof-tasks'],
+    queryKey: ['/api/public/tcof-tasks'],
     queryFn: async () => {
-      const res = await fetch('/api/tcof-tasks');
-      if (!res.ok) throw new Error('Failed to load canonical tasks');
+      const res = await fetch('/api/public/tcof-tasks');
+      if (!res.ok) {
+        console.error('[CHECKLIST] Failed to load tasks:', await res.text());
+        throw new Error('Failed to load canonical tasks');
+      }
       return res.json();
     }
   });

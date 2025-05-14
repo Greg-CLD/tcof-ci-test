@@ -2582,8 +2582,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public endpoint for getting tasks for the checklist - no admin required
-  app.get('/api/tcof-tasks', async (req: Request, res: Response) => {
+  // Completely public endpoint for getting tasks for the checklist - no admin required and no auth check
+  app.get('/api/public/tcof-tasks', async (req: Request, res: Response) => {
+    try {
+      // Get success factors from database
+      const factors = await getFactors();
+
+      if (factors && factors.length > 0) {
+        console.log('Returning public factors from database:', factors.length);
+        return res.json(factors);
+      }
+
+      // Fall back to file-based storage if database fails
+      try {
+        const successFactorsData = fs.readFileSync(path.join(process.cwd(), 'data', 'successFactors.json'), 'utf8');
+        const parsedFactors = JSON.parse(successFactorsData);
+        console.log('Returning public factors from JSON file:', parsedFactors.length);
+        return res.json(parsedFactors);
+      } catch (sfError: unknown) {
+        console.warn('successFactors.json not found, falling back to tcofTasks.json');
+      }
+
+      // Last resort fallback
+      const coreTasksData = fs.readFileSync(path.join(process.cwd(), 'data', 'tcofTasks.json'), 'utf8');
+      const parsedData = JSON.parse(coreTasksData);
+      console.log('Returning public tasks from fallback JSON:', parsedData.length);
+      res.json(parsedData);
+    } catch (error: unknown) {
+      console.error('Error loading tasks data for public checklist:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load tasks data';
+      res.status(500).json({ message: errorMessage });
+    }
+  });
+  
+  // Keep the original for backward compatibility but with auth required
+  app.get('/api/tcof-tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
       // Get success factors from database
       const factors = await getFactors();
