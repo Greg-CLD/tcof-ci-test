@@ -1014,13 +1014,14 @@ export const projectsDb = {
         if (savedTask) {
           console.log(`Task saved to database → ${savedTask.id}`);
           return savedTask;
+        } else {
+          console.error('Save task returned null');
+          throw new Error('Failed to save task - returned null');
         }
       } catch (error) {
         console.error('Error saving task:', error);
         throw error;
       }
-      
-      return null;
     } catch (error) {
       console.error('Error creating project task:', error);
       return null;
