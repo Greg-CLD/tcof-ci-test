@@ -25,10 +25,10 @@ router.get("/:projectId/tasks", isAuthenticated, async (req, res) => {
       return res.status(403).json({ message: "Unauthorized access to project" });
     }
     
-    // Get tasks for this project
+    // Get tasks for this project directly from database
     const tasks = await projectsDb.getProjectTasks(projectId);
     
-    console.log(`Found ${tasks.length} tasks for project ${projectId}`);
+    console.log(`Found ${tasks.length} tasks for project ${projectId} in database`);
     
     return res.json(tasks);
   } catch (error) {

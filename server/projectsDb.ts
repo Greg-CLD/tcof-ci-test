@@ -36,7 +36,7 @@ export interface Project {
 // Project task data type
 export interface ProjectTask {
   id: string;
-  projectId: number;  // Changed to number to match the schema
+  projectId: number;  // Number to match the schema 
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
   origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
@@ -47,8 +47,8 @@ export interface ProjectTask {
   dueDate?: string;
   owner?: string;
   status?: string;
-  createdAt: Date;    // Changed to Date to match the schema
-  updatedAt: Date;    // Changed to Date to match the schema
+  createdAt: string;  // Changed to string for client side compatibility
+  updatedAt: string;  // Changed to string for client side compatibility
 }
 
 // Project policy data type
@@ -145,28 +145,39 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
     let query = db.select().from(projectTasksTable);
     
     if (projectId) {
-      query = query.where(eq(projectTasksTable.projectId, projectId));
+      // Get the numeric project ID - handle both string UUIDs and positional IDs
+      const project = await projectsDb.getProject(projectId);
+      if (!project) {
+        console.log(`Project with ID ${projectId} not found`);
+        return [];
+      }
+      // Extract the numeric ID from the project
+      const numericProjectId = project.id;
+      console.log(`Using numeric project ID: ${numericProjectId}`);
+      
+      // Use numeric ID in the query
+      query = query.where(eq(projectTasksTable.projectId, numericProjectId));
     }
     
     const tasks = await query;
     console.log(`Loaded ${tasks.length} tasks from database${projectId ? ` for project ${projectId}` : ''}`);
     
-    // Convert database result to ProjectTask interface
+    // Convert database result to ProjectTask interface with proper type handling
     return tasks.map(task => ({
       id: task.id,
-      projectId: task.projectId.toString(),
+      projectId: task.projectId,
       text: task.text,
       stage: task.stage as 'identification' | 'definition' | 'delivery' | 'closure',
       origin: task.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
       sourceId: task.sourceId,
-      completed: task.completed || false,
+      completed: task.completed === null ? false : task.completed,
       notes: task.notes || '',
       priority: task.priority || '',
       dueDate: task.dueDate || '',
       owner: task.owner || '',
       status: task.status || '',
-      createdAt: task.createdAt.toISOString(),
-      updatedAt: task.updatedAt.toISOString()
+      createdAt: task.createdAt ? task.createdAt.toISOString() : new Date().toISOString(),
+      updatedAt: task.updatedAt ? task.updatedAt.toISOString() : new Date().toISOString()
     }));
   } catch (error) {
     console.error('Error loading project tasks from database:', error);
