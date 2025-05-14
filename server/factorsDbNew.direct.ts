@@ -144,7 +144,8 @@ export const factorsDb = {
         ORDER BY f.title;
       `);
 
-      // Log the first row to see raw structure
+      // Log the raw first row structure
+      console.log('Raw database row:', JSON.stringify(result.rows[0], null, 2));
       console.log('Raw first row:', JSON.stringify(result.rows[0], null, 2));
 
       if (!result.rows || result.rows.length === 0) {
