@@ -42,13 +42,16 @@ import {
 } from '@/components/ui/select';
 
 export interface TaskUpdates {
-  title?: string;
+  text?: string;
   completed?: boolean;
   notes?: string;
   priority?: TaskPriority | undefined;
   dueDate?: string | undefined;
   owner?: string;
   status?: 'To Do' | 'Working On It' | 'Done';
+  stage?: 'identification' | 'definition' | 'delivery' | 'closure';
+  origin?: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
+  sourceId?: string;
 }
 
 interface TaskCardProps {
@@ -143,7 +146,7 @@ export default function TaskCard({
     const isCompletedStatus = editedStatus === 'Done';
     
     onUpdate(id, {
-      title: editedTaskTitle,
+      text: editedTaskTitle,
       notes: editedNotes,
       owner: editedOwner,
       status: editedStatus,

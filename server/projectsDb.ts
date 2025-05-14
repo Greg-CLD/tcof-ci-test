@@ -829,21 +829,16 @@ export const projectsDb = {
    */
   getProjectTasksBySourceId: async (projectId: string, sourceId: string): Promise<ProjectTask[]> => {
     try {
-      // Load all tasks
-      const tasks = loadProjectTasks();
-      
-      // Handle string/number ID conversion
-      const searchProjectId = typeof projectId === 'number' ? String(projectId) : projectId;
-      const searchSourceId = typeof sourceId === 'number' ? String(sourceId) : sourceId;
-      
-      // Filter tasks by project ID and source ID
-      const projectTasks = tasks.filter(t => {
-        // Ensure we compare strings to handle different formats
-        const taskProjectId = typeof t.projectId === 'number' ? String(t.projectId) : t.projectId;
-        const taskSourceId = typeof t.sourceId === 'number' ? String(t.sourceId) : t.sourceId;
-        
-        return taskProjectId === searchProjectId && taskSourceId === searchSourceId;
-      });
+      // Query tasks directly from database
+      const projectTasks = await db
+        .select()
+        .from(projectTasksTable)
+        .where(
+          and(
+            eq(projectTasksTable.projectId, projectId),
+            eq(projectTasksTable.sourceId, sourceId)
+          )
+        );
       
       console.log(`Found ${projectTasks.length} tasks for project ${projectId} with sourceId ${sourceId}`);
       
@@ -1194,13 +1189,21 @@ export const projectsDb = {
       console.log(`Removing policy ${policyId}, policies count: ${policies.length} -> ${updatedPolicies.length}`);
       const result = saveProjectPolicies(updatedPolicies);
       
-      // Also delete any tasks associated with this policy
-      const tasks = loadProjectTasks();
-      const filteredTasks = tasks.filter(t => !(t.origin === 'policy' && t.sourceId === policyId));
-      
-      if (filteredTasks.length !== tasks.length) {
-        console.log(`Removing ${tasks.length - filteredTasks.length} tasks associated with policy ${policyId}`);
-        saveProjectTasks(filteredTasks);
+      // Also delete any tasks associated with this policy from the database
+      try {
+        const deletedTasks = await db
+          .delete(projectTasksTable)
+          .where(
+            and(
+              eq(projectTasksTable.origin, 'policy'),
+              eq(projectTasksTable.sourceId, policyId)
+            )
+          )
+          .returning();
+        
+        console.log(`Removed ${deletedTasks.length} tasks associated with policy ${policyId} from database`);
+      } catch (taskError) {
+        console.error('Error deleting associated policy tasks:', taskError);
       }
       
       console.log(`Policy deletion result: ${result}`);
