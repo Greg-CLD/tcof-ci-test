@@ -1,69 +1,55 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  organizationId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  sector?: string;
-  status?: string;
-}
+type ProjectContextType = {
+  currentProjectId: string | null;
+  setCurrentProjectId: (id: string | null) => void;
+  clearCurrentProject: () => void;
+};
 
-interface ProjectContextType {
-  currentProject: Project | null;
-  isLoading: boolean;
-  error: Error | null;
-  setCurrentProject: (project: Project) => void;
-}
+const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
-const ProjectContext = createContext<ProjectContextType | null>(null);
-
-export const ProjectProvider = ({ children }: { children: ReactNode }) => {
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(null);
-  
-  // Detect project ID from localStorage or URL
-  useEffect(() => {
-    const storedProjectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
-    if (storedProjectId) {
-      setProjectId(storedProjectId);
-    }
-  }, []);
-  
-  // Fetch project data if ID is available
-  const { isLoading, error } = useQuery<Project>({
-    queryKey: [`/api/projects/${projectId}`],
-    queryFn: async () => {
-      if (!projectId) return null;
-      
-      const res = await apiRequest('GET', `/api/projects/${projectId}`);
-      const data = await res.json();
-      setCurrentProject(data);
-      return data;
-    },
-    enabled: !!projectId,
+export function ProjectProvider({ children }: { children: ReactNode }) {
+  // Initialize state from localStorage if available
+  const [currentProjectId, setProjectId] = useState<string | null>(() => {
+    const saved = localStorage.getItem('currentProjectId');
+    return saved || null;
   });
-  
+
+  // Update localStorage whenever currentProjectId changes
+  useEffect(() => {
+    if (currentProjectId) {
+      localStorage.setItem('currentProjectId', currentProjectId);
+      console.log('ProjectContext: Saved project ID to localStorage:', currentProjectId);
+    } else {
+      localStorage.removeItem('currentProjectId');
+      console.log('ProjectContext: Cleared project ID from localStorage');
+    }
+  }, [currentProjectId]);
+
+  // Expose methods to manage project state
+  const setCurrentProjectId = (id: string | null) => {
+    console.log('ProjectContext: Setting current project ID:', id);
+    setProjectId(id);
+  };
+
+  const clearCurrentProject = () => {
+    console.log('ProjectContext: Clearing current project ID');
+    setProjectId(null);
+    localStorage.removeItem('currentProjectId');
+  };
+
   return (
-    <ProjectContext.Provider value={{ 
-      currentProject, 
-      isLoading, 
-      error: error as Error, 
-      setCurrentProject 
-    }}>
+    <ProjectContext.Provider value={{ currentProjectId, setCurrentProjectId, clearCurrentProject }}>
       {children}
     </ProjectContext.Provider>
   );
-};
+}
 
-export const useProjectContext = (): ProjectContextType => {
+// Custom hook to use the project context
+export function useProject() {
   const context = useContext(ProjectContext);
-  if (!context) {
-    throw new Error('useProjectContext must be used within a ProjectProvider');
+  if (context === undefined) {
+    throw new Error('useProject must be used within a ProjectProvider');
   }
   return context;
-};
+}

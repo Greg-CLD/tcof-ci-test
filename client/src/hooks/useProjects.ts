@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
+import { useProject as useProjectContext } from "@/contexts/ProjectContext";
 
 export interface Project {
   id: string;
@@ -280,14 +281,30 @@ export function useProjects() {
   };
 
   /**
-   * Get the currently selected project from localStorage
+   * Get the currently selected project from ProjectContext
    * @returns The selected project or undefined if none selected
    */
   const getSelectedProject = (): Project | undefined => {
-    const selectedProjectId = localStorage.getItem('selectedProjectId');
-    if (!selectedProjectId) return undefined;
-
-    return projects.find(p => p.id === selectedProjectId);
+    const { currentProjectId } = useProject();
+    
+    // First check from our centralized ProjectContext
+    if (currentProjectId) {
+      const projectFromContext = projects.find(p => p.id === currentProjectId);
+      if (projectFromContext) return projectFromContext;
+    }
+    
+    // Fallback for backward compatibility - check from localStorage using the old key
+    const oldStoredProjectId = localStorage.getItem('selectedProjectId');
+    if (oldStoredProjectId) {
+      console.log('Migrating from old selectedProjectId key:', oldStoredProjectId);
+      // Migrate to the new context
+      if (currentProjectId !== oldStoredProjectId) {
+        localStorage.setItem('currentProjectId', oldStoredProjectId);
+      }
+      return projects.find(p => p.id === oldStoredProjectId);
+    }
+    
+    return undefined;
   };
 
   /**
@@ -302,11 +319,20 @@ export function useProjects() {
   };
 
   /**
-   * Sets the currently selected project ID in localStorage
+   * Sets the currently selected project ID in ProjectContext and localStorage
    * @param id The project ID to set as selected
    */
   const setSelectedProjectId = (id: string) => {
+    // Get the project context's update function
+    const { setCurrentProjectId } = useProject();
+    
+    // Update the project context (this will also update localStorage)
+    setCurrentProjectId(id);
+    
+    // For backward compatibility, maintain the old key too
     localStorage.setItem('selectedProjectId', id);
+    
+    // Invalidate projects query to ensure we have fresh data
     queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
   };
 
