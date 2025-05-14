@@ -1185,10 +1185,10 @@ export const projectsDb = {
         return null;
       }
       
-      // Prepare task with updated data
+      // Prepare task with updated data and the verified safe project ID
       const task: ProjectTask = {
-        id: taskId,
-        projectId: existingTask.projectId.toString(),
+        id: taskIdValue, // Use the validated taskId
+        projectId: safeProjectId, // Use the validated and consistent project UUID
         text: data.text || existingTask.text,
         stage: (data.stage || existingTask.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
         origin: existingTask.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
