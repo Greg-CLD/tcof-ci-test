@@ -2611,82 +2611,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Admin API: Getting all success factors from view directly...');
+      console.log('Admin API: Using individual factor fetch approach...');
       
-      // Query the same view that getFactor uses, but without a WHERE clause
+      // Get the IDs of all factors first
       const result = await db.execute(sql`
-        SELECT id, title, description, tasks
-        FROM v_success_factors_full
+        SELECT id 
+        FROM success_factors 
         ORDER BY id
       `);
       
       if (!result.rows || result.rows.length === 0) {
-        console.log("No factors found in database");
+        console.log("No factor IDs found in database");
         return res.json([]);
       }
       
-      console.log(`Found ${result.rows.length} factors from view`);
+      console.log(`Found ${result.rows.length} factor IDs to fetch individually`);
       
-      // Debug the first row to see its structure
-      if (result.rows.length > 0) {
-        const firstRow = result.rows[0];
-        console.log('RAW first row - keys:', Object.keys(firstRow));
-        console.log('RAW first row - tasks type:', typeof firstRow.tasks);
-        console.log('RAW first row - tasks JSON:', JSON.stringify(firstRow.tasks).substring(0, 200) + '...');
-      }
+      // Create an array to store the fully fetched factors
+      const factors = [];
       
-      // Process each factor row the same way getFactor does
-      const factors = result.rows.map((row: any) => {
-        // Debug logging
-        if (row.id === 'sf-1') {
-          console.log(`Row id=${row.id} title=${row.title}`);
-          console.log(`Row tasks type: ${typeof row.tasks}`);
-          if (row.tasks) {
-            console.log(`Tasks has keys: ${Object.keys(row.tasks)}`);
-            if (row.tasks.Identification) {
-              console.log(`First Identification task: [${row.tasks.Identification[0]}]`);
-            }
+      // Process each factor ID and fetch the complete factor directly
+      for (const row of result.rows) {
+        try {
+          // Use the same method as the single-factor endpoint that we know works correctly
+          const factorId = String(row.id);
+          console.log(`Fetching complete factor ${factorId}...`);
+          
+          const factor = await factorsDb.getFactor(factorId);
+          if (factor) {
+            console.log(`Successfully fetched factor ${factorId} with ${factor.tasks.Identification.length} identification tasks`);
+            factors.push(factor);
+          } else {
+            console.log(`Factor ${factorId} not found`);
           }
-        }
-        
-        // Exactly match the structure from the single-factor endpoint
-        return {
-          id: String(row.id),
-          title: String(row.title),
-          description: row.description ? String(row.description) : '',
-          category: "Uncategorized", // This matches the single endpoint format
-          tasks: {
-            // Rebuild tasks object explicitly
-            Identification: row.tasks?.Identification?.filter((t: any) => t !== null) || [],
-            Definition: row.tasks?.Definition?.filter((t: any) => t !== null) || [],
-            Delivery: row.tasks?.Delivery?.filter((t: any) => t !== null) || [],
-            Closure: row.tasks?.Closure?.filter((t: any) => t !== null) || []
-          }
-        };
-      });
-      
-      // Verify the data structure for the first factor
-      if (factors.length > 0) {
-        const sample = factors[0];
-        console.log('Admin API: First factor tasks sample:', {
-          id: sample.id,
-          title: sample.title,
-          taskCounts: {
-            Identification: Array.isArray(sample.tasks.Identification) ? sample.tasks.Identification.length : 'NOT ARRAY',
-            Definition: Array.isArray(sample.tasks.Definition) ? sample.tasks.Definition.length : 'NOT ARRAY',
-            Delivery: Array.isArray(sample.tasks.Delivery) ? sample.tasks.Delivery.length : 'NOT ARRAY',
-            Closure: Array.isArray(sample.tasks.Closure) ? sample.tasks.Closure.length : 'NOT ARRAY'
-          }
-        });
-        
-        // Also log first few tasks if they exist
-        const idTasks = sample.tasks.Identification;
-        if (Array.isArray(idTasks) && idTasks.length > 0) {
-          console.log('Sample Identification tasks:', idTasks.slice(0, 3));
+        } catch (err) {
+          console.error(`Error fetching individual factor: ${err}`);
         }
       }
       
-      res.json(factors);
+      console.log(`Successfully fetched ${factors.length} complete factors`);
+      
+      // Add category to match the format expected by the client
+      const formattedFactors = factors.map(factor => ({
+        ...factor,
+        category: "Uncategorized" // This matches the single endpoint format
+      }));
+      
+      // Sample check of the data
+      if (formattedFactors.length > 0) {
+        const sample = formattedFactors[0];
+        console.log(`First factor has ${sample.tasks.Identification.length} identification tasks`);
+        
+        if (sample.tasks.Identification.length > 0) {
+          console.log(`First identification task: "${sample.tasks.Identification[0]}"`);
+        }
+      }
+      
+      // Return the correctly formatted factors
+      res.json(formattedFactors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
