@@ -18,7 +18,7 @@ interface ProjectTask {
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
   origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
-  sourceId: string;
+  sourceId: string | null; // Allow null for flexibility
   completed?: boolean;
   notes?: string;
   priority?: string;
@@ -34,7 +34,7 @@ interface CreateTaskParams {
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
   origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
-  sourceId: string;
+  sourceId: string | null;
   completed?: boolean;
   notes?: string;
   priority?: string;
@@ -47,7 +47,7 @@ interface UpdateTaskParams {
   text?: string;
   stage?: 'identification' | 'definition' | 'delivery' | 'closure';
   origin?: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
-  sourceId?: string;
+  sourceId?: string | null;
   completed?: boolean;
   notes?: string;
   priority?: string;

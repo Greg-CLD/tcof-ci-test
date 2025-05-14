@@ -65,7 +65,10 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 }
 
 export function setupAuth(app: Express) {
-  // Configure session middleware with enhanced settings
+  // Set trust proxy to work properly with Replit's infrastructure
+  app.set('trust proxy', 1);
+  
+  // Configure session middleware with enhanced settings for Replit
   app.use(
     session({
       store: new PgStore({
@@ -75,17 +78,32 @@ export function setupAuth(app: Express) {
         pruneSessionInterval: 60 // Prune expired sessions every minute
       }),
       secret: process.env.SESSION_SECRET || 'tcof-dev-secret',
-      resave: true, // Changed to true to ensure session is saved back to store
-      saveUninitialized: false,
+      resave: true, // Always save session even if unmodified
+      saveUninitialized: true, // Save new sessions that haven't been modified
       rolling: true, // Reset cookie expiration on each response
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
+        // Allow non-secure cookies in dev for easier testing
+        secure: false,
+        sameSite: 'lax',
+        path: '/'
       }
     })
   );
+  
+  // Debug middleware to track session data
+  app.use((req, res, next) => {
+    const sessionData = req.session as any;
+    console.log('Session debug:', { 
+      hasSession: !!req.session,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated(),
+      passport: sessionData?.passport,
+      cookie: sessionData?.cookie
+    });
+    next();
+  });
 
   // Initialize passport
   app.use(passport.initialize());
