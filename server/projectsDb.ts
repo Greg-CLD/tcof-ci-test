@@ -537,23 +537,10 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         throw sqlError;
       }
       
-      // Convert to ProjectTask interface with proper string type handling
-      return {
-        id: String(newTask.id),
-        projectId: String(newTask.project_id || projectIdString),
-        text: String(newTask.text),
-        stage: String(newTask.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
-        origin: String(newTask.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
-        sourceId: String(newTask.source_id),
-        completed: Boolean(newTask.completed),
-        notes: newTask.notes ? String(newTask.notes) : '',
-        priority: newTask.priority ? String(newTask.priority) : '',
-        dueDate: newTask.due_date ? String(newTask.due_date) : '',
-        owner: newTask.owner ? String(newTask.owner) : '',
-        status: newTask.status ? String(newTask.status) : '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      // This code is now unreachable because we return in the try block
+      // We're keeping this return with a log to track potential issues
+      console.log('WARNING: Code reached unreachable block in saveProjectTask');
+      return null;
     }
   } catch (error) {
     console.error('Error saving project task to database:', error);

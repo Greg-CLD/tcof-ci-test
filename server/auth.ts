@@ -202,17 +202,36 @@ export function setupAuth(app: Express) {
     // Accept any ID type (number or string)
     if (user && user.id !== undefined) {
       console.log("Serializing user:", user.id, user.username);
-      done(null, user.id); // Store the user ID as-is
+      
+      // Save the whole user object to req.session.passport.user
+      // This ensures we always have user data even if database queries fail
+      // This is a tradeoff - more data in session but more reliable auth
+      const { password, ...safeUser } = user;
+      
+      done(null, safeUser);
     } else {
       console.error("Invalid user object for serialization:", user);
       return done(new Error("Invalid user object for serialization"));
     }
   });
 
-  passport.deserializeUser(async (id: any, done) => {
+  passport.deserializeUser(async (userData: any, done) => {
     try {
-      // Handle either numeric or string IDs
-      console.log("Deserializing user with ID:", id, "type:", typeof id);
+      // If userData is already an object with an id property, use it directly
+      if (userData && typeof userData === 'object' && userData.id) {
+        console.log("Deserializing user from session:", userData.id, userData.username);
+        return done(null, userData);
+      }
+      
+      // For backwards compatibility, also handle if only ID was stored
+      const id = typeof userData === 'object' ? userData.id : userData;
+      
+      if (!id) {
+        console.error("No valid user ID for deserialization");
+        return done(null, false);
+      }
+      
+      console.log("Fetching user details for ID:", id);
       
       // Get user with direct query
       const result = await query('SELECT * FROM users WHERE id = $1', [id]);
