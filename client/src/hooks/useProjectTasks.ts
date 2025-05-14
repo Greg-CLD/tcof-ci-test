@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface ProjectTask {
@@ -47,14 +48,26 @@ export function useProjectTasks(projectId?: string) {
     enabled: !!projectId,
   });
   
+  // Log initial data when it changes
+  useEffect(() => {
+    if (tasks) {
+      console.log('Initial fetch:', tasks);
+    }
+  }, [tasks]);
+  
   // Mutation to create a new task
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: CreateTaskParams) => {
       const res = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
-      return await res.json();
+      const resJson = await res.json();
+      console.log('Post-mutation response (create):', resJson);
+      return resJson;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+      // Manually refetch to get fresh data
+      const freshData = await refetch();
+      console.log('Refetched list after create:', freshData.data);
     },
     onError: (error) => {
       console.error('Error creating task:', error);
@@ -66,10 +79,15 @@ export function useProjectTasks(projectId?: string) {
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
       const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, data);
-      return await res.json();
+      const resJson = await res.json();
+      console.log('Post-mutation response (update):', resJson);
+      return resJson;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+      // Manually refetch to get fresh data
+      const freshData = await refetch();
+      console.log('Refetched list after update:', freshData.data);
     },
     onError: (error) => {
       console.error('Error updating task:', error);
