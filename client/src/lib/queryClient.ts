@@ -1,5 +1,21 @@
 import { QueryClient } from "@tanstack/react-query";
 
+// Log all API requests
+async function logRequest(url: string, config: any) {
+  console.log(`API Request to ${url}:`, {
+    headers: config.headers,
+    method: config.method
+  });
+}
+
+async function logResponse(response: Response) {
+  console.log('API Response:', {
+    status: response.status,
+    headers: Object.fromEntries(response.headers),
+    url: response.url
+  });
+}
+
 // HTTP request function for mutations
 export async function apiRequest(
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
@@ -20,6 +36,9 @@ export async function apiRequest(
   }
 
   try {
+    // Log the request
+    await logRequest(url, options);
+    
     // Using Promise with timeout to handle infrastructure connectivity issues
     const fetchPromise = fetch(url, options);
     
@@ -31,7 +50,12 @@ export async function apiRequest(
     });
     
     // Race between the fetch and timeout
-    return await Promise.race([fetchPromise, timeoutPromise]);
+    const response = await Promise.race([fetchPromise, timeoutPromise]);
+    
+    // Log the response
+    await logResponse(response);
+    
+    return response;
   } catch (error) {
     // Create a mock Response for network errors
     console.error(`Network error during ${method} to ${url}:`, error);
@@ -39,23 +63,6 @@ export async function apiRequest(
     // Custom error response with helpful message
     const errorBody = JSON.stringify({
       error: true,
-
-// Log all API requests
-async function logRequest(url: string, config: any) {
-  console.log(`API Request to ${url}:`, {
-    headers: config.headers,
-    method: config.method
-  });
-}
-
-async function logResponse(response: Response) {
-  console.log('API Response:', {
-    status: response.status,
-    headers: Object.fromEntries(response.headers),
-    url: response.url
-  });
-}
-
       message: "Connection failed. Please check your internet connection and try again.",
       details: error instanceof Error ? error.message : String(error)
     });
