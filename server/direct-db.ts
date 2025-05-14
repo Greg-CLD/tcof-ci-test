@@ -17,12 +17,9 @@ export const db = postgres(DATABASE_URL, {
   idle_timeout: 60,
   connect_timeout: 30,
   statement_timeout: 60000, // 60 seconds
-  // Return arrays for queries
+  // Disable transformations to get raw data
   transform: {
-    column: {
-      from: () => true,
-      to: x => x
-    }
+    undefined: null,
   }
 });
 
