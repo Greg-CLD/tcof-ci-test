@@ -314,6 +314,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // System routes for diagnostics
+  app.get('/api/system/database-schema', async (req, res) => {
+    try {
+      // Check project_tasks table structure
+      const projectTasksSchema = await db.execute(`
+        SELECT column_name, data_type, is_nullable 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'project_tasks'
+        ORDER BY ordinal_position;
+      `);
+      
+      // Check if we have any data in project_tasks
+      const taskCount = await db.execute(`
+        SELECT COUNT(*) as count FROM project_tasks;
+      `);
+      
+      // Get sample tasks (limited to 5)
+      const sampleTasks = await db.execute(`
+        SELECT * FROM project_tasks LIMIT 5;
+      `);
+      
+      return res.json({
+        project_tasks: {
+          schema: projectTasksSchema,
+          count: taskCount[0]?.count || 0,
+          samples: sampleTasks
+        }
+      });
+    } catch (error) {
+      console.error('Error checking database schema:', error);
+      return res.status(500).json({ error: 'Failed to check database schema' });
+    }
+  });
+  
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -49,6 +49,7 @@ import { useFactors } from '@/hooks/useFactors';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
+import { TaskPersistenceHelper } from '@/components/TaskPersistenceHelper';
 
 interface ChecklistProps {
   projectId?: string;
@@ -808,6 +809,9 @@ export default function Checklist({ projectId }: ChecklistProps) {
           </Tabs>
         </>
       )}
+      
+      {/* Add the task persistence helper for testing */}
+      {project?.id && <TaskPersistenceHelper projectId={project.id} />}
     </div>
   );
 }
