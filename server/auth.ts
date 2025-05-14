@@ -93,43 +93,79 @@ export function setupAuth(app: Express) {
         console.log("Local strategy authenticating:", username);
         
         // Try to find user by username OR email
-        const result = await query(
+        console.log("Executing SQL query to find user:", 
           'SELECT * FROM users WHERE username = $1 OR email = $1', 
-          [username]
-        );
+          [username]);
         
-        // Log what we found
-        console.log("User lookup result:", result ? "Found user" : "No user found");
-        
-        const user = result?.[0];
-
-        // User not found
-        if (!user) {
-          console.log("Authentication failed: User not found");
-          return done(null, false, { message: "Invalid username or password" });
+        try {
+          // Get user with direct query
+          const result = await query(
+            'SELECT * FROM users WHERE username = $1 OR email = $1', 
+            [username]
+          );
+          
+          // Log the entire result for debugging
+          console.log("Raw database result:", JSON.stringify(result));
+          
+          const user = result?.[0];
+          
+          // Log user object if found
+          if (user) {
+            console.log("User found:", {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              hasPassword: !!user.password,
+              passwordLength: user.password ? user.password.length : 0
+            });
+          } else {
+            console.log("No user found with username or email:", username);
+          }
+          
+          // User not found
+          if (!user) {
+            console.log("Authentication failed: User not found");
+            return done(null, false, { message: "Invalid username or password" });
+          }
+          
+          // No password set
+          if (!user.password) {
+            console.log("Authentication failed: User has no password set");
+            return done(null, false, { message: "Invalid username or password" });
+          }
+          
+          // Log password details for debugging
+          console.log("Stored password format:", {
+            raw: user.password,
+            length: user.password.length,
+            containsSeparator: user.password.includes('.')
+          });
+          
+          // Check password match
+          console.log("Comparing passwords:", {
+            plainPassword: password,
+            hashedPasswordFormat: user.password.substring(0, 10) + '...'
+          });
+          
+          const passwordMatches = comparePasswords(password, user.password);
+          console.log("Password check result:", passwordMatches ? "Match" : "No match");
+          
+          if (!passwordMatches) {
+            return done(null, false, { message: "Invalid username or password" });
+          }
+          
+          // User found and password matches
+          console.log("Authentication successful for user:", user.username, "ID:", user.id);
+          return done(null, user);
+        } catch (dbError) {
+          console.error("Database error during user lookup:", dbError);
+          return done(dbError);
         }
-        
-        // No password set
-        if (!user.password) {
-          console.log("Authentication failed: User has no password set");
-          return done(null, false, { message: "Invalid username or password" });
-        }
-        
-        // Check password match
-        const passwordMatches = comparePasswords(password, user.password);
-        console.log("Password check result:", passwordMatches ? "Match" : "No match");
-        
-        if (!passwordMatches) {
-          return done(null, false, { message: "Invalid username or password" });
-        }
-
-        // User found and password matches
-        console.log("Authentication successful for user:", user.username, "ID:", user.id);
-        return done(null, user);
       } catch (error) {
         console.error("Authentication error:", error);
         return done(error);
       }
+    })
     })
   );
 
@@ -166,14 +202,19 @@ export function setupAuth(app: Express) {
 
   // Setup authentication routes
   app.post("/api/login", (req, res, next) => {
-    // Log request data for debugging, but never log passwords in production
-    console.log("Login attempt for user:", req.body.username);
+    // Log detailed request data for debugging
+    console.log('→ Headers:', req.headers);
+    console.log('→ Body:', req.body);
     
     // Validate required fields
     if (!req.body.username || !req.body.password) {
       console.error("Missing login credentials");
       return res.status(401).json({ message: "Missing credentials" });
     }
+    
+    // Log the exact SQL that will be executed
+    console.log('→ SQL query will be: SELECT * FROM users WHERE username = $1 OR email = $1');
+    console.log('→ With parameter:', req.body.username);
     
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
@@ -186,8 +227,9 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
       
-      // Log successful authentication
-      console.log("User authenticated successfully:", user.username, "ID:", user.id);
+      // Log successful authentication with user details (except password)
+      const { password, ...debugUser } = user;
+      console.log("User authenticated successfully:", debugUser);
       
       req.login(user, (err) => {
         if (err) {
