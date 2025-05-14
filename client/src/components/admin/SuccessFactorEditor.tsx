@@ -30,7 +30,7 @@ import AdminStageTabs, { Stage, FactorTask } from './AdminStageTabs';
 import FactorSidebar from './FactorSidebar';
 import SiteHeader from '@/components/SiteHeader';
 import { useAuth } from '@/hooks/useAuth';
-import { useAdminSuccessFactors } from '@/hooks/useAdminSuccessFactors';
+import { useAdminSuccessFactors, Stage as AdminStage } from '@/hooks/useAdminSuccessFactors';
 import { Link } from 'wouter';
 
 // Enhanced logging function that won't cause React rendering issues
@@ -42,7 +42,18 @@ function logData(message: string, data: any) {
 // We don't need props for a standalone page component
 export default function SuccessFactorEditor() {
   // Use our custom admin hook for success factors with tasks
-  const { factors = [], isLoading, error } = useAdminSuccessFactors();
+  const { 
+    factors = [], 
+    isLoading, 
+    error, 
+    addTask,
+    updateTask,
+    removeTask,
+    isAddingTask,
+    isUpdatingTask,
+    isRemovingTask
+  } = useAdminSuccessFactors();
+  
   console.log("[NETWORK RESPONSE] Factors:", factors);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
@@ -134,162 +145,124 @@ export default function SuccessFactorEditor() {
   // Update an existing task
   const handleUpdateTask = async (factorId: string, stage: Stage, taskIndex: number, newText: string) => {
     if (!selectedFactor || !selectedFactor.tasks) return;
-
-    setIsSaving(true);
-
-    // Make sure we have a complete tasks structure
-    const tasks = {
-      Identification: selectedFactor.tasks?.Identification || [],
-      Definition: selectedFactor.tasks?.Definition || [],
-      Delivery: selectedFactor.tasks?.Delivery || [],
-      Closure: selectedFactor.tasks?.Closure || []
-    };
     
-    // Create a defensive copy of the tasks array for this stage
-    const updatedTasks = [...(tasks[stage] || [])];
-    
-    // Safely update the task
-    if (taskIndex >= 0 && taskIndex < updatedTasks.length) {
-      updatedTasks[taskIndex] = newText;
-    }
-    
-    // Create updated factor with safe tasks structure
-    const updatedFactor = { 
-      ...selectedFactor,
-      tasks: {
-        ...tasks,
-        [stage]: updatedTasks
-      }
-    };
-
     try {
-      // Update in the API
-      const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
-      await response.json();
-
-      // Invalidate both the list and individual factor caches
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
-
-      console.log('[ADMIN] Updated task and invalidated cache');
+      console.log(`[EDITOR] Updating task at index ${taskIndex} for factor ${factorId} in ${stage} stage`);
+      
+      // Use the mutation from our hook
+      updateTask({
+        factorId,
+        stage: stage as AdminStage,
+        taskIndex,
+        newText
+      }, {
+        onSuccess: () => {
+          console.log(`[EDITOR] Task updated successfully`);
+          // Success notification
+          toast({
+            title: 'Task updated',
+            description: `Updated task in ${stage} stage`,
+            variant: 'default',
+          });
+        },
+        onError: (error) => {
+          console.error('Error updating task:', error);
+          toast({
+            title: 'Error updating task',
+            description: 'Could not update task on the server.',
+            variant: 'destructive',
+          });
+        }
+      });
     } catch (error) {
-      console.error('Error updating task:', error);
+      console.error('Error calling update task mutation:', error);
       toast({
         title: 'Error updating task',
         description: 'Could not update task on the server.',
         variant: 'destructive',
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
   // Add a new task to a factor
   const handleAddTask = async (factorId: string, stage: Stage) => {
-    if (!selectedFactor || !selectedFactor.tasks) return;
-
-    setIsSaving(true);
-
-    // Make sure we have a complete tasks structure
-    const tasks = {
-      Identification: selectedFactor.tasks?.Identification || [],
-      Definition: selectedFactor.tasks?.Definition || [],
-      Delivery: selectedFactor.tasks?.Delivery || [],
-      Closure: selectedFactor.tasks?.Closure || []
-    };
+    if (!selectedFactor) return;
     
-    // Create a defensive copy of the tasks array for this stage and add empty task
-    const updatedTasks = [...(tasks[stage] || []), ''];
-    
-    // Create updated factor with safe tasks structure
-    const updatedFactor = { 
-      ...selectedFactor,
-      tasks: {
-        ...tasks,
-        [stage]: updatedTasks
-      }
-    };
-
     try {
-      // Update in the API
-      const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
-      await response.json();
-
-      // Invalidate both the list and individual factor caches
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
-
-      toast({
-        title: 'Task added',
-        description: `Added new task to ${stage} stage`,
-        variant: 'default',
+      console.log(`[EDITOR] Adding new task to factor ${factorId} in ${stage} stage`);
+      
+      // Use the mutation from our hook
+      addTask({
+        factorId,
+        stage: stage as AdminStage,
+        taskText: '' // Start with an empty task
+      }, {
+        onSuccess: () => {
+          console.log(`[EDITOR] Task added successfully`);
+          // Success notification
+          toast({
+            title: 'Task added',
+            description: `Added new task to ${stage} stage`,
+            variant: 'default',
+          });
+        },
+        onError: (error) => {
+          console.error('Error adding task:', error);
+          toast({
+            title: 'Error adding task',
+            description: 'Could not add task to the server.',
+            variant: 'destructive',
+          });
+        }
       });
     } catch (error) {
-      console.error('Error adding task:', error);
+      console.error('Error calling add task mutation:', error);
       toast({
         title: 'Error adding task',
         description: 'Could not add task to the server.',
         variant: 'destructive',
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
   // Delete a task
   const handleDeleteTask = async (factorId: string, stage: Stage, taskIndex: number) => {
-    if (!selectedFactor || !selectedFactor.tasks) return;
+    if (!selectedFactor) return;
     
-    setIsSaving(true);
-    
-    // Make sure we have a complete tasks structure
-    const tasks = {
-      Identification: selectedFactor.tasks?.Identification || [],
-      Definition: selectedFactor.tasks?.Definition || [],
-      Delivery: selectedFactor.tasks?.Delivery || [],
-      Closure: selectedFactor.tasks?.Closure || []
-    };
-    
-    // Create a defensive copy of the tasks array for this stage
-    const updatedTasks = [...(tasks[stage] || [])];
-    
-    // Only remove the task if it exists
-    if (taskIndex >= 0 && taskIndex < updatedTasks.length) {
-      updatedTasks.splice(taskIndex, 1);
-    }
-    
-    // Create updated factor with safe tasks structure
-    const updatedFactor = { 
-      ...selectedFactor,
-      tasks: {
-        ...tasks,
-        [stage]: updatedTasks
-      }
-    };
-
     try {
-      // Update in the API
-      const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
-      await response.json();
-
-      // Invalidate both the list and individual factor caches
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
-
-      toast({
-        title: 'Task deleted',
-        description: `Removed task from ${stage} stage`,
-        variant: 'default',
+      console.log(`[EDITOR] Removing task at index ${taskIndex} from factor ${factorId} in ${stage} stage`);
+      
+      // Use the mutation from our hook
+      removeTask({
+        factorId,
+        stage: stage as AdminStage,
+        taskIndex
+      }, {
+        onSuccess: () => {
+          console.log(`[EDITOR] Task removed successfully`);
+          // Success notification
+          toast({
+            title: 'Task deleted',
+            description: `Removed task from ${stage} stage`,
+            variant: 'default',
+          });
+        },
+        onError: (error) => {
+          console.error('Error removing task:', error);
+          toast({
+            title: 'Error deleting task',
+            description: 'Could not delete task from the server.',
+            variant: 'destructive',
+          });
+        }
       });
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error('Error calling remove task mutation:', error);
       toast({
         title: 'Error deleting task',
         description: 'Could not delete task from the server.',
         variant: 'destructive',
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 

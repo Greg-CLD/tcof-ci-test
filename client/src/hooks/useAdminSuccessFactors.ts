@@ -1,5 +1,6 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { apiRequest } from '@/lib/queryClient';
 
 export interface AdminSuccessFactor {
   id: string;
@@ -12,6 +13,8 @@ export interface AdminSuccessFactor {
     Closure: string[];
   };
 }
+
+export type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 
 export function useAdminSuccessFactors() {
   console.log('[ADMIN] useAdminSuccessFactors hook initialized');
@@ -34,6 +37,159 @@ export function useAdminSuccessFactors() {
     console.log('[ADMIN] Forcing initial refetch of success factors');
     refetch();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Task mutations
+  const addTaskMutation = useMutation({
+    mutationFn: async ({ factorId, stage, taskText = '' }: { factorId: string, stage: Stage, taskText?: string }) => {
+      console.log(`[ADMIN] Adding new task to ${factorId} in ${stage} stage`);
+      
+      // Get current factor data
+      const response = await apiRequest('GET', `/api/admin/success-factors/${factorId}`);
+      const currentFactor = await response.json();
+      
+      if (!currentFactor) {
+        throw new Error(`Factor ${factorId} not found`);
+      }
+      
+      // Ensure the tasks structure exists
+      const tasks = {
+        Identification: Array.isArray(currentFactor.tasks?.Identification) ? [...currentFactor.tasks.Identification] : [],
+        Definition: Array.isArray(currentFactor.tasks?.Definition) ? [...currentFactor.tasks.Definition] : [],
+        Delivery: Array.isArray(currentFactor.tasks?.Delivery) ? [...currentFactor.tasks.Delivery] : [],
+        Closure: Array.isArray(currentFactor.tasks?.Closure) ? [...currentFactor.tasks.Closure] : []
+      };
+      
+      // Add the new task
+      tasks[stage].push(taskText);
+      
+      // Update the factor with the new task
+      const updatedFactor = {
+        ...currentFactor,
+        tasks
+      };
+      
+      // Send the update to the server
+      const updateResponse = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+      return await updateResponse.json();
+    },
+    onSuccess: () => {
+      // Invalidate both the list and individual factor queries
+      console.log('[ADMIN] Task added successfully, invalidating cache');
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
+      queryClient.refetchQueries({ queryKey: ['/api/admin/success-factors'] });
+    }
+  });
+  
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ 
+      factorId, 
+      stage, 
+      taskIndex, 
+      newText 
+    }: { 
+      factorId: string, 
+      stage: Stage, 
+      taskIndex: number, 
+      newText: string 
+    }) => {
+      console.log(`[ADMIN] Updating task at index ${taskIndex} for ${factorId} in ${stage} stage`);
+      
+      // Get current factor data
+      const response = await apiRequest('GET', `/api/admin/success-factors/${factorId}`);
+      const currentFactor = await response.json();
+      
+      if (!currentFactor) {
+        throw new Error(`Factor ${factorId} not found`);
+      }
+      
+      // Ensure the tasks structure exists
+      const tasks = {
+        Identification: Array.isArray(currentFactor.tasks?.Identification) ? [...currentFactor.tasks.Identification] : [],
+        Definition: Array.isArray(currentFactor.tasks?.Definition) ? [...currentFactor.tasks.Definition] : [],
+        Delivery: Array.isArray(currentFactor.tasks?.Delivery) ? [...currentFactor.tasks.Delivery] : [],
+        Closure: Array.isArray(currentFactor.tasks?.Closure) ? [...currentFactor.tasks.Closure] : []
+      };
+      
+      // Update the task if it exists
+      if (tasks[stage].length > taskIndex) {
+        tasks[stage][taskIndex] = newText;
+        
+        // Update the factor with the modified tasks
+        const updatedFactor = {
+          ...currentFactor,
+          tasks
+        };
+        
+        // Send the update to the server
+        const updateResponse = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+        return await updateResponse.json();
+      } else {
+        throw new Error(`Task index ${taskIndex} out of bounds for ${stage} stage`);
+      }
+    },
+    onSuccess: () => {
+      // Invalidate both the list and individual factor queries
+      console.log('[ADMIN] Task updated successfully, invalidating cache');
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
+      queryClient.refetchQueries({ queryKey: ['/api/admin/success-factors'] });
+    }
+  });
+  
+  const removeTaskMutation = useMutation({
+    mutationFn: async ({ 
+      factorId, 
+      stage, 
+      taskIndex 
+    }: { 
+      factorId: string, 
+      stage: Stage, 
+      taskIndex: number 
+    }) => {
+      console.log(`[ADMIN] Removing task at index ${taskIndex} from ${factorId} in ${stage} stage`);
+      
+      // Get current factor data
+      const response = await apiRequest('GET', `/api/admin/success-factors/${factorId}`);
+      const currentFactor = await response.json();
+      
+      if (!currentFactor) {
+        throw new Error(`Factor ${factorId} not found`);
+      }
+      
+      // Ensure the tasks structure exists
+      const tasks = {
+        Identification: Array.isArray(currentFactor.tasks?.Identification) ? [...currentFactor.tasks.Identification] : [],
+        Definition: Array.isArray(currentFactor.tasks?.Definition) ? [...currentFactor.tasks.Definition] : [],
+        Delivery: Array.isArray(currentFactor.tasks?.Delivery) ? [...currentFactor.tasks.Delivery] : [],
+        Closure: Array.isArray(currentFactor.tasks?.Closure) ? [...currentFactor.tasks.Closure] : []
+      };
+      
+      // Remove the task if it exists
+      if (tasks[stage].length > taskIndex) {
+        tasks[stage] = [
+          ...tasks[stage].slice(0, taskIndex),
+          ...tasks[stage].slice(taskIndex + 1)
+        ];
+        
+        // Update the factor with the modified tasks
+        const updatedFactor = {
+          ...currentFactor,
+          tasks
+        };
+        
+        // Send the update to the server
+        const updateResponse = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
+        return await updateResponse.json();
+      } else {
+        throw new Error(`Task index ${taskIndex} out of bounds for ${stage} stage`);
+      }
+    },
+    onSuccess: () => {
+      // Invalidate both the list and individual factor queries
+      console.log('[ADMIN] Task removed successfully, invalidating cache');
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
+      queryClient.refetchQueries({ queryKey: ['/api/admin/success-factors'] });
+    }
+  });
 
   // Log diagnostic info
   if (factors) {
@@ -83,7 +239,9 @@ export function useAdminSuccessFactors() {
 
   // Function to invalidate the cache after changes
   const invalidateCache = () => {
+    console.log('[ADMIN] Manually invalidating cache');
     queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
+    queryClient.refetchQueries({ queryKey: ['/api/admin/success-factors'] });
   };
 
   return {
@@ -91,6 +249,12 @@ export function useAdminSuccessFactors() {
     isLoading,
     error,
     refetch,
-    invalidateCache
+    invalidateCache,
+    addTask: addTaskMutation.mutate,
+    updateTask: updateTaskMutation.mutate,
+    removeTask: removeTaskMutation.mutate,
+    isAddingTask: addTaskMutation.isPending,
+    isUpdatingTask: updateTaskMutation.isPending,
+    isRemovingTask: removeTaskMutation.isPending
   };
 }
