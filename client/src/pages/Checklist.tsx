@@ -477,10 +477,10 @@ export default function Checklist({ projectId }: ChecklistProps) {
         return updatedTasks;
       });
       
-      // Delete from server
+      // Delete from server - use the correct endpoint
       await apiRequest(
         "DELETE",
-        `/api/project-tasks/${taskId}?projectId=${currentProjectId}`
+        `/api/projects/${currentProjectId}/tasks/${taskId}`
       );
       
       toast({
