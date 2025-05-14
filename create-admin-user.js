@@ -1,3 +1,4 @@
+
 /**
  * Script to create an admin user directly in the database
  */
@@ -24,9 +25,9 @@ async function createAdminUser() {
     console.log('Creating admin user...');
     
     // Define user details
-    const username = 'admin';
-    const email = 'greg.krawczyk@confluity.co.uk';
-    const password = 'admin123'; // Simple password for testing
+    const username = 'greg';
+    const email = 'greg@confluity.co.uk';
+    const password = 'confluity123'; // Set to requested password
     const hashedPassword = hashPassword(password);
     
     // Check if user exists
@@ -48,14 +49,8 @@ async function createAdminUser() {
       console.log(`Created new admin user with ID: ${result.rows[0].id}`);
     }
     
-    console.log(`Admin user details:
-      Username: ${username}
-      Email: ${email}
-      Password: ${password} (unencrypted for testing purposes only)
-    `);
-    
   } catch (error) {
-    console.error('Error creating admin user:', error);
+    console.error('Error creating/updating admin user:', error);
   } finally {
     client.release();
   }
