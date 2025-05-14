@@ -312,7 +312,7 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
       // Use direct SQL query with prepared statement to avoid type issues
       const sql = `
         SELECT * FROM project_tasks
-        WHERE project_id::text = $1
+        WHERE project_id = $1::uuid
       `;
       
       try {
@@ -481,8 +481,21 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         now
       ];
       
+      console.log('Inserting new task with params:', { 
+        taskId, 
+        projectId: projectIdString, 
+        text: task.text,
+        paramsLength: insertParams.length
+      });
+      
       // Execute query directly with proper parameters
-      const insertResult = await db.execute(insertSql, insertParams);
+      try {
+        const insertResult = await db.execute(insertSql, insertParams);
+        return handleResult(insertResult);
+      } catch (error) {
+        console.error('SQL error creating task:', error);
+        throw error;
+      }
       
       if (!insertResult.rows || insertResult.rows.length === 0) {
         throw new Error('Failed to create new task');
