@@ -118,7 +118,7 @@ export default function SiteHeader() {
                 <DollarSign className="h-4 w-4 mr-1" /> Pricing
               </Link>
             )}
-            {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
+            {user && (user.username.toLowerCase() === 'greg@confluity.co.uk' || user.email?.toLowerCase() === 'greg@confluity.co.uk' || user.username.toLowerCase() === 'greg') && (
               <Link 
                 href="/make-a-plan/admin" 
                 className={`text-tcof-dark hover:text-tcof-teal transition-colors flex items-center ${location.includes('/make-a-plan/admin') ? 'nav-link active font-medium' : 'nav-link'}`}
@@ -201,7 +201,7 @@ export default function SiteHeader() {
               )}
               
               {/* Admin link (mobile) */}
-              {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
+              {user && (user.username.toLowerCase() === 'greg@confluity.co.uk' || user.email?.toLowerCase() === 'greg@confluity.co.uk' || user.username.toLowerCase() === 'greg') && (
                 <Link 
                   href="/make-a-plan/admin"
                   onClick={handleNavigation}
@@ -269,7 +269,7 @@ export default function SiteHeader() {
                       <History className="h-5 w-5 mr-2" /> View History
                     </Link>
                     
-                    {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
+                    {user && (user.username.toLowerCase() === 'greg@confluity.co.uk' || user.email?.toLowerCase() === 'greg@confluity.co.uk' || user.username.toLowerCase() === 'greg') && (
                       <>
                         <Link 
                           href="/make-a-plan/admin/factors"
