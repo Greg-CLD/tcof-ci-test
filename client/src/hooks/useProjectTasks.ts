@@ -67,9 +67,34 @@ export function useProjectTasks(projectId?: string) {
     refetch
   } = useQuery<ProjectTask[]>({
     queryKey: ['api', 'projects', projectId, 'tasks'],
+    queryFn: async () => {
+      if (!projectId) return [];
+      
+      try {
+        // Use native fetch for more control over error handling
+        console.log(`Fetching tasks for project ${projectId}`);
+        const res = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+        
+        if (!res.ok) {
+          console.error(`Error fetching tasks: ${res.status} ${res.statusText}`);
+          // If we get a 401, throw an error to trigger retry on login
+          if (res.status === 401) {
+            throw new Error('Authentication required');
+          }
+          return [];
+        }
+        
+        const data = await res.json();
+        console.log(`Fetched ${data.length} tasks for project ${projectId}`);
+        return data;
+      } catch (err) {
+        console.error('Error in task query:', err);
+        return [];
+      }
+    },
     enabled: !!projectId,
-    // Enhanced error handling and retries
-    retry: 2,
+    retry: 3,
+    retryDelay: attempt => Math.min(attempt > 1 ? 2000 : 1000, 30 * 1000),
     staleTime: 10 * 1000, // 10 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
@@ -85,42 +110,92 @@ export function useProjectTasks(projectId?: string) {
   // Mutation to create a new task
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: CreateTaskParams) => {
-      const res = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
-      const resJson = await res.json();
-      console.log('Post-mutation response (create):', resJson);
-      return resJson;
+      console.log(`Creating task for project ${projectId}:`, taskData.text);
+      
+      try {
+        const res = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
+        
+        if (!res.ok) {
+          console.error(`Error creating task: ${res.status} ${res.statusText}`);
+          // Handle authentication errors specially
+          if (res.status === 401) {
+            throw new Error('Authentication required to create task');
+          }
+          throw new Error(`Failed to create task: ${res.status} ${res.statusText}`);
+        }
+        
+        const resJson = await res.json();
+        console.log('Task created successfully:', resJson.id);
+        return resJson;
+      } catch (err) {
+        console.error('Task creation exception:', err);
+        throw err;
+      }
     },
-    onSuccess: async () => {
-      // Use consistent query key format for invalidation
+    onSuccess: async (newTask) => {
+      console.log('Invalidating task cache after create');
+      // First invalidate the query cache
       await queryClient.invalidateQueries({ queryKey: ['api', 'projects', projectId, 'tasks'] });
-      // Manually refetch to get fresh data
+      
+      // Then optimistically update the cache to avoid waiting for refetch
+      queryClient.setQueryData(['api', 'projects', projectId, 'tasks'], (oldData: ProjectTask[] | undefined) => {
+        if (!oldData) return [newTask];
+        return [...oldData, newTask];
+      });
+      
+      // Finally refetch to ensure consistency
       const freshData = await refetch();
-      console.log('Refetched list after create:', freshData.data);
+      console.log(`Refetched ${freshData.data?.length || 0} tasks after create`);
     },
     onError: (error) => {
       console.error('Error creating task:', error);
-      throw error;
+      // Don't throw from the callback
     }
   });
   
   // Mutation to update an existing task
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
-      const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, data);
-      const resJson = await res.json();
-      console.log('Post-mutation response (update):', resJson);
-      return resJson;
+      console.log(`Updating task ${taskId} for project ${projectId}:`, data);
+      
+      try {
+        const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, data);
+        
+        if (!res.ok) {
+          console.error(`Error updating task: ${res.status} ${res.statusText}`);
+          // Handle authentication errors specially
+          if (res.status === 401) {
+            throw new Error('Authentication required to update task');
+          }
+          throw new Error(`Failed to update task: ${res.status} ${res.statusText}`);
+        }
+        
+        const resJson = await res.json();
+        console.log('Task updated successfully:', resJson.id);
+        return resJson;
+      } catch (err) {
+        console.error('Task update exception:', err);
+        throw err;
+      }
     },
-    onSuccess: async () => {
-      // Use consistent query key format for invalidation
+    onSuccess: async (updatedTask) => {
+      console.log('Invalidating task cache after update');
+      // First invalidate the query cache
       await queryClient.invalidateQueries({ queryKey: ['api', 'projects', projectId, 'tasks'] });
-      // Manually refetch to get fresh data
+      
+      // Then optimistically update the cache to avoid waiting for refetch
+      queryClient.setQueryData(['api', 'projects', projectId, 'tasks'], (oldData: ProjectTask[] | undefined) => {
+        if (!oldData) return [updatedTask];
+        return oldData.map(task => task.id === updatedTask.id ? updatedTask : task);
+      });
+      
+      // Finally refetch to ensure consistency
       const freshData = await refetch();
-      console.log('Refetched list after update:', freshData.data);
+      console.log(`Refetched ${freshData.data?.length || 0} tasks after update`);
     },
     onError: (error) => {
       console.error('Error updating task:', error);
-      throw error;
+      // Don't throw from the callback
     }
   });
   

@@ -65,19 +65,24 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 }
 
 export function setupAuth(app: Express) {
-  // Configure session middleware
+  // Configure session middleware with enhanced settings
   app.use(
     session({
       store: new PgStore({
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
-        tableName: 'sessions'
+        tableName: 'sessions',
+        pruneSessionInterval: 60 // Prune expired sessions every minute
       }),
       secret: process.env.SESSION_SECRET || 'tcof-dev-secret',
-      resave: false,
+      resave: true, // Changed to true to ensure session is saved back to store
       saveUninitialized: false,
+      rolling: true, // Reset cookie expiration on each response
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
       }
     })
   );
