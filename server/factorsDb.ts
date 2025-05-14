@@ -7,7 +7,7 @@ export async function getFactors(): Promise<FactorTask[]> {
   try {
     console.log("Getting all factors from v_success_factors_full view...");
     const result = await db.execute(sql`
-      SELECT id, title, description, tasks
+      SELECT id, title, description, tasks::text
       FROM v_success_factors_full
       ORDER BY id
     `);
@@ -19,19 +19,41 @@ export async function getFactors(): Promise<FactorTask[]> {
 
     console.log(`Found ${result.rows.length} factors in the database`);
     
-    // The view already returns tasks as a properly structured JSON object
-    // so we can directly return the rows as FactorTask objects
+    // Parse the JSON tasks manually to ensure proper structure
     const factors = result.rows.map((row: any) => {
+      // Parse the JSON string tasks
+      let parsedTasks;
+      try {
+        // Make sure tasks is a string before parsing
+        if (typeof row.tasks === 'string') {
+          parsedTasks = JSON.parse(row.tasks);
+        } else {
+          parsedTasks = row.tasks;
+        }
+      } catch (e) {
+        console.error('Error parsing tasks JSON for factor', row.id, e);
+        // Provide default empty structure if parsing fails
+        parsedTasks = {
+          Identification: [],
+          Definition: [],
+          Delivery: [],
+          Closure: []
+        };
+      }
+      
+      // Ensure each stage has a valid array, not null
+      const tasksWithDefaults = {
+        Identification: Array.isArray(parsedTasks.Identification) ? parsedTasks.Identification : [],
+        Definition: Array.isArray(parsedTasks.Definition) ? parsedTasks.Definition : [],
+        Delivery: Array.isArray(parsedTasks.Delivery) ? parsedTasks.Delivery : [],
+        Closure: Array.isArray(parsedTasks.Closure) ? parsedTasks.Closure : []
+      };
+      
       return {
         id: String(row.id),
         title: String(row.title),
         description: row.description ? String(row.description) : '',
-        tasks: row.tasks as {
-          Identification: string[];
-          Definition: string[];
-          Delivery: string[];
-          Closure: string[];
-        }
+        tasks: tasksWithDefaults
       };
     });
     
@@ -54,7 +76,7 @@ export async function getFactor(id: string): Promise<FactorTask | null> {
   try {
     console.log(`Getting factor ${id} from v_success_factors_full view...`);
     const result = await db.execute(sql`
-      SELECT id, title, description, tasks
+      SELECT id, title, description, tasks::text
       FROM v_success_factors_full
       WHERE id = ${id}
     `);
@@ -64,21 +86,45 @@ export async function getFactor(id: string): Promise<FactorTask | null> {
       return null;
     }
 
-    // Get row directly from view - tasks is already structured correctly
+    // Get row directly from view and parse JSON tasks
     const row = result.rows[0];
+    
+    // Parse the JSON tasks string
+    let parsedTasks;
+    try {
+      // Make sure tasks is a string before parsing
+      if (typeof row.tasks === 'string') {
+        parsedTasks = JSON.parse(row.tasks);
+      } else {
+        parsedTasks = row.tasks;
+      }
+    } catch (e) {
+      console.error(`Error parsing tasks JSON for factor ${id}:`, e);
+      // Provide default empty structure if parsing fails
+      parsedTasks = {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      };
+    }
+    
+    // Ensure each stage has a valid array, not null
+    const tasksWithDefaults = {
+      Identification: Array.isArray(parsedTasks.Identification) ? parsedTasks.Identification : [],
+      Definition: Array.isArray(parsedTasks.Definition) ? parsedTasks.Definition : [],
+      Delivery: Array.isArray(parsedTasks.Delivery) ? parsedTasks.Delivery : [],
+      Closure: Array.isArray(parsedTasks.Closure) ? parsedTasks.Closure : []
+    };
+    
     const factor: FactorTask = {
       id: String(row.id),
       title: String(row.title),
       description: row.description ? String(row.description) : '',
-      tasks: row.tasks as {
-        Identification: string[];
-        Definition: string[];
-        Delivery: string[];
-        Closure: string[];
-      }
+      tasks: tasksWithDefaults
     };
 
-    console.log(`Returning factor ${id}`);
+    console.log(`Returning factor ${id} with tasks:`, JSON.stringify(factor.tasks, null, 2));
     return factor;
   } catch (error) {
     console.error(`Error loading factor ${id} from database:`, error);

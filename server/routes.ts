@@ -2616,11 +2616,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the getFactors function to fetch all factors in one go
       const factors = await factorsDb.getFactors();
       
-      // Add category to match the format expected by the client
-      const formattedFactors = factors.map(factor => ({
-        ...factor,
-        category: "Uncategorized" // This matches the single endpoint format
-      }));
+      // Log the retrieved factors for debugging
+      console.log('Retrieved factors:', JSON.stringify(factors.slice(0, 1), null, 2));
+      
+      // Add category and ensure proper task structure for each factor
+      const formattedFactors = factors.map(factor => {
+        // Ensure each task array is properly initialized
+        const formattedFactor = {
+          ...factor,
+          category: "Uncategorized", // This matches the single endpoint format
+          tasks: {
+            Identification: Array.isArray(factor.tasks.Identification) ? factor.tasks.Identification : [],
+            Definition: Array.isArray(factor.tasks.Definition) ? factor.tasks.Definition : [],
+            Delivery: Array.isArray(factor.tasks.Delivery) ? factor.tasks.Delivery : [],
+            Closure: Array.isArray(factor.tasks.Closure) ? factor.tasks.Closure : []
+          }
+        };
+        
+        return formattedFactor;
+      });
       
       // Sample check of the data
       if (formattedFactors.length > 0) {
@@ -2630,6 +2644,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (sample.tasks.Identification.length > 0) {
           console.log(`First identification task: "${sample.tasks.Identification[0]}"`);
         }
+        
+        // Log the first formatted factor for debugging
+        console.log('First formatted factor:', JSON.stringify(sample, null, 2));
       }
       
       // Return the correctly formatted factors
