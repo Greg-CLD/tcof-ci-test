@@ -21,6 +21,7 @@ import { useFactors } from '@/hooks/useFactors';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChecklistProps {
   projectId?: string;
@@ -120,10 +121,17 @@ export default function Checklist({ projectId }: ChecklistProps) {
     
     return tasks;
   }, [successFactors]);
+  
+  // Refresh tasks state when canonical tasks change
+  useEffect(() => {
+    if (canonicalTasks && canonicalTasks.length > 0) {
+      refreshTasksState();
+    }
+  }, [canonicalTasks]);
 
   // Helper function to refresh task state
   const refreshTasksState = async () => {
-    if (!currentProjectId || !canonicalTasks) return;
+    if (!currentProjectId || !canonicalTasks || canonicalTasks.length === 0) return;
     
     try {
       // Get existing task statuses from the server
@@ -168,7 +176,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
           completed,
           stage: task.stage || 'Identification',
           source: 'factor',
-          sourceName: task.factorCode
+          sourceName: task.factorCode || task.factorId
         };
       });
       
