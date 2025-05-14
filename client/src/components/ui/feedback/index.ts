@@ -3,7 +3,6 @@ import {
   FeedbackProvider, 
   useFeedback, 
   FeedbackType,
-  FeedbackContextType,
   FeedbackItem as FeedbackItemType
 } from './feedback-context';
 import { FeedbackItem as FeedbackItemComponent } from './feedback-item';
@@ -16,7 +15,6 @@ export {
   FeedbackProvider,
   useFeedback,
   FeedbackType,
-  FeedbackContextType,
   FeedbackItemType,
   FeedbackItemComponent as FeedbackItem,
   FeedbackContainer,

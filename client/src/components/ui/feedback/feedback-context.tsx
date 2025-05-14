@@ -14,8 +14,8 @@ export interface FeedbackItem {
   animate?: boolean;
 }
 
-// Interface for our context
-interface FeedbackContextShape {
+// Define the context interface (keep it internal to this module)
+interface FeedbackContextType {
   // Current feedback items
   feedbackItems: FeedbackItem[];
   
@@ -30,8 +30,6 @@ interface FeedbackContextShape {
   showInfo: (message: string, options?: Partial<Omit<FeedbackItem, 'id' | 'type' | 'message'>>) => string;
   showWarning: (message: string, options?: Partial<Omit<FeedbackItem, 'id' | 'type' | 'message'>>) => string;
 }
-
-export type FeedbackContextType = FeedbackContextShape;
 
 // Create the context with a default empty value
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
