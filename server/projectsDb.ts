@@ -138,30 +138,172 @@ function saveProjects(projects: Project[]): boolean {
 }
 
 /**
+ * Get success factor tasks from the database
+ * @returns Array of success factor tasks
+ */
+async function getSuccessFactorTasks(): Promise<any[]> {
+  try {
+    const query = `
+      SELECT 
+        factor_id AS sourceId, 
+        stage,
+        text
+      FROM 
+        success_factor_tasks
+      WHERE 
+        text IS NOT NULL AND text <> ''
+      ORDER BY 
+        factor_id, stage, "order"
+    `;
+    
+    const result = await db.execute(query);
+    
+    if (!result.rows) {
+      console.error('Failed to fetch success factor tasks');
+      return [];
+    }
+    
+    return result.rows.map(row => ({
+      sourceId: row.sourceid, // lowercase due to postgres column names
+      stage: row.stage.toLowerCase(),
+      text: row.text,
+      origin: 'factor'
+    }));
+  } catch (error) {
+    console.error('Error fetching success factor tasks:', error);
+    return [];
+  }
+}
+
+/**
+ * Get all tasks from canonical sources (success factors, personal heuristics, etc.)
+ * @returns Array of tasks with their source information
+ */
+async function getAllCanonicalTasks(): Promise<any[]> {
+  // Get success factor tasks
+  const factorTasks = await getSuccessFactorTasks();
+  
+  // TODO: Add additional task sources when needed (personal heuristics, policies, etc.)
+  // const heuristicTasks = await getPersonalHeuristicTasks();
+  // const policyTasks = await getPolicyTasks();
+  
+  return factorTasks;
+}
+
+/**
+ * Seeds project tasks for a project from canonical sources
+ * @param projectId The project ID to seed tasks for
+ * @returns Success flag
+ */
+async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
+  try {
+    // Check if project exists
+    const project = await projectsDb.getProject(projectId);
+    if (!project) {
+      console.log(`Project with ID ${projectId} not found, can't seed tasks`);
+      return false;
+    }
+    
+    // Check if project already has tasks
+    const existingTasks = await loadProjectTasks(projectId);
+    if (existingTasks.length > 0) {
+      console.log(`Project ${projectId} already has ${existingTasks.length} tasks, no need to seed`);
+      return true;
+    }
+    
+    console.log(`Seeding tasks for project ${projectId}...`);
+    
+    // Get all canonical tasks
+    const canonicalTasks = await getAllCanonicalTasks();
+    console.log(`Found ${canonicalTasks.length} canonical tasks to seed`);
+    
+    // Create task records for each canonical task
+    let seedCount = 0;
+    for (const task of canonicalTasks) {
+      try {
+        await projectsDb.createProjectTask({
+          projectId,
+          text: task.text,
+          stage: task.stage,
+          origin: task.origin,
+          sourceId: task.sourceId,
+          completed: false,
+          notes: '',
+          priority: 'medium',
+          status: 'To Do'
+        });
+        seedCount++;
+      } catch (err) {
+        console.error(`Error seeding task for project ${projectId}:`, err);
+      }
+    }
+    
+    console.log(`Successfully seeded ${seedCount} tasks for project ${projectId}`);
+    return seedCount > 0;
+  } catch (error) {
+    console.error(`Error seeding tasks for project ${projectId}:`, error);
+    return false;
+  }
+}
+
+/**
  * Load all project tasks from the database
  */
 async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
   try {
-    let query = db.select().from(projectTasksTable);
-    
     if (projectId) {
-      // Get the numeric project ID - handle both string UUIDs and positional IDs
+      // Get the project (handles both UUID and positional IDs)
       const project = await projectsDb.getProject(projectId);
       if (!project) {
         console.log(`Project with ID ${projectId} not found`);
         return [];
       }
       
-      // Extract the ID from the project and convert to number if it's a string
-      const projectIdValue = typeof project.id === 'string' ? parseInt(project.id) : project.id;
-      console.log(`Using project ID: ${projectIdValue} (type: ${typeof projectIdValue})`);
+      // Get the project's string ID and ensure consistent type usage
+      const projectIdString = String(project.id);
+      console.log(`Using project ID: ${projectIdString} (string) to load tasks`);
       
-      // Use ID in the query, ensuring it matches the database column type
-      query = query.where(eq(projectTasksTable.projectId, projectIdValue));
+      // Use direct SQL query with prepared statement to avoid type issues
+      const sql = `
+        SELECT * FROM project_tasks
+        WHERE project_id::text = $1
+      `;
+      
+      try {
+        const result = await db.execute(sql, [projectIdString]);
+        
+        if (!result.rows || result.rows.length === 0) {
+          console.log(`No tasks found for project ${projectId}`);
+          return [];
+        }
+        
+        console.log(`Loaded ${result.rows.length} tasks from database for project ${projectId}`);
+        
+        return result.rows.map(task => ({
+          id: String(task.id),
+          projectId: String(task.project_id),
+          text: String(task.text),
+          stage: String(task.stage).toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure',
+          origin: String(task.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+          sourceId: String(task.source_id),
+          completed: Boolean(task.completed),
+          notes: task.notes ? String(task.notes) : '',
+          priority: task.priority ? String(task.priority) : '',
+          dueDate: task.due_date ? String(task.due_date) : '',
+          owner: task.owner ? String(task.owner) : '',
+          status: task.status ? String(task.status) : '',
+          createdAt: task.created_at ? new Date(String(task.created_at)).toISOString() : new Date().toISOString(),
+          updatedAt: task.updated_at ? new Date(String(task.updated_at)).toISOString() : new Date().toISOString()
+        }));
+      } catch (sqlError) {
+        console.error('SQL error loading project tasks:', sqlError);
+        return [];
+      }
     }
     
-    const tasks = await query;
-    console.log(`Loaded ${tasks.length} tasks from database${projectId ? ` for project ${projectId}` : ''}`);
+    // If no projectId, get all tasks using ORM
+    const tasks = await db.select().from(projectTasksTable);
+    console.log(`Loaded ${tasks.length} tasks from database (all projects)`);
     
     // Convert database result to ProjectTask interface with proper type handling
     return tasks.map(task => ({
@@ -171,7 +313,7 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
       stage: task.stage as 'identification' | 'definition' | 'delivery' | 'closure',
       origin: task.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
       sourceId: task.sourceId,
-      completed: task.completed === null ? false : task.completed,
+      completed: !!task.completed,
       notes: task.notes || '',
       priority: task.priority || '',
       dueDate: task.dueDate || '',
@@ -679,6 +821,10 @@ export const projectsDb = {
    */
   getProjectTasks: async (projectId: string): Promise<ProjectTask[]> => {
     try {
+      // First ensure that project tasks are seeded from canonical sources
+      console.log(`Checking if project ${projectId} needs task seeding...`);
+      await ensureProjectTasksSeeded(projectId);
+      
       // Load tasks directly from database for this project
       const tasks = await loadProjectTasks(projectId);
       console.log(`Found ${tasks.length} tasks for project ${projectId} in database`);
