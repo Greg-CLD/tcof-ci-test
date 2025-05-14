@@ -1,12 +1,17 @@
-
 import { test, expect } from '@playwright/test';
 
 test.describe('Success Factors Smoke Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // Enable console log capture
-    page.on('console', msg => {
-      console.log(`Browser console: ${msg.text()}`);
-    });
+    // Setup auth
+    await page.goto('/auth');
+    await page.getByLabel('Email').fill('test@example.com');
+    await page.getByLabel('Password').fill('password123');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    // Enable verbose console logging
+    page.on('console', msg => console.log(`Browser console: ${msg.text()}`));
+    page.on('request', req => console.log(`Network request: ${req.url()}`));
+    page.on('response', res => console.log(`Network response: ${res.status()}`));
   });
 
   test('should log detailed console messages', async ({ page }) => {
@@ -22,7 +27,7 @@ test.describe('Success Factors Smoke Tests', () => {
     });
 
     await page.goto('/success-factors');
-    
+
     // Verify console logs
     const logs = await page.evaluate(() => {
       return new Promise(resolve => {
@@ -116,7 +121,7 @@ test.describe('Success Factors Smoke Tests', () => {
     });
 
     await page.goto('/success-factors');
-    
+
     const apiCalls = requests.filter(url => url.includes('/api/'));
     expect(apiCalls.every(url => url.includes('/api/success_factors'))).toBeTruthy();
   });
