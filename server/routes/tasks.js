@@ -157,14 +157,19 @@ router.post("/:projectId/tasks", isAuthenticated, async (req, res) => {
         return res.status(403).json({ message: "Unauthorized access to project" });
       }
       
-      // Create new task
+      // Create new task with all possible properties
       const newTask = await projectsDb.createProjectTask({
         projectId,
         text,
         stage,
         origin,
         sourceId,
-        completed: completed || false
+        completed: completed || false,
+        notes: req.body.notes || '',
+        priority: req.body.priority || 'medium',
+        dueDate: req.body.dueDate,
+        owner: req.body.owner || '',
+        status: req.body.status || (completed ? 'Done' : 'To Do')
       });
       
       if (!newTask) {
