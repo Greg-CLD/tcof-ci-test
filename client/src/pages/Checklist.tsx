@@ -337,10 +337,20 @@ export default function Checklist({ projectId }: ChecklistProps) {
       setTasksByStage(byStage);
       
       // Use the proper REST API endpoint for updates
+      // Ensure we send the correct data to match the backend expectations
+      const updatedFields = {
+        ...updates,
+        stage: stage.toLowerCase(),
+        // Convert priority from TaskPriority type to string if present
+        priority: updates.priority ? String(updates.priority) : undefined,
+        // Ensure we convert status to string
+        status: updates.status ? String(updates.status) : undefined
+      };
+      
       const response = await apiRequest(
         "PUT",
         `/api/projects/${currentProjectId}/tasks/${taskId}`,
-        updates
+        updatedFields
       );
       
       console.log('[CHECKLIST] Task update sent successfully', response);
