@@ -9,6 +9,23 @@ export async function apiRequest(
   const options: RequestInit = {
     method,
     headers: {
+
+// Log all API requests
+const logRequest = async (url: string, config: any) => {
+  console.log(`API Request to ${url}:`, {
+    headers: config.headers,
+    method: config.method
+  });
+};
+
+const logResponse = async (response: Response) => {
+  console.log('API Response:', {
+    status: response.status,
+    headers: Object.fromEntries(response.headers),
+    url: response.url
+  });
+};
+
       "Content-Type": "application/json",
     },
     credentials: "include", // Important for cookies/sessions

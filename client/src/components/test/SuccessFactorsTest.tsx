@@ -7,6 +7,16 @@ import { Alert } from '../ui/alert';
 export default function SuccessFactorsTest() {
   const { successFactors, isLoading, error, refetch } = useSuccessFactors();
   
+  useEffect(() => {
+    console.log('SuccessFactorsTest component mounted');
+    // Log React Query config
+    console.log('React Query config:', {
+      queryKey: ['/api/success-factors'],
+      staleTime: 0,
+      refetchOnWindowFocus: true
+    });
+  }, []);
+
   console.log('SuccessFactorsTest component render');
 
   if (isLoading) {

@@ -21,7 +21,27 @@ export function useFactors() {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('useFactors hook mounted');
+    
     const loadFactors = async () => {
+      // Log request headers
+      const headers = {
+        'Content-Type': 'application/json',
+        // Add any auth headers here
+      };
+      console.log('Request headers:', headers);
+
+      // Test direct fetch
+      console.log('Testing direct fetch:');
+      try {
+        const directResponse = await fetch('/api/success-factors');
+        console.log('Direct fetch status:', directResponse.status);
+        console.log('Direct fetch headers:', Object.fromEntries(directResponse.headers));
+        const data = await directResponse.json();
+        console.log('Direct fetch data:', data);
+      } catch (e) {
+        console.error('Direct fetch failed:', e);
+      }
       try {
         // Uncomment to test error handling
         // throw new Error('Test error');
