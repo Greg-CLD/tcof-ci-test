@@ -36,8 +36,23 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
     if (projectId) {
       console.log(`ProtectedRouteGuard: found projectId in URL: ${projectId}, setting it.`);
       setSelectedProjectId(projectId);
-      return <>{children}</>; // Allow access since projectId was found
+      
+      // Store in localStorage for persistence across page refreshes
+      localStorage.setItem('currentProjectId', projectId);
+      localStorage.setItem('selectedProjectId', projectId);
+      
+      // Allow access since projectId was found
+      return <>{children}</>;
     }
+    
+    // Check if there's a project ID in localStorage before redirecting
+    const storedProjectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
+    if (storedProjectId) {
+      console.log(`ProtectedRouteGuard: found projectId in localStorage: ${storedProjectId}, setting it.`);
+      setSelectedProjectId(storedProjectId);
+      return <>{children}</>; 
+    }
+    
     return <Redirect to="/organisations" />;
   }
 

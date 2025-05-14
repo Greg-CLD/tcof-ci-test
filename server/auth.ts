@@ -84,18 +84,19 @@ export function setupAuth(app: Express) {
       store: new PgStore({
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
-        tableName: 'sessions'
+        tableName: 'sessions',
+        pruneSessionInterval: 24 * 60 * 60 // Prune interval - daily
       }),
       secret: process.env.SESSION_SECRET || 'tcof-dev-secret',
-      resave: true, // Changed to true to ensure session is always saved
-      saveUninitialized: true, // Changed to true to create session early
+      resave: true, // Must be true for our session store to work reliably
+      saveUninitialized: true, // Must be true to create session immediately 
       rolling: true, // Reset expiration with every response
       name: 'tcof.sid', // Set consistent name for the session cookie
       cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Secure in production only
-        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
+        httpOnly: true, 
+        secure: false, // Must be false for testing environment, regardless of NODE_ENV
+        sameSite: 'lax', // Required for proper cookie handling
         path: '/'
       }
     })

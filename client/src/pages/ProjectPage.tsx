@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProgress } from "@/contexts/ProgressContext";
 import Checklist from "@/pages/Checklist";
 import { 
@@ -45,6 +45,15 @@ export default function ProjectPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const { progress } = useProgress();
+  
+  // Store project ID in localStorage for persistence across refreshes
+  useEffect(() => {
+    if (projectId) {
+      console.log(`ProjectPage: storing projectId in localStorage: ${projectId}`);
+      localStorage.setItem('currentProjectId', projectId);
+      localStorage.setItem('selectedProjectId', projectId);
+    }
+  }, [projectId]);
 
   // Fetch project details
   const { 
