@@ -6,6 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
+import { eq, and } from 'drizzle-orm';
+import { projectTasks as projectTasksTable } from '@shared/schema';
 
 // Path to projects data file
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -136,63 +138,155 @@ function saveProjects(projects: Project[]): boolean {
 }
 
 /**
- * Load all project tasks from the data file
- * Creates the file if it doesn't exist
+ * Load all project tasks from the database
  */
-function loadProjectTasks(): ProjectTask[] {
+async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
   try {
-    // Make sure data directory exists
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-      console.log('Created data directory:', DATA_DIR);
+    let query = db.select().from(projectTasksTable);
+    
+    if (projectId) {
+      query = query.where(eq(projectTasksTable.projectId, parseInt(projectId)));
     }
     
-    // Check if file exists
-    if (!fs.existsSync(TASKS_FILE)) {
-      // Initialize with empty array
-      fs.writeFileSync(TASKS_FILE, JSON.stringify([], null, 2), 'utf8');
-      console.log('Created empty project tasks file:', TASKS_FILE);
-      return [];
-    }
+    const tasks = await query;
+    console.log(`Loaded ${tasks.length} tasks from database${projectId ? ` for project ${projectId}` : ''}`);
     
-    const data = fs.readFileSync(TASKS_FILE, 'utf8');
-    const tasks = JSON.parse(data);
-    console.log(`Loaded ${tasks.length} tasks from ${TASKS_FILE}`);
-    return tasks;
+    // Convert database result to ProjectTask interface
+    return tasks.map(task => ({
+      id: task.id,
+      projectId: task.projectId.toString(),
+      text: task.text,
+      stage: task.stage as 'identification' | 'definition' | 'delivery' | 'closure',
+      origin: task.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+      sourceId: task.sourceId,
+      completed: task.completed || false,
+      notes: task.notes || '',
+      priority: task.priority || '',
+      dueDate: task.dueDate || '',
+      owner: task.owner || '',
+      status: task.status || '',
+      createdAt: task.createdAt.toISOString(),
+      updatedAt: task.updatedAt.toISOString()
+    }));
   } catch (error) {
-    console.error('Error loading project tasks:', error);
-    
-    // If the error is related to parsing JSON, reset the file
-    if (error instanceof SyntaxError) {
-      try {
-        console.warn('Invalid JSON in tasks file, resetting to empty array');
-        fs.writeFileSync(TASKS_FILE, JSON.stringify([], null, 2), 'utf8');
-      } catch (writeError) {
-        console.error('Error resetting tasks file:', writeError);
-      }
-    }
-    
+    console.error('Error loading project tasks from database:', error);
     return [];
   }
 }
 
 /**
- * Save project tasks to the data file
+ * Save a project task to the database
  */
-function saveProjectTasks(tasks: ProjectTask[]): boolean {
+async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
   try {
-    // Make sure data directory exists
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-      console.log('Created data directory:', DATA_DIR);
+    // If the task has an ID, update it
+    if (task.id && task.id !== 'new') {
+      const [updatedTask] = await db
+        .update(projectTasksTable)
+        .set({
+          text: task.text,
+          stage: task.stage,
+          origin: task.origin,
+          sourceId: task.sourceId,
+          completed: task.completed || false,
+          notes: task.notes,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          owner: task.owner,
+          status: task.status,
+          updatedAt: new Date()
+        })
+        .where(eq(projectTasksTable.id, task.id))
+        .returning();
+      
+      if (!updatedTask) {
+        throw new Error(`Task with ID ${task.id} not found`);
+      }
+      
+      console.log(`Updated task ${updatedTask.id} in database`);
+      
+      // Convert to ProjectTask interface
+      return {
+        id: updatedTask.id,
+        projectId: updatedTask.projectId.toString(),
+        text: updatedTask.text,
+        stage: updatedTask.stage as 'identification' | 'definition' | 'delivery' | 'closure',
+        origin: updatedTask.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+        sourceId: updatedTask.sourceId,
+        completed: updatedTask.completed || false,
+        notes: updatedTask.notes || '',
+        priority: updatedTask.priority || '',
+        dueDate: updatedTask.dueDate || '',
+        owner: updatedTask.owner || '',
+        status: updatedTask.status || '',
+        createdAt: updatedTask.createdAt.toISOString(),
+        updatedAt: updatedTask.updatedAt.toISOString()
+      };
+    } else {
+      // Create a new task
+      const [newTask] = await db
+        .insert(projectTasksTable)
+        .values({
+          projectId: parseInt(task.projectId),
+          text: task.text,
+          stage: task.stage,
+          origin: task.origin,
+          sourceId: task.sourceId,
+          completed: task.completed || false,
+          notes: task.notes,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          owner: task.owner,
+          status: task.status
+        })
+        .returning();
+      
+      console.log(`Created new task ${newTask.id} in database`);
+      
+      // Convert to ProjectTask interface
+      return {
+        id: newTask.id,
+        projectId: newTask.projectId.toString(),
+        text: newTask.text,
+        stage: newTask.stage as 'identification' | 'definition' | 'delivery' | 'closure',
+        origin: newTask.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+        sourceId: newTask.sourceId,
+        completed: newTask.completed || false,
+        notes: newTask.notes || '',
+        priority: newTask.priority || '',
+        dueDate: newTask.dueDate || '',
+        owner: newTask.owner || '',
+        status: newTask.status || '',
+        createdAt: newTask.createdAt.toISOString(),
+        updatedAt: newTask.updatedAt.toISOString()
+      };
+    }
+  } catch (error) {
+    console.error('Error saving project task to database:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete a project task from the database
+ */
+async function deleteProjectTask(taskId: string): Promise<boolean> {
+  try {
+    const result = await db
+      .delete(projectTasksTable)
+      .where(eq(projectTasksTable.id, taskId))
+      .returning({ id: projectTasksTable.id });
+    
+    const success = result.length > 0;
+    if (success) {
+      console.log(`Deleted task ${taskId} from database`);
+    } else {
+      console.warn(`Task ${taskId} not found for deletion`);
     }
     
-    // Write the file
-    fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2), 'utf8');
-    console.log(`Saved ${tasks.length} tasks to ${TASKS_FILE}`);
-    return true;
+    return success;
   } catch (error) {
-    console.error('Error saving project tasks:', error);
+    console.error('Error deleting project task from database:', error);
     return false;
   }
 }
@@ -571,15 +665,10 @@ export const projectsDb = {
    */
   getProjectTasks: async (projectId: string): Promise<ProjectTask[]> => {
     try {
-      // Load all tasks
-      const tasks = loadProjectTasks();
-      
-      // Filter tasks by project ID
-      const projectTasks = tasks.filter(t => t.projectId === projectId);
-      
-      console.log(`Found ${projectTasks.length} tasks for project ${projectId}`);
-      
-      return projectTasks;
+      // Load tasks directly from database for this project
+      const tasks = await loadProjectTasks(projectId);
+      console.log(`Found ${tasks.length} tasks for project ${projectId} in database`);
+      return tasks;
     } catch (error) {
       console.error('Error getting project tasks:', error);
       return [];
