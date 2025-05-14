@@ -52,6 +52,16 @@ export function useAdminSuccessFactors() {
       }> = {};
       
       factors.forEach(factor => {
+        // Add defensive check for missing tasks object
+        if (!factor.tasks) {
+          console.error('[ADMIN] Factor missing tasks property:', factor.id);
+          taskCounts[factor.id] = { 
+            total: 0, 
+            byStage: { Identification: 0, Definition: 0, Delivery: 0, Closure: 0 } 
+          };
+          return;
+        }
+        
         const totalTasks = 
           (factor.tasks.Identification?.length || 0) + 
           (factor.tasks.Definition?.length || 0) + 

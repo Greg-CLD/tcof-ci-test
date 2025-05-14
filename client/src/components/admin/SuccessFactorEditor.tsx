@@ -133,18 +133,33 @@ export default function SuccessFactorEditor() {
 
   // Update an existing task
   const handleUpdateTask = async (factorId: string, stage: Stage, taskIndex: number, newText: string) => {
-    if (!selectedFactor) return;
+    if (!selectedFactor || !selectedFactor.tasks) return;
 
     setIsSaving(true);
 
-    const updatedFactor = { ...selectedFactor };
-    const updatedTasks = [...(updatedFactor.tasks[stage] || [])];
-
-    updatedTasks[taskIndex] = newText;
-
-    updatedFactor.tasks = {
-      ...updatedFactor.tasks,
-      [stage]: updatedTasks
+    // Make sure we have a complete tasks structure
+    const tasks = {
+      Identification: selectedFactor.tasks?.Identification || [],
+      Definition: selectedFactor.tasks?.Definition || [],
+      Delivery: selectedFactor.tasks?.Delivery || [],
+      Closure: selectedFactor.tasks?.Closure || []
+    };
+    
+    // Create a defensive copy of the tasks array for this stage
+    const updatedTasks = [...(tasks[stage] || [])];
+    
+    // Safely update the task
+    if (taskIndex >= 0 && taskIndex < updatedTasks.length) {
+      updatedTasks[taskIndex] = newText;
+    }
+    
+    // Create updated factor with safe tasks structure
+    const updatedFactor = { 
+      ...selectedFactor,
+      tasks: {
+        ...tasks,
+        [stage]: updatedTasks
+      }
     };
 
     try {
@@ -171,16 +186,28 @@ export default function SuccessFactorEditor() {
 
   // Add a new task to a factor
   const handleAddTask = async (factorId: string, stage: Stage) => {
-    if (!selectedFactor) return;
+    if (!selectedFactor || !selectedFactor.tasks) return;
 
     setIsSaving(true);
 
-    const updatedFactor = { ...selectedFactor };
-    const updatedTasks = [...(updatedFactor.tasks[stage] || []), ''];
-
-    updatedFactor.tasks = {
-      ...updatedFactor.tasks,
-      [stage]: updatedTasks
+    // Make sure we have a complete tasks structure
+    const tasks = {
+      Identification: selectedFactor.tasks?.Identification || [],
+      Definition: selectedFactor.tasks?.Definition || [],
+      Delivery: selectedFactor.tasks?.Delivery || [],
+      Closure: selectedFactor.tasks?.Closure || []
+    };
+    
+    // Create a defensive copy of the tasks array for this stage and add empty task
+    const updatedTasks = [...(tasks[stage] || []), ''];
+    
+    // Create updated factor with safe tasks structure
+    const updatedFactor = { 
+      ...selectedFactor,
+      tasks: {
+        ...tasks,
+        [stage]: updatedTasks
+      }
     };
 
     try {
@@ -211,19 +238,33 @@ export default function SuccessFactorEditor() {
 
   // Delete a task
   const handleDeleteTask = async (factorId: string, stage: Stage, taskIndex: number) => {
-    if (!selectedFactor) return;
-
+    if (!selectedFactor || !selectedFactor.tasks) return;
+    
     setIsSaving(true);
-
-    const updatedFactor = { ...selectedFactor };
-    const updatedTasks = [...(updatedFactor.tasks[stage] || [])];
-
-    // Remove the task at the specified index
-    updatedTasks.splice(taskIndex, 1);
-
-    updatedFactor.tasks = {
-      ...updatedFactor.tasks,
-      [stage]: updatedTasks
+    
+    // Make sure we have a complete tasks structure
+    const tasks = {
+      Identification: selectedFactor.tasks?.Identification || [],
+      Definition: selectedFactor.tasks?.Definition || [],
+      Delivery: selectedFactor.tasks?.Delivery || [],
+      Closure: selectedFactor.tasks?.Closure || []
+    };
+    
+    // Create a defensive copy of the tasks array for this stage
+    const updatedTasks = [...(tasks[stage] || [])];
+    
+    // Only remove the task if it exists
+    if (taskIndex >= 0 && taskIndex < updatedTasks.length) {
+      updatedTasks.splice(taskIndex, 1);
+    }
+    
+    // Create updated factor with safe tasks structure
+    const updatedFactor = { 
+      ...selectedFactor,
+      tasks: {
+        ...tasks,
+        [stage]: updatedTasks
+      }
     };
 
     try {

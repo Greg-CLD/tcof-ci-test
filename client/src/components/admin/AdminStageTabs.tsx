@@ -38,6 +38,16 @@ export default function AdminStageTabs({
   onAddTask, 
   onRemoveTask 
 }: AdminStageTabsProps) {
+  // Add a validation check for factor
+  if (!factor || !factor.tasks) {
+    console.error('[ADMIN_TABS] Invalid factor data provided to AdminStageTabs:', factor);
+    return (
+      <div className="p-4 bg-red-50 text-red-600 rounded-md">
+        Error: Invalid success factor data. Please refresh the page and try again.
+      </div>
+    );
+  }
+  
   const [activeTab, setActiveTab] = useState<Stage>('Identification');
   
   // Use console.log directly outside JSX
