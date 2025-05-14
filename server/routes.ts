@@ -2611,45 +2611,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Admin API: Using individual factor fetch approach...');
+      console.log('Admin API: Getting all success factors...');
       
-      // Get the IDs of all factors first
-      const result = await db.execute(sql`
-        SELECT id 
-        FROM success_factors 
-        ORDER BY id
-      `);
-      
-      if (!result.rows || result.rows.length === 0) {
-        console.log("No factor IDs found in database");
-        return res.json([]);
-      }
-      
-      console.log(`Found ${result.rows.length} factor IDs to fetch individually`);
-      
-      // Create an array to store the fully fetched factors
-      const factors = [];
-      
-      // Process each factor ID and fetch the complete factor directly
-      for (const row of result.rows) {
-        try {
-          // Use the same method as the single-factor endpoint that we know works correctly
-          const factorId = String(row.id);
-          console.log(`Fetching complete factor ${factorId}...`);
-          
-          const factor = await factorsDb.getFactor(factorId);
-          if (factor) {
-            console.log(`Successfully fetched factor ${factorId} with ${factor.tasks.Identification.length} identification tasks`);
-            factors.push(factor);
-          } else {
-            console.log(`Factor ${factorId} not found`);
-          }
-        } catch (err) {
-          console.error(`Error fetching individual factor: ${err}`);
-        }
-      }
-      
-      console.log(`Successfully fetched ${factors.length} complete factors`);
+      // Use the getFactors function to fetch all factors in one go
+      const factors = await factorsDb.getFactors();
       
       // Add category to match the format expected by the client
       const formattedFactors = factors.map(factor => ({

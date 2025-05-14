@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function getFactors(): Promise<FactorTask[]> {
   try {
-    console.log("Getting all factors from database using v_success_factors_full view...");
+    console.log("Getting all factors from v_success_factors_full view...");
     const result = await db.execute(sql`
       SELECT id, title, description, tasks
       FROM v_success_factors_full
@@ -19,49 +19,19 @@ export async function getFactors(): Promise<FactorTask[]> {
 
     console.log(`Found ${result.rows.length} factors in the database`);
     
-    // Log first row as example
-    if (result.rows.length > 0) {
-      console.log("Sample factor:", JSON.stringify(result.rows[0], null, 2));
-    }
-
-    // Map directly to FactorTask objects
+    // The view already returns tasks as a properly structured JSON object
+    // so we can directly return the rows as FactorTask objects
     const factors = result.rows.map((row: any) => {
-      console.log(`Raw row.tasks type: ${typeof row.tasks}`);
-      
-      // For debugging - let's see what's in the tasks field
-      if (typeof row.tasks === 'string') {
-        console.log(`Tasks is a string for factor ${row.id}, attempting to parse JSON`);
-        try {
-          row.tasks = JSON.parse(row.tasks);
-        } catch (e) {
-          console.error(`Failed to parse tasks JSON for factor ${row.id}:`, e);
-        }
-      }
-      
-      // More debugging
-      if (row.tasks) {
-        console.log(`Tasks property types for factor ${row.id}:`);
-        for (const stage of ['Identification', 'Definition', 'Delivery', 'Closure']) {
-          console.log(`- ${stage}: ${Array.isArray(row.tasks[stage]) ? 'array' : typeof row.tasks[stage]}`);
-          if (Array.isArray(row.tasks[stage]) && row.tasks[stage].length > 0) {
-            console.log(`  Example task: ${typeof row.tasks[stage][0]} - ${row.tasks[stage][0]}`);
-          }
-        }
-      }
-      
-      // Ensure each stage has a valid array
-      const taskObject = {
-        Identification: Array.isArray(row.tasks?.Identification) ? row.tasks.Identification.filter(Boolean) : [],
-        Definition: Array.isArray(row.tasks?.Definition) ? row.tasks.Definition.filter(Boolean) : [],
-        Delivery: Array.isArray(row.tasks?.Delivery) ? row.tasks.Delivery.filter(Boolean) : [],
-        Closure: Array.isArray(row.tasks?.Closure) ? row.tasks.Closure.filter(Boolean) : []
-      };
-      
       return {
         id: String(row.id),
         title: String(row.title),
         description: row.description ? String(row.description) : '',
-        tasks: taskObject
+        tasks: row.tasks as {
+          Identification: string[];
+          Definition: string[];
+          Delivery: string[];
+          Closure: string[];
+        }
       };
     });
     
@@ -71,12 +41,6 @@ export async function getFactors(): Promise<FactorTask[]> {
     if (factors.length > 0) {
       const sampleFactor = factors[0];
       console.log("Sample factor with tasks:", JSON.stringify(sampleFactor, null, 2));
-      
-      // Check the task structure of the returned sample
-      const stages = ['Identification', 'Definition', 'Delivery', 'Closure'] as const;
-      for (const stage of stages) {
-        console.log(`VERIFY: Stage ${stage} has ${sampleFactor.tasks[stage].length} tasks`);
-      }
     }
     
     return factors;
@@ -88,7 +52,7 @@ export async function getFactors(): Promise<FactorTask[]> {
 
 export async function getFactor(id: string): Promise<FactorTask | null> {
   try {
-    console.log(`Getting factor ${id} from database using v_success_factors_full view...`);
+    console.log(`Getting factor ${id} from v_success_factors_full view...`);
     const result = await db.execute(sql`
       SELECT id, title, description, tasks
       FROM v_success_factors_full
@@ -100,21 +64,16 @@ export async function getFactor(id: string): Promise<FactorTask | null> {
       return null;
     }
 
-    // Map directly to FactorTask object
+    // Get row directly from view - tasks is already structured correctly
     const row = result.rows[0];
     const factor: FactorTask = {
       id: String(row.id),
       title: String(row.title),
       description: row.description ? String(row.description) : '',
-      tasks: row.tasks as {
-        Identification: string[];
-        Definition: string[];
-        Delivery: string[];
-        Closure: string[];
-      }
+      tasks: row.tasks
     };
 
-    console.log(`Returning factor ${id} with tasks:`, JSON.stringify(factor.tasks, null, 2));
+    console.log(`Returning factor ${id}`);
     return factor;
   } catch (error) {
     console.error(`Error loading factor ${id} from database:`, error);
