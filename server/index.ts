@@ -103,7 +103,7 @@ process.on('uncaughtException', (error) => {
   if (process.env.NODE_ENV !== "production") {
     await setupVite(app);
   } else {
-    app.use(serveStatic);
+    app.use(express.static("dist/public"));
     app.get("*", (_req, res) => {
       res.sendFile("index.html", { root: "./dist/public" });
     });
