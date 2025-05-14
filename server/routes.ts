@@ -2611,113 +2611,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Admin API: Getting all success factors with clean task data...');
+      console.log('Admin API: Getting all success factors using the same query as individual endpoint...');
       
-      // Implementing the exact requirements: join factors with tasks, filter nulls, aggregate by stage
-      const query = `
-        WITH FactorStages AS (
-          SELECT DISTINCT 'Identification' AS stage
-          UNION SELECT 'Definition'
-          UNION SELECT 'Delivery'
-          UNION SELECT 'Closure'
-        ),
-        CleanTasks AS (
-          SELECT
-            factor_id,
-            stage,
-            text,
-            "order"
-          FROM
-            success_factor_tasks
-          WHERE
-            text IS NOT NULL AND text <> ''
-        ),
-        TasksByStage AS (
-          SELECT
-            f.id AS factor_id,
-            s.stage,
-            COALESCE(
-              (SELECT
-                json_agg(t.text ORDER BY t."order")
-               FROM CleanTasks t
-               WHERE t.factor_id = f.id AND t.stage = s.stage),
-              '[]'::json
-            ) AS tasks_array
-          FROM
-            success_factors f
-          CROSS JOIN
-            FactorStages s
-        )
-        SELECT
-          f.id,
-          f.title,
-          f.description,
-          json_build_object(
-            'Identification', COALESCE((SELECT tasks_array FROM TasksByStage WHERE factor_id = f.id AND stage = 'Identification'), '[]'::json),
-            'Definition', COALESCE((SELECT tasks_array FROM TasksByStage WHERE factor_id = f.id AND stage = 'Definition'), '[]'::json),
-            'Delivery', COALESCE((SELECT tasks_array FROM TasksByStage WHERE factor_id = f.id AND stage = 'Delivery'), '[]'::json),
-            'Closure', COALESCE((SELECT tasks_array FROM TasksByStage WHERE factor_id = f.id AND stage = 'Closure'), '[]'::json)
-          ) AS tasks
-        FROM
-          success_factors f
-        ORDER BY
-          f.title
-      `;
+      // Get all factor IDs first
+      const factorIdsQuery = `SELECT id FROM success_factors ORDER BY title`;
+      const factorIdsResult = await db.execute(factorIdsQuery);
+      const factorIds = factorIdsResult.rows.map((row: any) => row.id);
       
-      console.log("Executing optimized SQL query for clean factor tasks...");
-      const result = await db.execute(query);
+      console.log(`Found ${factorIds.length} factor IDs to process`);
       
-      console.log(`Query returned ${result.rows.length} factors`);
+      // Process each factor using the exact same query as the single factor endpoint
+      const allFactors = [];
       
-      // Transform the results to match the expected format with extensive data validation
-      const formattedFactors = [];
-      
-      for (let i = 0; i < result.rows.length; i++) {
-        const row = result.rows[i];
+      for (const factorId of factorIds) {
+        // Use the exact same query that works for individual factors
+        const query = `
+          SELECT 
+            sf.id, 
+            sf.title, 
+            sf.description,
+            jsonb_build_object(
+              'Identification', COALESCE((
+                SELECT jsonb_agg(t.text ORDER BY t."order")
+                FROM success_factor_tasks t
+                WHERE t.factor_id = sf.id AND t.stage = 'Identification' AND t.text IS NOT NULL AND t.text <> ''
+              ), '[]'::jsonb),
+              'Definition', COALESCE((
+                SELECT jsonb_agg(t.text ORDER BY t."order")
+                FROM success_factor_tasks t
+                WHERE t.factor_id = sf.id AND t.stage = 'Definition' AND t.text IS NOT NULL AND t.text <> ''
+              ), '[]'::jsonb),
+              'Delivery', COALESCE((
+                SELECT jsonb_agg(t.text ORDER BY t."order")
+                FROM success_factor_tasks t
+                WHERE t.factor_id = sf.id AND t.stage = 'Delivery' AND t.text IS NOT NULL AND t.text <> ''
+              ), '[]'::jsonb),
+              'Closure', COALESCE((
+                SELECT jsonb_agg(t.text ORDER BY t."order")
+                FROM success_factor_tasks t
+                WHERE t.factor_id = sf.id AND t.stage = 'Closure' AND t.text IS NOT NULL AND t.text <> ''
+              ), '[]'::jsonb)
+            ) as tasks
+          FROM 
+            success_factors sf
+          WHERE 
+            sf.id = $1
+        `;
         
-        // Debug the first row in full detail
-        if (i === 0) {
-          console.log("Sample row data:", JSON.stringify(row, null, 2));
-        }
+        const result = await db.execute(query, [factorId]);
         
-        // Parse the tasks field which might be a string or an object
-        let tasksData;
-        try {
-          tasksData = typeof row.tasks === 'string' ? JSON.parse(row.tasks) : row.tasks;
+        if (result.rows.length > 0) {
+          const row = result.rows[0];
           
-          // Debug the first row's parsed tasks
-          if (i === 0) {
-            console.log("Sample tasks data:", JSON.stringify(tasksData, null, 2));
+          // Parse tasks JSON if needed
+          let tasksData;
+          try {
+            tasksData = typeof row.tasks === 'string' ? JSON.parse(row.tasks) : row.tasks;
+          } catch (err) {
+            console.error(`Error parsing tasks for factor ${factorId}:`, err);
+            tasksData = {
+              Identification: [],
+              Definition: [],
+              Delivery: [],
+              Closure: []
+            };
           }
           
-          // Create the factor object with explicit validation for each task array
+          // Create factor with consistent structure
           const factor = {
             id: String(row.id),
             title: String(row.title),
             description: row.description ? String(row.description) : '',
             category: "Uncategorized",
             tasks: {
-              Identification: Array.isArray(tasksData.Identification) 
-                ? tasksData.Identification.filter(t => t !== null && typeof t === 'string')
-                : [],
-              Definition: Array.isArray(tasksData.Definition)
-                ? tasksData.Definition.filter(t => t !== null && typeof t === 'string')
-                : [],
-              Delivery: Array.isArray(tasksData.Delivery)
-                ? tasksData.Delivery.filter(t => t !== null && typeof t === 'string')
-                : [],
-              Closure: Array.isArray(tasksData.Closure)
-                ? tasksData.Closure.filter(t => t !== null && typeof t === 'string')
-                : []
+              Identification: Array.isArray(tasksData.Identification) ? tasksData.Identification : [],
+              Definition: Array.isArray(tasksData.Definition) ? tasksData.Definition : [],
+              Delivery: Array.isArray(tasksData.Delivery) ? tasksData.Delivery : [],
+              Closure: Array.isArray(tasksData.Closure) ? tasksData.Closure : []
             }
           };
           
-          // Add to our results
-          formattedFactors.push(factor);
-          
-          // Debug the first formatted factor
-          if (i === 0) {
-            console.log("First formatted factor:", JSON.stringify({
+          // Log the first factor for debugging
+          if (factorId === factorIds[0]) {
+            console.log("First factor data:", JSON.stringify({
               id: factor.id,
               title: factor.title,
               taskCounts: {
@@ -2734,26 +2710,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }, null, 2));
           }
-        } catch (err) {
-          console.error(`Error processing factor ${row.id}:`, err);
-          // Instead of skipping, provide an empty but valid structure
-          formattedFactors.push({
-            id: String(row.id),
-            title: String(row.title),
-            description: row.description ? String(row.description) : '',
-            category: "Uncategorized",
-            tasks: {
-              Identification: [],
-              Definition: [],
-              Delivery: [],
-              Closure: []
-            }
-          });
+          
+          allFactors.push(factor);
         }
       }
       
-      console.log(`Returning ${formattedFactors.length} factors with clean task data`);
-      res.json(formattedFactors);
+      console.log(`Returning ${allFactors.length} factors with tasks`);
+      res.json(allFactors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
