@@ -85,6 +85,7 @@ export default function TaskCard({
   frameworkCode,
   isGoodPractice = false,
   onUpdate,
+  onDelete,
   dragHandleProps
 }: TaskCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -330,22 +331,39 @@ export default function TaskCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setIsExpanded(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
                   Edit Task Details
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
                 
                 <DropdownMenuItem onClick={() => handlePriorityChange('high')}>
+                  <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
                   Set High Priority
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem onClick={() => handlePriorityChange('medium')}>
+                  <AlertTriangle className="mr-2 h-4 w-4 text-amber-500" />
                   Set Medium Priority
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem onClick={() => handlePriorityChange('low')}>
+                  <AlertTriangle className="mr-2 h-4 w-4 text-blue-500" />
                   Set Low Priority
                 </DropdownMenuItem>
+                
+                {onDelete && source !== 'factor' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => onDelete(id)}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Delete Task
+                    </DropdownMenuItem>
+                  </>
+                )}
                 
                 <DropdownMenuSeparator />
                 
