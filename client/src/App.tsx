@@ -702,6 +702,7 @@ function Router() {
 import A11yAuditProvider from '@/components/A11yAuditProvider';
 import { PlanProvider } from '@/contexts/PlanContext';
 import { ProjectProvider } from '@/contexts/ProjectContext';
+// Import feedback components directly from their source files
 import { FeedbackProvider } from '@/components/ui/feedback/feedback-context';
 import { FeedbackContainer } from '@/components/ui/feedback/feedback-container';
 
