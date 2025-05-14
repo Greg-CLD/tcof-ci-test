@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type ProjectContextType = {
+export type ProjectContextType = {
   currentProjectId: string | null;
   setCurrentProjectId: (id: string | null) => void;
   clearCurrentProject: () => void;

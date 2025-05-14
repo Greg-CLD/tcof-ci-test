@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
-import { useProject as useProjectContext } from "@/contexts/ProjectContext";
+// Use type import to avoid runtime dependencies
+import type { ProjectContextType } from "@/contexts/ProjectContext";
 
 export interface Project {
   id: string;
