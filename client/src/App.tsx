@@ -680,7 +680,8 @@ function Router() {
 import A11yAuditProvider from '@/components/A11yAuditProvider';
 import { PlanProvider } from '@/contexts/PlanContext';
 import { ProjectProvider } from '@/contexts/ProjectContext';
-import { FeedbackProvider, FeedbackContainer } from '@/components/ui/feedback';
+import { FeedbackProvider } from '@/components/ui/feedback/feedback-context';
+import { FeedbackContainer } from '@/components/ui/feedback/feedback-container';
 
 function App() {
   // Check if we're in development mode

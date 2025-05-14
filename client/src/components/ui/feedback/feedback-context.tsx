@@ -1,29 +1,24 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 
-// Define the types of micro-interactions we'll support
+// Explicitly define the feedback types as a string union
 export type FeedbackType = 'success' | 'error' | 'loading' | 'info' | 'warning';
 
-// Define the feedback item structure
+// Define the feedback item interface
 export interface FeedbackItem {
   id: string;
   type: FeedbackType;
   message: string;
-  targetElement?: string; // CSS selector for the element to attach feedback to
-  duration?: number; // How long to display the feedback (in ms)
+  targetElement?: string;
+  duration?: number;
   position?: 'top' | 'right' | 'bottom' | 'left' | 'center';
   animate?: boolean;
 }
 
-// Define the context interface (keep it internal to this module)
-interface FeedbackContextType {
-  // Current feedback items
+// Define the context interface
+export interface FeedbackContextType {
   feedbackItems: FeedbackItem[];
-  
-  // Methods to add different types of feedback
   addFeedback: (feedback: Omit<FeedbackItem, 'id'>) => string;
   removeFeedback: (id: string) => void;
-  
-  // Convenience methods for common feedback types
   showSuccess: (message: string, options?: Partial<Omit<FeedbackItem, 'id' | 'type' | 'message'>>) => string;
   showError: (message: string, options?: Partial<Omit<FeedbackItem, 'id' | 'type' | 'message'>>) => string;
   showLoading: (message: string, options?: Partial<Omit<FeedbackItem, 'id' | 'type' | 'message'>>) => string;
@@ -31,15 +26,15 @@ interface FeedbackContextType {
   showWarning: (message: string, options?: Partial<Omit<FeedbackItem, 'id' | 'type' | 'message'>>) => string;
 }
 
-// Create the context with a default empty value
+// Create the context with a default undefined value
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
-// Generate a unique ID for feedback items
+// Helper function to generate unique IDs for feedback items
 const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
 
-// Provider component
+// Provider component that manages feedback state
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
 
