@@ -104,7 +104,7 @@ export async function testTaskLifecycle(projectId: string) {
     console.log('Step 3: Verifying task persistence');
     const tasks = await testLoadTasks(projectId);
     
-    const foundTask = tasks.find(t => t.id === newTask.id);
+    const foundTask = tasks.find((t: any) => t.id === newTask.id);
     if (foundTask) {
       console.log('✅ Task successfully persisted:', foundTask);
       return { success: true, task: foundTask };

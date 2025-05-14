@@ -811,7 +811,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       )}
       
       {/* Add the task persistence helper for testing */}
-      {project?.id && <TaskPersistenceHelper projectId={project.id} />}
+      {currentProjectId && <TaskPersistenceHelper projectId={currentProjectId} />}
     </div>
   );
 }

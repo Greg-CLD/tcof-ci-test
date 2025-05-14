@@ -14,7 +14,6 @@ type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 import { projectsDb } from './projectsDb';
 import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation, RelationType } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
-import { db } from '@db';
 import { setupAuth, isAuthenticated } from './auth'; 
 
 // Define admin check middleware
@@ -245,13 +244,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/projects/:projectId/tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.params;
-      const tasks = req.body;
+      const taskData = req.body;
       
-      if (!Array.isArray(tasks)) {
-        return res.status(400).json({ message: 'Tasks must be an array' });
+      // If an array is passed, handle each task individually
+      if (Array.isArray(taskData)) {
+        const results = [];
+        for (const task of taskData) {
+          const result = await projectsDb.createProjectTask({
+            projectId,
+            ...task
+          });
+          if (result) results.push(result);
+        }
+        return res.status(201).json(results);
       }
       
-      const result = await projectsDb.createProjectTasks(projectId, tasks);
+      // Otherwise, handle as a single task
+      const result = await projectsDb.createProjectTask({
+        projectId,
+        ...taskData
+      });
       res.status(201).json(result);
     } catch (error) {
       console.error('Error creating project tasks:', error);
@@ -327,9 +339,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `);
       
       // Check if we have any data in project_tasks
-      const taskCount = await db.execute(`
+      const taskCountResult = await db.execute(`
         SELECT COUNT(*) as count FROM project_tasks;
       `);
+      
+      const taskCount = taskCountResult.rows && taskCountResult.rows.length > 0 
+        ? Number(taskCountResult.rows[0].count) 
+        : 0;
       
       // Get sample tasks (limited to 5)
       const sampleTasks = await db.execute(`
@@ -339,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({
         project_tasks: {
           schema: projectTasksSchema,
-          count: taskCount[0]?.count || 0,
+          count: taskCount,
           samples: sampleTasks
         }
       });
