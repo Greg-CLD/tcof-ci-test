@@ -70,7 +70,12 @@ export async function getFactor(id: string): Promise<FactorTask | null> {
       id: String(row.id),
       title: String(row.title),
       description: row.description ? String(row.description) : '',
-      tasks: row.tasks
+      tasks: row.tasks as {
+        Identification: string[];
+        Definition: string[];
+        Delivery: string[];
+        Closure: string[];
+      }
     };
 
     console.log(`Returning factor ${id}`);
