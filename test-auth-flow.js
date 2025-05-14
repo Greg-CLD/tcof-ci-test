@@ -8,9 +8,12 @@ const TEST_USER = {
 
 async function testAuthFlow() {
   try {
-    console.log("Testing authentication flow...");
+    console.log("Starting authentication test with:", {
+      email: TEST_USER.email,
+      passwordLength: TEST_USER.password.length
+    });
     
-    // Step 1: Test user creation/password reset
+    // Test login
     const loginResponse = await fetch('http://0.0.0.0:5000/api/login', {
       method: 'POST',
       headers: {
@@ -20,17 +23,30 @@ async function testAuthFlow() {
       credentials: 'include',
     });
 
-    console.log('Initial Login Attempt Status:', loginResponse.status);
-    const loginData = await loginResponse.text();
-    console.log('Login Response:', loginData);
+    console.log('Login Response Status:', loginResponse.status);
+    const loginData = await loginResponse.json().catch(() => null);
+    console.log('Login Response Data:', loginData);
 
-    // Step 2: Verify user exists
-    const userCheckResponse = await fetch(`http://0.0.0.0:5000/api/auth/user`);
+    if (!loginResponse.ok) {
+      console.error('Login failed:', loginData?.message || 'Unknown error');
+      return false;
+    }
+
+    // Verify authentication with user check
+    const userCheckResponse = await fetch('http://0.0.0.0:5000/api/auth/user', {
+      credentials: 'include',
+      headers: {
+        Cookie: loginResponse.headers.get('set-cookie') || ''
+      }
+    });
+
     console.log('User Check Status:', userCheckResponse.status);
+    const userData = await userCheckResponse.json().catch(() => null);
+    console.log('User Data:', userData);
     
-    return loginResponse.ok;
+    return loginResponse.ok && userCheckResponse.ok;
   } catch (error) {
-    console.error('Test failed:', error);
+    console.error('Test failed with error:', error);
     return false;
   }
 }
@@ -38,10 +54,10 @@ async function testAuthFlow() {
 // Run the test
 testAuthFlow().then(success => {
   if (success) {
-    console.log('Authentication test passed!');
+    console.log('✅ Authentication test passed!');
     process.exit(0);
   } else {
-    console.log('Authentication test failed!');
+    console.log('❌ Authentication test failed!');
     process.exit(1);
   }
 });
