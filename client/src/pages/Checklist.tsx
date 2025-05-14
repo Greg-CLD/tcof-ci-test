@@ -200,7 +200,12 @@ export default function Checklist({ projectId }: ChecklistProps) {
             completed: !!task.completed,
             stage: (task.stage.charAt(0).toUpperCase() + task.stage.slice(1)) as Stage,
             source: task.origin as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
-            sourceId: task.sourceId
+            sourceId: task.sourceId,
+            notes: task.notes || '',
+            priority: task.priority as 'low' | 'medium' | 'high' || 'medium',
+            dueDate: task.dueDate,
+            owner: task.owner || '',
+            status: task.status || (task.completed ? 'Done' : 'To Do')
           };
           
           // Add source name based on origin

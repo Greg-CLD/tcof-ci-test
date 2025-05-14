@@ -137,13 +137,41 @@ function saveProjects(projects: Project[]): boolean {
 
 /**
  * Load all project tasks from the data file
+ * Creates the file if it doesn't exist
  */
 function loadProjectTasks(): ProjectTask[] {
   try {
+    // Make sure data directory exists
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      console.log('Created data directory:', DATA_DIR);
+    }
+    
+    // Check if file exists
+    if (!fs.existsSync(TASKS_FILE)) {
+      // Initialize with empty array
+      fs.writeFileSync(TASKS_FILE, JSON.stringify([], null, 2), 'utf8');
+      console.log('Created empty project tasks file:', TASKS_FILE);
+      return [];
+    }
+    
     const data = fs.readFileSync(TASKS_FILE, 'utf8');
-    return JSON.parse(data);
+    const tasks = JSON.parse(data);
+    console.log(`Loaded ${tasks.length} tasks from ${TASKS_FILE}`);
+    return tasks;
   } catch (error) {
     console.error('Error loading project tasks:', error);
+    
+    // If the error is related to parsing JSON, reset the file
+    if (error instanceof SyntaxError) {
+      try {
+        console.warn('Invalid JSON in tasks file, resetting to empty array');
+        fs.writeFileSync(TASKS_FILE, JSON.stringify([], null, 2), 'utf8');
+      } catch (writeError) {
+        console.error('Error resetting tasks file:', writeError);
+      }
+    }
+    
     return [];
   }
 }
