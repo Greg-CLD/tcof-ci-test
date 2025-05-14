@@ -78,26 +78,22 @@ export function setupAuth(app: Express) {
   // Set trust proxy to work properly with Replit's infrastructure
   app.set('trust proxy', 1);
   
-  // Configure session middleware with enhanced settings for Replit
+  // Configure session middleware with simplified settings for Replit
   app.use(
     session({
       store: new PgStore({
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
-        tableName: 'sessions',
-        pruneSessionInterval: 60 // Prune expired sessions every minute
+        tableName: 'sessions'
       }),
       secret: process.env.SESSION_SECRET || 'tcof-dev-secret',
-      resave: true, // Always save session even if unmodified
-      saveUninitialized: true, // Save new sessions that haven't been modified
-      rolling: true, // Reset cookie expiration on each response
+      resave: false,
+      saveUninitialized: false,
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
-        // Allow non-secure cookies in dev for easier testing
         secure: false,
-        sameSite: 'lax',
-        path: '/'
+        sameSite: 'lax'
       }
     })
   );
@@ -274,7 +270,16 @@ export function setupAuth(app: Express) {
           return res.status(500).json({ message: "Failed to create session" });
         }
         
-        console.log("Session created successfully for user:", user.username);
+        console.log("Session created for:", {
+          id: user.id,
+          username: user.username,
+          sessionID: req.sessionID,
+          hasSession: !!req.session
+        });
+        
+        // Debug the state of req.isAuthenticated after login
+        console.log("isAuthenticated after login:", req.isAuthenticated());
+        console.log("Session passport value:", (req.session as any)?.passport);
         
         // Don't send the password to the client
         const { password, ...safeUser } = user;

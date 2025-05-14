@@ -502,18 +502,40 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         console.log(`SQL insert query: ${insertSql.replace(/\s+/g, ' ')}`);
         console.log(`Parameter count: ${insertParams.length}, expected 14`);
         
+        // Add all parameters for easier debugging
+        console.log('SQL params:', JSON.stringify(insertParams.map((p, i) => ({ 
+          index: i+1, 
+          value: p instanceof Date ? p.toISOString() : p 
+        }))));
+        
         insertResult = await db.execute(insertSql, insertParams);
         
-        if (!insertResult.rows || insertResult.rows.length === 0) {
+        if (!insertResult || !insertResult.rows || insertResult.rows.length === 0) {
           throw new Error('Failed to create new task');
         }
+        
+        const newTask = insertResult.rows[0];
+        console.log(`Created new task ${newTask.id} in database`);
+        return {
+          id: String(newTask.id),
+          projectId: String(newTask.project_id || projectIdString),
+          text: String(newTask.text),
+          stage: String(newTask.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
+          origin: String(newTask.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+          sourceId: String(newTask.source_id),
+          completed: Boolean(newTask.completed),
+          notes: newTask.notes ? String(newTask.notes) : '',
+          priority: newTask.priority ? String(newTask.priority) : '',
+          dueDate: newTask.due_date ? String(newTask.due_date) : '',
+          owner: newTask.owner ? String(newTask.owner) : '',
+          status: newTask.status ? String(newTask.status) : '',
+          createdAt: newTask.created_at ? new Date(String(newTask.created_at)).toISOString() : new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
       } catch (sqlError) {
         console.error('SQL error executing insert:', sqlError);
         throw sqlError;
       }
-      
-      const newTask = insertResult.rows[0];
-      console.log(`Created new task ${newTask.id} in database`);
       
       // Convert to ProjectTask interface with proper string type handling
       return {
