@@ -2582,9 +2582,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Completely public endpoint for getting tasks for the checklist - no admin required and no auth check
-  app.get('/api/public/tcof-tasks', async (req: Request, res: Response) => {
+  // Completely public endpoint for getting tasks for the checklist - no auth check with special path
+  // This path starts with "__tcof" to ensure it doesn't conflict with Vite's routing
+  app.get('/__tcof/public-checklist-tasks', async (req: Request, res: Response) => {
     try {
+      // Enable CORS for this public endpoint
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
       // Get success factors from database
       const factors = await getFactors();
 
