@@ -27,10 +27,15 @@ export async function getFactors(): Promise<FactorTask[]> {
     // Map directly to FactorTask objects
     const factors = result.rows.map((row: any) => {
       return {
-        id: row.id,
-        title: row.title,
-        description: row.description || '',
-        tasks: row.tasks
+        id: String(row.id),
+        title: String(row.title),
+        description: row.description ? String(row.description) : '',
+        tasks: row.tasks as {
+          Identification: string[];
+          Definition: string[];
+          Delivery: string[];
+          Closure: string[];
+        }
       };
     });
     

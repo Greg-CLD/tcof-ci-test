@@ -2612,7 +2612,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
+      console.log('Admin API: Getting all success factors from database view...');
       const factors = await factorsDb.getFactors();
+      
+      console.log(`Admin API: Returning ${factors.length} factors with properly structured tasks`);
+      
+      if (factors.length > 0) {
+        // Log sample of first factor (for debugging)
+        console.log('Admin API: Sample factor structure:', JSON.stringify({
+          id: factors[0].id,
+          title: factors[0].title,
+          hasIdentificationTasks: Array.isArray(factors[0].tasks?.Identification) && factors[0].tasks.Identification.length > 0,
+          identificationTaskCount: factors[0].tasks?.Identification?.length || 0
+        }));
+      }
+      
       res.json(factors || []);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
