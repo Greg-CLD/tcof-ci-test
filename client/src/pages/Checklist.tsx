@@ -405,7 +405,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
   };
   
   // Handle deleting a task
-  const handleDeleteTask = async (taskId: string, stage: Stage) => {
+  const handleDeleteTask = async (taskId: string) => {
     if (!currentProjectId) {
       toast({
         title: "No project selected",
