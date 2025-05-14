@@ -5,59 +5,87 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function getFactors(): Promise<FactorTask[]> {
   try {
-    console.log("Getting all factors from v_success_factors_full view...");
-    const result = await db.execute(sql`
-      SELECT id, title, description, tasks::text
-      FROM v_success_factors_full
+    console.log("Getting all factors directly from database tables...");
+    
+    // First, get all the basic factor data
+    const factorsResult = await db.execute(sql`
+      SELECT id, title, description
+      FROM success_factors
       ORDER BY id
     `);
 
-    if (!result.rows || result.rows.length === 0) {
+    if (!factorsResult.rows || factorsResult.rows.length === 0) {
       console.log("No factors found in database");
       return [];
     }
 
-    console.log(`Found ${result.rows.length} factors in the database`);
+    console.log(`Found ${factorsResult.rows.length} base factors in the database`);
     
-    // Parse the JSON tasks manually to ensure proper structure
-    const factors = result.rows.map((row: any) => {
-      // Parse the JSON string tasks
-      let parsedTasks;
-      try {
-        // Make sure tasks is a string before parsing
-        if (typeof row.tasks === 'string') {
-          parsedTasks = JSON.parse(row.tasks);
-        } else {
-          parsedTasks = row.tasks;
-        }
-      } catch (e) {
-        console.error('Error parsing tasks JSON for factor', row.id, e);
-        // Provide default empty structure if parsing fails
-        parsedTasks = {
-          Identification: [],
-          Definition: [],
-          Delivery: [],
-          Closure: []
-        };
-      }
+    // Then get all tasks for all factors
+    const tasksResult = await db.execute(sql`
+      SELECT factor_id, stage, text
+      FROM success_factor_tasks
+      WHERE text IS NOT NULL AND text <> ''
+      ORDER BY factor_id, stage, "order"
+    `);
+    
+    console.log(`Found ${tasksResult.rows.length} task entries in the database`);
+    
+    // Group tasks by factor_id and stage
+    const tasksByFactor: Record<string, Record<string, string[]>> = {};
+    
+    // Initialize empty task structures for all factors
+    for (const factor of factorsResult.rows) {
+      const factorId = String(factor.id);
+      tasksByFactor[factorId] = {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      };
+    }
+    
+    // Populate tasks from database results
+    for (const task of tasksResult.rows) {
+      const factorId = String(task.factor_id);
+      const stage = String(task.stage);
+      const text = String(task.text);
       
-      // Ensure each stage has a valid array, not null
-      const tasksWithDefaults = {
-        Identification: Array.isArray(parsedTasks.Identification) ? parsedTasks.Identification : [],
-        Definition: Array.isArray(parsedTasks.Definition) ? parsedTasks.Definition : [],
-        Delivery: Array.isArray(parsedTasks.Delivery) ? parsedTasks.Delivery : [],
-        Closure: Array.isArray(parsedTasks.Closure) ? parsedTasks.Closure : []
+      if (tasksByFactor[factorId] && 
+          text.trim() !== '') {
+        
+        // Make sure the stage exists in our structure
+        if (!tasksByFactor[factorId][stage]) {
+          tasksByFactor[factorId][stage] = [];
+        }
+        
+        // Add the task text to the appropriate array
+        tasksByFactor[factorId][stage].push(text);
+      }
+    }
+    
+    // Combine factor data with task data
+    const factors: FactorTask[] = factorsResult.rows.map((row: any) => {
+      const factorId = String(row.id);
+      const factorTasksRecord = tasksByFactor[factorId] || {};
+      
+      // Ensure we have a properly structured tasks object that matches FactorTask
+      const typedTasks = {
+        Identification: factorTasksRecord.Identification || [],
+        Definition: factorTasksRecord.Definition || [],
+        Delivery: factorTasksRecord.Delivery || [],
+        Closure: factorTasksRecord.Closure || []
       };
       
       return {
-        id: String(row.id),
+        id: factorId,
         title: String(row.title),
         description: row.description ? String(row.description) : '',
-        tasks: tasksWithDefaults
+        tasks: typedTasks
       };
     });
     
-    console.log(`Returning ${factors.length} factors with tasks`);
+    console.log(`Returning ${factors.length} factors with tasks from direct DB query`);
     
     // Debug log the first factor and its tasks
     if (factors.length > 0) {
@@ -74,54 +102,60 @@ export async function getFactors(): Promise<FactorTask[]> {
 
 export async function getFactor(id: string): Promise<FactorTask | null> {
   try {
-    console.log(`Getting factor ${id} from v_success_factors_full view...`);
-    const result = await db.execute(sql`
-      SELECT id, title, description, tasks::text
-      FROM v_success_factors_full
+    console.log(`Getting factor ${id} directly from database tables...`);
+    
+    // First, get the basic factor data
+    const factorResult = await db.execute(sql`
+      SELECT id, title, description
+      FROM success_factors
       WHERE id = ${id}
     `);
 
-    if (!result.rows || result.rows.length === 0) {
+    if (!factorResult.rows || factorResult.rows.length === 0) {
       console.log(`No factor found with ID ${id}`);
       return null;
     }
 
-    // Get row directly from view and parse JSON tasks
-    const row = result.rows[0];
+    const factorRow = factorResult.rows[0];
     
-    // Parse the JSON tasks string
-    let parsedTasks;
-    try {
-      // Make sure tasks is a string before parsing
-      if (typeof row.tasks === 'string') {
-        parsedTasks = JSON.parse(row.tasks);
-      } else {
-        parsedTasks = row.tasks;
-      }
-    } catch (e) {
-      console.error(`Error parsing tasks JSON for factor ${id}:`, e);
-      // Provide default empty structure if parsing fails
-      parsedTasks = {
-        Identification: [],
-        Definition: [],
-        Delivery: [],
-        Closure: []
-      };
-    }
+    // Then get all tasks for this factor
+    const tasksResult = await db.execute(sql`
+      SELECT stage, text
+      FROM success_factor_tasks
+      WHERE factor_id = ${id}
+      AND text IS NOT NULL AND text <> ''
+      ORDER BY stage, "order"
+    `);
     
-    // Ensure each stage has a valid array, not null
-    const tasksWithDefaults = {
-      Identification: Array.isArray(parsedTasks.Identification) ? parsedTasks.Identification : [],
-      Definition: Array.isArray(parsedTasks.Definition) ? parsedTasks.Definition : [],
-      Delivery: Array.isArray(parsedTasks.Delivery) ? parsedTasks.Delivery : [],
-      Closure: Array.isArray(parsedTasks.Closure) ? parsedTasks.Closure : []
+    console.log(`Found ${tasksResult.rows.length} task entries for factor ${id}`);
+    
+    // Initialize empty task structure
+    const tasks = {
+      Identification: [] as string[],
+      Definition: [] as string[],
+      Delivery: [] as string[],
+      Closure: [] as string[]
     };
     
+    // Populate tasks from database results
+    for (const task of tasksResult.rows) {
+      if (typeof task.stage === 'string' && 
+          typeof task.text === 'string' &&
+          task.text.trim() !== '') {
+        
+        // Make sure the stage exists in our structure
+        if (tasks[task.stage as keyof typeof tasks]) {
+          // Add the task text to the appropriate array
+          tasks[task.stage as keyof typeof tasks].push(task.text);
+        }
+      }
+    }
+    
     const factor: FactorTask = {
-      id: String(row.id),
-      title: String(row.title),
-      description: row.description ? String(row.description) : '',
-      tasks: tasksWithDefaults
+      id: String(factorRow.id),
+      title: String(factorRow.title),
+      description: factorRow.description ? String(factorRow.description) : '',
+      tasks: tasks
     };
 
     console.log(`Returning factor ${id} with tasks:`, JSON.stringify(factor.tasks, null, 2));
