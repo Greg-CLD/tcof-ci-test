@@ -84,25 +84,12 @@ export function setupAuth(app: Express) {
       store: new PgStore({
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
-        tableName: 'sessions',
-        // Increase session store compatibility
-        processSessionFn: function(raw: string | null) {
-          try {
-            if (!raw) return {};
-            const data = JSON.parse(raw);
-            if (typeof data.cookie === 'string') {
-              data.cookie = JSON.parse(data.cookie);
-            }
-            return data;
-          } catch (err) {
-            console.error('Session parse error:', err);
-            return {};
-          }
-        }
+        tableName: 'sessions'
       }),
       secret: process.env.SESSION_SECRET || 'tcof-dev-secret',
       resave: true, // Changed to true to ensure session is always saved
       saveUninitialized: true, // Changed to true to create session early
+      rolling: true, // Reset expiration with every response
       name: 'tcof.sid', // Set consistent name for the session cookie
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
@@ -219,29 +206,16 @@ export function setupAuth(app: Express) {
     if (user && user.id !== undefined) {
       console.log("Serializing user:", user.id, user.username);
       
-      // Save the whole user object to req.session.passport.user
-      // This ensures we always have user data even if database queries fail
-      // This is a tradeoff - more data in session but more reliable auth
-      const { password, ...safeUser } = user;
-      
-      done(null, safeUser);
+      // Store just the ID for better compatibility and session size
+      done(null, user.id);
     } else {
       console.error("Invalid user object for serialization:", user);
       return done(new Error("Invalid user object for serialization"));
     }
   });
 
-  passport.deserializeUser(async (userData: any, done) => {
+  passport.deserializeUser(async (id: any, done) => {
     try {
-      // If userData is already an object with an id property, use it directly
-      if (userData && typeof userData === 'object' && userData.id) {
-        console.log("Deserializing user from session:", userData.id, userData.username);
-        return done(null, userData);
-      }
-      
-      // For backwards compatibility, also handle if only ID was stored
-      const id = typeof userData === 'object' ? userData.id : userData;
-      
       if (!id) {
         console.error("No valid user ID for deserialization");
         return done(null, false);
@@ -261,10 +235,10 @@ export function setupAuth(app: Express) {
       }
       
       console.log("User found:", user.username);
-      done(null, user);
+      return done(null, user);
     } catch (error) {
       console.error("Deserialize user error:", error);
-      done(error);
+      return done(error);
     }
   });
 
