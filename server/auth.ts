@@ -207,18 +207,29 @@ export function setupAuth(app: Express) {
       console.log("Serializing user:", user.id, user.username);
       
       // Store just the ID for better compatibility and session size
-      done(null, user.id);
+      return done(null, user.id);
     } else {
       console.error("Invalid user object for serialization:", user);
       return done(new Error("Invalid user object for serialization"));
     }
   });
 
+  // Cache deserialization results for better performance
+  const userCache = new Map<string | number, any>();
+  
   passport.deserializeUser(async (id: any, done) => {
     try {
       if (!id) {
         console.error("No valid user ID for deserialization");
         return done(null, false);
+      }
+      
+      // Check cache first (5 minute TTL)
+      const cacheKey = id.toString();
+      const cachedUser = userCache.get(cacheKey);
+      if (cachedUser) {
+        console.log("User found in cache:", cachedUser.username);
+        return done(null, cachedUser);
       }
       
       console.log("Fetching user details for ID:", id);
@@ -233,6 +244,10 @@ export function setupAuth(app: Express) {
         console.error(`User with ID ${id} not found during deserialization`);
         return done(null, false); // Don't throw an error, just return false
       }
+      
+      // Cache user for 5 minutes
+      userCache.set(cacheKey, user);
+      setTimeout(() => userCache.delete(cacheKey), 5 * 60 * 1000);
       
       console.log("User found:", user.username);
       return done(null, user);
