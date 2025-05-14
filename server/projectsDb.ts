@@ -741,11 +741,18 @@ export const projectsDb = {
       // Load all tasks
       const tasks = loadProjectTasks();
       
+      // Handle string/number ID conversion
+      const searchProjectId = typeof projectId === 'number' ? String(projectId) : projectId;
+      const searchSourceId = typeof sourceId === 'number' ? String(sourceId) : sourceId;
+      
       // Filter tasks by project ID and source ID
-      const projectTasks = tasks.filter(t => 
-        t.projectId === projectId && 
-        t.sourceId === sourceId
-      );
+      const projectTasks = tasks.filter(t => {
+        // Ensure we compare strings to handle different formats
+        const taskProjectId = typeof t.projectId === 'number' ? String(t.projectId) : t.projectId;
+        const taskSourceId = typeof t.sourceId === 'number' ? String(t.sourceId) : t.sourceId;
+        
+        return taskProjectId === searchProjectId && taskSourceId === searchSourceId;
+      });
       
       console.log(`Found ${projectTasks.length} tasks for project ${projectId} with sourceId ${sourceId}`);
       
