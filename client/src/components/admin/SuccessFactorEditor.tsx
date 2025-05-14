@@ -47,7 +47,7 @@ export default function SuccessFactorEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
+
   // Get user for auth check
   const { user } = useAuth();
   const { toast } = useToast();
@@ -75,7 +75,7 @@ export default function SuccessFactorEditor() {
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
-  
+
   // Fetch factor when the ID changes
   useEffect(() => {
     if (selectedFactorId) {
@@ -98,7 +98,7 @@ export default function SuccessFactorEditor() {
         Closure: []
       }
     };
-    
+
     // Create a factor on the server
     setIsSaving(true);
     apiRequest('POST', '/api/admin/success-factors', newFactor)
@@ -109,10 +109,10 @@ export default function SuccessFactorEditor() {
         if (selectedFactorId) {
           queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', selectedFactorId] });
         }
-        
+
         // Select the new factor
         setSelectedFactorId(data.id);
-        
+
         toast({
           title: 'Success Factor Created',
           description: 'New success factor has been created.',
@@ -134,28 +134,28 @@ export default function SuccessFactorEditor() {
   // Update an existing task
   const handleUpdateTask = async (factorId: string, stage: Stage, taskIndex: number, newText: string) => {
     if (!selectedFactor) return;
-    
+
     setIsSaving(true);
-    
+
     const updatedFactor = { ...selectedFactor };
     const updatedTasks = [...(updatedFactor.tasks[stage] || [])];
-    
+
     updatedTasks[taskIndex] = newText;
-    
+
     updatedFactor.tasks = {
       ...updatedFactor.tasks,
       [stage]: updatedTasks
     };
-    
+
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
       await response.json();
-      
+
       // Invalidate both the list and individual factor caches
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
-      
+
       console.log('[ADMIN] Updated task and invalidated cache');
     } catch (error) {
       console.error('Error updating task:', error);
@@ -168,30 +168,30 @@ export default function SuccessFactorEditor() {
       setIsSaving(false);
     }
   };
-  
+
   // Add a new task to a factor
   const handleAddTask = async (factorId: string, stage: Stage) => {
     if (!selectedFactor) return;
-    
+
     setIsSaving(true);
-    
+
     const updatedFactor = { ...selectedFactor };
     const updatedTasks = [...(updatedFactor.tasks[stage] || []), ''];
-    
+
     updatedFactor.tasks = {
       ...updatedFactor.tasks,
       [stage]: updatedTasks
     };
-    
+
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
       await response.json();
-      
+
       // Invalidate both the list and individual factor caches
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
-      
+
       toast({
         title: 'Task added',
         description: `Added new task to ${stage} stage`,
@@ -208,33 +208,33 @@ export default function SuccessFactorEditor() {
       setIsSaving(false);
     }
   };
-  
+
   // Delete a task
   const handleDeleteTask = async (factorId: string, stage: Stage, taskIndex: number) => {
     if (!selectedFactor) return;
-    
+
     setIsSaving(true);
-    
+
     const updatedFactor = { ...selectedFactor };
     const updatedTasks = [...(updatedFactor.tasks[stage] || [])];
-    
+
     // Remove the task at the specified index
     updatedTasks.splice(taskIndex, 1);
-    
+
     updatedFactor.tasks = {
       ...updatedFactor.tasks,
       [stage]: updatedTasks
     };
-    
+
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
       await response.json();
-      
+
       // Invalidate both the list and individual factor caches
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
-      
+
       toast({
         title: 'Task deleted',
         description: `Removed task from ${stage} stage`,
@@ -255,16 +255,16 @@ export default function SuccessFactorEditor() {
   // Update factor title
   const handleUpdateFactorTitle = async (factorId: string, newTitle: string) => {
     if (!selectedFactor) return;
-    
+
     setIsSaving(true);
-    
+
     const updatedFactor = { ...selectedFactor, title: newTitle };
-    
+
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
       await response.json();
-      
+
       // Invalidate both the list and individual factor caches
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
@@ -283,16 +283,16 @@ export default function SuccessFactorEditor() {
   // Update factor description
   const handleUpdateFactorDescription = async (factorId: string, newDescription: string) => {
     if (!selectedFactor) return;
-    
+
     setIsSaving(true);
-    
+
     const updatedFactor = { ...selectedFactor, description: newDescription };
-    
+
     try {
       // Update in the API
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
       await response.json();
-      
+
       // Invalidate both the list and individual factor caches
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
@@ -311,16 +311,16 @@ export default function SuccessFactorEditor() {
   // Delete a factor
   const handleDeleteFactor = async () => {
     if (!selectedFactor) return;
-    
+
     try {
       setIsSaving(true);
-      
+
       // Delete from the API
       await apiRequest('DELETE', `/api/admin/success-factors/${selectedFactor.id}`);
-      
+
       // Invalidate both the list and individual factor caches
       queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
-      
+
       // Select another factor if available
       const remainingFactors = factors.filter(f => f.id !== selectedFactor.id);
       if (remainingFactors.length > 0) {
@@ -328,9 +328,9 @@ export default function SuccessFactorEditor() {
       } else {
         setSelectedFactorId(null);
       }
-      
+
       setShowDeleteDialog(false);
-      
+
       toast({
         title: 'Factor deleted',
         description: 'Successfully deleted the success factor.',
@@ -371,10 +371,36 @@ export default function SuccessFactorEditor() {
     );
   }
 
+  // Ensure task stages exist
+  const ensureTaskStages = (tasks: any) => {
+    if (!tasks) {
+      return {
+        Identification: [],
+        Definition: [],
+        Delivery: [],
+        Closure: []
+      };
+    }
+    return {
+      Identification: tasks.Identification || [],
+      Definition: tasks.Definition || [],
+      Delivery: tasks.Delivery || [],
+      Closure: tasks.Closure || []
+    };
+  };
+
+  const handleFactorSelect = (factor: any) => {
+    const validatedFactor = {
+      ...factor,
+      tasks: ensureTaskStages(factor.tasks)
+    };
+    setSelectedFactorId(validatedFactor.id);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-tcof-dark">Success Factor Editor</h1>
@@ -382,7 +408,7 @@ export default function SuccessFactorEditor() {
             <Button variant="outline">Back to Admin</Button>
           </Link>
         </div>
-        
+
         {isLoading || selectedFactorLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-tcof-teal" />
@@ -395,11 +421,16 @@ export default function SuccessFactorEditor() {
               <FactorSidebar
                 factors={factors}
                 selectedFactorId={selectedFactorId}
-                onSelectFactor={(id) => setSelectedFactorId(id)}
+                onSelectFactor={(id) => {
+                  const factor = factors.find(f => f.id === id);
+                  if (factor) {
+                    handleFactorSelect(factor)
+                  }
+                }}
                 onCreateFactor={handleCreateFactor}
               />
             </div>
-            
+
             {/* Main content panel with task tabs - 75% width */}
             <div className="w-full md:w-3/4">
               <Card className="h-full">
@@ -451,7 +482,7 @@ export default function SuccessFactorEditor() {
                         </AlertDialog>
                       </div>
                     </CardHeader>
-                    
+
                     <CardContent>
                       {/* Using our helper function for diagnostic logs */}
                       {logData('[ADMIN] Selected factor tasks before rendering:', selectedFactor.tasks)}
@@ -461,7 +492,7 @@ export default function SuccessFactorEditor() {
                         Delivery: selectedFactor.tasks.Delivery?.length || 0,
                         Closure: selectedFactor.tasks.Closure?.length || 0
                       })}
-                      
+
                       <AdminStageTabs
                         factor={selectedFactor}
                         onTaskChange={handleUpdateTask}
