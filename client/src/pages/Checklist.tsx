@@ -2,8 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { Stage } from '@/lib/plan-db';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Loader2, PlusSquare } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Download, FileText, Loader2, PlusSquare, X, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import TaskCard from '@/components/checklist/TaskCard';
 import SummaryBar from '@/components/checklist/SummaryBar';
 import { ChecklistHeader } from '@/components/outcomes/ChecklistHeader';
@@ -293,7 +321,8 @@ export default function Checklist({ projectId }: ChecklistProps) {
     switch (source) {
       case 'factor': return 'Success Factor Tasks';
       case 'heuristic': return 'Personal Heuristic Tasks';
-      case 'framework': return 'Framework Tasks';
+      case 'policy': return 'Company Policy Tasks';
+      case 'framework': return 'Good Practice Tasks';
       case 'custom': return 'Custom Tasks';
       default: return 'Tasks';
     }
@@ -404,64 +433,89 @@ export default function Checklist({ projectId }: ChecklistProps) {
               </TabsTrigger>
             </TabsList>
             
-            {Object.entries(tasksByStage).map(([stage, stageTasks]) => (
-              <TabsContent key={stage} value={stage} className="space-y-6">
-                {stageTasks.length === 0 ? (
-                  <div className="text-center py-8 border border-dashed rounded-md">
-                    <p className="text-gray-500">No tasks found for this stage</p>
-                    <Button variant="outline" className="mt-4">
-                      <PlusSquare className="mr-2 h-4 w-4" />
-                      Add Custom Task
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-8">
-                    {/* Group tasks by source */}
-                    {Object.entries(
-                      stageTasks.reduce((groups, task) => {
-                        const source = task.source || 'custom';
-                        if (!groups[source]) groups[source] = [];
-                        groups[source].push(task);
-                        return groups;
-                      }, {} as Record<string, UnifiedTask[]>)
-                    ).map(([source, tasks]) => (
-                      <div key={source} className="space-y-2">
-                        <h3 className="text-sm font-semibold text-tcof-dark border-b pb-2">
-                          {getSourceLabel(source)}
-                        </h3>
-                        <div className="space-y-2">
-                          {tasks.map(task => (
-                            <TaskCard
-                              key={`${task.source}-${task.id}`}
-                              id={task.id}
-                              text={task.text}
-                              completed={task.completed}
-                              notes={task.notes}
-                              priority={task.priority}
-                              dueDate={task.dueDate}
-                              owner={task.owner}
-                              status={task.completed ? 'Done' : task.status || 'To Do'}
-                              stage={task.stage}
-                              source={task.source}
-                              sourceName={task.sourceName}
-                              isGoodPractice={false}
-                              onUpdate={(id, updates) => {
-                                handleTaskUpdate(
-                                  id,
-                                  updates,
-                                  task.stage,
-                                  task.source
-                                );
-                              }}
-                            />
-                          ))}
+            {Object.entries(tasksByStage).map(([stage, stageTasks]) => {
+              // Apply filters to tasks
+              const filteredTasks = stageTasks.filter(task => {
+                // Filter by source
+                if (sourceFilter !== 'all' && task.source !== sourceFilter) {
+                  return false;
+                }
+                
+                // Filter by status
+                if (statusFilter === 'completed' && !task.completed) {
+                  return false;
+                }
+                if (statusFilter === 'incomplete' && task.completed) {
+                  return false;
+                }
+                
+                // Filter by search query
+                if (searchQuery && !task.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+                  return false;
+                }
+                
+                return true;
+              });
+              
+              return (
+                <TabsContent key={stage} value={stage} className="space-y-6">
+                  {filteredTasks.length === 0 ? (
+                    <div className="text-center py-8 border border-dashed rounded-md">
+                      <p className="text-gray-500">No tasks found for this stage</p>
+                      <Button variant="outline" className="mt-4">
+                        <PlusSquare className="mr-2 h-4 w-4" />
+                        Add Custom Task
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      {/* Group tasks by source */}
+                      {Object.entries(
+                        filteredTasks.reduce((groups, task) => {
+                          const source = task.source || 'custom';
+                          if (!groups[source]) groups[source] = [];
+                          groups[source].push(task);
+                          return groups;
+                        }, {} as Record<string, UnifiedTask[]>)
+                      ).map(([source, tasks]) => (
+                        <div key={source} className="space-y-2">
+                          <h3 className="text-sm font-semibold text-tcof-dark border-b pb-2">
+                            {getSourceLabel(source)}
+                          </h3>
+                          <div className="space-y-2">
+                            {tasks.map(task => (
+                              <TaskCard
+                                key={`${task.source}-${task.id}`}
+                                id={task.id}
+                                text={task.text}
+                                completed={task.completed}
+                                notes={task.notes}
+                                priority={task.priority}
+                                dueDate={task.dueDate}
+                                owner={task.owner}
+                                status={task.completed ? 'Done' : task.status || 'To Do'}
+                                stage={task.stage}
+                                source={task.source}
+                                sourceName={task.sourceName}
+                                isGoodPractice={false}
+                                onUpdate={(id, updates) => {
+                                  handleTaskUpdate(
+                                    id,
+                                    updates,
+                                    task.stage,
+                                    task.source
+                                  );
+                                }}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            ))}
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              );
+            })}
           </Tabs>
         </>
       )}
