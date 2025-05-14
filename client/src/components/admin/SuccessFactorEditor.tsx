@@ -536,20 +536,35 @@ export default function SuccessFactorEditor() {
 
                       {/* Make sure factor has a valid tasks object */}
                       {selectedFactor && selectedFactor.tasks ? (
-                        <AdminStageTabs
-                          factor={{
-                            ...selectedFactor,
-                            tasks: {
-                              Identification: selectedFactor.tasks?.Identification || [],
-                              Definition: selectedFactor.tasks?.Definition || [],
-                              Delivery: selectedFactor.tasks?.Delivery || [],
-                              Closure: selectedFactor.tasks?.Closure || []
-                            }
-                          }}
-                          onTaskChange={(stage, index, value) => handleUpdateTask(selectedFactor.id, stage, index, value)}
-                          onAddTask={(stage) => handleAddTask(selectedFactor.id, stage)}
-                          onRemoveTask={(stage, index) => handleDeleteTask(selectedFactor.id, stage, index)}
-                        />
+                        <>
+                          {/* Sanity check logging */}
+                          {console.log('Selected Factor before render:', selectedFactor)}
+                          {console.log('Factor tasks before render:', selectedFactor.tasks)}
+                          
+                          <AdminStageTabs
+                            factor={{
+                              ...selectedFactor,
+                              tasks: {
+                                // Ensure each stage has a proper string array with no nulls
+                                Identification: Array.isArray(selectedFactor.tasks?.Identification) 
+                                  ? selectedFactor.tasks.Identification.filter(task => typeof task === 'string')
+                                  : [],
+                                Definition: Array.isArray(selectedFactor.tasks?.Definition) 
+                                  ? selectedFactor.tasks.Definition.filter(task => typeof task === 'string')
+                                  : [],
+                                Delivery: Array.isArray(selectedFactor.tasks?.Delivery) 
+                                  ? selectedFactor.tasks.Delivery.filter(task => typeof task === 'string')
+                                  : [],
+                                Closure: Array.isArray(selectedFactor.tasks?.Closure) 
+                                  ? selectedFactor.tasks.Closure.filter(task => typeof task === 'string')
+                                  : []
+                              }
+                            }}
+                            onTaskChange={(stage, index, value) => handleUpdateTask(selectedFactor.id, stage, index, value)}
+                            onAddTask={(stage) => handleAddTask(selectedFactor.id, stage)}
+                            onRemoveTask={(stage, index) => handleDeleteTask(selectedFactor.id, stage, index)}
+                          />
+                        </>
                       ) : (
                         <div className="p-4 text-center text-gray-500">
                           Tasks data is not available. Please try refreshing the page.
