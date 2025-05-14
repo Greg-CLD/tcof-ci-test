@@ -156,7 +156,8 @@ async function getSuccessFactorTasks(): Promise<any[]> {
         factor_id, stage, "order"
     `;
     
-    const result = await db.execute(query);
+    // Use empty params array to prevent parameter binding errors
+    const result = await db.execute(query, []);
     
     if (!result.rows) {
       console.error('Failed to fetch success factor tasks');
