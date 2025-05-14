@@ -8,6 +8,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as factorsDb from './factorsDb';
 import { db } from "./db";
+import { sql } from 'drizzle-orm';
 import type { FactorTask } from '../scripts/factorUtils';
 // Define the Stage type for canonical checklist tasks
 type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
@@ -22,13 +23,24 @@ function isAdmin(req: Request, res: Response, next: any) {
     return res.status(401).json({ message: 'Not authenticated' });
   }
   
-  // Check if user has admin role
+  // Check if user has admin role or is greg@confluity.co.uk
   const user = req.user as any;
-  if (user && user.role === 'admin') {
+  if (user && (user.role === 'admin' || (user.username && user.username.toLowerCase() === 'greg@confluity.co.uk'))) {
     return next();
   }
   
   return res.status(403).json({ message: 'Not authorized' });
+}
+
+// Import organization routes
+async function importOrganisationRoutes() {
+  try {
+    const module = await import('./routes/organisations.js');
+    return module.default;
+  } catch (error) {
+    console.error('Failed to import organisation routes:', error);
+    return null;
+  }
 }
 
 // Store success factors in memory for faster access with fallback to DB
@@ -103,6 +115,19 @@ async function saveFactors(factors: FactorTask[]): Promise<boolean> {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up auth routes and middleware
   setupAuth(app);
+  
+  // Register organization routes
+  try {
+    const organisationRoutes = await importOrganisationRoutes();
+    if (organisationRoutes) {
+      app.use('/api/organisations', organisationRoutes);
+      console.log('Organisation routes registered successfully');
+    } else {
+      console.error('Failed to load organisation routes');
+    }
+  } catch (error) {
+    console.error('Error registering organisation routes:', error);
+  }
   
   // Debug endpoint
   app.get('/api/debug', (req, res) => {
