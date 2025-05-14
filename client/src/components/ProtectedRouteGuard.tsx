@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Redirect, useLocation, useParams } from 'wouter';
 import { useProjects } from '@/hooks/useProjects';
+import { useProject } from '@/contexts/ProjectContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ interface ProtectedRouteGuardProps {
  */
 export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
   const { isLoading, isSelectedProjectProfileComplete, getSelectedProject, setSelectedProjectId } = useProjects();
+  const { currentProjectId, setCurrentProjectId } = useProject(); // Get context directly
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
 
@@ -24,44 +26,51 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
     return <>{children}</>;
   }
 
-  // Show nothing while loading
+  // Show loading state while projects are loading
   if (isLoading) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-tcof-teal border-t-transparent"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading project...</p>
+        </div>
+      </div>
+    );
   }
 
+  // Prioritize projectId from URL params over context
+  const routeProjectId = projectId;
+  const contextProjectId = currentProjectId;
   const selectedProject = getSelectedProject();
 
-  // If no project is selected, try to get it from URL params
+  console.log(`ProtectedRouteGuard: routeProjectId=${routeProjectId}, contextProjectId=${contextProjectId}, hasSelectedProject=${!!selectedProject}`);
+
+  // If no project is selected but we have a projectId in URL params, use that
+  if (!selectedProject && routeProjectId) {
+    console.log(`ProtectedRouteGuard: found projectId in URL: ${routeProjectId}, setting it.`);
+    
+    // Update project context - this will also handle localStorage
+    setCurrentProjectId(routeProjectId);
+    
+    // Also update the projects hook for compatibility
+    setSelectedProjectId(routeProjectId);
+    
+    // Allow access since projectId was found
+    return <>{children}</>;
+  }
+  
+  // If we still don't have a project, check if there's one in the context
+  if (!selectedProject && contextProjectId) {
+    console.log(`ProtectedRouteGuard: found projectId in context: ${contextProjectId}, using it.`);
+    
+    // Update the projects hook with the context value
+    setSelectedProjectId(contextProjectId);
+    return <>{children}</>;
+  }
+  
+  // If we still don't have a project, we need to redirect to organizations
   if (!selectedProject) {
-    if (projectId) {
-      console.log(`ProtectedRouteGuard: found projectId in URL: ${projectId}, setting it.`);
-      
-      // Always store project ID in localStorage using consistent key
-      localStorage.setItem('currentProjectId', projectId);
-      // Keep old key for backward compatibility
-      localStorage.setItem('selectedProjectId', projectId);
-      
-      // Update the project selection in our hook
-      setSelectedProjectId(projectId);
-      
-      // Allow access since projectId was found
-      return <>{children}</>;
-    }
-    
-    // Check if there's a project ID in localStorage before redirecting
-    const storedProjectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
-    if (storedProjectId) {
-      console.log(`ProtectedRouteGuard: found projectId in localStorage: ${storedProjectId}, setting it.`);
-      
-      // Make sure both localStorage keys are consistent
-      localStorage.setItem('currentProjectId', storedProjectId);
-      localStorage.setItem('selectedProjectId', storedProjectId);
-      
-      // Update the project selection
-      setSelectedProjectId(storedProjectId);
-      return <>{children}</>; 
-    }
-    
+    console.log('ProtectedRouteGuard: No project selected or found, redirecting to organisations.');
     return <Redirect to="/organisations" />;
   }
 

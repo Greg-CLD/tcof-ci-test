@@ -1,5 +1,5 @@
 import { Switch, Route, Link, useLocation, useParams, Redirect } from "wouter";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 
@@ -62,6 +62,7 @@ import GlobalNav from "@/components/GlobalNav";
 import AuthRequired from "@/components/AuthRequired";
 import SiteFooter from "@/components/SiteFooter";
 import { Suspense } from "react";
+import { useProject } from "@/contexts/ProjectContext";
 
 // Tool components with consistent layout
 const GoalMappingPage = () => {
@@ -205,46 +206,51 @@ const TCOFJourneyPage = () => {
 function Router() {
   const authProtection = useAuthProtection();
   const { user, isAuthenticated } = useAuth();
+  const { currentProjectId } = useProject(); // Use project context instead of direct localStorage access
   const [location, navigate] = useLocation();
   const hasRedirectedRef = useRef(false);
+  
+  // Enhanced logging shows both auth state and project state
+  console.log("Current location in Router:", location, { 
+    user: user?.username || 'none', 
+    isAuthenticated, 
+    currentProjectId,
+    hasRedirected: hasRedirectedRef.current 
+  });
 
-  // We won't use useEffect for redirects to avoid the infinite loop issues
-  // Instead we'll use more granular control with direct conditional rendering
+  useEffect(() => {
+    // Only run these redirects once both auth and project contexts are fully loaded
+    // and only on first render - prevents multiple redirects
+    
+    if (hasRedirectedRef.current) {
+      return; // Skip if we've already redirected
+    }
 
-  // Log current location on each render for debugging
-  console.log("Current location in Router:", location, { user, isAuthenticated, hasRedirected: hasRedirectedRef.current });
-
-  // Hard-Stop Redirect Rule: Run once per mount, with a ref to prevent multiple redirects
-  if (isAuthenticated && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
-    console.log("NAVIGATE FROM", location, "TO /all-projects (ONE-TIME REDIRECT)");
-    hasRedirectedRef.current = true;
-    navigate('/all-projects');
-    return null; // Critical: DO NOT render anything during redirect
-  }
-
-  // If user tries to go to /get-your-bearings, redirect to /organisations
-  if (location === '/get-your-bearings' && !hasRedirectedRef.current) {
-    console.log("Intercepting /get-your-bearings, redirecting to /organisations");
-    hasRedirectedRef.current = true;
-    navigate('/organisations');
-    return null; // Critical: DO NOT render during navigation
-  }
-
-  // Don't allow users to directly access tool pages without selecting a project
-  if (isAuthenticated && location === '/make-a-plan' && !localStorage.getItem('selectedProjectId')) {
-    console.log("Missing projectId, redirecting to /organisations");
-    if (!hasRedirectedRef.current) {
+    // Only redirect authenticated users from home/auth pages to projects
+    if (isAuthenticated && (location === '/' || location === '/auth')) {
+      console.log("NAVIGATE FROM", location, "TO /all-projects (DEFERRED REDIRECT)");
+      hasRedirectedRef.current = true;
+      navigate('/all-projects');
+    }
+    
+    // Redirect /get-your-bearings to /organisations
+    else if (location === '/get-your-bearings') {
+      console.log("Intercepting /get-your-bearings, redirecting to /organisations");
       hasRedirectedRef.current = true;
       navigate('/organisations');
-      return null; // Critical: DO NOT render during navigation
     }
-  }
+    
+    // Redirect tool pages without project context to org selection
+    else if (isAuthenticated && location === '/make-a-plan' && !currentProjectId) {
+      console.log("Missing projectId, redirecting to /organisations");
+      hasRedirectedRef.current = true;
+      navigate('/organisations');
+    }
+  }, [isAuthenticated, location, currentProjectId, navigate]); // Dependencies ensure this runs when needed
 
-  // For organization routes, if not logged in, redirect to home
+  // We still need this redirect check here for auth protection
   if (!isAuthenticated && (location === '/organisations' || location.startsWith('/organisations/'))) {
-    return (
-      <Redirect to="/" />
-    );
+    return <Redirect to="/" />;
   }
 
   return (
@@ -706,6 +712,9 @@ import { ProjectProvider } from '@/contexts/ProjectContext';
 import { FeedbackProvider } from '@/components/ui/feedback/feedback-context';
 import { FeedbackContainer } from '@/components/ui/feedback/feedback-container';
 
+// Import our new AppInitializer component
+import { AppInitializer } from '@/components/AppInitializer';
+
 function App() {
   // Check if we're in development mode
   const isDev = import.meta.env.DEV;
@@ -720,11 +729,14 @@ function App() {
               <ProgressProvider>
                 <PlanProvider>
                   <ProjectProvider>
-                    <AppLayout>
-                      <Router />
-                      {/* Add the feedback container to display notifications */}
-                      <FeedbackContainer />
-                    </AppLayout>
+                    {/* Use AppInitializer to wait for both contexts to hydrate */}
+                    <AppInitializer>
+                      <AppLayout>
+                        <Router />
+                        {/* Add the feedback container to display notifications */}
+                        <FeedbackContainer />
+                      </AppLayout>
+                    </AppInitializer>
                   </ProjectProvider>
                 </PlanProvider>
               </ProgressProvider>
