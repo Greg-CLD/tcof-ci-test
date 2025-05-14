@@ -374,7 +374,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       // Send to server
       const response = await apiRequest(
         "POST",
-        `/api/projects/${currentProjectId}/custom-tasks`,
+        `/api/project-tasks`,
         taskData
       );
       console.log('[CHECKLIST] Task created successfully', response);
@@ -419,17 +419,22 @@ export default function Checklist({ projectId }: ChecklistProps) {
       // Optimistically update UI
       setTasks(prev => prev.filter(task => task.id !== taskId));
       
-      // Update tasks by stage
+      // Update tasks by stage - filter tasks from all stages
       setTasksByStage(prev => {
         const updatedTasks = { ...prev };
-        updatedTasks[stage] = updatedTasks[stage].filter(task => task.id !== taskId);
+        
+        // Find and remove the task from whichever stage it's in
+        Object.keys(updatedTasks).forEach(stageKey => {
+          updatedTasks[stageKey as Stage] = updatedTasks[stageKey as Stage].filter(task => task.id !== taskId);
+        });
+        
         return updatedTasks;
       });
       
       // Delete from server
       await apiRequest(
         "DELETE",
-        `/api/projects/${currentProjectId}/tasks/${taskId}`
+        `/api/project-tasks/${taskId}?projectId=${currentProjectId}`
       );
       
       toast({
@@ -717,6 +722,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
                                     task.source
                                   );
                                 }}
+                                onDelete={handleDeleteTask}
                               />
                             ))}
                           </div>
