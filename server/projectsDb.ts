@@ -201,14 +201,26 @@ async function getSuccessFactorTasks(): Promise<any[]> {
  * @returns Array of tasks with their source information
  */
 async function getAllCanonicalTasks(): Promise<any[]> {
-  // Get success factor tasks
-  const factorTasks = await getSuccessFactorTasks();
-  
-  // TODO: Add additional task sources when needed (personal heuristics, policies, etc.)
-  // const heuristicTasks = await getPersonalHeuristicTasks();
-  // const policyTasks = await getPolicyTasks();
-  
-  return factorTasks;
+  try {
+    // Get success factor tasks
+    const factorTasks = await getSuccessFactorTasks();
+    console.log(`getAllCanonicalTasks: Retrieved ${factorTasks.length} factor tasks`);
+    
+    // Log first few tasks for debugging
+    if (factorTasks.length > 0) {
+      console.log(`Sample tasks: ${JSON.stringify(factorTasks.slice(0, 2))}`);
+    }
+    
+    // TODO: Add additional task sources when needed (personal heuristics, policies, etc.)
+    // const heuristicTasks = await getPersonalHeuristicTasks();
+    // const policyTasks = await getPolicyTasks();
+    
+    return factorTasks;
+  } catch (error) {
+    console.error('Error in getAllCanonicalTasks:', error);
+    // Return empty array on error to prevent cascade failures
+    return [];
+  }
 }
 
 /**
@@ -218,97 +230,114 @@ async function getAllCanonicalTasks(): Promise<any[]> {
  */
 async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
   try {
-    // Ensure projectId is a string
+    // Always ensure projectId is a string
     const projectIdString = String(projectId);
     
-    // Check if project exists
-    const project = await projectsDb.getProject(projectIdString);
+    console.log(`Checking if project ${projectIdString} needs task seeding...`);
+    
+    // Get the project directly from Replit DB (more reliable for projectId lookup)
+    const projects = loadProjects();
+    const project = projects.find(p => String(p.id) === projectIdString);
+    
     if (!project) {
-      console.log(`Project with ID ${projectIdString} not found, can't seed tasks`);
+      console.log(`Project with ID ${projectIdString} not found in projects list, can't seed tasks`);
       return false;
     }
     
-    // Check if project already has tasks - use SQL to avoid type issues
-    const checkSql = `
-      SELECT COUNT(*) as task_count FROM project_tasks 
-      WHERE project_id::text = $1
-    `;
+    console.log(`Found project for seeding: ${project.name} (ID: ${project.id})`);
     
-    // Ensure projectIdString is valid to prevent parameter binding errors
-    const safeProjectId = projectIdString || '';
-    console.log(`Checking for existing tasks with project ID: ${safeProjectId}`);
-    
-    const checkResult = await db.execute(checkSql, [safeProjectId]);
-    const taskCount = parseInt(checkResult.rows?.[0]?.task_count || '0');
-    
-    if (taskCount > 0) {
-      console.log(`Project ${projectIdString} already has ${taskCount} tasks, no need to seed`);
-      return true;
-    }
-    
-    console.log(`Seeding tasks for project ${projectIdString}...`);
-    
-    // Get all canonical tasks
-    const canonicalTasks = await getAllCanonicalTasks();
-    console.log(`Found ${canonicalTasks.length} canonical tasks to seed`);
-    
-    // Prepare for batch insertion
-    let successCount = 0;
-    
-    // Process each canonical task
-    for (const task of canonicalTasks) {
-      try {
-        // Ensure task has all required fields with defaults if needed
-        const taskText = task.text || 'Task';
-        const taskStage = (task.stage || 'identification').toLowerCase();
-        const taskOrigin = (task.origin || 'custom').toLowerCase();
-        const taskSourceId = task.sourceId || '';
-        
-        console.log(`Creating task from source: "${taskText.substring(0, 30)}..." (${taskStage}, ${taskOrigin}, ${taskSourceId})`);
-        
-        // Use direct SQL insertion for better handling of types
-        const insertSql = `
-          INSERT INTO project_tasks (
-            id, project_id, text, stage, origin, source_id,
-            completed, notes, priority, status, created_at, updated_at
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-        `;
-        
-        const taskId = uuidv4();
-        
-        const insertParams = [
-          taskId,                                     // $1
-          projectIdString,                            // $2
-          taskText,                                   // $3
-          taskStage,                                  // $4
-          taskOrigin,                                 // $5
-          taskSourceId,                               // $6
-          false,                                      // $7
-          '',                                         // $8
-          'medium',                                   // $9
-          'To Do'                                     // $10
-        ];
-        
-        // Debug log and parameter validation
-        console.log(`Inserting task: ${taskId} for project ${projectIdString}, param count: ${insertParams.length}`);
-        
-        // Execute insert
-        await db.execute(insertSql, insertParams);
-        successCount++;
-        
-        if (successCount % 10 === 0) {
-          console.log(`Seeded ${successCount}/${canonicalTasks.length} tasks...`);
-        }
-      } catch (err) {
-        console.error(`Error seeding task for project ${projectIdString}:`, err);
+    // Use a direct SQL query with explicit parameter binding
+    try {
+      // Check if project already has tasks
+      const checkCountQuery = `
+        SELECT COUNT(*) FROM project_tasks 
+        WHERE project_id = $1::uuid
+      `;
+      
+      // Get existing task count
+      const countResult = await db.execute(checkCountQuery, [project.id]);
+      const taskCount = parseInt(countResult.rows[0]?.count || '0');
+      
+      if (taskCount > 0) {
+        console.log(`Project ${project.id} already has ${taskCount} tasks, skipping seed`);
+        return true;
       }
+      
+      // No tasks found, proceed with seeding
+      console.log(`No tasks found for project ${project.id}, starting seeding process`);
+      
+      // Get canonical tasks from the database
+      const canonicalTasks = await getAllCanonicalTasks();
+      
+      if (!canonicalTasks || canonicalTasks.length === 0) {
+        console.log('No canonical tasks found to seed. Check success_factor_tasks table.');
+        return false;
+      }
+      
+      console.log(`Found ${canonicalTasks.length} canonical tasks to seed`);
+      
+      // Insert each task individually to avoid batch issues
+      let successCount = 0;
+      
+      for (const task of canonicalTasks) {
+        try {
+          // Generate a unique ID for this task
+          const taskId = uuidv4();
+          
+          // Ensure all fields have default values
+          const taskText = task.text || 'Task';
+          const taskStage = (task.stage || 'identification').toLowerCase();
+          const taskOrigin = (task.origin || 'custom').toLowerCase();
+          const taskSourceId = task.sourceId || '';
+          
+          // Build insert query
+          const insertQuery = `
+            INSERT INTO project_tasks (
+              id, project_id, text, stage, origin, source_id,
+              completed, notes, priority, status, created_at, updated_at
+            )
+            VALUES (
+              $1::uuid, $2::uuid, $3, $4, $5, $6, 
+              $7, $8, $9, $10, NOW(), NOW()
+            )
+          `;
+          
+          // Prepare parameters with type assertions
+          const params = [
+            taskId,                // $1
+            project.id,            // $2
+            taskText,              // $3
+            taskStage,             // $4
+            taskOrigin,            // $5
+            taskSourceId,          // $6
+            false,                 // $7
+            '',                    // $8
+            'medium',              // $9
+            'To Do'                // $10
+          ];
+          
+          // Execute insert with parameters
+          await db.execute(insertQuery, params);
+          successCount++;
+          
+          if (successCount % 10 === 0) {
+            console.log(`Seeded ${successCount}/${canonicalTasks.length} tasks...`);
+          }
+        } catch (taskError) {
+          console.error('Error seeding individual task:', taskError);
+          // Continue with other tasks
+        }
+      }
+      
+      console.log(`Successfully seeded ${successCount}/${canonicalTasks.length} tasks for project ${project.id}`);
+      return successCount > 0;
+      
+    } catch (sqlError) {
+      console.error('SQL error during task seeding:', sqlError);
+      return false;
     }
-    
-    console.log(`Successfully seeded ${successCount}/${canonicalTasks.length} tasks for project ${projectIdString}`);
-    return successCount > 0;
   } catch (error) {
-    console.error(`Error seeding tasks for project ${projectId}:`, error);
+    console.error(`Error in ensureProjectTasksSeeded for project ${projectId}:`, error);
     return false;
   }
 }
@@ -417,184 +446,162 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
     if (task.id && task.id !== 'new') {
       console.log(`Updating existing task ${task.id}`);
       
-      // Use prepared SQL statement for update to avoid type issues
-      const updateSql = `
-        UPDATE project_tasks
-        SET 
-          text = $1,
-          stage = $2,
-          origin = $3,
-          source_id = $4,
-          completed = $5,
-          notes = $6,
-          priority = $7,
-          due_date = $8,
-          owner = $9,
-          status = $10,
-          updated_at = $11
-        WHERE id = $12
-        RETURNING *
-      `;
+      // For direct query approach to avoid parameter binding issues
+      const now = new Date().toISOString();
       
-      // Ensure each parameter is properly prepared and non-null
-      const updateParams = [
-        task.text || '',                              // $1
-        task.stage || 'identification',               // $2
-        task.origin || 'custom',                      // $3
-        task.sourceId || '',                          // $4
-        task.completed === true,                      // $5 - convert to boolean
-        task.notes || '',                             // $6
-        task.priority || '',                          // $7
-        task.dueDate || '',                           // $8
-        task.owner || '',                             // $9
-        task.status || 'pending',                     // $10
-        new Date().toISOString(),                     // $11
-        task.id                                       // $12
-      ];
-      
-      // Validate all parameters to prevent binding errors
-      console.log(`Updating task with ID: ${task.id}, parameter count: ${updateParams.length}`);
-      
-      // Add all parameters for easier debugging
-      console.log('Update SQL params:', JSON.stringify(updateParams.map((p, i) => ({ 
-        index: i+1, 
-        value: typeof p === 'object' ? String(p) : p 
-      }))));
-      
-      const updateResult = await db.execute(updateSql, updateParams);
-      
-      if (!updateResult.rows || updateResult.rows.length === 0) {
-        throw new Error(`Task with ID ${task.id} not found`);
+      try {
+        // Use direct SQL with literal parameters to avoid binding issues
+        const updateSql = `
+          UPDATE project_tasks
+          SET 
+            text = $1,
+            stage = $2,
+            origin = $3,
+            source_id = $4,
+            completed = $5,
+            notes = $6,
+            priority = $7,
+            due_date = $8,
+            owner = $9,
+            status = $10,
+            updated_at = $11
+          WHERE id = $12
+          RETURNING *
+        `;
+        
+        // Ensure each parameter is properly prepared and non-null
+        const updateParams = [
+          task.text || '',                              // $1
+          task.stage || 'identification',               // $2
+          task.origin || 'custom',                      // $3
+          task.sourceId || '',                          // $4
+          task.completed === true,                      // $5 - convert to boolean
+          task.notes || '',                             // $6
+          task.priority || '',                          // $7
+          task.dueDate || '',                           // $8
+          task.owner || '',                             // $9
+          task.status || 'pending',                     // $10
+          now,                                          // $11
+          task.id                                       // $12
+        ];
+        
+        // Validate all parameters to prevent binding errors
+        console.log(`Updating task with ID: ${task.id}, parameter count: ${updateParams.length}`);
+        
+        // Add all parameters for easier debugging
+        console.log('Update SQL params:', JSON.stringify(updateParams.map((p, i) => ({ 
+          index: i+1, 
+          value: typeof p === 'object' ? String(p) : p 
+        }))));
+        
+        const updateResult = await db.execute(updateSql, updateParams);
+        
+        if (!updateResult.rows || updateResult.rows.length === 0) {
+          throw new Error(`Task with ID ${task.id} not found`);
+        }
+        
+        const updatedTask = updateResult.rows[0];
+        console.log(`Updated task ${updatedTask.id} in database`);
+        
+        // Convert to ProjectTask with careful null handling
+        return {
+          id: String(updatedTask.id),
+          projectId: String(updatedTask.project_id || projectIdString),
+          text: String(updatedTask.text || ''),
+          stage: (String(updatedTask.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
+          origin: (String(updatedTask.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
+          sourceId: String(updatedTask.source_id || ''),
+          completed: Boolean(updatedTask.completed),
+          notes: String(updatedTask.notes || ''),
+          priority: String(updatedTask.priority || ''),
+          dueDate: String(updatedTask.due_date || ''),
+          owner: String(updatedTask.owner || ''),
+          status: String(updatedTask.status || 'pending'),
+          createdAt: updatedTask.created_at ? new Date(String(updatedTask.created_at)).toISOString() : new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      } catch (updateError) {
+        console.error('Error updating task:', updateError);
+        throw updateError;
       }
-      
-      const updatedTask = updateResult.rows[0];
-      console.log(`Updated task ${updatedTask.id} in database`);
-      
-      // Log the raw row data for debugging
-      console.log('Updated task row data:', JSON.stringify(updatedTask));
-      
-      // Convert to ProjectTask with careful null handling
-      const taskResult = {
-        id: String(updatedTask.id),
-        projectId: String(updatedTask.project_id || projectIdString),
-        text: String(updatedTask.text),
-        stage: String(updatedTask.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
-        origin: String(updatedTask.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
-        sourceId: String(updatedTask.source_id || ''),
-        completed: Boolean(updatedTask.completed),
-        notes: updatedTask.notes ? String(updatedTask.notes) : '',
-        priority: updatedTask.priority ? String(updatedTask.priority) : '',
-        dueDate: updatedTask.due_date ? String(updatedTask.due_date) : '',
-        owner: updatedTask.owner ? String(updatedTask.owner) : '',
-        status: updatedTask.status ? String(updatedTask.status) : '',
-        createdAt: updatedTask.created_at ? new Date(String(updatedTask.created_at)).toISOString() : new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      console.log('Returning updated task result:', JSON.stringify(taskResult));
-      return taskResult;
     } else {
       // Create a new task with a new UUID if not provided
       const taskId = task.id === 'new' ? uuidv4() : (task.id || uuidv4());
       console.log(`Creating new task ${taskId} for project ${projectIdString}`);
       
-      // Use prepared SQL statement for insert to avoid type conflicts
-      const insertSql = `
-        INSERT INTO project_tasks (
-          id, project_id, text, stage, origin, source_id, 
-          completed, notes, priority, due_date, owner, status,
-          created_at, updated_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-        RETURNING *
-      `;
-      
       const now = new Date().toISOString();
       
-      // Ensure each parameter is properly prepared and non-null
-      const insertParams = [
-        taskId,                                       // $1
-        projectIdString,                              // $2
-        task.text || '',                              // $3
-        task.stage || 'identification',               // $4
-        task.origin || 'custom',                      // $5
-        task.sourceId || '',                          // $6
-        task.completed === true,                      // $7 - convert to boolean
-        task.notes || '',                             // $8
-        task.priority || '',                          // $9
-        task.dueDate || '',                           // $10
-        task.owner || '',                             // $11
-        task.status || 'pending',                     // $12
-        now,                                          // $13
-        now                                           // $14
-      ];
-      
-      console.log('Inserting new task with params:', { 
-        taskId, 
-        projectId: projectIdString, 
-        text: task.text,
-        paramsLength: insertParams.length
-      });
-      
-      // Create a variable for the result outside the try block
-      let insertResult;
-      
       try {
-        // Execute query directly with proper parameters
-        console.log(`SQL insert query: ${insertSql.replace(/\s+/g, ' ')}`);
-        console.log(`Parameter count: ${insertParams.length}, expected 14`);
+        // Use direct SQL with literal parameters to avoid binding issues
+        const insertSql = `
+          INSERT INTO project_tasks (
+            id, project_id, text, stage, origin, source_id, 
+            completed, notes, priority, due_date, owner, status,
+            created_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          RETURNING *
+        `;
         
-        // Add all parameters for easier debugging
+        // Ensure each parameter is properly prepared and non-null
+        const insertParams = [
+          taskId,                                       // $1
+          projectIdString,                              // $2
+          task.text || '',                              // $3
+          task.stage || 'identification',               // $4
+          task.origin || 'custom',                      // $5
+          task.sourceId || '',                          // $6
+          task.completed === true,                      // $7 - convert to boolean
+          task.notes || '',                             // $8
+          task.priority || '',                          // $9
+          task.dueDate || '',                           // $10
+          task.owner || '',                             // $11
+          task.status || 'pending',                     // $12
+          now,                                          // $13
+          now                                           // $14
+        ];
+        
+        console.log(`Inserting task ${taskId} with ${insertParams.length} parameters`);
         console.log('SQL params:', JSON.stringify(insertParams.map((p, i) => ({ 
           index: i+1, 
           value: typeof p === 'object' ? String(p) : p 
         }))));
         
-        insertResult = await db.execute(insertSql, insertParams);
+        const insertResult = await db.execute(insertSql, insertParams);
         
-        if (!insertResult || !insertResult.rows || insertResult.rows.length === 0) {
-          console.error('DB insert returned no rows', insertResult);
+        if (!insertResult.rows || insertResult.rows.length === 0) {
+          console.error('DB insert returned no rows');
           throw new Error('Failed to create new task - no rows returned');
         }
         
         const newTask = insertResult.rows[0];
         console.log(`Created new task ${newTask.id} in database`);
         
-        // Log the raw row data for debugging
-        console.log('Task row data:', JSON.stringify(newTask));
-        
         // Convert to ProjectTask with careful null handling
-        const taskResult = {
+        return {
           id: String(newTask.id),
           projectId: String(newTask.project_id || projectIdString),
-          text: String(newTask.text),
-          stage: String(newTask.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
-          origin: String(newTask.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+          text: String(newTask.text || ''),
+          stage: (String(newTask.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
+          origin: (String(newTask.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
           sourceId: String(newTask.source_id || ''),
           completed: Boolean(newTask.completed),
-          notes: newTask.notes ? String(newTask.notes) : '',
-          priority: newTask.priority ? String(newTask.priority) : '',
-          dueDate: newTask.due_date ? String(newTask.due_date) : '',
-          owner: newTask.owner ? String(newTask.owner) : '',
-          status: newTask.status ? String(newTask.status) : '',
-          createdAt: newTask.created_at ? new Date(String(newTask.created_at)).toISOString() : new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          notes: String(newTask.notes || ''),
+          priority: String(newTask.priority || ''),
+          dueDate: String(newTask.due_date || ''),
+          owner: String(newTask.owner || ''),
+          status: String(newTask.status || 'pending'),
+          createdAt: newTask.created_at ? new Date(String(newTask.created_at)).toISOString() : now,
+          updatedAt: newTask.updated_at ? new Date(String(newTask.updated_at)).toISOString() : now
         };
-        
-        console.log('Returning task result:', JSON.stringify(taskResult));
-        return taskResult;
-      } catch (sqlError) {
-        console.error('SQL error executing insert:', sqlError);
-        throw sqlError;
+      } catch (insertError) {
+        console.error('Error inserting task:', insertError);
+        throw insertError;
       }
-      
-      // This code is now unreachable because we return in the try block
-      // We're keeping this return with a log to track potential issues
-      console.log('WARNING: Code reached unreachable block in saveProjectTask');
-      return null;
     }
   } catch (error) {
     console.error('Error saving project task to database:', error);
+    // Return null instead of throwing to avoid breaking the client
     return null;
   }
 }
@@ -1246,45 +1253,47 @@ export const projectsDb = {
    */
   getProjectTasksBySourceId: async (projectId: string, sourceId: string): Promise<ProjectTask[]> => {
     try {
-      // Get the project to extract the numeric ID
-      const project = await projectsDb.getProject(projectId);
-      if (!project) {
-        console.log(`Project with ID ${projectId} not found`);
+      // Always ensure projectId is a string
+      const projectIdString = String(projectId);
+      
+      console.log(`Looking for tasks with projectId: ${projectIdString} and sourceId: ${sourceId}`);
+      
+      // Use direct SQL query with prepared statements to avoid type issues
+      const sql = `
+        SELECT * FROM project_tasks
+        WHERE project_id::text = $1 AND source_id::text = $2
+      `;
+      
+      // Safe parameter binding
+      const safeParams = [projectIdString || '', sourceId || ''];
+      console.log(`SQL params for getProjectTasksBySourceId: ${JSON.stringify(safeParams)}`);
+      
+      // Execute the query with parameters
+      const result = await db.execute(sql, safeParams);
+      
+      if (!result.rows || result.rows.length === 0) {
+        console.log(`No tasks found for project ${projectIdString} with sourceId ${sourceId}`);
         return [];
       }
       
-      // Extract the ID and convert to number if it's a string
-      const projectIdValue = typeof project.id === 'string' ? parseInt(project.id) : project.id;
-      
-      // Query tasks directly from database using numeric ID
-      const projectTasks = await db
-        .select()
-        .from(projectTasksTable)
-        .where(
-          and(
-            eq(projectTasksTable.projectId, projectIdValue),
-            eq(projectTasksTable.sourceId, sourceId)
-          )
-        );
-      
-      console.log(`Found ${projectTasks.length} tasks for project ${projectId} with sourceId ${sourceId}`);
+      console.log(`Found ${result.rows.length} tasks for project ${projectIdString} with sourceId ${sourceId}`);
       
       // Convert to ProjectTask interface with proper type handling and defaults
-      return projectTasks.map(task => ({
+      return result.rows.map(task => ({
         id: String(task.id || ''),
-        projectId: String(task.projectId || ''), // Ensure consistent string type
+        projectId: String(task.project_id || ''), // Notice project_id in snake_case from direct SQL
         text: String(task.text || ''),
-        stage: (String(task.stage || 'identification') as 'identification' | 'definition' | 'delivery' | 'closure'),
-        origin: (String(task.origin || 'custom') as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
-        sourceId: String(task.sourceId || ''),
+        stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
+        origin: (String(task.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
+        sourceId: String(task.source_id || ''), // Notice source_id in snake_case from direct SQL
         completed: Boolean(task.completed || false),
         notes: String(task.notes || ''),
         priority: String(task.priority || ''),
-        dueDate: String(task.dueDate || ''),
+        dueDate: String(task.due_date || ''), // Notice due_date in snake_case from direct SQL
         owner: String(task.owner || ''),
         status: String(task.status || 'pending'),
-        createdAt: String(task.createdAt || new Date().toISOString()),
-        updatedAt: String(task.updatedAt || new Date().toISOString())
+        createdAt: task.created_at ? new Date(String(task.created_at)).toISOString() : new Date().toISOString(),
+        updatedAt: task.updated_at ? new Date(String(task.updated_at)).toISOString() : new Date().toISOString()
       }));
     } catch (error) {
       console.error('Error getting project tasks by sourceId:', error);
