@@ -36,7 +36,7 @@ export interface Project {
 // Project task data type
 export interface ProjectTask {
   id: string;
-  projectId: string | number;  // Can be either string or number for flexibility
+  projectId: string;  // Always treat as string for consistency across client and server
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
   origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
@@ -47,8 +47,8 @@ export interface ProjectTask {
   dueDate?: string;
   owner?: string;
   status?: string;
-  createdAt: string;  // Changed to string for client side compatibility
-  updatedAt: string;  // Changed to string for client side compatibility
+  createdAt: string;  // String format for client side compatibility
+  updatedAt: string;  // String format for client side compatibility
 }
 
 // Project policy data type

@@ -81,6 +81,8 @@ import App from "./App";
 import "./index.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { apiRequest } from "./lib/queryClient";
+// Import testing helpers
+import "./lib/taskTestHelpers";
 
 // Declare the window object extensions for TypeScript
 declare global {
