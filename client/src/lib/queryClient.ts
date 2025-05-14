@@ -18,7 +18,36 @@ export async function apiRequest(
     options.body = JSON.stringify(data);
   }
 
-  return fetch(url, options);
+  try {
+    // Using Promise with timeout to handle infrastructure connectivity issues
+    const fetchPromise = fetch(url, options);
+    
+    // Create a timeout promise that rejects after 10 seconds
+    const timeoutPromise = new Promise<Response>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("Request timed out. Please try again later."));
+      }, 10000); // 10 second timeout
+    });
+    
+    // Race between the fetch and timeout
+    return await Promise.race([fetchPromise, timeoutPromise]);
+  } catch (error) {
+    // Create a mock Response for network errors
+    console.error(`Network error during ${method} to ${url}:`, error);
+    
+    // Custom error response with helpful message
+    const errorBody = JSON.stringify({
+      error: true,
+      message: "Connection failed. Please check your internet connection and try again.",
+      details: error instanceof Error ? error.message : String(error)
+    });
+    
+    return new Response(errorBody, {
+      status: 503,
+      statusText: "Service Unavailable",
+      headers: { "Content-Type": "application/json" }
+    });
+  }
 }
 
 // Default query function that uses apiRequest
@@ -34,13 +63,39 @@ export const defaultQueryFn = async ({ queryKey }: { queryKey: string[] }) => {
     } else if (res.status === 404) {
       // Not found errors
       throw new Error("Resource not found");
+    } else if (res.status === 500) {
+      // Server errors that might be due to infrastructure issues
+      try {
+        const errorData = await res.json();
+        if (errorData.message) {
+          throw new Error(`Server error: ${errorData.message}`);
+        }
+      } catch (parseError) {
+        // If can't parse JSON, try text
+        const errorText = await res.text().catch(() => "");
+        
+        // Check for compute node errors specifically
+        if (errorText.includes("compute node") || errorText.includes("infrastructure")) {
+          throw new Error("Temporary server issue. Please try again in a moment.");
+        }
+        
+        throw new Error(
+          `Server error (${res.status}): ${errorText || "Unknown error occurred"}`
+        );
+      }
+    } else if (res.status === 503) {
+      // Service unavailable - likely infrastructure error
+      try {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Service temporarily unavailable. Please try again later.");
+      } catch (parseError) {
+        throw new Error("Service temporarily unavailable. Please try again later.");
+      }
     } else {
       // General server errors
-      const errorText = await res.text();
+      const errorText = await res.text().catch(() => "");
       throw new Error(
-        `Server error (${res.status}): ${
-          errorText || "Unknown error occurred"
-        }`
+        `Server error (${res.status}): ${errorText || "Unknown error occurred"}`
       );
     }
   }
