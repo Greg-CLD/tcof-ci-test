@@ -8,7 +8,7 @@ const router = express.Router();
  * GET /api/projects/:projectId/tasks
  * Get all tasks for a specific project
  */
-router.get("/:projectId/tasks", isAuthenticated, async (req, res) => {
+router.get("/:projectId/tasks", async (req, res) => {
   try {
     const { projectId } = req.params;
     const userId = req.user.id;

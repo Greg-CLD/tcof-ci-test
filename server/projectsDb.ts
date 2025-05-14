@@ -151,12 +151,13 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
         console.log(`Project with ID ${projectId} not found`);
         return [];
       }
-      // Extract the numeric ID from the project
-      const numericProjectId = project.id;
-      console.log(`Using numeric project ID: ${numericProjectId}`);
       
-      // Use numeric ID in the query
-      query = query.where(eq(projectTasksTable.projectId, numericProjectId));
+      // Extract the ID from the project and convert to number if it's a string
+      const projectIdValue = typeof project.id === 'string' ? parseInt(project.id) : project.id;
+      console.log(`Using project ID: ${projectIdValue} (type: ${typeof projectIdValue})`);
+      
+      // Use ID in the query, ensuring it matches the database column type
+      query = query.where(eq(projectTasksTable.projectId, projectIdValue));
     }
     
     const tasks = await query;
@@ -165,7 +166,7 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
     // Convert database result to ProjectTask interface with proper type handling
     return tasks.map(task => ({
       id: task.id,
-      projectId: task.projectId,
+      projectId: String(task.projectId), // Ensure consistent string type for projectId
       text: task.text,
       stage: task.stage as 'identification' | 'definition' | 'delivery' | 'closure',
       origin: task.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
@@ -235,10 +236,12 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
       };
     } else {
       // Create a new task
+      const projectIdValue = typeof task.projectId === 'string' ? parseInt(task.projectId) : task.projectId;
+      
       const [newTask] = await db
         .insert(projectTasksTable)
         .values({
-          projectId: parseInt(task.projectId),
+          projectId: projectIdValue,
           text: task.text,
           stage: task.stage,
           origin: task.origin,
@@ -840,20 +843,46 @@ export const projectsDb = {
    */
   getProjectTasksBySourceId: async (projectId: string, sourceId: string): Promise<ProjectTask[]> => {
     try {
-      // Query tasks directly from database
+      // Get the project to extract the numeric ID
+      const project = await projectsDb.getProject(projectId);
+      if (!project) {
+        console.log(`Project with ID ${projectId} not found`);
+        return [];
+      }
+      
+      // Extract the ID and convert to number if it's a string
+      const projectIdValue = typeof project.id === 'string' ? parseInt(project.id) : project.id;
+      
+      // Query tasks directly from database using numeric ID
       const projectTasks = await db
         .select()
         .from(projectTasksTable)
         .where(
           and(
-            eq(projectTasksTable.projectId, projectId),
+            eq(projectTasksTable.projectId, projectIdValue),
             eq(projectTasksTable.sourceId, sourceId)
           )
         );
       
       console.log(`Found ${projectTasks.length} tasks for project ${projectId} with sourceId ${sourceId}`);
       
-      return projectTasks;
+      // Convert to ProjectTask interface with proper type handling
+      return projectTasks.map(task => ({
+        id: task.id,
+        projectId: String(task.projectId), // Ensure consistent string type
+        text: task.text,
+        stage: task.stage as 'identification' | 'definition' | 'delivery' | 'closure',
+        origin: task.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+        sourceId: task.sourceId,
+        completed: task.completed === null ? false : task.completed,
+        notes: task.notes || '',
+        priority: task.priority || '',
+        dueDate: task.dueDate || '',
+        owner: task.owner || '',
+        status: task.status || '',
+        createdAt: task.createdAt ? task.createdAt.toISOString() : new Date().toISOString(),
+        updatedAt: task.updatedAt ? task.updatedAt.toISOString() : new Date().toISOString()
+      }));
     } catch (error) {
       console.error('Error getting project tasks by sourceId:', error);
       return [];
