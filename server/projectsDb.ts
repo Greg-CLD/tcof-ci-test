@@ -1032,10 +1032,21 @@ export const projectsDb = {
     }
   ): Promise<ProjectTask | null> => {
     try {
-      // Create task directly in database
+      // First verify this is a valid project ID using our improved getProject function
+      const project = await projectsDb.getProject(taskData.projectId);
+      
+      if (!project) {
+        console.error(`Cannot create task - project with ID ${taskData.projectId} not found`);
+        return null;
+      }
+      
+      // Use the verified UUID from the project object to ensure consistency
+      const safeProjectId = String(project.id);
+      
+      // Create task directly in database with verified project ID
       const task: ProjectTask = {
         id: uuidv4(), // Will be replaced with DB-generated ID
-        projectId: taskData.projectId,
+        projectId: safeProjectId, // Use the reliable project.id instead of direct taskData.projectId
         text: taskData.text,
         stage: taskData.stage,
         origin: taskData.origin,
@@ -1050,8 +1061,9 @@ export const projectsDb = {
         updatedAt: new Date().toISOString(), // Will be set by database
       };
       
-      console.log('About to save task to database:', {
-        projectId: task.projectId,
+      console.log('About to save task to database with verified project ID:', {
+        originalProjectId: taskData.projectId,
+        safeProjectId: safeProjectId, 
         text: task.text,
         stage: task.stage,
         origin: task.origin,
@@ -1122,33 +1134,51 @@ export const projectsDb = {
     }
   ): Promise<ProjectTask | null> => {
     try {
-      // First, check if taskId is a valid UUID
+      // First, validate the project exists and get the correct UUID
+      const project = await projectsDb.getProject(projectId);
+      
+      if (!project) {
+        console.error(`Cannot update task - project with ID ${projectId} not found`);
+        return null;
+      }
+      
+      // Use the verified UUID from the project object to ensure consistency
+      const safeProjectId = String(project.id);
+      console.log(`Validated project ID ${projectId} to safe UUID ${safeProjectId}`);
+      
+      // Check if taskId is a valid UUID
       let taskIdValue = taskId;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       
       if (!uuidRegex.test(taskId)) {
-        // If not a UUID, we need a different approach - try to find the task by source_id
-        console.log(`Task ID ${taskId} is not a valid UUID, looking up by source_id`);
+        // If not a UUID, try to find the task by source_id AND project ID
+        console.log(`Task ID ${taskId} is not a valid UUID, looking up by source_id for project ${safeProjectId}`);
         const tasksBySourceId = await db
           .select()
           .from(projectTasksTable)
-          .where(eq(projectTasksTable.sourceId, taskId))
+          .where(and(
+            eq(projectTasksTable.sourceId, taskId),
+            eq(projectTasksTable.projectId, safeProjectId) // Use the safe project ID
+          ))
           .limit(1);
           
         if (tasksBySourceId.length > 0) {
           // We found a task using source_id instead
           taskIdValue = tasksBySourceId[0].id;
-          console.log(`Found task using source_id lookup: ${taskIdValue}`);
+          console.log(`Found task using source_id lookup: ${taskIdValue} for project ${safeProjectId}`);
         } else {
-          console.error(`No task found with ID ${taskId} or source_id ${taskId}`);
+          console.error(`No task found with source_id ${taskId} for project ${safeProjectId}`);
         }
       }
       
-      // Now get the task using the (possibly updated) taskId
+      // Now get the task using the (possibly updated) taskId and verified project ID
       const [existingTask] = await db
         .select()
         .from(projectTasksTable)
-        .where(eq(projectTasksTable.id, taskIdValue));
+        .where(and(
+          eq(projectTasksTable.id, taskIdValue),
+          eq(projectTasksTable.projectId, safeProjectId) // Ensure task belongs to this project
+        ));
       
       if (!existingTask) {
         console.log(`No task found with ID ${taskId} to update`);
@@ -1246,35 +1276,45 @@ export const projectsDb = {
    */
   getProjectTasksBySourceId: async (projectId: string, sourceId: string): Promise<ProjectTask[]> => {
     try {
-      // Always ensure projectId is a string
-      const projectIdString = String(projectId);
+      // Use the improved getProject function for reliable project lookup
+      const project = await projectsDb.getProject(projectId);
       
-      console.log(`Looking for tasks with projectId: ${projectIdString} and sourceId: ${sourceId}`);
+      if (!project) {
+        console.log(`Project with ID ${projectId} not found, can't get tasks by sourceId`);
+        return [];
+      }
       
-      // Use direct SQL query with prepared statements to avoid type issues
+      // Get the safe project UUID from the object
+      const safeProjectId = String(project.id);
+      const safeSourceId = String(sourceId || '');
+      
+      console.log(`Looking for tasks with confirmed projectId: ${safeProjectId} and sourceId: ${safeSourceId}`);
+      
+      // Use direct SQL query with UUID type casting for projectId
       const sql = `
         SELECT * FROM project_tasks
-        WHERE project_id::text = $1 AND source_id::text = $2
+        WHERE project_id = $1::uuid AND source_id = $2
       `;
       
-      // Safe parameter binding
-      const safeParams = [projectIdString || '', sourceId || ''];
+      // Safe parameter binding with the confirmed project UUID
+      const safeParams = [safeProjectId, safeSourceId];
       console.log(`SQL params for getProjectTasksBySourceId: ${JSON.stringify(safeParams)}`);
       
       // Execute the query with parameters
       const result = await db.execute(sql, safeParams);
       
       if (!result.rows || result.rows.length === 0) {
-        console.log(`No tasks found for project ${projectIdString} with sourceId ${sourceId}`);
+        console.log(`No tasks found for project ${safeProjectId} with sourceId ${safeSourceId}`);
         return [];
       }
       
-      console.log(`Found ${result.rows.length} tasks for project ${projectIdString} with sourceId ${sourceId}`);
+      console.log(`Found ${result.rows.length} tasks for project ${safeProjectId} with sourceId ${safeSourceId}`);
       
       // Convert to ProjectTask interface with proper type handling and defaults
+      // Always use the safely determined projectId to avoid inconsistencies
       return result.rows.map(task => ({
         id: String(task.id || ''),
-        projectId: String(task.project_id || ''), // Notice project_id in snake_case from direct SQL
+        projectId: safeProjectId, // Use the confirmed safe project UUID 
         text: String(task.text || ''),
         stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
         origin: (String(task.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
