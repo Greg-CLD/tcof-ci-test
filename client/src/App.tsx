@@ -58,6 +58,7 @@ import AppLayout from "@/layouts/AppLayout";
 import GlobalNav from "@/components/GlobalNav";
 import AuthRequired from "@/components/AuthRequired";
 import SiteFooter from "@/components/SiteFooter";
+import { Suspense } from "react";
 
 // Tool components with consistent layout
 const GoalMappingPage = () => {
@@ -65,9 +66,9 @@ const GoalMappingPage = () => {
   const storedProjectId = localStorage.getItem('currentProjectId');
   const projectId = routeProjectId || storedProjectId;
   const [_, navigate] = useLocation();
-  
+
   console.log(`GoalMappingPage: Using projectId: ${projectId} (from route: ${routeProjectId}, from localStorage: ${storedProjectId})`);
-  
+
   // Store the projectId in localStorage for consistency across pages
   useEffect(() => {
     if (projectId && !storedProjectId) {
@@ -75,7 +76,7 @@ const GoalMappingPage = () => {
       localStorage.setItem('currentProjectId', projectId);
     }
   }, [projectId, storedProjectId]);
-  
+
   // Handler for navigation back to the project
   const handleBackToProject = () => {
     // Get saved organisation ID from localStorage
@@ -87,7 +88,7 @@ const GoalMappingPage = () => {
       navigate(`/projects/${projectId}`);
     }
   };
-  
+
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
       <div className="mb-6 flex justify-between items-center">
@@ -111,9 +112,9 @@ const CynefinOrientationPage = () => {
   const storedProjectId = localStorage.getItem('currentProjectId');
   const projectId = routeProjectId || storedProjectId;
   const [_, navigate] = useLocation();
-  
+
   console.log(`CynefinOrientationPage: Using projectId: ${projectId} (from route: ${routeProjectId}, from localStorage: ${storedProjectId})`);
-  
+
   // Store the projectId in localStorage for consistency across pages
   useEffect(() => {
     if (projectId && !storedProjectId) {
@@ -121,7 +122,7 @@ const CynefinOrientationPage = () => {
       localStorage.setItem('currentProjectId', projectId);
     }
   }, [projectId, storedProjectId]);
-  
+
   // Handler for navigation back to the project
   const handleBackToProject = () => {
     // Get saved organisation ID from localStorage
@@ -133,7 +134,7 @@ const CynefinOrientationPage = () => {
       navigate(`/projects/${projectId}`);
     }
   };
-  
+
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
       <div className="mb-6 flex justify-between items-center">
@@ -157,9 +158,9 @@ const TCOFJourneyPage = () => {
   const storedProjectId = localStorage.getItem('currentProjectId');
   const projectId = routeProjectId || storedProjectId;
   const [_, navigate] = useLocation();
-  
+
   console.log(`TCOFJourneyPage: Using projectId: ${projectId} (from route: ${routeProjectId}, from localStorage: ${storedProjectId})`);
-  
+
   // Store the projectId in localStorage for consistency across pages
   useEffect(() => {
     if (projectId && !storedProjectId) {
@@ -167,7 +168,7 @@ const TCOFJourneyPage = () => {
       localStorage.setItem('currentProjectId', projectId);
     }
   }, [projectId, storedProjectId]);
-  
+
   // Handler for navigation back to the project
   const handleBackToProject = () => {
     // Get saved organisation ID from localStorage
@@ -179,7 +180,7 @@ const TCOFJourneyPage = () => {
       navigate(`/projects/${projectId}`);
     }
   };
-  
+
   return (
     <main className="flex-grow container mx-auto px-4 py-12">
       <div className="mb-6 flex justify-between items-center">
@@ -203,13 +204,13 @@ function Router() {
   const { user, isAuthenticated } = useAuth();
   const [location, navigate] = useLocation();
   const hasRedirectedRef = useRef(false);
-  
+
   // We won't use useEffect for redirects to avoid the infinite loop issues
   // Instead we'll use more granular control with direct conditional rendering
-  
+
   // Log current location on each render for debugging
   console.log("Current location in Router:", location, { user, isAuthenticated, hasRedirected: hasRedirectedRef.current });
-  
+
   // Hard-Stop Redirect Rule: Run once per mount, with a ref to prevent multiple redirects
   if (isAuthenticated && (location === '/' || location === '/auth') && !hasRedirectedRef.current) {
     console.log("NAVIGATE FROM", location, "TO /all-projects (ONE-TIME REDIRECT)");
@@ -217,7 +218,7 @@ function Router() {
     navigate('/all-projects');
     return null; // Critical: DO NOT render anything during redirect
   }
-  
+
   // If user tries to go to /get-your-bearings, redirect to /organisations
   if (location === '/get-your-bearings' && !hasRedirectedRef.current) {
     console.log("Intercepting /get-your-bearings, redirecting to /organisations");
@@ -225,7 +226,7 @@ function Router() {
     navigate('/organisations');
     return null; // Critical: DO NOT render during navigation
   }
-  
+
   // Don't allow users to directly access tool pages without selecting a project
   if (isAuthenticated && location === '/make-a-plan' && !localStorage.getItem('selectedProjectId')) {
     console.log("Missing projectId, redirecting to /organisations");
@@ -235,14 +236,14 @@ function Router() {
       return null; // Critical: DO NOT render during navigation
     }
   }
-  
+
   // For organization routes, if not logged in, redirect to home
   if (!isAuthenticated && (location === '/organisations' || location.startsWith('/organisations/'))) {
     return (
       <Redirect to="/" />
     );
   }
-  
+
   return (
     <Switch>
       <Route path="/">
@@ -259,7 +260,7 @@ function Router() {
           <Redirect to="/" />
         )}
       </Route>
-      
+
       {/* Organizations management - authenticated users only */}
       <Route path="/organisations">
         {isAuthenticated ? (
@@ -270,7 +271,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* Organisation Dashboard - authenticated users only */}
       <Route path="/organisations/:orgId">
         {isAuthenticated ? (
@@ -281,7 +282,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* Organisation Heuristics - authenticated users only */}
       <Route path="/organisations/:orgId/heuristics">
         {isAuthenticated ? (
@@ -292,7 +293,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       <Route path="/pro-tools" component={ProTools} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/test-auth" component={TestAuth} />
@@ -463,7 +464,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       <Route path="/final-checklist">
         {isAuthenticated ? (
           <ProtectedRouteGuard>
@@ -473,7 +474,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       <Route path="/factor-checklist">
         {isAuthenticated ? (
           <ProtectedRouteGuard>
@@ -483,7 +484,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       <Route path="/projects/:projectId/outcomes">
         {isAuthenticated ? (
           <ProtectedRouteGuard>
@@ -493,7 +494,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* Project Setup Page (for editing project profile) */}
       <Route path="/projects/:projectId/setup">
         {isAuthenticated ? (
@@ -504,7 +505,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* NEW SIMPLIFIED EDIT ROUTES */}
       {/* Basic Project Edit Page - direct route */}
       <Route path="/projects/:projectId/edit-basic">
@@ -516,7 +517,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* Basic Project Edit Page with Organization context */}
       <Route path="/organisations/:orgId/projects/:projectId/edit-basic">
         {isAuthenticated ? (
@@ -527,7 +528,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* Project Profile Edit Page - OLD PATH */}
       <Route path="/projects/:projectId/profile/edit">
         {isAuthenticated ? (
@@ -538,7 +539,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* Project Detail Page - OLD PATH */}
       <Route path="/projects/:projectId">
         {isAuthenticated ? (
@@ -549,7 +550,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* NEW ROUTES WITH ORGANIZATION CONTEXT */}
       {/* Project Profile Edit Page with Organization */}
       <Route path="/organisations/:orgId/projects/:projectId/profile/edit">
@@ -561,7 +562,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* Project Detail Page with Organization */}
       <Route path="/organisations/:orgId/projects/:projectId">
         {isAuthenticated ? (
@@ -572,7 +573,7 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
-      
+
       {/* Dashboard route - protected like other tools */}
       <Route path="/dashboard">
         {isAuthenticated ? (
@@ -586,9 +587,9 @@ function Router() {
           />
         )}
       </Route>
-      
+
       {/* Tools routes - Most specific first */}
-      
+
       {/* Goal mapping with project ID */}
       <Route path="/tools/goal-mapping/:projectId">
         {isAuthenticated ? (
@@ -602,7 +603,7 @@ function Router() {
           />
         )}
       </Route>
-      
+
       {/* Cynefin orientation with project ID */}
       <Route path="/tools/cynefin-orientation/:projectId">
         {isAuthenticated ? (
@@ -616,7 +617,7 @@ function Router() {
           />
         )}
       </Route>
-      
+
       {/* TCOF journey with project ID */}
       <Route path="/tools/tcof-journey/:projectId">
         {isAuthenticated ? (
@@ -630,7 +631,7 @@ function Router() {
           />
         )}
       </Route>
-      
+
       {/* Base routes without project IDs */}
       <Route path="/tools/goal-mapping">
         {isAuthenticated ? (
@@ -644,7 +645,7 @@ function Router() {
           />
         )}
       </Route>
-      
+
       <Route path="/tools/cynefin-orientation">
         {isAuthenticated ? (
           <ProtectedRouteGuard>
@@ -657,7 +658,7 @@ function Router() {
           />
         )}
       </Route>
-      
+
       <Route path="/tools/tcof-journey">
         {isAuthenticated ? (
           <ProtectedRouteGuard>
@@ -670,7 +671,7 @@ function Router() {
           />
         )}
       </Route>
-      
+
       <Route component={NotFound} />
     </Switch>
   );
@@ -686,7 +687,7 @@ import { FeedbackContainer } from '@/components/ui/feedback/feedback-container';
 function App() {
   // Check if we're in development mode
   const isDev = import.meta.env.DEV;
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
