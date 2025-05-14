@@ -88,11 +88,11 @@ const loadFactorsFromJson = (): FactorTask[] => {
       path.join(__dirname, '..', '..', 'data', 'tcof_success_factors_v2.json'),
       path.join(__dirname, '..', '..', 'data', 'tcofFactors.json')
     ];
-    
+
     // Try each path
     let factorsData;
     let usedPath;
-    
+
     for (const dataPath of possiblePaths) {
       try {
         if (fs.existsSync(dataPath)) {
@@ -104,11 +104,11 @@ const loadFactorsFromJson = (): FactorTask[] => {
         // Continue to next path
       }
     }
-    
+
     if (!factorsData) {
       throw new Error('None of the expected success factors JSON files were found');
     }
-    
+
     console.log(`Loaded success factors from ${usedPath}`);
     return JSON.parse(factorsData);
   } catch (error) {
@@ -124,16 +124,34 @@ export const factorsDb = {
 
   async getAll(): Promise<FactorTask[]> {
     try {
-      // Fetch all factors using direct SQL
-      const query = 'SELECT id, title, description FROM success_factors ORDER BY title';
-      
-      const result = await db.execute(query);
-      
+      console.log('Fetching all success factors...');
+
+      // Get all factors and their tasks in a single query
+      const result = await db.execute(`
+        SELECT 
+          f.id,
+          f.title,
+          f.description,
+          json_agg(
+            json_build_object(
+              'stage', sft.stage,
+              'text', sft.text
+            )
+          ) as tasks
+        FROM success_factors f 
+        LEFT JOIN success_factor_tasks sft ON f.id = sft.factor_id
+        GROUP BY f.id, f.title, f.description
+        ORDER BY f.title;
+      `);
+
+      // Log the first row to see raw structure
+      console.log('Raw first row:', JSON.stringify(result.rows[0], null, 2));
+
       if (!result.rows || result.rows.length === 0) {
         console.log('No factors found in database');
         return [];
       }
-      
+
       this.length = result.rows.length;
 
       // Transform each factor
@@ -142,7 +160,7 @@ export const factorsDb = {
           // Fetch tasks for this factor
           const tasksQuery = 'SELECT id, factor_id, stage, text, "order" FROM success_factor_tasks WHERE factor_id = $1 ORDER BY stage, "order"';
           const tasksResult = await db.execute(tasksQuery, [factor.id]);
-          
+
           return transformFactorWithTasks(factor, tasksResult.rows || []);
         })
       );
@@ -157,12 +175,12 @@ export const factorsDb = {
   async setAll(factors: FactorTask[]): Promise<void> {
     try {
       console.log(`Attempting to update all success factors (${factors.length} items)`);
-      
+
       // Instead of using a transaction, we'll do this in separate queries
       // First clear all data
       await db.execute('DELETE FROM success_factor_tasks');
       await db.execute('DELETE FROM success_factors');
-      
+
       // Then insert new data
       for (const factor of factors) {
         // Insert factor
@@ -170,7 +188,7 @@ export const factorsDb = {
           'INSERT INTO success_factors (id, title, description) VALUES ($1, $2, $3)',
           [factor.id, factor.title, factor.description || '']
         );
-        
+
         // Insert factor tasks
         const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
         for (const stage of stages) {
@@ -183,7 +201,7 @@ export const factorsDb = {
           }
         }
       }
-      
+
       this.length = factors.length;
       console.log(`Successfully updated all success factors`);
     } catch (error) {
@@ -195,13 +213,13 @@ export const factorsDb = {
   async add(factor: FactorTask): Promise<void> {
     try {
       const id = factor.id || `sf-${uuidv4()}`;
-      
+
       // Insert factor
       await db.execute(
         'INSERT INTO success_factors (id, title, description) VALUES ($1, $2, $3)',
         [id, factor.title, factor.description || '']
       );
-      
+
       // Insert factor tasks
       const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
       for (const stage of stages) {
@@ -213,7 +231,7 @@ export const factorsDb = {
           );
         }
       }
-      
+
       this.length++;
     } catch (error) {
       console.error('Error adding success factor:', error);
@@ -226,15 +244,15 @@ export const factorsDb = {
       // Fetch factor
       const query = 'SELECT id, title, description FROM success_factors WHERE id = $1';
       const result = await db.execute(query, [id]);
-      
+
       if (!result.rows || result.rows.length === 0) {
         return undefined;
       }
-      
+
       // Fetch tasks for this factor
       const tasksQuery = 'SELECT id, factor_id, stage, text, "order" FROM success_factor_tasks WHERE factor_id = $1 ORDER BY stage, "order"';
       const tasksResult = await db.execute(tasksQuery, [id]);
-      
+
       return transformFactorWithTasks(result.rows[0], tasksResult.rows || []);
     } catch (error) {
       console.error(`Error finding success factor with ID ${id}:`, error);
@@ -246,10 +264,10 @@ export const factorsDb = {
     try {
       // Delete tasks first (should cascade, but just to be safe)
       await db.execute('DELETE FROM success_factor_tasks WHERE factor_id = $1', [id]);
-      
+
       // Delete factor
       const result = await db.execute('DELETE FROM success_factors WHERE id = $1', [id]);
-      
+
       const success = result.rowCount && result.rowCount > 0;
       if (success) {
         this.length--;
@@ -268,10 +286,10 @@ export const factorsDb = {
         'UPDATE success_factors SET title = $1, description = $2 WHERE id = $3',
         [updatedFactor.title, updatedFactor.description || '', id]
       );
-      
+
       // Delete existing tasks
       await db.execute('DELETE FROM success_factor_tasks WHERE factor_id = $1', [id]);
-      
+
       // Insert updated tasks
       const stages = ['Identification', 'Definition', 'Delivery', 'Closure'];
       for (const stage of stages) {
@@ -283,7 +301,7 @@ export const factorsDb = {
           );
         }
       }
-      
+
       return true;
     } catch (error) {
       console.error(`Error updating success factor with ID ${id}:`, error);
@@ -307,15 +325,15 @@ export const factorsDb = {
       // Fetch factor
       const query = 'SELECT id, title, description FROM success_factors WHERE id = $1';
       const result = await db.execute(query, [id]);
-      
+
       if (!result.rows || result.rows.length === 0) {
         return undefined;
       }
-      
+
       // Fetch tasks for this factor
       const tasksQuery = 'SELECT id, factor_id, stage, text, "order" FROM success_factor_tasks WHERE factor_id = $1 ORDER BY stage, "order"';
       const tasksResult = await db.execute(tasksQuery, [id]);
-      
+
       return {
         ...result.rows[0],
         tasks: tasksResult.rows || []
@@ -335,7 +353,7 @@ export const factorsDb = {
 
     try {
       const factors = await this.getAll();
-      
+
       if (factors.length === 0) {
         console.log('No factors found in database, seeding from JSON file...');
         const jsonFactors = loadFactorsFromJson();
@@ -349,7 +367,7 @@ export const factorsDb = {
           return false;
         }
       }
-      
+
       console.log(`Database already initialized with ${factors.length} success factors`);
       this.initialized = true;
       return true;
