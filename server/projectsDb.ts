@@ -1003,11 +1003,33 @@ export const projectsDb = {
     }
   ): Promise<ProjectTask | null> => {
     try {
-      // First, get the task to ensure it exists
+      // First, check if taskId is a valid UUID
+      let taskIdValue = taskId;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      
+      if (!uuidRegex.test(taskId)) {
+        // If not a UUID, we need a different approach - try to find the task by source_id
+        console.log(`Task ID ${taskId} is not a valid UUID, looking up by source_id`);
+        const tasksBySourceId = await db
+          .select()
+          .from(projectTasksTable)
+          .where(eq(projectTasksTable.source_id, taskId))
+          .limit(1);
+          
+        if (tasksBySourceId.length > 0) {
+          // We found a task using source_id instead
+          taskIdValue = tasksBySourceId[0].id;
+          console.log(`Found task using source_id lookup: ${taskIdValue}`);
+        } else {
+          console.error(`No task found with ID ${taskId} or source_id ${taskId}`);
+        }
+      }
+      
+      // Now get the task using the (possibly updated) taskId
       const [existingTask] = await db
         .select()
         .from(projectTasksTable)
-        .where(eq(projectTasksTable.id, taskId));
+        .where(eq(projectTasksTable.id, taskIdValue));
       
       if (!existingTask) {
         console.log(`No task found with ID ${taskId} to update`);
@@ -1054,17 +1076,40 @@ export const projectsDb = {
    */
   deleteProjectTask: async (taskId: string): Promise<boolean> => {
     try {
-      // Delete the task directly from the database
+      // First, check if taskId is a valid UUID
+      let taskIdValue = taskId;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      
+      if (!uuidRegex.test(taskId)) {
+        // If not a UUID, we need a different approach - try to find the task by source_id
+        console.log(`Task ID ${taskId} is not a valid UUID, looking up by source_id`);
+        const tasksBySourceId = await db
+          .select()
+          .from(projectTasksTable)
+          .where(eq(projectTasksTable.source_id, taskId))
+          .limit(1);
+          
+        if (tasksBySourceId.length > 0) {
+          // We found a task using source_id instead
+          taskIdValue = tasksBySourceId[0].id;
+          console.log(`Found task using source_id lookup: ${taskIdValue}`);
+        } else {
+          console.error(`No task found with ID ${taskId} or source_id ${taskId}`);
+          return false;
+        }
+      }
+      
+      // Delete the task using the (possibly updated) taskId
       const result = await db
         .delete(projectTasksTable)
-        .where(eq(projectTasksTable.id, taskId))
+        .where(eq(projectTasksTable.id, taskIdValue))
         .returning({ id: projectTasksTable.id });
       
       const success = result.length > 0;
       if (success) {
         console.log(`Task ${taskId} successfully deleted from database`);
       } else {
-        console.log(`No task found with ID ${taskId} to delete from database`);
+        console.log(`No task found with ID ${taskIdValue} to delete from database`);
       }
       
       return success;

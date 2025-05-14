@@ -174,17 +174,17 @@ export const outcomeProgress = pgTable("outcome_progress", {
 // Project tasks table - stores all tasks for a project
 export const projectTasks = pgTable("project_tasks", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   text: text("text").notNull(),
   stage: varchar("stage", { length: 50 }).notNull(), // 'identification', 'definition', 'delivery', 'closure'
   origin: varchar("origin", { length: 50 }).notNull(), // 'heuristic', 'factor', 'policy', 'custom', 'framework'
-  sourceId: varchar("source_id", { length: 255 }).notNull(),
+  sourceId: text("source_id"), // Using text to match actual database schema
   completed: boolean("completed").default(false),
   notes: text("notes"),
   priority: varchar("priority", { length: 50 }),
   dueDate: varchar("due_date", { length: 50 }),
   owner: varchar("owner", { length: 255 }),
-  status: varchar("status", { length: 50 }),
+  status: varchar("status", { length: 50 }).default('pending'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
