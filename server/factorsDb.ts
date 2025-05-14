@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function getFactors(): Promise<FactorTask[]> {
   try {
+    console.log("Getting all factors from database...");
     const result = await db.execute(sql`
       SELECT f.id, f.title, f.description,
              ft.stage, ft.text
@@ -14,7 +15,15 @@ export async function getFactors(): Promise<FactorTask[]> {
     `);
 
     if (!result.rows || result.rows.length === 0) {
+      console.log("No factors found in database");
       return [];
+    }
+
+    console.log(`Found ${result.rows.length} factor-task rows in the database`);
+    
+    // Log first row as example
+    if (result.rows.length > 0) {
+      console.log("Sample row:", JSON.stringify(result.rows[0], null, 2));
     }
 
     // Group tasks by factor and stage
@@ -22,9 +31,11 @@ export async function getFactors(): Promise<FactorTask[]> {
 
     result.rows.forEach((row: any) => {
       if (!factorMap.has(row.id)) {
+        console.log(`Creating new factor entry for factor ID: ${row.id}`);
         factorMap.set(row.id, {
           id: row.id,
           title: row.title,
+          description: row.description || '',
           tasks: {
             Identification: [],
             Definition: [],
@@ -36,11 +47,24 @@ export async function getFactors(): Promise<FactorTask[]> {
 
       const factor = factorMap.get(row.id)!;
       if (row.stage && row.text) {
+        console.log(`Adding task "${row.text}" to stage "${row.stage}" for factor ${row.id}`);
         factor.tasks[row.stage as keyof typeof factor.tasks].push(row.text);
+      } else if (row.stage) {
+        console.log(`WARNING: Missing text for task in stage "${row.stage}" for factor ${row.id}`);
+      } else if (row.text) {
+        console.log(`WARNING: Missing stage for task text "${row.text}" for factor ${row.id}`);
       }
     });
 
-    return Array.from(factorMap.values());
+    const factors = Array.from(factorMap.values());
+    console.log(`Returning ${factors.length} factors with tasks`);
+    
+    // Debug log the first factor and its tasks
+    if (factors.length > 0) {
+      console.log("Sample factor with tasks:", JSON.stringify(factors[0], null, 2));
+    }
+    
+    return factors;
   } catch (error) {
     console.error('Error loading factors from database:', error);
     throw error;
