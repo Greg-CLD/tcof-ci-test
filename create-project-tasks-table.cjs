@@ -2,18 +2,13 @@
  * Script to create the project_tasks table in your database
  * Run this with: node create-project-tasks-table.js
  */
-import pg from 'pg';
-import * as dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+const pg = require('pg');
+const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 
 // Load environment variables
 dotenv.config();
-
-// Get directory name (ESM equivalent of __dirname)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Create a new PostgreSQL client
 const pool = new pg.Pool({
