@@ -213,7 +213,12 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
       SELECT COUNT(*) as task_count FROM project_tasks 
       WHERE project_id::text = $1
     `;
-    const checkResult = await db.execute(checkSql, [projectIdString]);
+    
+    // Ensure projectIdString is valid to prevent parameter binding errors
+    const safeProjectId = projectIdString || '';
+    console.log(`Checking for existing tasks with project ID: ${safeProjectId}`);
+    
+    const checkResult = await db.execute(checkSql, [safeProjectId]);
     const taskCount = parseInt(checkResult.rows[0]?.task_count || '0');
     
     if (taskCount > 0) {
@@ -319,7 +324,10 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
       `;
       
       try {
-        const result = await db.execute(sql, [projectIdString]);
+        // Ensure projectIdString is valid to prevent parameter binding errors
+        const safeProjectId = projectIdString || '';
+        console.log(`Loading tasks with project ID: ${safeProjectId}`);
+        const result = await db.execute(sql, [safeProjectId]);
         
         if (!result.rows || result.rows.length === 0) {
           console.log(`No tasks found for project ${projectId}`);
@@ -428,6 +436,15 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         new Date().toISOString(),                     // $11
         task.id                                       // $12
       ];
+      
+      // Validate all parameters to prevent binding errors
+      console.log(`Updating task with ID: ${task.id}, parameter count: ${updateParams.length}`);
+      
+      // Add all parameters for easier debugging
+      console.log('Update SQL params:', JSON.stringify(updateParams.map((p, i) => ({ 
+        index: i+1, 
+        value: typeof p === 'object' ? String(p) : p 
+      }))));
       
       const updateResult = await db.execute(updateSql, updateParams);
       
