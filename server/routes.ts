@@ -2613,64 +2613,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Admin API: Getting all success factors...');
       
-      // Let's use a raw SQL query that will directly get the tasks by each factor and stage
-      const query = `
-        SELECT 
-          sf.id, 
-          sf.title, 
-          sf.description
-        FROM 
-          success_factors sf
-        ORDER BY 
-          sf.title;
+      // Instead of fetching all factors at once, let's use individual endpoint approach for each
+      const factorsQuery = `
+        SELECT id FROM success_factors ORDER BY title
       `;
       
-      const result = await db.execute(query);
-      console.log(`API: Found ${result.rows.length} factors in the database`);
+      const factorsResult = await db.execute(factorsQuery);
+      console.log(`API: Found ${factorsResult.rows.length} factor IDs in the database`);
       
-      // Get tasks for each factor from the tasks table directly
-      const taskResults = await Promise.all(
-        result.rows.map(async (row: any) => {
-          // Query tasks for each factor
-          const tasksQuery = `
-            SELECT stage, text 
-            FROM success_factor_tasks 
-            WHERE factor_id = $1
-            ORDER BY stage, "order"
-          `;
+      // Array to hold formatted factors
+      const formattedFactors = [];
+      
+      // Process each factor ID
+      for (const row of factorsResult.rows) {
+        try {
+          const factorId = row.id;
+          console.log(`Processing factor ${factorId}`);
           
-          const tasksResult = await db.execute(tasksQuery, [row.id]);
+          // Use the same approach as the single factor endpoint
+          const factorResult = await db.execute(sql`
+            SELECT id, title, description, tasks::text
+            FROM v_success_factors_full
+            WHERE id = ${factorId}
+          `);
           
-          // Create a map of stage -> tasks
-          const tasksByStage = {
-            Identification: [],
-            Definition: [],
-            Delivery: [],
-            Closure: []
-          };
+          if (factorResult.rows.length === 0) {
+            console.log(`No data found for factor ${factorId}`);
+            continue;
+          }
           
-          // Populate the tasks for each stage
-          tasksResult.rows.forEach((taskRow: any) => {
-            if (taskRow.stage && taskRow.text) {
-              if (Array.isArray(tasksByStage[taskRow.stage as keyof typeof tasksByStage])) {
-                tasksByStage[taskRow.stage as keyof typeof tasksByStage].push(taskRow.text);
-              }
+          const factorRow = factorResult.rows[0];
+          
+          // Parse the JSON tasks
+          let parsedTasks;
+          try {
+            if (typeof factorRow.tasks === 'string') {
+              parsedTasks = JSON.parse(factorRow.tasks);
+            } else {
+              parsedTasks = factorRow.tasks;
             }
-          });
+          } catch (e) {
+            console.error(`Error parsing tasks for factor ${factorId}:`, e);
+            parsedTasks = {
+              Identification: [],
+              Definition: [],
+              Delivery: [],
+              Closure: []
+            };
+          }
           
-          return {
-            id: String(row.id),
-            title: String(row.title),
-            description: row.description ? String(row.description) : '',
-            category: "Uncategorized", // Add category to match the format expected by the client
-            tasks: tasksByStage
+          // Format the factor with proper task structure
+          const formattedFactor = {
+            id: String(factorRow.id),
+            title: String(factorRow.title),
+            description: factorRow.description ? String(factorRow.description) : '',
+            category: "Uncategorized",
+            tasks: {
+              Identification: Array.isArray(parsedTasks.Identification) ? parsedTasks.Identification.filter(Boolean) : [],
+              Definition: Array.isArray(parsedTasks.Definition) ? parsedTasks.Definition.filter(Boolean) : [],
+              Delivery: Array.isArray(parsedTasks.Delivery) ? parsedTasks.Delivery.filter(Boolean) : [],
+              Closure: Array.isArray(parsedTasks.Closure) ? parsedTasks.Closure.filter(Boolean) : []
+            }
           };
-        })
-      );
+          
+          formattedFactors.push(formattedFactor);
+        } catch (factorError) {
+          console.error(`Error processing factor ${row.id}:`, factorError);
+          // Continue with next factor
+        }
+      }
       
       // Log detailed data for debugging
-      if (taskResults.length > 0) {
-        const sample = taskResults[0];
+      if (formattedFactors.length > 0) {
+        const sample = formattedFactors[0];
         console.log(`First factor has ${sample.tasks.Identification.length} identification tasks`);
         
         if (sample.tasks.Identification.length > 0) {
@@ -2681,8 +2696,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Return the correctly formatted factors
-      console.log(`API: Returning ${taskResults.length} formatted factors`);
-      res.json(taskResults);
+      console.log(`API: Returning ${formattedFactors.length} formatted factors`);
+      res.json(formattedFactors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
