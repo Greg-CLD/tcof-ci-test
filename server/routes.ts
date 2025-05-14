@@ -2615,17 +2615,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Admin API: Getting all success factors from database view...');
       const factors = await factorsDb.getFactors();
       
-      console.log(`Admin API: Returning ${factors.length} factors with properly structured tasks`);
+      console.log(`Admin API: Retrieved ${factors.length} factors with tasks`);
       
       if (factors.length > 0) {
-        // Log sample of first factor (for debugging)
-        console.log('Admin API: Sample factor structure:', JSON.stringify({
-          id: factors[0].id,
-          title: factors[0].title,
-          hasIdentificationTasks: Array.isArray(factors[0].tasks?.Identification) && factors[0].tasks.Identification.length > 0,
-          identificationTaskCount: factors[0].tasks?.Identification?.length || 0
-        }));
+        // Deep log of the first factor for debugging
+        console.log('Admin API: ACTUAL DATA STRUCTURE OF FIRST FACTOR:', JSON.stringify(factors[0], null, 2));
+        
+        // Check if we need to override task arrays
+        factors.forEach(factor => {
+          // Ensure tasks property is present
+          if (!factor.tasks) {
+            console.log(`Admin API: Creating empty tasks object for factor ${factor.id}`);
+            factor.tasks = {
+              Identification: [],
+              Definition: [],
+              Delivery: [],
+              Closure: []
+            };
+          }
+          
+          // Check if any stage has a null array and replace it with empty array
+          const stages = ['Identification', 'Definition', 'Delivery', 'Closure'] as const;
+          stages.forEach(stage => {
+            // Type-safe access
+            if (!Array.isArray(factor.tasks[stage])) {
+              console.log(`Admin API: Fixing null tasks array for stage ${stage} in factor ${factor.id}`);
+              factor.tasks[stage] = [];
+            } else if (factor.tasks[stage].length > 0) {
+              // Filter out null values from arrays
+              factor.tasks[stage] = factor.tasks[stage].filter(task => task !== null);
+              console.log(`Admin API: Stage ${stage} has ${factor.tasks[stage].length} non-null tasks`);
+            }
+          });
+        });
       }
+      
+      console.log('Admin API: FINAL DATA BEING SENT:', JSON.stringify(factors[0], null, 2));
       
       res.json(factors || []);
     } catch (error: unknown) {
