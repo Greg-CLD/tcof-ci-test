@@ -2613,30 +2613,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Admin API: Getting all success factors...');
       
-      // Use the getFactors function to fetch all factors in one go
-      const factors = await factorsDb.getFactors();
+      // Let's use a raw SQL query that will directly get the tasks by each factor and stage
+      const query = `
+        SELECT 
+          sf.id, 
+          sf.title, 
+          sf.description,
+          (
+            SELECT jsonb_build_object(
+              'Identification', COALESCE(jsonb_agg(task_text) FILTER (WHERE stage = 'Identification'), '[]'::jsonb),
+              'Definition', COALESCE(jsonb_agg(task_text) FILTER (WHERE stage = 'Definition'), '[]'::jsonb),
+              'Delivery', COALESCE(jsonb_agg(task_text) FILTER (WHERE stage = 'Delivery'), '[]'::jsonb),
+              'Closure', COALESCE(jsonb_agg(task_text) FILTER (WHERE stage = 'Closure'), '[]'::jsonb)
+            )
+            FROM (
+              SELECT 
+                sft.factor_id, 
+                sft.stage, 
+                sft.text as task_text
+              FROM 
+                success_factor_tasks sft
+              WHERE 
+                sft.factor_id = sf.id
+              ORDER BY 
+                sft.order
+            ) t
+          ) as tasks
+        FROM 
+          success_factors sf
+        ORDER BY 
+          sf.title;
+      `;
       
-      // Log the retrieved factors for debugging
-      console.log('Retrieved factors:', JSON.stringify(factors.slice(0, 1), null, 2));
+      const result = await db.execute(query);
+      console.log(`API: Found ${result.rows.length} factors in the database`);
       
-      // Add category and ensure proper task structure for each factor
-      const formattedFactors = factors.map(factor => {
-        // Ensure each task array is properly initialized
-        const formattedFactor = {
-          ...factor,
-          category: "Uncategorized", // This matches the single endpoint format
-          tasks: {
-            Identification: Array.isArray(factor.tasks.Identification) ? factor.tasks.Identification : [],
-            Definition: Array.isArray(factor.tasks.Definition) ? factor.tasks.Definition : [],
-            Delivery: Array.isArray(factor.tasks.Delivery) ? factor.tasks.Delivery : [],
-            Closure: Array.isArray(factor.tasks.Closure) ? factor.tasks.Closure : []
-          }
+      // Process each factor
+      const formattedFactors = result.rows.map((row: any) => {
+        let tasksObj = row.tasks;
+        
+        // Ensure tasks is an object with arrays for each stage
+        if (!tasksObj) {
+          tasksObj = {
+            Identification: [],
+            Definition: [],
+            Delivery: [],
+            Closure: []
+          };
+        }
+        
+        // Make sure each stage has a non-null array
+        const formattedTasks = {
+          Identification: Array.isArray(tasksObj.Identification) ? tasksObj.Identification.filter(Boolean) : [],
+          Definition: Array.isArray(tasksObj.Definition) ? tasksObj.Definition.filter(Boolean) : [],
+          Delivery: Array.isArray(tasksObj.Delivery) ? tasksObj.Delivery.filter(Boolean) : [],
+          Closure: Array.isArray(tasksObj.Closure) ? tasksObj.Closure.filter(Boolean) : []
         };
         
-        return formattedFactor;
+        return {
+          id: String(row.id),
+          title: String(row.title),
+          description: row.description ? String(row.description) : '',
+          category: "Uncategorized", // Add category to match the format expected by the client
+          tasks: formattedTasks
+        };
       });
       
-      // Sample check of the data
+      // Log detailed data for debugging
       if (formattedFactors.length > 0) {
         const sample = formattedFactors[0];
         console.log(`First factor has ${sample.tasks.Identification.length} identification tasks`);
@@ -2645,11 +2688,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`First identification task: "${sample.tasks.Identification[0]}"`);
         }
         
-        // Log the first formatted factor for debugging
-        console.log('First formatted factor:', JSON.stringify(sample, null, 2));
+        console.log('Sample formatted factor:', JSON.stringify(sample, null, 2));
       }
       
       // Return the correctly formatted factors
+      console.log(`API: Returning ${formattedFactors.length} formatted factors`);
       res.json(formattedFactors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
