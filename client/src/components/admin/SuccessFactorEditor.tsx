@@ -24,7 +24,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Loader2, Trash2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AdminStageTabs, { Stage, FactorTask } from './AdminStageTabs';
 import FactorSidebar from './FactorSidebar';
 import SiteHeader from '@/components/SiteHeader';
@@ -50,6 +51,7 @@ console.log("[NETWORK RESPONSE] Factors:", factors);
   // Get user for auth check
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Set selected factor when data loads
   useEffect(() => {
@@ -59,10 +61,28 @@ console.log("[NETWORK RESPONSE] Factors:", factors);
     }
   }, [factors, selectedFactorId]);
 
-  // Get the currently selected factor - always default to first factor if selection is null
-  const selectedFactor = selectedFactorId 
-    ? factors.find(f => f.id === selectedFactorId) 
-    : (factors.length > 0 ? factors[0] : null);
+  // Instead of getting the factor from the factors array, we'll fetch it individually
+  // Set up a direct query for the selected factor
+  const {
+    data: selectedFactor,
+    isLoading: selectedFactorLoading,
+    error: selectedFactorError,
+    refetch: refetchSelectedFactor
+  } = useQuery<FactorTask>({
+    queryKey: ['/api/admin/success-factors', selectedFactorId],
+    enabled: !!selectedFactorId, // Only run the query if we have a factor ID
+    // Disable stale time, always fetch fresh
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+  
+  // Fetch factor when the ID changes
+  useEffect(() => {
+    if (selectedFactorId) {
+      console.log('[ADMIN] Selected new factor, fetching details:', selectedFactorId);
+      refetchSelectedFactor();
+    }
+  }, [selectedFactorId, refetchSelectedFactor]);
 
   // Create a new factor
   const handleCreateFactor = () => {
@@ -84,8 +104,11 @@ console.log("[NETWORK RESPONSE] Factors:", factors);
     apiRequest('POST', '/api/admin/success-factors', newFactor)
       .then(response => response.json())
       .then(data => {
-        // Invalidate the cache to refresh data
-        invalidateCache();
+        // Invalidate both the list and individual factor caches
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
+        if (selectedFactorId) {
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', selectedFactorId] });
+        }
         
         // Select the new factor
         setSelectedFactorId(data.id);
