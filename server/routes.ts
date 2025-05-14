@@ -22,13 +22,13 @@ function isAdmin(req: Request, res: Response, next: any) {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: 'Not authenticated' });
   }
-  
+
   // Check if user has admin role or is greg@confluity.co.uk
   const user = req.user as any;
   if (user && (user.role === 'admin' || (user.username && user.username.toLowerCase() === 'greg@confluity.co.uk'))) {
     return next();
   }
-  
+
   return res.status(403).json({ message: 'Not authorized' });
 }
 
@@ -48,24 +48,24 @@ async function importProjectRoutes() {
   try {
     const module = await import('./routes/projects.js');
 
-// Test endpoints
-app.get('/api/success-factors/test-empty', (_, res) => {
-  res.json([]);
-});
+    // Test endpoints
+    app.get('/api/success-factors/test-empty', (_, res) => {
+      res.json([]);
+    });
 
-app.get('/api/success-factors/test-error', (_, res) => {
-  res.status(500).json({ error: 'Test error' });
-});
+    app.get('/api/success-factors/test-error', (_, res) => {
+      res.status(500).json({ error: 'Test error' });
+    });
 
-app.get('/api/success-factors/test-mock', (_, res) => {
-  res.json([
-    { id: '1', factor: 'Test Factor 1', description: 'Description 1' },
-    { id: '2', factor: 'Test Factor 2', description: 'Description 2' },
-    { id: '3', factor: 'Test Factor 3', description: 'Description 3' },
-    { id: '4', factor: 'Test Factor 4', description: 'Description 4' },
-    { id: '5', factor: 'Test Factor 5', description: 'Description 5' }
-  ]);
-});
+    app.get('/api/success-factors/test-mock', (_, res) => {
+      res.json([
+        { id: '1', factor: 'Test Factor 1', description: 'Description 1' },
+        { id: '2', factor: 'Test Factor 2', description: 'Description 2' },
+        { id: '3', factor: 'Test Factor 3', description: 'Description 3' },
+        { id: '4', factor: 'Test Factor 4', description: 'Description 4' },
+        { id: '5', factor: 'Test Factor 5', description: 'Description 5' }
+      ]);
+    });
 
     return module.default;
   } catch (error) {
@@ -86,7 +86,7 @@ async function getFactors(forceRefresh: boolean = false): Promise<FactorTask[]> 
   if (!forceRefresh && cachedFactors && now - factorsCacheTime < CACHE_TTL) {
     return cachedFactors;
   }
-  
+
   try {
     // Try to get success factors from the database
     const factors = await factorsDb.getFactors();
@@ -99,7 +99,7 @@ async function getFactors(forceRefresh: boolean = false): Promise<FactorTask[]> 
   } catch (error) {
     console.error('Error fetching factors from database:', error);
   }
-  
+
   // Fall back to file-based storage if database fails
   try {
     const successFactorsData = fs.readFileSync(path.join(process.cwd(), 'data', 'successFactors.json'), 'utf8');
@@ -111,7 +111,7 @@ async function getFactors(forceRefresh: boolean = false): Promise<FactorTask[]> 
   } catch (error) {
     console.error('Error reading factors from file:', error);
   }
-  
+
   // Last resort fallback
   try {
     const coreTasksData = fs.readFileSync(path.join(process.cwd(), 'data', 'tcofTasks.json'), 'utf8');
@@ -131,11 +131,11 @@ async function saveFactors(factors: FactorTask[]): Promise<boolean> {
   try {
     // Save to database
     await factorsDb.saveFactors(factors);
-    
+
     // Update cache
     cachedFactors = factors;
     factorsCacheTime = Date.now();
-    
+
     return true;
   } catch (error) {
     console.error('Error saving factors to database:', error);
@@ -146,7 +146,7 @@ async function saveFactors(factors: FactorTask[]): Promise<boolean> {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up auth routes and middleware
   setupAuth(app);
-  
+
   // Register organization routes
   try {
     const organisationRoutes = await importOrganisationRoutes();
@@ -159,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering organisation routes:', error);
   }
-  
+
   // Register project routes
   try {
     const projectRoutes = await importProjectRoutes();
@@ -172,12 +172,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('Error registering project routes:', error);
   }
-  
+
   // Debug endpoint
   app.get('/api/debug', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
-  
+
   // Completely public endpoint for getting tasks for the checklist - no auth check with special path
   app.get('/__tcof/public-checklist-tasks', async (req: Request, res: Response) => {
     try {
@@ -193,16 +193,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to load success factors' });
     }
   });
-  
+
   // Database analysis tool endpoint for diagnosing table structure issues
   app.get('/__tcof/db-analysis', async (req: Request, res: Response) => {
     try {
       // Enable CORS for this public endpoint
       res.header("Access-Control-Allow-Origin", "*");
       res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-      
+
       console.log('Running database structure analysis...');
-      
+
       // Check project_tasks table
       const projectTasksCheck = await db.execute(sql`
         SELECT EXISTS (
@@ -211,11 +211,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           AND table_name = 'project_tasks'
         );
       `);
-      
+
       const projectTasksExists = projectTasksCheck.rows && 
                                projectTasksCheck.rows[0] && 
                                projectTasksCheck.rows[0].exists;
-      
+
       // Check projects table
       const projectsCheck = await db.execute(sql`
         SELECT EXISTS (
@@ -224,11 +224,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           AND table_name = 'projects'
         );
       `);
-      
+
       const projectsExists = projectsCheck.rows && 
                           projectsCheck.rows[0] && 
                           projectsCheck.rows[0].exists;
-      
+
       // Get project_tasks columns if the table exists
       let projectTasksColumns = [];
       if (projectTasksExists) {
@@ -241,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
         projectTasksColumns = columnsResult.rows || [];
       }
-      
+
       // Get projects columns if the table exists
       let projectsColumns = [];
       if (projectsExists) {
@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
         projectsColumns = columnsResult.rows || [];
       }
-      
+
       // Return database analysis results
       return res.json({
         tables: {
@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Authenticated endpoint for getting tasks
   app.get('/api/tcof-tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -287,7 +287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to load tasks data' });
     }
   });
-  
+
   // Admin endpoint for updating tasks
   app.post('/api/admin/tcof-tasks', isAdmin, async (req: Request, res: Response) => {
     try {
@@ -295,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!Array.isArray(updatedTasks)) {
         return res.status(400).json({ message: 'Invalid tasks data' });
       }
-      
+
       const success = await saveFactors(updatedTasks);
       if (success) {
         return res.json({ message: 'Tasks updated successfully' });
@@ -307,14 +307,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to update tasks' });
     }
   });
-  
+
   // Project tasks API
   // Create tasks for a project
   app.post('/api/projects/:projectId/tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.params;
       const taskData = req.body;
-      
+
       // If an array is passed, handle each task individually
       if (Array.isArray(taskData)) {
         const results = [];
@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return res.status(201).json(results);
       }
-      
+
       // Otherwise, handle as a single task
       const result = await projectsDb.createProjectTask({
         projectId,
@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Get tasks for a project
   app.get('/api/projects/:projectId/tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -357,18 +357,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Update a specific task for a project
   app.put('/api/projects/:projectId/tasks/:taskId', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId, taskId } = req.params;
       const taskUpdate = req.body;
-      
+
       // Ensure we have the required fields
       if (!taskUpdate) {
         return res.status(400).json({ message: 'Task data is required' });
       }
-      
+
       const updatedTask = await projectsDb.updateProjectTask(projectId, taskId, taskUpdate);
       res.json(updatedTask);
     } catch (error) {
@@ -379,7 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Delete a specific task for a project
   app.delete('/api/projects/:projectId/tasks/:taskId', isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -394,7 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // System routes for diagnostics
   app.get('/api/system/database-schema', async (req, res) => {
     try {
@@ -406,21 +406,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         AND table_name = 'project_tasks'
         ORDER BY ordinal_position;
       `);
-      
+
       // Check if we have any data in project_tasks
       const taskCountResult = await db.execute(`
         SELECT COUNT(*) as count FROM project_tasks;
       `);
-      
+
       const taskCount = taskCountResult.rows && taskCountResult.rows.length > 0 
         ? Number(taskCountResult.rows[0].count) 
         : 0;
-      
+
       // Get sample tasks (limited to 5)
       const sampleTasks = await db.execute(`
         SELECT * FROM project_tasks LIMIT 5;
       `);
-      
+
       return res.json({
         project_tasks: {
           schema: projectTasksSchema,
@@ -433,7 +433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: 'Failed to check database schema' });
     }
   });
-  
+
   const httpServer = createServer(app);
   return httpServer;
 }

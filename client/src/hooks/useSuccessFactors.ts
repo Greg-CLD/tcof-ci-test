@@ -27,7 +27,7 @@ export function useSuccessFactors() {
     refetch
   } = useQuery<SuccessFactor[]>({
     queryKey,
-    staleTime: 0, // For testing: force fresh network calls
+    staleTime: 0, // Force fresh network calls 
     refetchOnWindowFocus: true,
   });
 
@@ -63,7 +63,7 @@ export function useSuccessFactors() {
       });
     });
     console.log(`📊 useSuccessFactors - Normalized ${successFactors.length} success factors`);
-    
+
     if (successFactors.length > 0 && rawSuccessFactors && successFactors.length !== rawSuccessFactors.length) {
       console.warn('📊 useSuccessFactors - Count mismatch between raw and normalized data');
     }

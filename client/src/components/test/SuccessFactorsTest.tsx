@@ -15,28 +15,40 @@ export default function SuccessFactorsTest() {
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        Failed to load success factors
-        <Button onClick={() => refetch()}>Retry</Button>
-      </Alert>
+      <div>
+        <Alert variant="destructive">
+          Failed to load success factors
+        </Alert>
+        <Button onClick={() => refetch()} className="mt-4">
+          Retry
+        </Button>
+      </div>
     );
   }
 
   if (!successFactors || successFactors.length === 0) {
-    return <div>No success factors available</div>;
+    return (
+      <div className="p-4 text-center">
+        <Alert>No success factors available</Alert>
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div className="p-4">
       <h2>Success Factors ({successFactors.length})</h2>
-      <Button onClick={() => refetch()}>Refresh</Button>
-      <ul>
+      <Button onClick={() => refetch()} className="mb-4">
+        Refresh Data
+      </Button>
+      
+      <div className="grid gap-4">
         {successFactors.map(factor => (
-          <li key={factor.id}>
-            {factor.title} - {factor.description}
-          </li>
+          <div key={factor.id} className="border p-4 rounded">
+            <h3>{factor.title}</h3>
+            <p>{factor.description}</p>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
