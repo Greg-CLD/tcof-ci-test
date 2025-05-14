@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useProgress } from "@/contexts/ProgressContext";
 import Checklist from "@/pages/Checklist";
 import { 
@@ -46,6 +46,54 @@ export default function ProjectPage() {
   const [showHelp, setShowHelp] = useState(false);
   const { progress } = useProgress();
   
+  // Get the current active tab from URL query parameter or default to "overview"
+  const getActiveTabFromURL = useCallback(() => {
+    const url = new URL(window.location.href);
+    return url.searchParams.get('tab') || 'overview';
+  }, []);
+  
+  // State to track the active tab
+  const [activeTab, setActiveTab] = useState(() => getActiveTabFromURL());
+  
+  // Update URL when tab changes
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+    
+    // Update URL with query parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', value);
+    
+    // Use history API to avoid full page reload
+    window.history.pushState({}, '', url.toString());
+  }, []);
+  
+  // Initialize the tab from URL when component mounts
+  useEffect(() => {
+    // Check if we need to add the tab param to the URL (on first load without params)
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('tab')) {
+      url.searchParams.set('tab', activeTab);
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [activeTab]);
+  
+  // Add effect to listen for URL changes (browser back/forward) and update active tab accordingly
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const tabFromUrl = getActiveTabFromURL();
+      if (tabFromUrl !== activeTab) {
+        setActiveTab(tabFromUrl);
+      }
+    };
+    
+    // Listen for popstate events (browser back/forward)
+    window.addEventListener('popstate', handleUrlChange);
+    
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, [activeTab, getActiveTabFromURL]);
+
   // Store project ID in localStorage for persistence across refreshes
   useEffect(() => {
     if (projectId) {
@@ -228,7 +276,11 @@ export default function ProjectPage() {
               </AlertDialogContent>
             </AlertDialog>
 
-            <Tabs defaultValue="overview" className="w-full">
+            <Tabs 
+              value={activeTab}
+              onValueChange={handleTabChange}
+              className="w-full"
+            >
               <TabsList className="mb-6">
                 <TabsTrigger value="introduction">Introduction</TabsTrigger>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
