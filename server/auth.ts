@@ -78,22 +78,38 @@ export function setupAuth(app: Express) {
   // Set trust proxy to work properly with Replit's infrastructure
   app.set('trust proxy', 1);
   
-  // Configure session middleware with simplified settings for Replit
+  // Configure session middleware with improved persistence for Replit
   app.use(
     session({
       store: new PgStore({
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
-        tableName: 'sessions'
+        tableName: 'sessions',
+        // Increase session store compatibility
+        processSessionFn: function(raw: string | null) {
+          try {
+            if (!raw) return {};
+            const data = JSON.parse(raw);
+            if (typeof data.cookie === 'string') {
+              data.cookie = JSON.parse(data.cookie);
+            }
+            return data;
+          } catch (err) {
+            console.error('Session parse error:', err);
+            return {};
+          }
+        }
       }),
       secret: process.env.SESSION_SECRET || 'tcof-dev-secret',
-      resave: false,
-      saveUninitialized: false,
+      resave: true, // Changed to true to ensure session is always saved
+      saveUninitialized: true, // Changed to true to create session early
+      name: 'tcof.sid', // Set consistent name for the session cookie
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax'
+        secure: process.env.NODE_ENV === 'production', // Secure in production only
+        sameSite: 'lax',
+        path: '/'
       }
     })
   );
