@@ -43,6 +43,17 @@ async function importOrganisationRoutes() {
   }
 }
 
+// Import project routes
+async function importProjectRoutes() {
+  try {
+    const module = await import('./routes/projects.js');
+    return module.default;
+  } catch (error) {
+    console.error('Failed to import project routes:', error);
+    return null;
+  }
+}
+
 // Store success factors in memory for faster access with fallback to DB
 let cachedFactors: FactorTask[] | null = null;
 let factorsCacheTime = 0;
@@ -127,6 +138,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   } catch (error) {
     console.error('Error registering organisation routes:', error);
+  }
+  
+  // Register project routes
+  try {
+    const projectRoutes = await importProjectRoutes();
+    if (projectRoutes) {
+      app.use('/api/projects', projectRoutes);
+      console.log('Project routes registered successfully');
+    } else {
+      console.error('Failed to load project routes');
+    }
+  } catch (error) {
+    console.error('Error registering project routes:', error);
   }
   
   // Debug endpoint
