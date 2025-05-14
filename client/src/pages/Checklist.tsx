@@ -81,7 +81,7 @@ interface TaskUpdates {
 
 export default function Checklist({ projectId }: ChecklistProps) {
   const { toast } = useToast();
-  const { plan } = usePlan();
+  const { plan } = usePlan() as { plan: any };
   const { getSelectedProject } = useProjects();
   const queryClient = useQueryClient();
 
@@ -250,7 +250,11 @@ export default function Checklist({ projectId }: ChecklistProps) {
       
       // Merge canonical tasks with custom tasks from project_tasks table
       // Filter out canonical tasks that already exist in project tasks to avoid duplicates
-      const existingTaskIds = new Set(projectTasks.map(task => task.sourceId).filter(Boolean));
+      const existingTaskIds = new Set(
+        projectTasks
+          .filter(task => task.sourceId !== undefined)
+          .map(task => task.sourceId)
+      );
       const filteredCanonicalTasks = canonicalTasksList.filter(task => !existingTaskIds.has(task.id));
       
       // Combine both task types
@@ -521,7 +525,7 @@ export default function Checklist({ projectId }: ChecklistProps) {
       />
       
       <div className="mb-8">
-        <SummaryBar tasks={tasks} plan={plan} />
+        <SummaryBar tasks={tasks} plan={plan as any} />
       </div>
       
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
