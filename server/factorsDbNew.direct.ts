@@ -50,6 +50,8 @@ export interface FactorTask {
 // Helper function to transform database rows to the FactorTask interface
 const transformFactorWithTasks = (factor: any, tasks: any[]): FactorTask => {
   console.log("[TRANSFORM] Starting transform for factor:", factor.id);
+  console.log("[TRANSFORM] Tasks received:", JSON.stringify(tasks, null, 2));
+  
   // Group tasks by stage
   const stagedTasks: { [key: string]: string[] } = {
     Identification: [],
@@ -59,12 +61,17 @@ const transformFactorWithTasks = (factor: any, tasks: any[]): FactorTask => {
   };
 
   tasks.forEach(task => {
+    console.log(`[TRANSFORM] Processing task: stage=${task.stage}, text=${task.text}`);
+    
     if (stagedTasks[task.stage]) {
-      stagedTasks[task.stage].push(task.text);
+      // Make sure we push the actual text, not null
+      const taskText = task.text || "";
+      stagedTasks[task.stage].push(taskText);
+      console.log(`[TRANSFORM] Added task to ${task.stage}: ${taskText}`);
     }
   });
 
-  return {
+  const result = {
     id: factor.id,
     title: factor.title,
     description: factor.description || '',
@@ -77,6 +84,9 @@ const transformFactorWithTasks = (factor: any, tasks: any[]): FactorTask => {
     }
     // Removed createdAt/updatedAt since they don't exist in the success_factors table
   };
+  
+  console.log(`[TRANSFORM] Result for factor ${factor.id}:`, JSON.stringify(result.tasks, null, 2));
+  return result;
 };
 
 // Function to load success factors from JSON file (fallback)
@@ -152,6 +162,14 @@ export const factorsDb = {
         console.log('No factors found in database');
         return [];
       }
+      
+      // Process tasks in each row
+      result.rows.forEach(row => {
+        // Fix for tasks parsing
+        row.tasks = Array.isArray(row.tasks) 
+          ? row.tasks                        // Neon already returns an array  
+          : JSON.parse(row.tasks ?? '[]');   // fallback for safety
+      });
 
       this.length = result.rows.length;
 
