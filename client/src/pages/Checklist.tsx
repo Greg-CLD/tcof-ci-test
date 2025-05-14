@@ -318,6 +318,137 @@ export default function Checklist({ projectId }: ChecklistProps) {
       });
     }
   };
+  
+  // Handle adding a new task
+  const handleAddTask = async () => {
+    if (!newTaskText.trim()) {
+      toast({
+        title: "Task text is required",
+        description: "Please enter task text",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!currentProjectId) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Create a new task ID
+      const taskId = uuidv4();
+      
+      // Create task data
+      const taskData = {
+        taskId,
+        text: newTaskText,
+        stage: newTaskStage,
+        source: newTaskSource === 'all' ? 'custom' : newTaskSource,
+        projectId: currentProjectId,
+      };
+      
+      // Optimistically update UI
+      const newTaskObject: UnifiedTask = {
+        id: taskId,
+        text: newTaskText,
+        completed: false,
+        stage: newTaskStage,
+        source: newTaskSource === 'all' ? 'custom' : newTaskSource as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
+      };
+      
+      // Add to tasks array
+      setTasks(prev => [...prev, newTaskObject]);
+      
+      // Add to tasks by stage
+      setTasksByStage(prev => {
+        const updatedTasks = { ...prev };
+        updatedTasks[newTaskStage] = [...updatedTasks[newTaskStage], newTaskObject];
+        return updatedTasks;
+      });
+      
+      // Send to server
+      const response = await apiRequest(
+        "POST",
+        `/api/projects/${currentProjectId}/custom-tasks`,
+        taskData
+      );
+      console.log('[CHECKLIST] Task created successfully', response);
+      
+      // Reset form
+      setNewTaskText('');
+      setAddTaskDialogOpen(false);
+      
+      // Set initial stage to match the current tab
+      setNewTaskStage(activeTab);
+      
+      toast({
+        title: "Task added",
+        description: "New task has been added successfully",
+      });
+    } catch (error) {
+      console.error('[CHECKLIST] Error creating task:', error);
+      
+      // Revert local state on error by refreshing from server
+      refreshTasksState();
+      
+      toast({
+        title: "Error adding task",
+        description: "Failed to create new task. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Handle deleting a task
+  const handleDeleteTask = async (taskId: string, stage: Stage) => {
+    if (!currentProjectId) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Optimistically update UI
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+      
+      // Update tasks by stage
+      setTasksByStage(prev => {
+        const updatedTasks = { ...prev };
+        updatedTasks[stage] = updatedTasks[stage].filter(task => task.id !== taskId);
+        return updatedTasks;
+      });
+      
+      // Delete from server
+      await apiRequest(
+        "DELETE",
+        `/api/projects/${currentProjectId}/tasks/${taskId}`
+      );
+      
+      toast({
+        title: "Task deleted",
+        description: "Task has been removed successfully",
+      });
+    } catch (error) {
+      console.error('[CHECKLIST] Error deleting task:', error);
+      
+      // Revert local state on error by refreshing from server
+      refreshTasksState();
+      
+      toast({
+        title: "Error deleting task",
+        description: "Failed to delete task. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
 
 
@@ -365,6 +496,81 @@ export default function Checklist({ projectId }: ChecklistProps) {
         </div>
         
         <div className="flex gap-2">
+          <Dialog open={addTaskDialogOpen} onOpenChange={setAddTaskDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="whitespace-nowrap bg-tcof-teal hover:bg-tcof-teal/90 text-white">
+                <PlusSquare className="mr-2 h-4 w-4" />
+                Add Task
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Add New Task</DialogTitle>
+                <DialogDescription>
+                  Create a custom task for your project checklist.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="task-text">Task Description</Label>
+                  <Textarea
+                    id="task-text"
+                    placeholder="Enter task description..."
+                    value={newTaskText}
+                    onChange={(e) => setNewTaskText(e.target.value)}
+                    className="resize-none"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="task-source">Source</Label>
+                    <Select 
+                      value={newTaskSource === 'all' ? 'custom' : newTaskSource} 
+                      onValueChange={(value) => setNewTaskSource(value as SourceFilter)}
+                    >
+                      <SelectTrigger id="task-source">
+                        <SelectValue placeholder="Select source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Custom Task</SelectItem>
+                        <SelectItem value="policy">Company Policy</SelectItem>
+                        <SelectItem value="framework">Good Practice</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="task-stage">Stage</Label>
+                    <Select 
+                      value={newTaskStage} 
+                      onValueChange={(value) => setNewTaskStage(value as Stage)}
+                    >
+                      <SelectTrigger id="task-stage">
+                        <SelectValue placeholder="Select stage" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Identification">Identification</SelectItem>
+                        <SelectItem value="Definition">Definition</SelectItem>
+                        <SelectItem value="Delivery">Delivery</SelectItem>
+                        <SelectItem value="Closure">Closure</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddTaskDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddTask}>Add Task</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
           <Button variant="outline">
             <FileText className="mr-2 h-4 w-4" />
             Export PDF

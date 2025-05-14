@@ -66,6 +66,7 @@ interface TaskCardProps {
   frameworkCode?: string;
   isGoodPractice?: boolean;
   onUpdate: (id: string, updates: TaskUpdates, isGoodPractice?: boolean) => void;
+  onDelete?: (id: string) => void;
   dragHandleProps?: any;
 }
 
