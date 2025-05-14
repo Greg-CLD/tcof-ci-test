@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useMemo } from "react";
+import { createContext, ReactNode, useContext, useEffect, useMemo } from "react";
 import { UseMutationResult, useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -52,9 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     queryFn: getQueryFn({ on401: "returnNull" }), // Special handler for 401s
-    retry: false,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
+    retry: 3, // Retry up to 3 times on failure
+    retryDelay: 1000, // Wait 1 second between retries
+    staleTime: 1000 * 60 * 1, // Cache for 1 minute only - more frequent checks for session status
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when connection is restored
+    refetchOnMount: true, // Refetch when component mounts
+    refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
   });
 
   // Login mutation
@@ -247,6 +252,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       onError: (error) => options?.onError?.(error)
     });
   };
+  
+  // Attempt to restore session on mount or when network reconnects
+  useEffect(() => {
+    // Check if we already have a user
+    if (user) return;
+    
+    // Don't show toast during silent session check
+    const silentCheck = async () => {
+      try {
+        console.log('Attempting silent session restoration');
+        await refetch();
+      } catch (err) {
+        console.error('Session restoration error:', err);
+      }
+    };
+    
+    // Try to restore session
+    silentCheck();
+    
+    // Also set up a listener for online status to try again when reconnected
+    const handleOnline = () => {
+      console.log('Network reconnected, attempting session restoration');
+      silentCheck();
+    };
+    
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [refetch, user]);
 
   // Compute derived state
   const isAuthenticated = !!user;
@@ -255,7 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Provide the auth context to the children
   const contextValue = useMemo(
     () => ({
-      user,
+      user: user ?? null, // Ensure it's never undefined
       isLoading,
       error,
       isAuthenticated,
