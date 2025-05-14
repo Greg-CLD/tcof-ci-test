@@ -1013,7 +1013,7 @@ export const projectsDb = {
         const tasksBySourceId = await db
           .select()
           .from(projectTasksTable)
-          .where(eq(projectTasksTable.source_id, taskId))
+          .where(eq(projectTasksTable.sourceId, taskId))
           .limit(1);
           
         if (tasksBySourceId.length > 0) {
@@ -1086,7 +1086,7 @@ export const projectsDb = {
         const tasksBySourceId = await db
           .select()
           .from(projectTasksTable)
-          .where(eq(projectTasksTable.source_id, taskId))
+          .where(eq(projectTasksTable.sourceId, taskId))
           .limit(1);
           
         if (tasksBySourceId.length > 0) {

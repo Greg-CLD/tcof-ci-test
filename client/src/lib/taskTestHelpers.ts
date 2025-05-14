@@ -1,212 +1,141 @@
 /**
- * Helper functions to diagnose and test task persistence in browser console
- * These functions can be executed directly in the browser console to test various aspects
- * of the task persistence functionality
+ * Task persistence testing helpers
+ * These functions can be called from the browser console or used 
+ * via the TaskPersistenceHelper component
  */
+import { apiRequest } from './queryClient';
 
-// Function to test if a task can be loaded from API for a given project
+/**
+ * Test loading tasks for a project
+ * @param projectId The project ID
+ * @returns Array of tasks or error
+ */
 export async function testLoadTasks(projectId: string) {
-  console.group('🔍 Testing task loading for project ' + projectId);
+  console.log(`Testing task loading for project ${projectId}...`);
   try {
-    // First try loading canonical tasks from public endpoint
-    console.log('Testing public task endpoint...');
-    const canonicalResponse = await fetch('/__tcof/public-checklist-tasks');
-    if (!canonicalResponse.ok) {
-      console.error('❌ Failed to load canonical tasks:', 
-        await canonicalResponse.text());
-    } else {
-      const canonicalData = await canonicalResponse.json();
-      console.log('✅ Successfully loaded canonical tasks:', 
-        canonicalData?.length || 0, 'factors with tasks');
-      
-      // Display sample task if available
-      if (canonicalData && canonicalData.length > 0) {
-        console.log('Sample factor:', canonicalData[0]);
-      }
-    }
-    
-    // Then try loading project-specific tasks
-    console.log('Testing project tasks endpoint...');
-    const projectResponse = await fetch(`/api/projects/${projectId}/tasks`);
-    if (!projectResponse.ok) {
-      console.error('❌ Failed to load project tasks:', 
-        await projectResponse.text());
-    } else {
-      const projectTasks = await projectResponse.json();
-      console.log('✅ Successfully loaded project tasks:', 
-        projectTasks?.length || 0, 'tasks');
-      
-      // Display sample task if available
-      if (projectTasks && projectTasks.length > 0) {
-        console.log('Sample task:', projectTasks[0]);
-      } else {
-        console.log('No project-specific tasks found. This might be normal for a new project.');
-      }
-    }
+    const response = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+    const tasks = await response.json();
+    console.log(`Successfully loaded ${tasks.length} tasks:`, tasks);
+    return tasks;
   } catch (error) {
-    console.error('❌ Error during test:', error);
+    console.error('Error loading tasks:', error);
+    throw error;
   }
-  console.groupEnd();
 }
 
-// Function to test if a new task can be created for a project
+/**
+ * Test creating a new task
+ * @param projectId The project ID
+ * @returns The created task or error
+ */
 export async function testCreateTask(projectId: string) {
-  console.group('🔍 Testing task creation for project ' + projectId);
+  console.log(`Testing task creation for project ${projectId}...`);
+  
+  const timestamp = new Date().toISOString();
+  const taskData = {
+    text: `Test task created at ${timestamp}`,
+    stage: 'identification',
+    origin: 'custom',
+    sourceId: `test-${Date.now()}`,
+    priority: 'medium',
+    status: 'pending',
+  };
+  
   try {
-    // Create a test task
-    const testTask = {
-      text: `Test task created at ${new Date().toISOString()}`,
-      stage: 'identification',
-      origin: 'custom',
-      sourceId: `test-${Date.now()}`,
-      completed: false,
-      notes: 'Test notes',
-      priority: 'medium',
-      status: 'To Do',
-      owner: ''
-    };
-    
-    console.log('Creating test task:', testTask);
-    
-    const response = await fetch(`/api/projects/${projectId}/tasks`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(testTask)
-    });
-    
-    if (!response.ok) {
-      console.error('❌ Failed to create task:', await response.text());
-    } else {
-      const result = await response.json();
-      console.log('✅ Successfully created task:', result);
-      return result;
-    }
+    const response = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
+    const task = await response.json();
+    console.log('Task created successfully:', task);
+    return task;
   } catch (error) {
-    console.error('❌ Error during test:', error);
+    console.error('Error creating task:', error);
+    throw error;
   }
-  console.groupEnd();
 }
 
-// Function to test if a task can be updated
+/**
+ * Test updating an existing task
+ * @param projectId The project ID
+ * @param taskId The task ID
+ * @returns The updated task or error
+ */
 export async function testUpdateTask(projectId: string, taskId: string) {
-  console.group(`🔍 Testing task update for project ${projectId}, task ${taskId}`);
+  console.log(`Testing task update for project ${projectId}, task ${taskId}...`);
+  
   try {
-    // Update the task
+    // First, get the task
+    const getResponse = await apiRequest('GET', `/api/projects/${projectId}/tasks/${taskId}`);
+    const task = await getResponse.json();
+    
+    // Then update it
     const updateData = {
-      completed: true,
-      notes: `Updated at ${new Date().toISOString()}`,
-      status: 'Done'
+      ...task,
+      text: `${task.text} (updated at ${new Date().toISOString()})`,
+      status: task.status === 'completed' ? 'pending' : 'completed'
     };
     
-    console.log('Updating task with data:', updateData);
+    const updateResponse = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, updateData);
+    const updatedTask = await updateResponse.json();
     
-    const response = await fetch(`/api/projects/${projectId}/tasks/${taskId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(updateData)
-    });
-    
-    if (!response.ok) {
-      console.error('❌ Failed to update task:', await response.text());
-    } else {
-      const result = await response.json();
-      console.log('✅ Successfully updated task:', result);
-      return result;
-    }
+    console.log('Task updated successfully:', updatedTask);
+    return updatedTask;
   } catch (error) {
-    console.error('❌ Error during test:', error);
+    console.error('Error updating task:', error);
+    throw error;
   }
-  console.groupEnd();
 }
 
-// Function to perform a full lifecycle test (create -> update -> verify)
+/**
+ * Run a full task lifecycle test (create, update, verify)
+ * @param projectId The project ID
+ */
 export async function testTaskLifecycle(projectId: string) {
-  console.group('🔍 Performing full task lifecycle test for project ' + projectId);
+  console.log(`Starting full task lifecycle test for project ${projectId}...`);
+  
   try {
-    // Step 1: Create a task
-    console.log('Step 1: Creating a new task...');
+    // 1. Create a task
+    console.log('Step 1: Creating a new task');
     const newTask = await testCreateTask(projectId);
     
-    if (!newTask || !newTask.id) {
-      console.error('❌ Task creation failed, cannot continue lifecycle test');
-      console.groupEnd();
-      return;
-    }
-    
-    // Step 2: Update the task
-    console.log('Step 2: Updating the new task...');
+    // 2. Update the task
+    console.log('Step 2: Updating the task');
     const updatedTask = await testUpdateTask(projectId, newTask.id);
     
-    if (!updatedTask) {
-      console.error('❌ Task update failed, cannot continue lifecycle test');
-      console.groupEnd();
-      return;
-    }
+    // 3. Load the tasks and verify our task is there
+    console.log('Step 3: Verifying task persistence');
+    const tasks = await testLoadTasks(projectId);
     
-    // Step 3: Verify task exists after refresh
-    console.log('Step 3: Verifying task persistence...');
-    const verifyResponse = await fetch(`/api/projects/${projectId}/tasks`);
-    
-    if (!verifyResponse.ok) {
-      console.error('❌ Failed to verify tasks:', await verifyResponse.text());
-      console.groupEnd();
-      return;
-    }
-    
-    const allTasks = await verifyResponse.json();
-    const foundTask = allTasks.find((t: any) => t.id === newTask.id);
-    
+    const foundTask = tasks.find(t => t.id === newTask.id);
     if (foundTask) {
-      console.log('✅ Task successfully persisted in the database:', foundTask);
+      console.log('✅ Task successfully persisted:', foundTask);
+      return { success: true, task: foundTask };
     } else {
-      console.error('❌ Task not found after refresh! Persistence failed');
+      console.error('❌ Task not found after reload. Persistence test failed.');
+      return { success: false, error: 'Task not found after reload' };
     }
-    
-    console.log('Full lifecycle test complete');
   } catch (error) {
-    console.error('❌ Error during lifecycle test:', error);
+    console.error('Task lifecycle test failed:', error);
+    return { success: false, error };
   }
-  console.groupEnd();
 }
 
-// Function to analyze database tables and their structures
+/**
+ * Analyze database tables
+ */
 export async function analyzeDatabase() {
-  console.group('🔍 Analyzing database structure');
+  console.log('Analyzing database schema...');
+  
   try {
-    // Note: This is a diagnostic endpoint that needs to be added to the backend
-    const response = await fetch('/__tcof/db-analysis');
-    
-    if (!response.ok) {
-      console.error('❌ Failed to analyze database:', await response.text());
-      console.log('This endpoint may not be implemented yet. Add it to your backend to use this diagnostic function.');
-    } else {
-      const dbInfo = await response.json();
-      console.log('Database structure:', dbInfo);
-    }
+    const response = await apiRequest('GET', '/api/system/database-schema');
+    const schema = await response.json();
+    console.log('Database schema:', schema);
+    return schema;
   } catch (error) {
-    console.error('❌ Error during database analysis:', error);
+    console.error('Error analyzing database:', error);
+    throw error;
   }
-  console.groupEnd();
 }
 
-// Instructions for use
-console.log(`
-Task Testing Utilities loaded! You can use these functions in the browser console:
-
-1. window.testLoadTasks(projectId) - Test if tasks can be loaded from the API
-2. window.testCreateTask(projectId) - Test if a new task can be created
-3. window.testUpdateTask(projectId, taskId) - Test if a task can be updated
-4. window.testTaskLifecycle(projectId) - Run a full create/update/verify test
-5. window.analyzeDatabase() - Analyze database structure (requires backend endpoint)
-
-Example usage: window.testLoadTasks('your-project-id')
-`);
-
-// Expose these functions to the window object for browser console access
+// Add these functions to the global window object for browser console access
 declare global {
   interface Window {
     testLoadTasks: typeof testLoadTasks;
@@ -217,6 +146,7 @@ declare global {
   }
 }
 
+// Export these functions to the global window object
 if (typeof window !== 'undefined') {
   window.testLoadTasks = testLoadTasks;
   window.testCreateTask = testCreateTask;
