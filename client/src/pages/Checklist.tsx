@@ -415,6 +415,12 @@ export default function Checklist({ projectId }: ChecklistProps) {
         completed: false,
         stage: newTaskStage,
         source: newTaskSource === 'all' ? 'custom' : newTaskSource as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
+        sourceId: taskId,
+        notes: '',
+        priority: 'medium',
+        dueDate: '',
+        owner: '',
+        status: 'To Do'
       };
       
       // Add to tasks array

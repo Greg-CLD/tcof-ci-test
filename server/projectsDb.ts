@@ -181,7 +181,15 @@ function loadProjectTasks(): ProjectTask[] {
  */
 function saveProjectTasks(tasks: ProjectTask[]): boolean {
   try {
+    // Make sure data directory exists
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      console.log('Created data directory:', DATA_DIR);
+    }
+    
+    // Write the file
     fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2), 'utf8');
+    console.log(`Saved ${tasks.length} tasks to ${TASKS_FILE}`);
     return true;
   } catch (error) {
     console.error('Error saving project tasks:', error);
