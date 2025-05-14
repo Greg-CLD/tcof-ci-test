@@ -2613,91 +2613,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Admin API: Getting all success factors...');
       
-      // Instead of fetching all factors at once, let's use individual endpoint approach for each
-      const factorsQuery = `
-        SELECT id FROM success_factors ORDER BY title
-      `;
+      // Let's simplify and call the single factor endpoint for each factor ID
+      // This ensures we use the same exact code path that is known to work
       
-      const factorsResult = await db.execute(factorsQuery);
-      console.log(`API: Found ${factorsResult.rows.length} factor IDs in the database`);
+      // Get all factor IDs
+      const idsQuery = `SELECT id FROM success_factors ORDER BY title`;
+      const idsResult = await db.execute(idsQuery);
+      const factorIds = idsResult.rows.map((row: any) => row.id);
       
-      // Array to hold formatted factors
-      const formattedFactors = [];
+      console.log(`Found ${factorIds.length} factor IDs`);
       
-      // Process each factor ID
-      for (const row of factorsResult.rows) {
+      // Array to hold the results
+      const allFactors = [];
+      
+      // Process each factor ID one at a time
+      for (const factorId of factorIds) {
         try {
-          const factorId = row.id;
-          console.log(`Processing factor ${factorId}`);
+          // This is the same SQL query from the single factor endpoint which we know works correctly
+          const query = `
+            SELECT 
+              sf.id, 
+              sf.title, 
+              sf.description,
+              jsonb_build_object(
+                'Identification', (
+                  SELECT jsonb_agg(t.text)
+                  FROM success_factor_tasks t
+                  WHERE t.factor_id = sf.id AND t.stage = 'Identification'
+                  ORDER BY t."order"
+                ),
+                'Definition', (
+                  SELECT jsonb_agg(t.text)
+                  FROM success_factor_tasks t
+                  WHERE t.factor_id = sf.id AND t.stage = 'Definition'
+                  ORDER BY t."order"
+                ),
+                'Delivery', (
+                  SELECT jsonb_agg(t.text)
+                  FROM success_factor_tasks t
+                  WHERE t.factor_id = sf.id AND t.stage = 'Delivery'
+                  ORDER BY t."order"
+                ),
+                'Closure', (
+                  SELECT jsonb_agg(t.text)
+                  FROM success_factor_tasks t
+                  WHERE t.factor_id = sf.id AND t.stage = 'Closure'
+                  ORDER BY t."order"
+                )
+              ) as tasks
+            FROM 
+              success_factors sf
+            WHERE 
+              sf.id = $1;
+          `;
           
-          // Use the same approach as the single factor endpoint
-          const factorResult = await db.execute(sql`
-            SELECT id, title, description, tasks::text
-            FROM v_success_factors_full
-            WHERE id = ${factorId}
-          `);
+          const result = await db.execute(query, [factorId]);
           
-          if (factorResult.rows.length === 0) {
+          if (result.rows.length === 0) {
             console.log(`No data found for factor ${factorId}`);
             continue;
           }
           
-          const factorRow = factorResult.rows[0];
+          const row = result.rows[0];
           
-          // Parse the JSON tasks
-          let parsedTasks;
-          try {
-            if (typeof factorRow.tasks === 'string') {
-              parsedTasks = JSON.parse(factorRow.tasks);
-            } else {
-              parsedTasks = factorRow.tasks;
-            }
-          } catch (e) {
-            console.error(`Error parsing tasks for factor ${factorId}:`, e);
-            parsedTasks = {
-              Identification: [],
-              Definition: [],
-              Delivery: [],
-              Closure: []
-            };
-          }
+          // Process the tasks to handle nulls and empty arrays
+          let taskData = typeof row.tasks === 'string' ? JSON.parse(row.tasks) : row.tasks;
           
-          // Format the factor with proper task structure
-          const formattedFactor = {
-            id: String(factorRow.id),
-            title: String(factorRow.title),
-            description: factorRow.description ? String(factorRow.description) : '',
-            category: "Uncategorized",
-            tasks: {
-              Identification: Array.isArray(parsedTasks.Identification) ? parsedTasks.Identification.filter(Boolean) : [],
-              Definition: Array.isArray(parsedTasks.Definition) ? parsedTasks.Definition.filter(Boolean) : [],
-              Delivery: Array.isArray(parsedTasks.Delivery) ? parsedTasks.Delivery.filter(Boolean) : [],
-              Closure: Array.isArray(parsedTasks.Closure) ? parsedTasks.Closure.filter(Boolean) : []
-            }
+          // Clean up the task arrays
+          const cleanedTasks = {
+            Identification: Array.isArray(taskData.Identification) ? taskData.Identification.filter(Boolean) : [],
+            Definition: Array.isArray(taskData.Definition) ? taskData.Definition.filter(Boolean) : [],
+            Delivery: Array.isArray(taskData.Delivery) ? taskData.Delivery.filter(Boolean) : [],
+            Closure: Array.isArray(taskData.Closure) ? taskData.Closure.filter(Boolean) : []
           };
           
-          formattedFactors.push(formattedFactor);
-        } catch (factorError) {
-          console.error(`Error processing factor ${row.id}:`, factorError);
+          // Format the factor with clean task structure
+          const formattedFactor = {
+            id: String(row.id),
+            title: String(row.title),
+            description: row.description ? String(row.description) : '',
+            category: "Uncategorized",
+            tasks: cleanedTasks
+          };
+          
+          allFactors.push(formattedFactor);
+        } catch (error) {
+          console.error(`Error processing factor ${factorId}:`, error);
           // Continue with next factor
         }
       }
       
-      // Log detailed data for debugging
-      if (formattedFactors.length > 0) {
-        const sample = formattedFactors[0];
-        console.log(`First factor has ${sample.tasks.Identification.length} identification tasks`);
-        
-        if (sample.tasks.Identification.length > 0) {
-          console.log(`First identification task: "${sample.tasks.Identification[0]}"`);
-        }
-        
-        console.log('Sample formatted factor:', JSON.stringify(sample, null, 2));
+      console.log(`Returning ${allFactors.length} formatted factors`);
+      if (allFactors.length > 0) {
+        console.log("Sample factor:", JSON.stringify(allFactors[0], null, 2));
       }
       
-      // Return the correctly formatted factors
-      console.log(`API: Returning ${formattedFactors.length} formatted factors`);
-      res.json(formattedFactors);
+      res.json(allFactors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
