@@ -51,9 +51,9 @@ export async function apiRequest(
 }
 
 // Default query function that uses apiRequest
-export const defaultQueryFn = async ({ queryKey }: { queryKey: string[] }) => {
-  const [url] = queryKey;
-  const res = await apiRequest("GET", url);
+export const defaultQueryFn = async ({ queryKey }: { queryKey: readonly unknown[] }) => {
+  const [url] = queryKey as readonly string[];
+  const res = await apiRequest("GET", url as string);
 
   // Handle 404 and other error responses
   if (!res.ok) {
@@ -127,8 +127,8 @@ type QueryFnOpts = {
 export function getQueryFn(options: QueryFnOpts = {}) {
   const { on401 = "throw", on404 = "throw" } = options;
 
-  return async ({ queryKey }: { queryKey: string[] }) => {
-    const [url] = queryKey;
+  return async ({ queryKey }: { queryKey: readonly unknown[] }) => {
+    const [url] = queryKey as readonly string[];
     try {
       const res = await apiRequest("GET", url);
 

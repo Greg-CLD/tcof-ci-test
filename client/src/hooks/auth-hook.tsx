@@ -62,19 +62,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials: LoginCredentials) => {
       console.log('Attempting login with:', { username: credentials.username });
       
-      const res = await apiRequest("POST", "/api/login", credentials);
-      
-      console.log('Login response status:', res.status);
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "Login failed" }));
-        console.error('Login API error:', errorData);
-        throw new Error(errorData.message || "Login failed");
+      try {
+        const res = await apiRequest("POST", "/api/login", credentials);
+        
+        console.log('Login response status:', res.status);
+        
+        if (!res.ok) {
+          // Handle specific error status codes
+          if (res.status === 500) {
+            try {
+              const errorData = await res.json();
+              throw new Error(errorData.message || "Server error during login. Please try again later.");
+            } catch (parseError) {
+              // If can't parse JSON, try text
+              const errorText = await res.text().catch(() => "");
+              
+              // Check for compute node errors specifically
+              if (errorText.includes("compute node") || errorText.includes("infrastructure")) {
+                throw new Error("Temporary server issue. Please try refreshing the page and logging in again.");
+              }
+              
+              throw new Error(`Server error: ${errorText || "Unknown login error occurred"}`);
+            }
+          } else if (res.status === 503) {
+            throw new Error("Login service temporarily unavailable. Please try again in a moment.");
+          } else {
+            // Other error statuses (401, 400, etc.)
+            try {
+              const errorData = await res.json();
+              throw new Error(errorData.message || "Login failed. Please check your credentials.");
+            } catch (parseError) {
+              throw new Error("Login failed. Please check your credentials.");
+            }
+          }
+        }
+        
+        const userData = await res.json();
+        console.log('Login successful, user data received');
+        return userData;
+      } catch (error) {
+        // Handle network errors and other exceptions
+        console.error('Login error:', error);
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error("Connection error during login. Please check your internet and try again.");
       }
-      
-      const userData = await res.json();
-      console.log('Login successful, user data received');
-      return userData;
     },
     onSuccess: (userData: User) => {
       console.log('Login success, updating cache with user:', userData.username);
