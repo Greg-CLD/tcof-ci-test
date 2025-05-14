@@ -183,8 +183,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
   
-  // Success factors endpoint for frontend use
-  app.get('/api/success-factors', async (req: Request, res: Response) => {
+  // Success factors endpoints for frontend use - both URLs map to the same handler
+  async function getFactorsHandler(req: Request, res: Response) {
     try {
       console.log('Getting success factors for frontend...');
       const factors = await getFactors();
@@ -194,7 +194,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching success factors:', error);
       res.status(500).json({ message: 'Failed to load success factors' });
     }
-  });
+  }
+  
+  // Register both endpoints with the same handler to ensure compatibility
+  app.get('/api/success-factors', getFactorsHandler);
+  app.get('/api/factors', getFactorsHandler);
 
   // Completely public endpoint for getting tasks for the checklist - no auth check with special path
   app.get('/__tcof/public-checklist-tasks', async (req: Request, res: Response) => {
