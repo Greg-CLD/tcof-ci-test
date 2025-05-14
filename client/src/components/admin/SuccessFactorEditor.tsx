@@ -152,8 +152,9 @@ console.log("[NETWORK RESPONSE] Factors:", factors);
       const response = await apiRequest('PUT', `/api/admin/success-factors/${factorId}`, updatedFactor);
       await response.json();
       
-      // Invalidate the cache to refresh data
-      invalidateCache();
+      // Invalidate both the list and individual factor caches
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/success-factors', factorId] });
       
       console.log('[ADMIN] Updated task and invalidated cache');
     } catch (error) {
@@ -378,7 +379,7 @@ console.log("[NETWORK RESPONSE] Factors:", factors);
           </Link>
         </div>
         
-        {isLoading ? (
+        {isLoading || selectedFactorLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-tcof-teal" />
             <span className="ml-2">Loading success factors...</span>
