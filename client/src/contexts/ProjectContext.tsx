@@ -62,3 +62,8 @@ export function useProject() {
   }
   return context;
 }
+
+// For backward compatibility - alias for useProject
+export function useProjectContext() {
+  return useProject();
+}
