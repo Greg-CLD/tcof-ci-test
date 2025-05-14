@@ -15,7 +15,7 @@ export interface FeedbackItem {
 }
 
 // Interface for our context
-export interface FeedbackContextType {
+interface FeedbackContextShape {
   // Current feedback items
   feedbackItems: FeedbackItem[];
   
@@ -30,6 +30,8 @@ export interface FeedbackContextType {
   showInfo: (message: string, options?: Partial<Omit<FeedbackItem, 'id' | 'type' | 'message'>>) => string;
   showWarning: (message: string, options?: Partial<Omit<FeedbackItem, 'id' | 'type' | 'message'>>) => string;
 }
+
+export type FeedbackContextType = FeedbackContextShape;
 
 // Create the context with a default empty value
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
