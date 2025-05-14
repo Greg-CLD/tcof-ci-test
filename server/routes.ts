@@ -2611,47 +2611,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Admin API: Getting all success factors with direct task query...');
+      console.log('Admin API: Getting all success factors with clean task data...');
       
-      // Completely new approach using a single combined query for all factors
-      // This is a more efficient approach than trying to process each factor individually
-      
-      // First, get all the factors
+      // Implementing the exact requirements: join factors with tasks, filter nulls, aggregate by stage
       const query = `
-        WITH factor_tasks AS (
+        WITH FactorStages AS (
+          SELECT DISTINCT 'Identification' AS stage
+          UNION SELECT 'Definition'
+          UNION SELECT 'Delivery'
+          UNION SELECT 'Closure'
+        ),
+        CleanTasks AS (
           SELECT
-            t.factor_id,
-            t.stage,
-            array_agg(t.text ORDER BY t."order") AS task_texts
+            factor_id,
+            stage,
+            text,
+            "order"
           FROM
-            success_factor_tasks t
-          GROUP BY
-            t.factor_id, t.stage
+            success_factor_tasks
+          WHERE
+            text IS NOT NULL AND text <> ''
+        ),
+        TasksByStage AS (
+          SELECT
+            f.id AS factor_id,
+            s.stage,
+            COALESCE(
+              (SELECT
+                json_agg(t.text ORDER BY t."order")
+               FROM CleanTasks t
+               WHERE t.factor_id = f.id AND t.stage = s.stage),
+              '[]'::json
+            ) AS tasks_array
+          FROM
+            success_factors f
+          CROSS JOIN
+            FactorStages s
         )
         SELECT
           f.id,
           f.title,
           f.description,
-          (
-            SELECT
-              json_build_object(
-                'Identification', COALESCE((
-                  SELECT task_texts FROM factor_tasks
-                  WHERE factor_id = f.id AND stage = 'Identification'
-                ), ARRAY[]::text[]),
-                'Definition', COALESCE((
-                  SELECT task_texts FROM factor_tasks
-                  WHERE factor_id = f.id AND stage = 'Definition'
-                ), ARRAY[]::text[]),
-                'Delivery', COALESCE((
-                  SELECT task_texts FROM factor_tasks
-                  WHERE factor_id = f.id AND stage = 'Delivery'
-                ), ARRAY[]::text[]),
-                'Closure', COALESCE((
-                  SELECT task_texts FROM factor_tasks
-                  WHERE factor_id = f.id AND stage = 'Closure'
-                ), ARRAY[]::text[])
-              )
+          json_build_object(
+            'Identification', COALESCE((SELECT tasks_array FROM TasksByStage WHERE factor_id = f.id AND stage = 'Identification'), '[]'::json),
+            'Definition', COALESCE((SELECT tasks_array FROM TasksByStage WHERE factor_id = f.id AND stage = 'Definition'), '[]'::json),
+            'Delivery', COALESCE((SELECT tasks_array FROM TasksByStage WHERE factor_id = f.id AND stage = 'Delivery'), '[]'::json),
+            'Closure', COALESCE((SELECT tasks_array FROM TasksByStage WHERE factor_id = f.id AND stage = 'Closure'), '[]'::json)
           ) AS tasks
         FROM
           success_factors f
@@ -2659,12 +2664,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           f.title
       `;
       
-      console.log("Executing direct SQL query for all factors...");
+      console.log("Executing optimized SQL query for clean factor tasks...");
       const result = await db.execute(query);
       
       console.log(`Query returned ${result.rows.length} factors`);
       
-      // Transform the results to match the expected format
+      // Transform the results to match the expected format with extensive data validation
       const formattedFactors = [];
       
       for (let i = 0; i < result.rows.length; i++) {
@@ -2685,17 +2690,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log("Sample tasks data:", JSON.stringify(tasksData, null, 2));
           }
           
-          // Create the factor object
+          // Create the factor object with explicit validation for each task array
           const factor = {
             id: String(row.id),
             title: String(row.title),
             description: row.description ? String(row.description) : '',
             category: "Uncategorized",
             tasks: {
-              Identification: Array.isArray(tasksData.Identification) ? tasksData.Identification : [],
-              Definition: Array.isArray(tasksData.Definition) ? tasksData.Definition : [],
-              Delivery: Array.isArray(tasksData.Delivery) ? tasksData.Delivery : [],
-              Closure: Array.isArray(tasksData.Closure) ? tasksData.Closure : []
+              Identification: Array.isArray(tasksData.Identification) 
+                ? tasksData.Identification.filter(t => t !== null && typeof t === 'string')
+                : [],
+              Definition: Array.isArray(tasksData.Definition)
+                ? tasksData.Definition.filter(t => t !== null && typeof t === 'string')
+                : [],
+              Delivery: Array.isArray(tasksData.Delivery)
+                ? tasksData.Delivery.filter(t => t !== null && typeof t === 'string')
+                : [],
+              Closure: Array.isArray(tasksData.Closure)
+                ? tasksData.Closure.filter(t => t !== null && typeof t === 'string')
+                : []
             }
           };
           
@@ -2712,16 +2725,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 Definition: factor.tasks.Definition.length,
                 Delivery: factor.tasks.Delivery.length,
                 Closure: factor.tasks.Closure.length
+              },
+              sampleTasks: {
+                Identification: factor.tasks.Identification.slice(0, 1),
+                Definition: factor.tasks.Definition.slice(0, 1),
+                Delivery: factor.tasks.Delivery.slice(0, 1),
+                Closure: factor.tasks.Closure.slice(0, 1)
               }
             }, null, 2));
           }
         } catch (err) {
           console.error(`Error processing factor ${row.id}:`, err);
-          // Skip this factor if there's an error
+          // Instead of skipping, provide an empty but valid structure
+          formattedFactors.push({
+            id: String(row.id),
+            title: String(row.title),
+            description: row.description ? String(row.description) : '',
+            category: "Uncategorized",
+            tasks: {
+              Identification: [],
+              Definition: [],
+              Delivery: [],
+              Closure: []
+            }
+          });
         }
       }
       
-      console.log(`Returning ${formattedFactors.length} factors with tasks`);
+      console.log(`Returning ${formattedFactors.length} factors with clean task data`);
       res.json(formattedFactors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);

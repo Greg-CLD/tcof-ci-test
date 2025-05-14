@@ -59,10 +59,10 @@ console.log("[NETWORK RESPONSE] Factors:", factors);
     }
   }, [factors, selectedFactorId]);
 
-  // Get the currently selected factor
-  const selectedFactor = selectedFactorId
-    ? factors.find(f => f.id === selectedFactorId)
-    : null;
+  // Get the currently selected factor - always default to first factor if selection is null
+  const selectedFactor = selectedFactorId 
+    ? factors.find(f => f.id === selectedFactorId) 
+    : (factors.length > 0 ? factors[0] : null);
 
   // Create a new factor
   const handleCreateFactor = () => {

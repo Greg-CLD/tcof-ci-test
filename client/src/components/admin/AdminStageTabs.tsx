@@ -108,11 +108,13 @@ export default function AdminStageTabs({
         console.log(`[ADMIN_TABS] Rendering stage ${stage}. Active tab: ${activeTab}`);
         console.log(`[ADMIN_TABS] Tasks for ${stage}:`, factor.tasks[stage as keyof typeof factor.tasks]);
         
-        // Get tasks array safely
-        const stageTasksArray = Array.isArray(factor.tasks[stage as keyof typeof factor.tasks]) 
-          ? factor.tasks[stage as keyof typeof factor.tasks] 
+        // Get tasks array safely and ensure it only contains valid strings (no nulls)
+        const stageTasks = factor.tasks[stage as keyof typeof factor.tasks];
+        const stageTasksArray = Array.isArray(stageTasks) 
+          ? stageTasks.filter(task => task !== null && typeof task === 'string')
           : [];
         
+        console.log(`[ADMIN_TABS] ${stage} tasks:`, stageTasksArray);
         const hasTasks = stageTasksArray.length > 0;
         
         return (
