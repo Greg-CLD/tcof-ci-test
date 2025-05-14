@@ -8,9 +8,6 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as factorsDb from './factorsDb';
 import type { FactorTask } from '../scripts/factorUtils';
-import { db } from './db';
-import { sql } from 'drizzle-orm';
-
 // Define the Stage type for canonical checklist tasks
 type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 import { projectsDb } from './projectsDb';
@@ -2630,17 +2627,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Found ${result.rows.length} factors from view`);
       
+      // Debug the first row to see its structure
+      if (result.rows.length > 0) {
+        const firstRow = result.rows[0];
+        console.log('RAW first row - keys:', Object.keys(firstRow));
+        console.log('RAW first row - tasks type:', typeof firstRow.tasks);
+        console.log('RAW first row - tasks JSON:', JSON.stringify(firstRow.tasks).substring(0, 200) + '...');
+      }
+      
       // Process each factor row the same way getFactor does
       const factors = result.rows.map((row: any) => {
+        // Debug logging
+        if (row.id === 'sf-1') {
+          console.log(`Row id=${row.id} title=${row.title}`);
+          console.log(`Row tasks type: ${typeof row.tasks}`);
+          if (row.tasks) {
+            console.log(`Tasks has keys: ${Object.keys(row.tasks)}`);
+            if (row.tasks.Identification) {
+              console.log(`First Identification task: [${row.tasks.Identification[0]}]`);
+            }
+          }
+        }
+        
+        // Exactly match the structure from the single-factor endpoint
         return {
           id: String(row.id),
           title: String(row.title),
           description: row.description ? String(row.description) : '',
-          tasks: row.tasks as {
-            Identification: string[];
-            Definition: string[];
-            Delivery: string[];
-            Closure: string[];
+          category: "Uncategorized", // This matches the single endpoint format
+          tasks: {
+            // Rebuild tasks object explicitly
+            Identification: row.tasks?.Identification?.filter((t: any) => t !== null) || [],
+            Definition: row.tasks?.Definition?.filter((t: any) => t !== null) || [],
+            Delivery: row.tasks?.Delivery?.filter((t: any) => t !== null) || [],
+            Closure: row.tasks?.Closure?.filter((t: any) => t !== null) || []
           }
         };
       });
