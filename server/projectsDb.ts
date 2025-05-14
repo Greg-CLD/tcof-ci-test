@@ -145,7 +145,7 @@ async function getSuccessFactorTasks(): Promise<any[]> {
   try {
     const query = `
       SELECT 
-        factor_id AS sourceId, 
+        factor_id AS sourceid, 
         stage,
         text
       FROM 
@@ -164,12 +164,32 @@ async function getSuccessFactorTasks(): Promise<any[]> {
       return [];
     }
     
-    return result.rows.map(row => ({
-      sourceId: row.sourceid, // lowercase due to postgres column names
-      stage: row.stage.toLowerCase(),
-      text: row.text,
-      origin: 'factor'
-    }));
+    // Log for debugging
+    console.log(`Found ${result.rows.length} success factor tasks`);
+    if (result.rows.length > 0) {
+      console.log('Sample success factor task:', JSON.stringify(result.rows[0]));
+    }
+    
+    // Map from DB row to task object with careful null/undefined handling
+    return result.rows.map(row => {
+      const sourceId = row.sourceid ? String(row.sourceid) : '';
+      
+      // Default stage to identification if missing or invalid
+      let stage = 'identification';
+      if (row.stage && typeof row.stage === 'string') {
+        stage = row.stage.toLowerCase();
+      }
+      
+      // Text should never be empty per the SQL query, but handle it anyway
+      const text = row.text ? String(row.text) : 'Task';
+      
+      return {
+        sourceId,
+        stage,
+        text,
+        origin: 'factor'
+      };
+    });
   } catch (error) {
     console.error('Error fetching success factor tasks:', error);
     return [];
@@ -219,7 +239,7 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
     console.log(`Checking for existing tasks with project ID: ${safeProjectId}`);
     
     const checkResult = await db.execute(checkSql, [safeProjectId]);
-    const taskCount = parseInt(checkResult.rows[0]?.task_count || '0');
+    const taskCount = parseInt(checkResult.rows?.[0]?.task_count || '0');
     
     if (taskCount > 0) {
       console.log(`Project ${projectIdString} already has ${taskCount} tasks, no need to seed`);
@@ -233,28 +253,18 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
     console.log(`Found ${canonicalTasks.length} canonical tasks to seed`);
     
     // Prepare for batch insertion
-    const batchSize = 50;
     let successCount = 0;
-    let currentBatch = [];
     
     // Process each canonical task
     for (const task of canonicalTasks) {
       try {
-        // Create a task object consistent with our schema
-        const newTask = {
-          id: uuidv4(),
-          projectId: projectIdString,
-          text: task.text,
-          stage: task.stage.toLowerCase(),
-          origin: task.origin.toLowerCase(),
-          sourceId: task.sourceId,
-          completed: false,
-          notes: '',
-          priority: 'medium',
-          status: 'To Do',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+        // Ensure task has all required fields with defaults if needed
+        const taskText = task.text || 'Task';
+        const taskStage = (task.stage || 'identification').toLowerCase();
+        const taskOrigin = (task.origin || 'custom').toLowerCase();
+        const taskSourceId = task.sourceId || '';
+        
+        console.log(`Creating task from source: "${taskText.substring(0, 30)}..." (${taskStage}, ${taskOrigin}, ${taskSourceId})`);
         
         // Use direct SQL insertion for better handling of types
         const insertSql = `
@@ -265,18 +275,23 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
         `;
         
+        const taskId = uuidv4();
+        
         const insertParams = [
-          newTask.id,
-          projectIdString,
-          newTask.text,
-          newTask.stage,
-          newTask.origin,
-          newTask.sourceId,
-          false,
-          '',
-          'medium',
-          'To Do'
+          taskId,                                     // $1
+          projectIdString,                            // $2
+          taskText,                                   // $3
+          taskStage,                                  // $4
+          taskOrigin,                                 // $5
+          taskSourceId,                               // $6
+          false,                                      // $7
+          '',                                         // $8
+          'medium',                                   // $9
+          'To Do'                                     // $10
         ];
+        
+        // Debug log and parameter validation
+        console.log(`Inserting task: ${taskId} for project ${projectIdString}, param count: ${insertParams.length}`);
         
         // Execute insert
         await db.execute(insertSql, insertParams);
@@ -286,7 +301,7 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
           console.log(`Seeded ${successCount}/${canonicalTasks.length} tasks...`);
         }
       } catch (err) {
-        console.error(`Error seeding task "${task.text}" for project ${projectIdString}:`, err);
+        console.error(`Error seeding task for project ${projectIdString}:`, err);
       }
     }
     
