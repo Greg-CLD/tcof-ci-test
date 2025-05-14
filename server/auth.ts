@@ -166,7 +166,6 @@ export function setupAuth(app: Express) {
         return done(error);
       }
     })
-    })
   );
 
   // Serialize and deserialize user
@@ -184,8 +183,12 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: any, done) => {
     try {
       // Handle either numeric or string IDs
-      console.log("Deserializing user with ID:", id);
+      console.log("Deserializing user with ID:", id, "type:", typeof id);
+      
+      // Get user with direct query
       const result = await query('SELECT * FROM users WHERE id = $1', [id]);
+      console.log("Deserialize user query result:", result ? "found" : "not found");
+      
       const user = result?.[0];
       
       if (!user) {
@@ -193,6 +196,7 @@ export function setupAuth(app: Express) {
         return done(null, false); // Don't throw an error, just return false
       }
       
+      console.log("User found:", user.username);
       done(null, user);
     } catch (error) {
       console.error("Deserialize user error:", error);
