@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Download, FileText, Loader2, PlusSquare, X, Trash2 } from 'lucide-react';
+import { Download, FileText, Loader2, PlusSquare, X, Trash2, MoreHorizontal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Dialog, 
@@ -46,8 +46,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePlan } from '@/contexts/PlanContext';
 import { useProjects } from '@/hooks/useProjects';
 import { useFactors } from '@/hooks/useFactors';
-import { Badge } from '@/components/ui/badge';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -101,6 +100,12 @@ export default function Checklist({ projectId }: ChecklistProps) {
     Delivery: [],
     Closure: []
   });
+  
+  // Add task dialog state
+  const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [newTaskSource, setNewTaskSource] = useState<SourceFilter>('custom');
+  const [newTaskStage, setNewTaskStage] = useState<Stage>('Identification');
 
   // Filters
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
