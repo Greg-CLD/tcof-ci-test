@@ -230,23 +230,26 @@ async function getAllCanonicalTasks(): Promise<any[]> {
  */
 async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
   try {
-    // Always ensure projectId is a string
-    const projectIdString = String(projectId);
+    // Always ensure projectId is a string and trimmed
+    const projectIdString = String(projectId).trim();
     
     console.log(`Checking if project ${projectIdString} needs task seeding...`);
     
-    // Get the project directly from Replit DB (more reliable for projectId lookup)
-    const projects = loadProjects();
-    const project = projects.find(p => String(p.id) === projectIdString);
+    // Get the project using our improved getProject function
+    const project = await projectsDb.getProject(projectIdString);
     
     if (!project) {
-      console.log(`Project with ID ${projectIdString} not found in projects list, can't seed tasks`);
+      console.log(`Project with ID ${projectIdString} not found, can't seed tasks`);
       return false;
     }
     
-    console.log(`Found project for seeding: ${project.name} (ID: ${project.id})`);
+    // Once we have a valid project, ALWAYS use the project.id from the object
+    // to ensure we're using the correct UUID string for database operations
+    const safeProjectId = String(project.id);
     
-    // Use a direct SQL query with explicit parameter binding
+    console.log(`Found project for seeding: ${project.name} (ID: ${safeProjectId})`);
+    
+    // Use a direct SQL query with explicit parameter binding and safe string ID
     try {
       // Check if project already has tasks
       const checkCountQuery = `
@@ -255,16 +258,16 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
       `;
       
       // Get existing task count
-      const countResult = await db.execute(checkCountQuery, [project.id]);
+      const countResult = await db.execute(checkCountQuery, [safeProjectId]);
       const taskCount = parseInt(countResult.rows[0]?.count || '0');
       
       if (taskCount > 0) {
-        console.log(`Project ${project.id} already has ${taskCount} tasks, skipping seed`);
+        console.log(`Project ${safeProjectId} already has ${taskCount} tasks, skipping seed`);
         return true;
       }
       
       // No tasks found, proceed with seeding
-      console.log(`No tasks found for project ${project.id}, starting seeding process`);
+      console.log(`No tasks found for project ${safeProjectId}, starting seeding process`);
       
       // Get canonical tasks from the database
       const canonicalTasks = await getAllCanonicalTasks();
@@ -302,10 +305,10 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
             )
           `;
           
-          // Prepare parameters with type assertions
+          // Prepare parameters with type assertions - use safeProjectId
           const params = [
             taskId,                // $1
-            project.id,            // $2
+            safeProjectId,         // $2 - Always use the safe string UUID
             taskText,              // $3
             taskStage,             // $4
             taskOrigin,            // $5
@@ -329,7 +332,7 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
         }
       }
       
-      console.log(`Successfully seeded ${successCount}/${canonicalTasks.length} tasks for project ${project.id}`);
+      console.log(`Successfully seeded ${successCount}/${canonicalTasks.length} tasks for project ${safeProjectId}`);
       return successCount > 0;
       
     } catch (sqlError) {
@@ -348,18 +351,18 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
 async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
   try {
     if (projectId) {
-      // Load all projects to find the one with this ID
-      const projects = loadProjects();
-      const project = projects.find(p => String(p.id) === String(projectId));
+      // Use the improved getProject function to get the project with safe ID handling
+      const project = await projectsDb.getProject(projectId);
       
       if (!project) {
-        console.log(`Project with ID ${projectId} not found`);
+        console.log(`Project with ID ${projectId} not found using reliable lookup`);
         return [];
       }
     
       // Get the project's string ID and ensure consistent type usage
-      const projectIdString = String(project.id);
-      console.log(`Using project ID: ${projectIdString} (string) to load tasks`);
+      // ALWAYS use the project.id from the object to ensure we have the correct UUID
+      const safeProjectId = String(project.id);
+      console.log(`Using confirmed project ID: ${safeProjectId} (UUID string) to load tasks`);
       
       // Use direct SQL query with prepared statement to avoid type issues
       const sql = `
@@ -368,21 +371,20 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
       `;
       
       try {
-        // Ensure projectIdString is valid to prevent parameter binding errors
-        const safeProjectId = projectIdString || '';
-        console.log(`Loading tasks with project ID: ${safeProjectId}`);
+        console.log(`Loading tasks with safe project ID: ${safeProjectId}`);
         const result = await db.execute(sql, [safeProjectId]);
         
         if (!result.rows || result.rows.length === 0) {
-          console.log(`No tasks found for project ${projectId}`);
+          console.log(`No tasks found for project ${safeProjectId}`);
           return [];
         }
         
-        console.log(`Loaded ${result.rows.length} tasks from database for project ${projectId}`);
+        console.log(`Loaded ${result.rows.length} tasks from database for project ${safeProjectId}`);
         
         return result.rows.map(task => ({
           id: String(task.id || ''),
-          projectId: String(task.project_id || ''),
+          // Always use the confirmed project.id from above to avoid type mismatches
+          projectId: safeProjectId,
           text: String(task.text || ''),
           stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
           origin: (String(task.origin || 'custom') as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
@@ -841,59 +843,50 @@ export const projectsDb = {
       // Load all projects
       const projects = loadProjects();
       
-      console.log(`Getting project with ID: ${projectId} (type: ${typeof projectId})`);
+      // Convert projectId to string consistently
+      const projectIdString = String(projectId).trim();
       
-      // Special case: If we have a numeric ID like "3", it may be a UI-assigned identifier
-      // rather than the actual UUID in the database. Check if this is the case.
+      console.log(`Getting project with ID: ${projectIdString} (original type: ${typeof projectId})`);
+      
+      // First try exact UUID match (most reliable)
+      const exactUuidMatch = projects.find(p => String(p.id) === projectIdString);
+      if (exactUuidMatch) {
+        console.log(`Found exact UUID match for project ID ${projectIdString}`);
+        return exactUuidMatch;
+      }
+      
+      // If numeric ID and it's a valid project UUID, use that project
       if (!isNaN(Number(projectId))) {
-        // This might be a numeric position/index identifier from the client
-        const numericId = Number(projectId);
+        console.log(`ProjectId ${projectIdString} appears to be numeric, searching for exact string match first`);
         
-        // Get all projects for current user
-        // For numeric ID "3", try looking at the 3rd project for the user or project at index 2
-        console.log(`Checking if ${projectId} is a positional ID or real UUID`);
-        
-        // Attempt 1: First check for an exact string match (in case the UUID happens to start with a number)
-        const exactMatch = projects.find(p => p.id === String(projectId) || p.id === projectId);
-        if (exactMatch) {
-          console.log(`Found exact match for ID ${projectId}:`, exactMatch);
-          return exactMatch;
+        // In many cases, the numeric ID is actually the correctly stored UUID
+        // Attempt 1: Direct string equality with projectId converted to string
+        const exactStringMatch = projects.find(p => p.id === projectIdString);
+        if (exactStringMatch) {
+          console.log(`Found exact string match for ID ${projectIdString}:`, exactStringMatch);
+          return exactStringMatch;
         }
         
-        // Attempt 2: Try to interpret as an array index for the user's projects
-        // (projectId "3" could refer to the 3rd project, which is at index 2)
-        const indexMatch = numericId > 0 && numericId <= projects.length ? 
-                            projects[numericId - 1] : 
-                            null;
-        if (indexMatch) {
-          console.log(`Found project at position ${numericId}:`, indexMatch);
-          return indexMatch;
-        }
-        
-        // Attempt 3: If we have fewer than 10 projects, try using the first one as a fallback
-        // This is a last resort to avoid breaking the UI experience
-        if (projects.length > 0 && numericId < 10) {
-          console.log(`Using first project as fallback for ID ${projectId}:`, projects[0]);
-          return projects[0];
+        // ONLY AS FALLBACK - If not found by exact ID, check for special case where numeric ID
+        // is a valid array index (making sure this is only for small numbers to prevent bugs)
+        if (Number(projectId) > 0 && Number(projectId) < 100) {
+          const numericId = Number(projectId);
+          console.log(`No exact match for numeric projectId ${projectIdString}, checking for positional reference...`);
+          
+          // Last resort: Try as an array index (only for low numbers that are likely to be positions)
+          if (numericId > 0 && numericId <= projects.length) {
+            const indexMatch = projects[numericId - 1];
+            console.log(`FALLBACK: Using project at position ${numericId}:`, indexMatch);
+            // Important: Log this as a fallback to help trace the source of projectId issues
+            console.log(`WARNING: Using positional fallback. This should be fixed in client code to use UUID.`);
+            return indexMatch;
+          }
         }
       }
       
-      // Standard UUID lookup: Convert numeric IDs to strings for comparison if needed
-      const searchId = typeof projectId === 'number' ? String(projectId) : projectId;
-      
-      // Find project by ID
-      const project = projects.find(p => {
-        console.log(`Comparing project ID: ${p.id} with searchId: ${searchId}`);
-        return p.id === searchId || p.id === projectId;
-      });
-      
-      if (!project) {
-        console.log(`Project with ID ${projectId} not found using UUID comparison`);
-      } else {
-        console.log(`Found project by UUID: `, project);
-      }
-      
-      return project || null;
+      // If we reach here, we didn't find the project
+      console.log(`Project with ID ${projectIdString} not found in ${projects.length} projects`);
+      return null;
     } catch (error) {
       console.error('Error getting project:', error);
       return null;
