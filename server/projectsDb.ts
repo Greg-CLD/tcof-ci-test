@@ -413,19 +413,20 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         RETURNING *
       `;
       
+      // Ensure each parameter is properly prepared and non-null
       const updateParams = [
-        task.text,
-        task.stage,
-        task.origin,
-        task.sourceId,
-        task.completed || false,
-        task.notes || '',
-        task.priority || '',
-        task.dueDate || '',
-        task.owner || '',
-        task.status || '',
-        new Date(),
-        task.id
+        task.text || '',                              // $1
+        task.stage || 'identification',               // $2
+        task.origin || 'custom',                      // $3
+        task.sourceId || '',                          // $4
+        task.completed === true,                      // $5 - convert to boolean
+        task.notes || '',                             // $6
+        task.priority || '',                          // $7
+        task.dueDate || '',                           // $8
+        task.owner || '',                             // $9
+        task.status || 'pending',                     // $10
+        new Date().toISOString(),                     // $11
+        task.id                                       // $12
       ];
       
       const updateResult = await db.execute(updateSql, updateParams);
@@ -476,22 +477,24 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         RETURNING *
       `;
       
-      const now = new Date();
+      const now = new Date().toISOString();
+      
+      // Ensure each parameter is properly prepared and non-null
       const insertParams = [
-        taskId,
-        projectIdString,
-        task.text,
-        task.stage,
-        task.origin,
-        task.sourceId,
-        task.completed || false,
-        task.notes || '',
-        task.priority || '',
-        task.dueDate || '',
-        task.owner || '',
-        task.status || '',
-        now,
-        now
+        taskId,                                       // $1
+        projectIdString,                              // $2
+        task.text || '',                              // $3
+        task.stage || 'identification',               // $4
+        task.origin || 'custom',                      // $5
+        task.sourceId || '',                          // $6
+        task.completed === true,                      // $7 - convert to boolean
+        task.notes || '',                             // $8
+        task.priority || '',                          // $9
+        task.dueDate || '',                           // $10
+        task.owner || '',                             // $11
+        task.status || 'pending',                     // $12
+        now,                                          // $13
+        now                                           // $14
       ];
       
       console.log('Inserting new task with params:', { 
@@ -512,7 +515,7 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         // Add all parameters for easier debugging
         console.log('SQL params:', JSON.stringify(insertParams.map((p, i) => ({ 
           index: i+1, 
-          value: p instanceof Date ? p.toISOString() : p 
+          value: typeof p === 'object' ? String(p) : p 
         }))));
         
         insertResult = await db.execute(insertSql, insertParams);
