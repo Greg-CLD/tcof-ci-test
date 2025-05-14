@@ -58,9 +58,19 @@ function comparePasswords(plainPassword: string, hashedPassword: string): boolea
 }
 
 export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  console.log('Authentication check:', {
+    hasReqUser: !!req.user,
+    isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+    sessionID: req.sessionID,
+    hasSession: !!req.session,
+    path: req.path
+  });
+  
   if (req.isAuthenticated()) {
     return next();
   }
+  
+  console.log('Authentication failed, redirecting to login');
   res.status(401).json({ message: "Authentication required" });
 }
 
