@@ -2,36 +2,51 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 
+import { ProjectTask as DBProjectTask } from '@shared/schema';
+
+// Local interface for client-side project tasks
 interface ProjectTask {
   id: string;
   projectId: string;
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
-  origin: 'heuristic' | 'factor' | 'policy';
+  origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceId: string;
   completed?: boolean;
-  assignedTo?: string;
+  notes?: string;
+  priority?: string;
   dueDate?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  owner?: string;
+  status?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface CreateTaskParams {
   projectId: string;
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
-  origin: 'heuristic' | 'factor' | 'policy';
+  origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceId: string;
-  assignedTo?: string;
+  completed?: boolean;
+  notes?: string;
+  priority?: string;
   dueDate?: string;
+  owner?: string;
+  status?: string;
 }
 
 interface UpdateTaskParams {
   text?: string;
   stage?: 'identification' | 'definition' | 'delivery' | 'closure';
+  origin?: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
+  sourceId?: string;
   completed?: boolean;
-  assignedTo?: string;
+  notes?: string;
+  priority?: string;
   dueDate?: string;
+  owner?: string;
+  status?: string;
 }
 
 export function useProjectTasks(projectId?: string) {

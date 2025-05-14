@@ -801,23 +801,20 @@ export const projectsDb = {
    */
   deleteProjectTask: async (taskId: string): Promise<boolean> => {
     try {
-      // Load all tasks
-      const tasks = loadProjectTasks();
+      // Delete the task directly from the database
+      const result = await db
+        .delete(projectTasksTable)
+        .where(eq(projectTasksTable.id, taskId))
+        .returning({ id: projectTasksTable.id });
       
-      // Filter out the task to delete
-      const updatedTasks = tasks.filter(t => t.id !== taskId);
-      
-      if (updatedTasks.length === tasks.length) {
-        // No task was removed
-        console.log(`No task found with ID ${taskId} to delete`);
-        return false;
+      const success = result.length > 0;
+      if (success) {
+        console.log(`Task ${taskId} successfully deleted from database`);
+      } else {
+        console.log(`No task found with ID ${taskId} to delete from database`);
       }
       
-      // Save updated tasks list
-      console.log(`Removing task ${taskId}, tasks count: ${tasks.length} -> ${updatedTasks.length}`);
-      const result = saveProjectTasks(updatedTasks);
-      console.log(`Task deletion result: ${result}`);
-      return result;
+      return success;
     } catch (error) {
       console.error('Error deleting project task:', error);
       return false;
