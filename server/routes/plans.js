@@ -15,7 +15,7 @@ function isAuthenticated(req, res, next) {
 }
 
 // GET a plan by project ID
-router.get('/api/plans/project/:projectId', isAuthenticated, async (req, res) => {
+router.get('/project/:projectId', isAuthenticated, async (req, res) => {
   try {
     const projectId = parseInt(req.params.projectId);
     if (isNaN(projectId)) {
@@ -63,7 +63,7 @@ router.get('/api/plans/project/:projectId', isAuthenticated, async (req, res) =>
 });
 
 // POST to create or update a plan
-router.post('/api/plans', isAuthenticated, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
     const { projectId, blocks, name } = req.body;
     
@@ -114,7 +114,7 @@ router.post('/api/plans', isAuthenticated, async (req, res) => {
 });
 
 // PATCH to update a specific block of a plan
-router.patch('/api/plans/:planId/block/:blockId', isAuthenticated, async (req, res) => {
+router.patch('/:planId/block/:blockId', isAuthenticated, async (req, res) => {
   try {
     const { planId, blockId } = req.params;
     const blockData = req.body;

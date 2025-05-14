@@ -230,7 +230,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register plans routes
   try {
-    app.use('/', plansRouter);
+    // Mount plans router at its proper API path, not at root
+    app.use('/api/plans', plansRouter);
 
     // Register the improved plans API endpoints
     const plansApiRouter = await import('./routes/api/plans/index.js');

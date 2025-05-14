@@ -1,5 +1,11 @@
 // Re-export with specific naming to avoid conflicts
-import { FeedbackProvider, useFeedback, FeedbackType, FeedbackContextType, FeedbackItem as FeedbackItemType } from './feedback-context';
+import { 
+  FeedbackProvider, 
+  useFeedback, 
+  FeedbackType,
+  FeedbackItem as FeedbackItemType,
+  FeedbackContextType
+} from './feedback-context';
 import { FeedbackItem as FeedbackItemComponent } from './feedback-item';
 import { FeedbackContainer } from './feedback-container';
 import { FeedbackButton } from './feedback-button';
