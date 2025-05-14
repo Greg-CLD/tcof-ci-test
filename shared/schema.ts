@@ -171,6 +171,29 @@ export const outcomeProgress = pgTable("outcome_progress", {
   };
 });
 
+// Project tasks table - stores all tasks for a project
+export const projectTasks = pgTable("project_tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  stage: varchar("stage", { length: 50 }).notNull(), // 'identification', 'definition', 'delivery', 'closure'
+  origin: varchar("origin", { length: 50 }).notNull(), // 'heuristic', 'factor', 'policy', 'custom', 'framework'
+  sourceId: varchar("source_id", { length: 255 }).notNull(),
+  completed: boolean("completed").default(false),
+  notes: text("notes"),
+  priority: varchar("priority", { length: 50 }),
+  dueDate: varchar("due_date", { length: 50 }),
+  owner: varchar("owner", { length: 255 }),
+  status: varchar("status", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    projectIdIdx: index("project_tasks_project_id_idx").on(table.projectId),
+    stageIdx: index("project_tasks_stage_idx").on(table.stage),
+  };
+});
+
 // Plan metadata (serialized as JSON in DB, but with schema for validation)
 export const plans = pgTable("plans", {
   id: uuid("id").primaryKey().defaultRandom(),
