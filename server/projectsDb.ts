@@ -37,9 +37,14 @@ export interface ProjectTask {
   projectId: string;
   text: string;
   stage: 'identification' | 'definition' | 'delivery' | 'closure';
-  origin: 'heuristic' | 'factor' | 'policy';
+  origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceId: string;
   completed?: boolean;
+  notes?: string;
+  priority?: string;
+  dueDate?: string;
+  owner?: string;
+  status?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -555,9 +560,14 @@ export const projectsDb = {
       projectId: string;
       text: string;
       stage: 'identification' | 'definition' | 'delivery' | 'closure';
-      origin: 'heuristic' | 'factor' | 'policy';
+      origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
       sourceId: string;
       completed?: boolean;
+      notes?: string;
+      priority?: string;
+      dueDate?: string;
+      owner?: string;
+      status?: string;
       createdAt?: string;
       updatedAt?: string;
     }
@@ -572,6 +582,11 @@ export const projectsDb = {
         origin: taskData.origin,
         sourceId: taskData.sourceId,
         completed: taskData.completed || false,
+        notes: taskData.notes,
+        priority: taskData.priority,
+        dueDate: taskData.dueDate,
+        owner: taskData.owner,
+        status: taskData.status,
         createdAt: taskData.createdAt || new Date().toISOString(),
         updatedAt: taskData.updatedAt || new Date().toISOString(),
       };
@@ -609,6 +624,12 @@ export const projectsDb = {
       text?: string;
       stage?: 'identification' | 'definition' | 'delivery' | 'closure';
       completed?: boolean;
+      notes?: string;
+      priority?: string;
+      dueDate?: string;
+      owner?: string;
+      sourceId?: string;
+      status?: string;
     }
   ): Promise<ProjectTask | null> => {
     try {

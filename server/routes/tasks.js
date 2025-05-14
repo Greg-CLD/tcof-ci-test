@@ -126,8 +126,8 @@ router.post("/:projectId/tasks", isAuthenticated, async (req, res) => {
         return res.status(400).json({ message: "Valid stage is required (identification, definition, delivery, closure)" });
       }
       
-      if (!origin || !['heuristic', 'factor', 'policy'].includes(origin)) {
-        return res.status(400).json({ message: "Valid origin is required (heuristic, factor, policy)" });
+      if (!origin || !['heuristic', 'factor', 'policy', 'custom', 'framework'].includes(origin)) {
+        return res.status(400).json({ message: "Valid origin is required (heuristic, factor, policy, custom, framework)" });
       }
       
       if (!sourceId) {
@@ -178,7 +178,17 @@ router.put("/:projectId/tasks/:taskId", isAuthenticated, async (req, res) => {
   try {
     const { projectId, taskId } = req.params;
     const userId = req.user.id;
-    const { text, stage, completed } = req.body;
+    const { 
+      text, 
+      stage, 
+      completed, 
+      notes,
+      priority,
+      dueDate,
+      owner,
+      status,
+      sourceId 
+    } = req.body;
     
     // Check if project exists and user has access
     const project = await projectsDb.getProject(projectId);
@@ -207,6 +217,12 @@ router.put("/:projectId/tasks/:taskId", isAuthenticated, async (req, res) => {
     if (text !== undefined) updateData.text = text;
     if (stage !== undefined) updateData.stage = stage;
     if (completed !== undefined) updateData.completed = completed;
+    if (notes !== undefined) updateData.notes = notes;
+    if (priority !== undefined) updateData.priority = priority;
+    if (dueDate !== undefined) updateData.dueDate = dueDate;
+    if (owner !== undefined) updateData.owner = owner;
+    if (status !== undefined) updateData.status = status;
+    if (sourceId !== undefined) updateData.sourceId = sourceId;
     
     // Update the task
     const updatedTask = await projectsDb.updateProjectTask(taskId, updateData);
