@@ -693,14 +693,12 @@ export const projectsDb = {
       dueDate?: string;
       owner?: string;
       status?: string;
-      createdAt?: string;
-      updatedAt?: string;
     }
   ): Promise<ProjectTask | null> => {
     try {
-      // Create new task object
+      // Create task directly in database
       const task: ProjectTask = {
-        id: uuidv4(),
+        id: uuidv4(), // Will be replaced with DB-generated ID
         projectId: taskData.projectId,
         text: taskData.text,
         stage: taskData.stage,
@@ -712,22 +710,16 @@ export const projectsDb = {
         dueDate: taskData.dueDate,
         owner: taskData.owner,
         status: taskData.status,
-        createdAt: taskData.createdAt || new Date().toISOString(),
-        updatedAt: taskData.updatedAt || new Date().toISOString(),
+        createdAt: new Date().toISOString(), // Will be set by database
+        updatedAt: new Date().toISOString(), // Will be set by database
       };
       
-      // Load existing tasks
-      const tasks = loadProjectTasks();
+      // Save to database
+      const savedTask = await saveProjectTask(task);
       
-      // Add new task
-      tasks.push(task);
-      
-      // Save updated tasks list
-      const saved = saveProjectTasks(tasks);
-      
-      if (saved) {
-        console.log(`Task saved → ${task.id}`);
-        return task;
+      if (savedTask) {
+        console.log(`Task saved to database → ${savedTask.id}`);
+        return savedTask;
       }
       
       return null;
@@ -758,28 +750,41 @@ export const projectsDb = {
     }
   ): Promise<ProjectTask | null> => {
     try {
-      // Load all tasks
-      const tasks = loadProjectTasks();
+      // First, get the task to ensure it exists
+      const [existingTask] = await db
+        .select()
+        .from(projectTasksTable)
+        .where(eq(projectTasksTable.id, taskId));
       
-      // Find task index
-      const index = tasks.findIndex(t => t.id === taskId);
-      
-      if (index === -1) {
+      if (!existingTask) {
+        console.log(`No task found with ID ${taskId} to update`);
         return null;
       }
       
-      // Update task
-      tasks[index] = {
-        ...tasks[index],
-        ...data,
+      // Prepare task with updated data
+      const task: ProjectTask = {
+        id: taskId,
+        projectId: existingTask.projectId.toString(),
+        text: data.text || existingTask.text,
+        stage: (data.stage || existingTask.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
+        origin: existingTask.origin as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
+        sourceId: data.sourceId || existingTask.sourceId,
+        completed: data.completed !== undefined ? data.completed : existingTask.completed,
+        notes: data.notes !== undefined ? data.notes : existingTask.notes,
+        priority: data.priority !== undefined ? data.priority : existingTask.priority,
+        dueDate: data.dueDate !== undefined ? data.dueDate : existingTask.dueDate,
+        owner: data.owner !== undefined ? data.owner : existingTask.owner,
+        status: data.status !== undefined ? data.status : existingTask.status,
+        createdAt: existingTask.createdAt.toISOString(),
         updatedAt: new Date().toISOString()
       };
       
-      // Save updated tasks list
-      const saved = saveProjectTasks(tasks);
+      // Update task in database
+      const updatedTask = await saveProjectTask(task);
       
-      if (saved) {
-        return tasks[index];
+      if (updatedTask) {
+        console.log(`Task updated in database → ${updatedTask.id}`);
+        return updatedTask;
       }
       
       return null;
