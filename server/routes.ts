@@ -358,6 +358,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId,
         ...taskData
       });
+      
+      console.log('Task creation completed. Result:', result ? 'success' : 'null', 
+                 'ID:', result?.id, 'Type:', typeof result);
+      
+      if (!result) {
+        return res.status(500).json({
+          message: 'Task created but returned no data',
+          success: false
+        });
+      }
+      
+      // Return the created task with all its properties
       res.status(201).json(result);
     } catch (error) {
       console.error('Error creating project tasks:', error);

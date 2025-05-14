@@ -436,14 +436,17 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
       const updatedTask = updateResult.rows[0];
       console.log(`Updated task ${updatedTask.id} in database`);
       
-      // Convert to ProjectTask interface with proper string type handling
-      return {
+      // Log the raw row data for debugging
+      console.log('Updated task row data:', JSON.stringify(updatedTask));
+      
+      // Convert to ProjectTask with careful null handling
+      const taskResult = {
         id: String(updatedTask.id),
         projectId: String(updatedTask.project_id || projectIdString),
         text: String(updatedTask.text),
         stage: String(updatedTask.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
         origin: String(updatedTask.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
-        sourceId: String(updatedTask.source_id),
+        sourceId: String(updatedTask.source_id || ''),
         completed: Boolean(updatedTask.completed),
         notes: updatedTask.notes ? String(updatedTask.notes) : '',
         priority: updatedTask.priority ? String(updatedTask.priority) : '',
@@ -453,6 +456,9 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         createdAt: updatedTask.created_at ? new Date(String(updatedTask.created_at)).toISOString() : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+      
+      console.log('Returning updated task result:', JSON.stringify(taskResult));
+      return taskResult;
     } else {
       // Create a new task with a new UUID if not provided
       const taskId = task.id === 'new' ? uuidv4() : (task.id || uuidv4());
@@ -511,18 +517,24 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         insertResult = await db.execute(insertSql, insertParams);
         
         if (!insertResult || !insertResult.rows || insertResult.rows.length === 0) {
-          throw new Error('Failed to create new task');
+          console.error('DB insert returned no rows', insertResult);
+          throw new Error('Failed to create new task - no rows returned');
         }
         
         const newTask = insertResult.rows[0];
         console.log(`Created new task ${newTask.id} in database`);
-        return {
+        
+        // Log the raw row data for debugging
+        console.log('Task row data:', JSON.stringify(newTask));
+        
+        // Convert to ProjectTask with careful null handling
+        const taskResult = {
           id: String(newTask.id),
           projectId: String(newTask.project_id || projectIdString),
           text: String(newTask.text),
           stage: String(newTask.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
           origin: String(newTask.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
-          sourceId: String(newTask.source_id),
+          sourceId: String(newTask.source_id || ''),
           completed: Boolean(newTask.completed),
           notes: newTask.notes ? String(newTask.notes) : '',
           priority: newTask.priority ? String(newTask.priority) : '',
@@ -532,6 +544,9 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
           createdAt: newTask.created_at ? new Date(String(newTask.created_at)).toISOString() : new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
+        
+        console.log('Returning task result:', JSON.stringify(taskResult));
+        return taskResult;
       } catch (sqlError) {
         console.error('SQL error executing insert:', sqlError);
         throw sqlError;
