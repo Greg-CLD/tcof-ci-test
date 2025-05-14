@@ -4,6 +4,8 @@ import SiteFooter from "@/components/SiteFooter";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import ProjectBanner from "@/components/ProjectBanner";
 import { Toaster } from "@/components/ui/toaster";
+import { QuickAuthDebug } from "@/components/QuickAuthDebug";
+import { TaskPersistenceTest } from "@/components/TaskPersistenceTest";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -25,6 +27,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </div>
       <SiteFooter />
       <Toaster />
+      <QuickAuthDebug />
+      <TaskPersistenceTest />
     </div>
   );
 };
