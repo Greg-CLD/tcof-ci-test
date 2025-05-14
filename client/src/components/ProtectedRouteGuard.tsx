@@ -31,20 +31,22 @@ export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
 
   const selectedProject = getSelectedProject();
 
-  // If no project is selected, try to get it from URL params
+  // If no project is selected, try to restore from storage or URL params
   if (!selectedProject) {
-    if (projectId) {
-      console.log(`ProtectedRouteGuard: found projectId in URL: ${projectId}, setting it.`);
+    const storedProjectId = localStorage.getItem('currentProjectId');
+    const finalProjectId = projectId || storedProjectId;
+    
+    if (finalProjectId) {
+      console.log(`ProtectedRouteGuard: using projectId: ${finalProjectId}`);
       
-      // Always store project ID in localStorage using consistent key
-      localStorage.setItem('currentProjectId', projectId);
-      // Keep old key for backward compatibility
-      localStorage.setItem('selectedProjectId', projectId);
+      // Ensure consistent storage
+      localStorage.setItem('currentProjectId', finalProjectId);
+      localStorage.setItem('selectedProjectId', finalProjectId);
       
-      // Update the project selection in our hook
-      setSelectedProjectId(projectId);
+      // Update context
+      setSelectedProjectId(finalProjectId);
       
-      // Allow access since projectId was found
+      // Allow access since we have a valid project ID
       return <>{children}</>;
     }
     

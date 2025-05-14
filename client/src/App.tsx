@@ -230,13 +230,16 @@ function Router() {
     return null; // Critical: DO NOT render during navigation
   }
 
-  // Don't allow users to directly access tool pages without selecting a project
-  if (isAuthenticated && location === '/make-a-plan' && !localStorage.getItem('selectedProjectId')) {
-    console.log("Missing projectId, redirecting to /organisations");
-    if (!hasRedirectedRef.current) {
-      hasRedirectedRef.current = true;
-      navigate('/organisations');
-      return null; // Critical: DO NOT render during navigation
+  // Check both storage keys and URL params before redirecting
+  if (isAuthenticated && location === '/make-a-plan') {
+    const projectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
+    if (!projectId && !location.includes('/projects/')) {
+      console.log("No project context found, redirecting to /organisations");
+      if (!hasRedirectedRef.current) {
+        hasRedirectedRef.current = true;
+        navigate('/organisations');
+        return null;
+      }
     }
   }
 
