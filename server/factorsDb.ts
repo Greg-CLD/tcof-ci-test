@@ -5,13 +5,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function getFactors(): Promise<FactorTask[]> {
   try {
-    console.log("Getting all factors from database...");
+    console.log("Getting all factors from database using v_success_factors_full view...");
     const result = await db.execute(sql`
-      SELECT f.id, f.title, f.description,
-             ft.stage, ft.text
-      FROM success_factors f
-      LEFT JOIN success_factor_tasks ft ON f.id = ft.factor_id
-      ORDER BY f.id, ft.stage
+      SELECT id, title, description, tasks
+      FROM v_success_factors_full
+      ORDER BY id
     `);
 
     if (!result.rows || result.rows.length === 0) {
@@ -19,44 +17,23 @@ export async function getFactors(): Promise<FactorTask[]> {
       return [];
     }
 
-    console.log(`Found ${result.rows.length} factor-task rows in the database`);
+    console.log(`Found ${result.rows.length} factors in the database`);
     
     // Log first row as example
     if (result.rows.length > 0) {
-      console.log("Sample row:", JSON.stringify(result.rows[0], null, 2));
+      console.log("Sample factor:", JSON.stringify(result.rows[0], null, 2));
     }
 
-    // Group tasks by factor and stage
-    const factorMap = new Map<string, FactorTask>();
-
-    result.rows.forEach((row: any) => {
-      if (!factorMap.has(row.id)) {
-        console.log(`Creating new factor entry for factor ID: ${row.id}`);
-        factorMap.set(row.id, {
-          id: row.id,
-          title: row.title,
-          description: row.description || '',
-          tasks: {
-            Identification: [],
-            Definition: [],
-            Delivery: [],
-            Closure: []
-          }
-        });
-      }
-
-      const factor = factorMap.get(row.id)!;
-      if (row.stage && row.text) {
-        console.log(`Adding task "${row.text}" to stage "${row.stage}" for factor ${row.id}`);
-        factor.tasks[row.stage as keyof typeof factor.tasks].push(row.text);
-      } else if (row.stage) {
-        console.log(`WARNING: Missing text for task in stage "${row.stage}" for factor ${row.id}`);
-      } else if (row.text) {
-        console.log(`WARNING: Missing stage for task text "${row.text}" for factor ${row.id}`);
-      }
+    // Map directly to FactorTask objects
+    const factors = result.rows.map((row: any) => {
+      return {
+        id: row.id,
+        title: row.title,
+        description: row.description || '',
+        tasks: row.tasks
+      };
     });
-
-    const factors = Array.from(factorMap.values());
+    
     console.log(`Returning ${factors.length} factors with tasks`);
     
     // Debug log the first factor and its tasks
@@ -73,37 +50,33 @@ export async function getFactors(): Promise<FactorTask[]> {
 
 export async function getFactor(id: string): Promise<FactorTask | null> {
   try {
+    console.log(`Getting factor ${id} from database using v_success_factors_full view...`);
     const result = await db.execute(sql`
-      SELECT f.id, f.title, f.description,
-             ft.stage, ft.text
-      FROM success_factors f
-      LEFT JOIN success_factor_tasks ft ON f.id = ft.factor_id
-      WHERE f.id = ${id}
-      ORDER BY ft.stage
+      SELECT id, title, description, tasks
+      FROM v_success_factors_full
+      WHERE id = ${id}
     `);
 
     if (!result.rows || result.rows.length === 0) {
+      console.log(`No factor found with ID ${id}`);
       return null;
     }
 
+    // Map directly to FactorTask object
+    const row = result.rows[0];
     const factor: FactorTask = {
-      id: String(result.rows[0].id),
-      title: String(result.rows[0].title),
-      description: result.rows[0].description ? String(result.rows[0].description) : '',
-      tasks: {
-        Identification: [],
-        Definition: [],
-        Delivery: [],
-        Closure: []
+      id: String(row.id),
+      title: String(row.title),
+      description: row.description ? String(row.description) : '',
+      tasks: row.tasks as {
+        Identification: string[];
+        Definition: string[];
+        Delivery: string[];
+        Closure: string[];
       }
     };
 
-    result.rows.forEach((row: any) => {
-      if (row.stage && row.text) {
-        factor.tasks[row.stage as keyof typeof factor.tasks].push(row.text);
-      }
-    });
-
+    console.log(`Returning factor ${id} with tasks:`, JSON.stringify(factor.tasks, null, 2));
     return factor;
   } catch (error) {
     console.error(`Error loading factor ${id} from database:`, error);
