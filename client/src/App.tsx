@@ -676,6 +676,11 @@ function Router() {
         )}
       </Route>
 
+      {/* Test routes */}
+      <Route path="/test-factors">
+        <SuccessFactorsTest />
+      </Route>
+
       <Route component={NotFound} />
     </Switch>
   );
