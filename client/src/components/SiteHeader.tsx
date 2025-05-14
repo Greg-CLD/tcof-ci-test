@@ -201,7 +201,7 @@ export default function SiteHeader() {
               )}
               
               {/* Admin link (mobile) */}
-              {user && (user.username.toLowerCase() === 'greg@confluity.co.uk' || user.email?.toLowerCase() === 'greg@confluity.co.uk' || user.username.toLowerCase() === 'greg') && (
+              {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
                 <Link 
                   href="/make-a-plan/admin"
                   onClick={handleNavigation}
@@ -269,7 +269,7 @@ export default function SiteHeader() {
                       <History className="h-5 w-5 mr-2" /> View History
                     </Link>
                     
-                    {user && (user.username.toLowerCase() === 'greg@confluity.co.uk' || user.email?.toLowerCase() === 'greg@confluity.co.uk' || user.username.toLowerCase() === 'greg') && (
+                    {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
                       <>
                         <Link 
                           href="/make-a-plan/admin/factors"
