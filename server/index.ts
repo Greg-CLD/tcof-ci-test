@@ -8,8 +8,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add health check endpoint
-app.get('/', (_req, res) => {
+// Move health check to /health endpoint
+app.get('/health', (_req, res) => {
   res.status(200).send('OK');
 });
 
