@@ -16,10 +16,10 @@ export interface FactorTask {
   title: string;
   description: string;
   tasks: {
-    Identification: string[];
-    Definition: string[];
-    Delivery: string[];
-    Closure: string[];
+    Identification: (string | null)[];
+    Definition: (string | null)[];
+    Delivery: (string | null)[];
+    Closure: (string | null)[];
   };
 }
 
@@ -108,14 +108,37 @@ export default function AdminStageTabs({
         console.log(`[ADMIN_TABS] Rendering stage ${stage}. Active tab: ${activeTab}`);
         console.log(`[ADMIN_TABS] Tasks for ${stage}:`, factor.tasks[stage as keyof typeof factor.tasks]);
         
-        // Get tasks array safely and ensure it only contains valid strings (no nulls)
+        // Get tasks array safely and handle data format inconsistencies
+        // Extremely aggressive filtering to ensure we only have valid string tasks (no nulls)
         const stageTasks = factor.tasks[stage as keyof typeof factor.tasks];
-        const stageTasksArray = Array.isArray(stageTasks) 
-          ? stageTasks.filter(task => task !== null && typeof task === 'string')
-          : [];
+        let stageTasksArray: string[] = [];
         
-        console.log(`[ADMIN_TABS] ${stage} tasks:`, stageTasksArray);
-        const hasTasks = stageTasksArray.length > 0;
+        try {
+          if (Array.isArray(stageTasks)) {
+            // Log all the raw stage tasks for debugging 
+            console.log(`[ADMIN_TABS] Raw ${stage} tasks:`, stageTasks);
+            console.log(`[ADMIN_TABS] Raw ${stage} tasks types:`, 
+              stageTasks.map(t => `${t === null ? 'null' : typeof t}`).join(', '));
+            
+            // Filter out all non-string values (nulls, undefined, objects, etc)
+            stageTasksArray = stageTasks
+              .filter(task => task !== null && 
+                             task !== undefined && 
+                             typeof task === 'string')
+              .map(task => (typeof task === 'string') ? task.trim() : '')
+              .filter(task => task !== '');
+            
+            console.log(`[ADMIN_TABS] ${stage} tasks after filtering:`, stageTasksArray);
+          } else if (stageTasks === null || stageTasks === undefined) {
+            console.log(`[ADMIN_TABS] ${stage} tasks is null or undefined`);
+          } else {
+            console.log(`[ADMIN_TABS] ${stage} tasks has unexpected type:`, typeof stageTasks);
+          }
+        } catch (err) {
+          console.error(`[ADMIN_TABS] Error processing ${stage} tasks:`, err);
+        }
+        
+        const hasTasks = Array.isArray(stageTasksArray) && stageTasksArray.length > 0;
         
         return (
           <TabsContent key={stage} value={stage}>

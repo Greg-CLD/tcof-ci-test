@@ -2611,108 +2611,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Admin API: Getting all success factors using the same query as individual endpoint...');
+      console.log('Admin API: Getting all success factors directly from tasks table...');
       
-      // Get all factor IDs first
-      const factorIdsQuery = `SELECT id FROM success_factors ORDER BY title`;
-      const factorIdsResult = await db.execute(factorIdsQuery);
-      const factorIds = factorIdsResult.rows.map((row: any) => row.id);
-      
-      console.log(`Found ${factorIds.length} factor IDs to process`);
-      
-      // Process each factor using the exact same query as the single factor endpoint
-      const allFactors = [];
-      
-      for (const factorId of factorIds) {
-        // Use the exact same query that works for individual factors
-        const query = `
+      // This is a completely new approach - instead of getting factors and then tasks,
+      // we'll get all tasks first and then group them by factor and stage
+      const query = `
+        WITH factors AS (
+          SELECT id, title, description FROM success_factors ORDER BY title
+        ),
+        tasks AS (
           SELECT 
-            sf.id, 
-            sf.title, 
-            sf.description,
-            jsonb_build_object(
-              'Identification', COALESCE((
-                SELECT jsonb_agg(t.text ORDER BY t."order")
-                FROM success_factor_tasks t
-                WHERE t.factor_id = sf.id AND t.stage = 'Identification' AND t.text IS NOT NULL AND t.text <> ''
-              ), '[]'::jsonb),
-              'Definition', COALESCE((
-                SELECT jsonb_agg(t.text ORDER BY t."order")
-                FROM success_factor_tasks t
-                WHERE t.factor_id = sf.id AND t.stage = 'Definition' AND t.text IS NOT NULL AND t.text <> ''
-              ), '[]'::jsonb),
-              'Delivery', COALESCE((
-                SELECT jsonb_agg(t.text ORDER BY t."order")
-                FROM success_factor_tasks t
-                WHERE t.factor_id = sf.id AND t.stage = 'Delivery' AND t.text IS NOT NULL AND t.text <> ''
-              ), '[]'::jsonb),
-              'Closure', COALESCE((
-                SELECT jsonb_agg(t.text ORDER BY t."order")
-                FROM success_factor_tasks t
-                WHERE t.factor_id = sf.id AND t.stage = 'Closure' AND t.text IS NOT NULL AND t.text <> ''
-              ), '[]'::jsonb)
-            ) as tasks
+            factor_id, 
+            stage, 
+            text, 
+            "order"
           FROM 
-            success_factors sf
+            success_factor_tasks
           WHERE 
-            sf.id = $1
-        `;
-        
-        const result = await db.execute(query, [factorId]);
-        
-        if (result.rows.length > 0) {
-          const row = result.rows[0];
-          
-          // Parse tasks JSON if needed
-          let tasksData;
-          try {
-            tasksData = typeof row.tasks === 'string' ? JSON.parse(row.tasks) : row.tasks;
-          } catch (err) {
-            console.error(`Error parsing tasks for factor ${factorId}:`, err);
-            tasksData = {
-              Identification: [],
-              Definition: [],
-              Delivery: [],
-              Closure: []
-            };
-          }
-          
-          // Create factor with consistent structure
-          const factor = {
+            text IS NOT NULL AND text <> ''
+          ORDER BY 
+            factor_id, stage, "order"
+        )
+        SELECT 
+          f.id,
+          f.title,
+          f.description,
+          t.factor_id,
+          t.stage,
+          t.text
+        FROM 
+          factors f
+        LEFT JOIN
+          tasks t ON f.id = t.factor_id
+        ORDER BY
+          f.title, t.stage, t."order"
+      `;
+      
+      const result = await db.execute(query);
+      console.log(`Raw query returned ${result.rows.length} rows`);
+      
+      // Now we need to transform this flat structure into our hierarchical structure
+      const factorMap = new Map();
+      
+      // First build the base factor objects
+      for (const row of result.rows) {
+        if (!factorMap.has(row.id)) {
+          factorMap.set(row.id, {
             id: String(row.id),
             title: String(row.title),
             description: row.description ? String(row.description) : '',
             category: "Uncategorized",
             tasks: {
-              Identification: Array.isArray(tasksData.Identification) ? tasksData.Identification : [],
-              Definition: Array.isArray(tasksData.Definition) ? tasksData.Definition : [],
-              Delivery: Array.isArray(tasksData.Delivery) ? tasksData.Delivery : [],
-              Closure: Array.isArray(tasksData.Closure) ? tasksData.Closure : []
+              Identification: [],
+              Definition: [],
+              Delivery: [],
+              Closure: []
             }
-          };
-          
-          // Log the first factor for debugging
-          if (factorId === factorIds[0]) {
-            console.log("First factor data:", JSON.stringify({
-              id: factor.id,
-              title: factor.title,
-              taskCounts: {
-                Identification: factor.tasks.Identification.length,
-                Definition: factor.tasks.Definition.length,
-                Delivery: factor.tasks.Delivery.length,
-                Closure: factor.tasks.Closure.length
-              },
-              sampleTasks: {
-                Identification: factor.tasks.Identification.slice(0, 1),
-                Definition: factor.tasks.Definition.slice(0, 1),
-                Delivery: factor.tasks.Delivery.slice(0, 1),
-                Closure: factor.tasks.Closure.slice(0, 1)
-              }
-            }, null, 2));
-          }
-          
-          allFactors.push(factor);
+          });
         }
+      }
+      
+      // Now add the tasks to the factors
+      for (const row of result.rows) {
+        if (row.text && row.stage) {
+          const factor = factorMap.get(row.id);
+          if (factor && factor.tasks[row.stage]) {
+            factor.tasks[row.stage].push(row.text);
+          }
+        }
+      }
+      
+      // Convert the map to an array
+      const allFactors = Array.from(factorMap.values());
+      
+      // Log the first factor for debugging
+      if (allFactors.length > 0) {
+        console.log("First factor data:", JSON.stringify({
+          id: allFactors[0].id,
+          title: allFactors[0].title,
+          taskCounts: {
+            Identification: allFactors[0].tasks.Identification.length,
+            Definition: allFactors[0].tasks.Definition.length,
+            Delivery: allFactors[0].tasks.Delivery.length,
+            Closure: allFactors[0].tasks.Closure.length
+          },
+          sampleTasks: {
+            Identification: allFactors[0].tasks.Identification.slice(0, 1),
+            Definition: allFactors[0].tasks.Definition.slice(0, 1),
+            Delivery: allFactors[0].tasks.Delivery.slice(0, 1),
+            Closure: allFactors[0].tasks.Closure.slice(0, 1)
+          }
+        }, null, 2));
       }
       
       console.log(`Returning ${allFactors.length} factors with tasks`);
