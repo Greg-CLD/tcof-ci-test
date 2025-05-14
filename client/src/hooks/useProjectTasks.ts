@@ -59,8 +59,13 @@ export function useProjectTasks(projectId?: string) {
     error,
     refetch
   } = useQuery<ProjectTask[]>({
-    queryKey: ['/api/projects', projectId, 'tasks'],
+    queryKey: ['api', 'projects', projectId, 'tasks'],
     enabled: !!projectId,
+    // Enhanced error handling and retries
+    retry: 2,
+    staleTime: 10 * 1000, // 10 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true,
   });
   
   // Log initial data when it changes
@@ -79,7 +84,8 @@ export function useProjectTasks(projectId?: string) {
       return resJson;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'tasks'] });
+      // Use consistent query key format for invalidation
+      await queryClient.invalidateQueries({ queryKey: ['api', 'projects', projectId, 'tasks'] });
       // Manually refetch to get fresh data
       const freshData = await refetch();
       console.log('Refetched list after create:', freshData.data);
@@ -99,7 +105,8 @@ export function useProjectTasks(projectId?: string) {
       return resJson;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'tasks'] });
+      // Use consistent query key format for invalidation
+      await queryClient.invalidateQueries({ queryKey: ['api', 'projects', projectId, 'tasks'] });
       // Manually refetch to get fresh data
       const freshData = await refetch();
       console.log('Refetched list after update:', freshData.data);
@@ -116,8 +123,12 @@ export function useProjectTasks(projectId?: string) {
       const res = await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${taskId}`);
       return await res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/projects', projectId, 'tasks'] });
+    onSuccess: async () => {
+      // Use consistent query key format for invalidation
+      await queryClient.invalidateQueries({ queryKey: ['api', 'projects', projectId, 'tasks'] });
+      // Manually refetch to get fresh data
+      const freshData = await refetch();
+      console.log('Refetched list after delete:', freshData.data);
     },
     onError: (error) => {
       console.error('Error deleting task:', error);
