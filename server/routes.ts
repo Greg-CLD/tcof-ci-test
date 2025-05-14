@@ -2612,47 +2612,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Success Factor Editor API endpoints
   app.get('/api/admin/success-factors', isAdmin, async (req: Request, res: Response) => {
     try {
-      console.log('Admin API: Getting all success factors from database view...');
-      const factors = await factorsDb.getFactors();
+      console.log('Admin API: Getting all success factors individually...');
       
-      console.log(`Admin API: Retrieved ${factors.length} factors with tasks`);
+      // Get the IDs of all factors first
+      const result = await db.execute(sql`
+        SELECT id 
+        FROM success_factors 
+        ORDER BY id
+      `);
       
-      if (factors.length > 0) {
-        // Deep log of the first factor for debugging
-        console.log('Admin API: ACTUAL DATA STRUCTURE OF FIRST FACTOR:', JSON.stringify(factors[0], null, 2));
-        
-        // Check if we need to override task arrays
-        factors.forEach(factor => {
-          // Ensure tasks property is present
-          if (!factor.tasks) {
-            console.log(`Admin API: Creating empty tasks object for factor ${factor.id}`);
-            factor.tasks = {
-              Identification: [],
-              Definition: [],
-              Delivery: [],
-              Closure: []
-            };
-          }
-          
-          // Check if any stage has a null array and replace it with empty array
-          const stages = ['Identification', 'Definition', 'Delivery', 'Closure'] as const;
-          stages.forEach(stage => {
-            // Type-safe access
-            if (!Array.isArray(factor.tasks[stage])) {
-              console.log(`Admin API: Fixing null tasks array for stage ${stage} in factor ${factor.id}`);
-              factor.tasks[stage] = [];
-            } else if (factor.tasks[stage].length > 0) {
-              // Filter out null values from arrays
-              factor.tasks[stage] = factor.tasks[stage].filter(task => task !== null);
-              console.log(`Admin API: Stage ${stage} has ${factor.tasks[stage].length} non-null tasks`);
-            }
-          });
-        });
+      if (!result.rows || result.rows.length === 0) {
+        console.log("No factors found in database");
+        return res.json([]);
       }
       
-      console.log('Admin API: FINAL DATA BEING SENT:', JSON.stringify(factors[0], null, 2));
+      console.log(`Found ${result.rows.length} factor IDs`);
       
-      res.json(factors || []);
+      // Fetch each factor individually using the same method as the single-factor endpoint
+      const factorPromises = result.rows.map(async (row: any) => {
+        const factorId = row.id;
+        return await factorsDb.getFactor(factorId);
+      });
+      
+      // Wait for all promises to resolve
+      const factors = await Promise.all(factorPromises);
+      
+      // Filter out any null responses (in case a factor was deleted during the operation)
+      const validFactors = factors.filter(f => f !== null);
+      
+      console.log(`Successfully retrieved ${validFactors.length} factors with full task data`);
+      
+      // Sample check on the first factor
+      if (validFactors.length > 0) {
+        const sample = validFactors[0];
+        console.log('Admin API: Sample of properly structured factor:', JSON.stringify({
+          id: sample!.id,
+          taskCount: {
+            Identification: sample!.tasks.Identification.length,
+            Definition: sample!.tasks.Definition.length,
+            Delivery: sample!.tasks.Delivery.length,
+            Closure: sample!.tasks.Closure.length
+          }
+        }));
+      }
+      
+      res.json(validFactors);
     } catch (error: unknown) {
       console.error('Error getting success factors:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get success factors';
