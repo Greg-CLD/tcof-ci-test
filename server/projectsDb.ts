@@ -306,7 +306,29 @@ export const projectsDb = {
   },
   
   createProjectTask: async (taskData: Partial<ProjectTask>): Promise<ProjectTask | null> => {
-    return await projectsDb.createTask(taskData);
+    console.log(`Creating task for project ${taskData.projectId}:`, taskData.text);
+    try {
+      if (!taskData.projectId) {
+        console.error('Cannot create task: missing projectId');
+        return null;
+      }
+      
+      // Normalize the project ID if needed
+      const normalizedProjectId = validateProjectUUID(taskData.projectId);
+      taskData.projectId = normalizedProjectId;
+      
+      // Create the task with normalized projectId
+      const task = await projectsDb.createTask(taskData);
+      if (task) {
+        console.log(`Successfully created task ${task.id} for project ${normalizedProjectId}`);
+      } else {
+        console.error(`Failed to create task for project ${normalizedProjectId}`);
+      }
+      return task;
+    } catch (error) {
+      console.error(`Error creating task for project ${taskData.projectId}:`, error);
+      return null;
+    }
   },
   
   updateProjectTask: async (projectId: string, taskId: string, data: Partial<ProjectTask>): Promise<ProjectTask | null> => {
