@@ -4,6 +4,26 @@
 import { PlanRecord, DeliveryApproachData, CustomFramework, Stage, TaskPriority, savePlan, loadPlan, createEmptyPlan, getPlan } from '@/lib/plan-db';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storageAdapter';
+import { v5 as uuidv5 } from 'uuid';
+
+// Utility functions for UUID conversion
+// IMPORTANT: These must match the server-side implementation
+const TCOF_NAMESPACE = '88c11a30-d9a5-4d97-ac16-01a9f25c2abb';
+
+function isValidUuid(str: string): boolean {
+  if (!str) return false;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(str);
+}
+
+function convertToUuid(id: string): string {
+  if (isValidUuid(id)) return id;
+  return uuidv5(id, TCOF_NAMESPACE);
+}
+
+function generateUuid(): string {
+  return uuidv4();
+}
 
 /**
  * Gets the ID of the selected plan from localStorage
@@ -391,6 +411,10 @@ export const loadSuccessFactorTasks = async (): Promise<Record<Stage, {
     factors.forEach((factor: any) => {
       if (!factor.tasks) return;
       
+      // Convert factor ID to a valid UUID if it's not already
+      const factorUuid = convertToUuid(factor.id);
+      console.log(`Converting factor ID ${factor.id} to UUID ${factorUuid}`);
+      
       // Process tasks for each stage
       Object.keys(factor.tasks).forEach((stageName) => {
         const stage = stageName as Stage;
@@ -401,11 +425,11 @@ export const loadSuccessFactorTasks = async (): Promise<Record<Stage, {
           if (!taskText) return; // Skip empty tasks
           
           result[stage].push({
-            id: uuidv4(),
+            id: generateUuid(), // Always generate a fresh UUID for each task
             text: taskText,
             stage,
             origin: 'factor',
-            sourceId: factor.id,
+            sourceId: factorUuid, // Use the converted UUID
             completed: false
           });
         });

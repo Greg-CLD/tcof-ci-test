@@ -2,6 +2,7 @@ import { db } from './db';
 import { sql, eq } from 'drizzle-orm';
 import type { FactorTask } from '../scripts/factorUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { convertToUuid } from './uuidUtils';
 
 export async function getFactors(): Promise<FactorTask[]> {
   try {
