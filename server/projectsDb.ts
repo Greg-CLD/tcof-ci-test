@@ -392,6 +392,7 @@ export const projectsDb = {
     
     try {
       const normalizedProjectId = validateProjectUUID(taskData.projectId);
+      console.log(`Creating task for normalized project ID: ${normalizedProjectId}`);
       
       const task: ProjectTask = {
         id: taskData.id || uuidv4(),
@@ -410,30 +411,40 @@ export const projectsDb = {
         updatedAt: new Date().toISOString()
       };
       
+      console.log('Task object prepared for insert:', JSON.stringify(task, null, 2));
+      
       // Save the task to the database using Drizzle insert
+      console.log('Starting database insert operation');
+      const insertValues = {
+        id: task.id,
+        projectId: task.projectId,
+        text: task.text,
+        stage: task.stage,
+        origin: task.origin,
+        sourceId: task.sourceId,
+        completed: task.completed, 
+        notes: task.notes,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        owner: task.owner,
+        status: task.status,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      console.log('Insert values:', JSON.stringify(insertValues, null, 2));
+      
       const [savedTask] = await db.insert(projectTasksTable)
-        .values({
-          id: task.id,
-          projectId: task.projectId,
-          text: task.text,
-          stage: task.stage,
-          origin: task.origin,
-          sourceId: task.sourceId,
-          completed: task.completed, 
-          notes: task.notes,
-          priority: task.priority,
-          dueDate: task.dueDate,
-          owner: task.owner,
-          status: task.status,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
+        .values(insertValues)
         .returning();
       
+      console.log('Database operation result:', savedTask ? 'Success' : 'Failed (null)');
+      
       if (savedTask) {
+        console.log('Saved task from DB:', JSON.stringify(savedTask, null, 2));
         return convertDbTaskToProjectTask(savedTask);
       }
       
+      console.error('Task creation failed: Database returned null after insert');
       return null;
     } catch (error) {
       console.error('Error creating task:', error);
