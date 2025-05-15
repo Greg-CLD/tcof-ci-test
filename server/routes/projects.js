@@ -5,9 +5,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { isOrgMember } from "../middlewares/isOrgMember.js";
-
-// Import UUID validation utilities
-const { isValidUUID, isNumericId, convertNumericIdToUuid } = require("../utils/uuid-utils.cjs");
+import { isValidUUID, isNumericId, convertNumericIdToUuid } from "../utils/uuid-utils.js";
 
 /**
  * Middleware to validate a project ID

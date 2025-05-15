@@ -10,7 +10,7 @@
  * @param {string|null|undefined} id - String to validate as UUID
  * @returns {boolean} Boolean indicating if string is a valid UUID
  */
-function isValidUUID(id) {
+export function isValidUUID(id) {
   if (!id) return false;
   
   // UUID pattern validation (RFC4122)
@@ -24,7 +24,7 @@ function isValidUUID(id) {
  * @param {string|number|null|undefined} id - String or number to check
  * @returns {boolean} Boolean indicating if value is numeric
  */
-function isNumericId(id) {
+export function isNumericId(id) {
   if (id === null || id === undefined) return false;
   
   // Check if it's a number or a string that represents a number
@@ -38,7 +38,7 @@ function isNumericId(id) {
  * @param {string|number} numericId - The numeric ID to convert
  * @returns {string} A UUID format string derived from the numeric ID
  */
-function convertNumericIdToUuid(numericId) {
+export function convertNumericIdToUuid(numericId) {
   // Convert to string first
   const idStr = String(numericId);
   
@@ -50,9 +50,3 @@ function convertNumericIdToUuid(numericId) {
   // Using the numeric ID as part of the UUID ensures deterministic mapping
   return `${paddedId.substring(0, 8)}-${paddedId.substring(8, 10)}00-4000-8000-000000000000`;
 }
-
-module.exports = {
-  isValidUUID,
-  isNumericId,
-  convertNumericIdToUuid
-};
