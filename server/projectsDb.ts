@@ -99,7 +99,7 @@ export function validateProjectUUID(idString: string): string {
 /**
  * Helper to convert a DB task to a ProjectTask
  */
-function convertDbTaskToProjectTask(dbTask: any): ProjectTask {
+function convertDbTaskToProjectTask(dbTask: any, clientTaskId?: string): ProjectTask {
   // Convert dates to strings for consistent interface
   let createdAt = dbTask.createdAt;
   if (createdAt instanceof Date) {
@@ -119,8 +119,26 @@ function convertDbTaskToProjectTask(dbTask: any): ProjectTask {
     }
   }
   
+  // Check if this is a compound factor ID situation
+  // If sourceId has the pattern of a compound UUID-suffix ID and looks like it came from a factor
+  // use it as the client-facing ID for consistency
+  let effectiveId = dbTask.id;
+  
+  if (clientTaskId) {
+    // If we're explicitly given the client ID to use, use it
+    effectiveId = clientTaskId;
+  } else if (dbTask.sourceId && 
+             dbTask.sourceId.includes('-') && 
+             dbTask.sourceId.split('-').length > 5 && 
+             dbTask.origin === 'factor') {
+    // This is likely a task created from a factor with a compound ID
+    // Use the sourceId as the client-facing ID for consistency
+    effectiveId = dbTask.sourceId;
+    console.log(`Using sourceId ${dbTask.sourceId} as client-facing ID for task ${dbTask.id}`);
+  }
+  
   return {
-    id: dbTask.id,
+    id: effectiveId,
     projectId: dbTask.projectId,
     text: dbTask.text || '',
     stage: dbTask.stage || '',
@@ -304,14 +322,48 @@ export const projectsDb = {
       const normalizedProjectId = validateProjectUUID(taskData.projectId);
       console.log(`Creating task for normalized project ID: ${normalizedProjectId}`);
       
+      // Check if we have a compound ID from a factor task
+      let taskId = taskData.id || uuidv4();
+      let sourceId = taskData.sourceId || '';
+      
+      // If task ID is a compound ID (likely from a factor), store as sourceId
+      if (taskData.id && taskData.id.includes('-') && taskData.id.split('-').length > 5) {
+        console.log(`Detected compound ID for task: ${taskData.id}`);
+        
+        // In this case, use the compound ID as sourceId for tracking, but generate a proper UUID
+        sourceId = taskData.id;
+        taskId = uuidv4();
+        
+        console.log(`Using compound ID as sourceId: ${sourceId}`);
+        console.log(`Generated new valid UUID for task: ${taskId}`);
+        
+        // Check if task already exists with this sourceId
+        try {
+          const existingTasks = await db.select()
+            .from(projectTasksTable)
+            .where(eq(projectTasksTable.sourceId, sourceId))
+            .limit(1);
+            
+          if (existingTasks.length > 0) {
+            console.log(`Task with sourceId ${sourceId} already exists, using its data for update`);
+            
+            // Return the existing task (client can use update endpoint if needed)
+            return convertDbTaskToProjectTask(existingTasks[0]);
+          }
+        } catch (lookupErr) {
+          console.warn(`Error checking for existing tasks with sourceId ${sourceId}:`, lookupErr);
+          // Continue with task creation regardless
+        }
+      }
+      
       // Convert empty values to appropriate defaults
       const task = {
-        id: taskData.id || uuidv4(),
+        id: taskId,
         projectId: normalizedProjectId,
         text: taskData.text || '',
         stage: taskData.stage || 'identification',
         origin: taskData.origin || 'custom',
-        sourceId: taskData.sourceId || '',
+        sourceId: sourceId,
         completed: taskData.completed || false,
         notes: taskData.notes || '',
         priority: taskData.priority || '',
@@ -503,12 +555,8 @@ export const projectsDb = {
           console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
           console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
           
-          const converted = convertDbTaskToProjectTask(updatedTask);
-          
-          // Important: Return the task with its original ID from the client for consistency
-          if (validTaskId !== taskId) {
-            converted.id = taskId; // Keep client-side ID for front-end consistency
-          }
+          // Pass the original taskId to maintain client-side consistency
+          const converted = convertDbTaskToProjectTask(updatedTask, taskId);
           
           console.log('Converted task:', JSON.stringify(converted, null, 2));
           return converted;
