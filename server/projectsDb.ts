@@ -411,6 +411,46 @@ export const projectsDb = {
     try {
       console.log(`Updating task ${taskId} with data:`, data);
       
+      // Check for factor-task compound IDs (like "f219d47b-39b5-5be1-86f2-e0ec3afc8e3b-c1332bc7")
+      // These are likely concatenations of a UUID with a suffix
+      let validTaskId = taskId;
+      
+      if (taskId.includes('-') && taskId.split('-').length > 5) {
+        console.log(`Detected compound ID: ${taskId}`);
+        
+        try {
+          // First check if this is a sourceId for an existing task
+          const existingTasksBySource = await db.select()
+            .from(projectTasksTable)
+            .where(eq(projectTasksTable.sourceId, taskId));
+            
+          if (existingTasksBySource.length > 0) {
+            // Task exists with this source ID, use its actual UUID instead
+            validTaskId = existingTasksBySource[0].id as string;
+            console.log(`Found task with sourceId ${taskId}, using its ID ${validTaskId} for update`);
+          } else {
+            // Check if task exists with the ID directly (unlikely but possible)
+            const existingTasksById = await db.select()
+              .from(projectTasksTable)
+              .where(eq(projectTasksTable.id, taskId))
+              .limit(1);
+              
+            if (existingTasksById.length === 0) {
+              // Task doesn't exist yet, we need to handle this as a special case
+              console.log(`Task with ID/sourceId ${taskId} not found, treating as a task to be created`);
+              throw new Error(`Task with ID ${taskId} does not exist. This appears to be a factor task reference. Try creating the task first using createTask API.`);
+            }
+          }
+        } catch (err) {
+          if (err instanceof Error && err.message.includes('Try creating')) {
+            // Pass through our custom error
+            throw err;
+          }
+          console.error(`Error looking up task by compound ID ${taskId}:`, err);
+          throw new Error(`Failed to process task ID ${taskId}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      
       // Sanitize input data to ensure types match and handle empty strings properly
       const updateData: Record<string, string | boolean | null | Date> = {};
       
@@ -431,12 +471,12 @@ export const projectsDb = {
       // Always update the updatedAt timestamp
       updateData.updatedAt = new Date();
       
-      console.log(`Prepared update data:`, JSON.stringify(updateData, null, 2));
+      console.log(`Prepared update data for task ${validTaskId}:`, JSON.stringify(updateData, null, 2));
       
       // Generate the SQL for logging purposes (before executing)
       const updateSQL = db.update(projectTasksTable)
         .set(updateData)
-        .where(eq(projectTasksTable.id, taskId))
+        .where(eq(projectTasksTable.id, validTaskId))
         .toSQL();
       
       console.log('SQL to be executed:', updateSQL.sql);
@@ -446,24 +486,30 @@ export const projectsDb = {
         // Update the task using Drizzle
         const [updatedTask] = await db.update(projectTasksTable)
           .set(updateData)
-          .where(eq(projectTasksTable.id, taskId))
+          .where(eq(projectTasksTable.id, validTaskId))
           .returning();
         
         console.log('Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
         console.log('Rows affected:', updatedTask ? '1' : '0');
         
         if (updatedTask) {
-          console.log(`Task ${taskId} updated successfully:`, JSON.stringify(updatedTask, null, 2));
+          console.log(`Task ${validTaskId} updated successfully:`, JSON.stringify(updatedTask, null, 2));
           
           // Verify the task exists and was updated with a direct query
           const verifyResult = await db.select()
             .from(projectTasksTable)
-            .where(eq(projectTasksTable.id, taskId));
+            .where(eq(projectTasksTable.id, validTaskId));
           
           console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
           console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
           
           const converted = convertDbTaskToProjectTask(updatedTask);
+          
+          // Important: Return the task with its original ID from the client for consistency
+          if (validTaskId !== taskId) {
+            converted.id = taskId; // Keep client-side ID for front-end consistency
+          }
+          
           console.log('Converted task:', JSON.stringify(converted, null, 2));
           return converted;
         }
@@ -475,7 +521,7 @@ export const projectsDb = {
       }
       
       // If no task was found/updated, throw an error instead of returning null
-      throw new Error(`Task with ID ${taskId} not found or couldn't be updated`);
+      throw new Error(`Task with ID ${validTaskId} not found or couldn't be updated`);
     } catch (error) {
       console.error(`Error updating task ${taskId}:`, error);
       // Re-throw the error so it can be properly handled by the API route
