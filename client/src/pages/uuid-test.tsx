@@ -121,7 +121,7 @@ export default function UUIDTestPage() {
               <select
                 className="form-select block w-full pl-3 pr-10 py-2 text-base leading-6 border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm sm:leading-5 rounded-md bg-white"
                 value={currentProjectId || ''}
-                onChange={(e) => selectProject(e.target.value)}
+                onChange={(e) => setCurrentProjectId(e.target.value)}
                 disabled={loading || projects.length === 0}
               >
                 <option value="">Select a project</option>
