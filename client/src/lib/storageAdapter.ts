@@ -88,7 +88,8 @@ async function listIds(): Promise<string[]> {
       const replitIds = replitKeys.map((k: string) => k.replace(KEY_PREFIX, ''));
       
       // Combine both sets of IDs, removing duplicates
-      return [...new Set([...localIds, ...replitIds])];
+      const uniqueIds = Array.from(new Set([...localIds, ...replitIds]));
+      return uniqueIds;
     } catch (error) {
       console.error('Error listing from Replit DB:', error);
       // Fall back to just localStorage IDs
@@ -133,10 +134,9 @@ async function migrateFromLocalStorage(): Promise<void> {
   }
   
   try {
+    // Only process keys that start with our prefix but don't end with _migrated
     const localKeys = Object.keys(localStorage)
-      .filter(k => k.startsWith(KEY_PREFIX))
-      // Skip already migrated keys
-      .filter(k => !localStorage.getItem(`${k}_migrated`));
+      .filter(k => k.startsWith(KEY_PREFIX) && !k.endsWith('_migrated'));
     
     if (localKeys.length === 0) {
       console.log('No new data to migrate to Replit DB.');
@@ -164,8 +164,44 @@ async function migrateFromLocalStorage(): Promise<void> {
   }
 }
 
-// Start migration process if we have a DB connection
+/**
+ * Clean up any localStorage keys with multiple _migrated suffixes
+ * This helps recover from the bug where _migrated was repeatedly appended
+ */
+function cleanupMigratedKeys(): void {
+  try {
+    // Find all keys that have _migrated_migrated in them (indicating the bug)
+    const keysToFix = Object.keys(localStorage)
+      .filter(k => k.startsWith(KEY_PREFIX) && k.includes('_migrated_migrated'));
+    
+    if (keysToFix.length > 0) {
+      console.log(`Found ${keysToFix.length} keys with multiple _migrated suffixes to clean up`);
+      
+      for (const key of keysToFix) {
+        // Get the original key without any _migrated suffix
+        const originalKey = key.replace(/_migrated+/g, '');
+        // Get the value
+        const value = localStorage.getItem(key);
+        
+        if (value) {
+          // Store with the original key
+          localStorage.setItem(originalKey, value);
+          // Add a single _migrated suffix for tracking
+          localStorage.setItem(`${originalKey}_migrated`, 'true');
+          // Remove the problematic key
+          localStorage.removeItem(key);
+          console.log(`Cleaned up key: ${key} -> ${originalKey}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error cleaning up migrated keys:', error);
+  }
+}
+
+// Run cleanup and migration on startup
 if (db) {
+  cleanupMigratedKeys();
   migrateFromLocalStorage();
 }
 
