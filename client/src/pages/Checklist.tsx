@@ -148,12 +148,6 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
     Delivery: [],
     Closure: []
   });
-  
-  // Add task dialog state
-  const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
-  const [newTaskText, setNewTaskText] = useState('');
-  const [newTaskSource, setNewTaskSource] = useState<SourceFilter>('custom');
-  const [newTaskStage, setNewTaskStage] = useState<Stage>('Identification');
 
   // Filters
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
@@ -699,80 +693,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
         </div>
         
         <div className="flex gap-2">
-          <Dialog open={addTaskDialogOpen} onOpenChange={setAddTaskDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="whitespace-nowrap bg-tcof-teal hover:bg-tcof-teal/90 text-white">
-                <PlusSquare className="mr-2 h-4 w-4" />
-                Add Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Add New Task</DialogTitle>
-                <DialogDescription>
-                  Create a custom task for your project checklist.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="task-text">Task Description</Label>
-                  <Textarea
-                    id="task-text"
-                    placeholder="Enter task description..."
-                    value={newTaskText}
-                    onChange={(e) => setNewTaskText(e.target.value)}
-                    className="resize-none"
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="task-source">Source</Label>
-                    <Select 
-                      value={newTaskSource === 'all' ? 'custom' : newTaskSource} 
-                      onValueChange={(value) => setNewTaskSource(value as SourceFilter)}
-                    >
-                      <SelectTrigger id="task-source">
-                        <SelectValue placeholder="Select source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="custom">Custom Task</SelectItem>
-                        <SelectItem value="policy">Company Policy</SelectItem>
-                        <SelectItem value="framework">Good Practice</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="task-stage">Stage</Label>
-                    <Select 
-                      value={newTaskStage} 
-                      onValueChange={(value) => setNewTaskStage(value as Stage)}
-                    >
-                      <SelectTrigger id="task-stage">
-                        <SelectValue placeholder="Select stage" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Identification">Identification</SelectItem>
-                        <SelectItem value="Definition">Definition</SelectItem>
-                        <SelectItem value="Delivery">Delivery</SelectItem>
-                        <SelectItem value="Closure">Closure</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAddTaskDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddTask}>Add Task</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <CreateTaskForm 
+            projectId={currentProjectId}
+            onTaskCreated={refreshTasksState}
+            defaultStage={activeTab}
+          />
           
           <Button variant="outline">
             <FileText className="mr-2 h-4 w-4" />
