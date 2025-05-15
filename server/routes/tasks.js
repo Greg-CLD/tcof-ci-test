@@ -280,7 +280,7 @@ router.put("/:projectId/tasks/:taskId", isAuthenticated, async (req, res) => {
     }
     
     // Get all project tasks
-    const tasks = await projectsDb.getProjectTasks(projectId);
+    const tasks = await projectsDb.getTasksForProject(projectId);
     
     // Find the specific task
     const task = tasks.find(t => t.id === taskId);
@@ -359,7 +359,7 @@ router.delete("/:projectId/tasks/:taskId", isAuthenticated, async (req, res) => 
     }
     
     // Get all project tasks
-    const tasks = await projectsDb.getProjectTasks(projectId);
+    const tasks = await projectsDb.getTasksForProject(projectId);
     
     // Find the specific task
     const task = tasks.find(t => t.id === taskId);
