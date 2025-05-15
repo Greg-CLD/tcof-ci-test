@@ -69,3 +69,6 @@ export function useProject() {
   }
   return context;
 }
+
+// Alias for backward compatibility
+export const useProjectContext = useProject;

@@ -206,7 +206,7 @@ const TCOFJourneyPage = () => {
 function Router() {
   const authProtection = useAuthProtection();
   const { user, isAuthenticated } = useAuth();
-  const { currentProjectId } = useProject(); // Use project context instead of direct localStorage access
+  const { projectId: currentProjectId } = useProject(); // Use project context instead of direct localStorage access
   const [location, navigate] = useLocation();
   const hasRedirectedRef = useRef(false);
   

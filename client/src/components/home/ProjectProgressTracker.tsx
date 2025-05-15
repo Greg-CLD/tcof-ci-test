@@ -48,7 +48,7 @@ const ProgressItem: React.FC<ProgressItemProps> = ({ title, status, progress = 0
 };
 
 export const ProjectProgressTracker: React.FC = () => {
-  const { currentProject } = useProjectContext();
+  const { projectId } = useProjectContext();
   const [bearingsStatus, setBearingsStatus] = useState<'completed' | 'in-progress' | 'not-started'>('not-started');
   const [planStatus, setPlanStatus] = useState<'completed' | 'in-progress' | 'not-started'>('not-started');
   const [checklistStatus, setChecklistStatus] = useState<'completed' | 'in-progress' | 'not-started'>('not-started');
@@ -57,9 +57,9 @@ export const ProjectProgressTracker: React.FC = () => {
   
   useEffect(() => {
     async function checkToolsStatus() {
-      if (!currentProject?.id) return;
+      if (!projectId) return;
       
-      const projectId = currentProject.id;
+      // Using projectId from context
       
       // Check "Get Your Bearings" tools status
       const goalMapPromise = loadFromLocalStorage<GoalMapData>(`${STORAGE_KEYS.GOAL_MAP}-${projectId}`);
@@ -125,9 +125,9 @@ export const ProjectProgressTracker: React.FC = () => {
     }
     
     checkToolsStatus();
-  }, [currentProject]);
+  }, [projectId]);
   
-  if (!currentProject) return null;
+  if (!projectId) return null;
   
   return (
     <div className="mb-6">
