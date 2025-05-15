@@ -116,12 +116,13 @@ export function useProjectTasks(projectId?: string) {
     refetchOnMount: true, // Ensure it refreshes when component mounts
   });
   
-  // Log initial data when it changes
+  // Log initial data when it changes and verify query key
   useEffect(() => {
     if (tasks) {
       console.log('Initial fetch:', tasks);
+      console.log('Current query key:', `/api/projects/${projectId}/tasks`);
     }
-  }, [tasks]);
+  }, [tasks, projectId]);
   
   // Mutation to create a new task
   const createTaskMutation = useMutation({
@@ -154,12 +155,32 @@ export function useProjectTasks(projectId?: string) {
     },
     onSuccess: async (newTask) => {
       console.log('Task created, invalidating cache and refetching');
-      // Invalidate the query cache with the correct query key format
-      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       
-      // Immediately refetch from backend to ensure UI shows persisted state
-      const freshData = await refetch();
-      console.log(`Refetched ${freshData.data?.length || 0} tasks after create`);
+      // First log the new task that was created
+      console.log('Created task:', newTask);
+      
+      // Ensure cache invalidation and refetching with 100% guarantee
+      try {
+        // Invalidate the query cache with the correct query key format
+        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+        
+        // Force immediate refetch from backend to ensure UI shows persisted state
+        const freshData = await refetch();
+        console.log(`Refetched ${freshData.data?.length || 0} tasks after create`);
+        
+        // Manually verify the created task exists in the refetched data
+        const taskExists = freshData.data?.some(task => task.id === newTask.id);
+        console.log(`Task ${newTask.id} exists in refetched data: ${taskExists}`);
+        
+        if (!taskExists) {
+          console.warn('Task was created but not found in refetched data. Forcing another refetch...');
+          setTimeout(() => refetch(), 1000); // Try once more after a delay
+        }
+      } catch (err) {
+        console.error('Error during cache invalidation/refetch:', err);
+        // Still attempt a final refetch to recover
+        setTimeout(() => refetch(), 2000);
+      }
     },
     onError: (error) => {
       console.error('Error creating task:', error);
@@ -198,12 +219,37 @@ export function useProjectTasks(projectId?: string) {
     },
     onSuccess: async (updatedTask) => {
       console.log('Task updated, invalidating cache and refetching');
-      // Invalidate the query cache with the correct query key format
-      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       
-      // Immediately refetch from backend to ensure UI shows persisted state
-      const freshData = await refetch();
-      console.log(`Refetched ${freshData.data?.length || 0} tasks after update`);
+      // First log the updated task
+      console.log('Updated task:', updatedTask);
+      
+      // Robust cache invalidation and refetching
+      try {
+        // Invalidate the query cache with the correct query key format
+        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+        
+        // Force immediate refetch from backend to ensure UI shows persisted state
+        const freshData = await refetch();
+        console.log(`Refetched ${freshData.data?.length || 0} tasks after update`);
+        
+        // Verify the update was reflected in the fetched data
+        if (updatedTask && updatedTask.id) {
+          const taskInData = freshData.data?.find(task => task.id === updatedTask.id);
+          console.log('Updated task in refetched data:', taskInData);
+          
+          if (!taskInData) {
+            console.warn('Updated task not found in refetched data. Forcing another refetch...');
+            setTimeout(() => refetch(), 1000);
+          } else if (taskInData.updatedAt !== updatedTask.updatedAt) {
+            console.warn('Task found but update timestamp mismatch. Forcing another refetch...');
+            setTimeout(() => refetch(), 1000);
+          }
+        }
+      } catch (err) {
+        console.error('Error during cache invalidation/refetch:', err);
+        // Still attempt a final refetch to recover
+        setTimeout(() => refetch(), 2000);
+      }
     },
     onError: (error) => {
       console.error('Error updating task:', error);
@@ -238,13 +284,33 @@ export function useProjectTasks(projectId?: string) {
         throw err;
       }
     },
-    onSuccess: async () => {
+    onSuccess: async (result, deletedTaskId) => {
       console.log('Task deleted, invalidating cache and refetching');
-      // Use consistent query key format for invalidation
-      await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
-      // Manually refetch to get fresh data
-      const freshData = await refetch();
-      console.log('Refetched list after delete:', freshData.data);
+      console.log('Delete result:', result);
+      console.log('Deleted task ID:', deletedTaskId);
+      
+      // Robust cache invalidation and refetching
+      try {
+        // Use consistent query key format for invalidation
+        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+        
+        // Manually refetch to get fresh data
+        const freshData = await refetch();
+        console.log('Refetched list after delete:', freshData.data);
+        
+        // Verify the task is actually gone from the fresh data
+        const taskStillExists = freshData.data?.some(task => task.id === deletedTaskId);
+        if (taskStillExists) {
+          console.warn(`Task ${deletedTaskId} was not actually deleted from the server! Forcing another refetch...`);
+          setTimeout(() => refetch(), 1000);
+        } else {
+          console.log(`Verified task ${deletedTaskId} is no longer in the task list`);
+        }
+      } catch (err) {
+        console.error('Error during cache invalidation/refetch after delete:', err);
+        // Still attempt a final refetch to recover
+        setTimeout(() => refetch(), 2000);
+      }
     },
     onError: (error) => {
       console.error('Error deleting task:', error);

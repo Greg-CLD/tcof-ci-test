@@ -702,13 +702,50 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   app.delete('/api/projects/:projectId/tasks/:taskId', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId, taskId } = req.params;
+      const userId = req.user.id;
+      
+      console.log(`DELETE request for task ${taskId} in project ${projectId} by user ${userId}`);
+      
+      // Verify the project exists and user has access to it
+      const project = await projectsDb.getProject(projectId);
+      if (!project) {
+        console.warn(`Project ${projectId} not found for task deletion`);
+        return res.status(404).json({
+          success: false,
+          message: 'Project not found'
+        });
+      }
+      
+      // Verify user ownership
+      if (project.userId !== userId) {
+        console.warn(`User ${userId} not authorized to delete tasks in project ${projectId}`);
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to modify this project'
+        });
+      }
+      
+      // Verify the task exists in the project before deletion
+      const tasks = await projectsDb.getTasksForProject(projectId);
+      const taskExists = tasks.some(task => task.id === taskId);
+      
+      if (!taskExists) {
+        console.warn(`Task ${taskId} not found in project ${projectId}`);
+        return res.status(404).json({
+          success: false,
+          message: 'Task not found in this project',
+          taskId
+        });
+      }
       
       // Make sure the task exists and belongs to the project
       try {
+        console.log(`Deleting task ${taskId} from project ${projectId}`);
         await projectsDb.deleteTask(taskId);
         
         // Return a JSON response with success data instead of an empty 204
         // This helps with debugging and provides feedback to the frontend
+        console.log(`Task ${taskId} successfully deleted`);
         return res.status(200).json({
           success: true,
           taskId,
@@ -717,6 +754,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       } catch (err) {
         // Check if this is a "not found" error
         if (err instanceof Error && err.message.includes('not found')) {
+          console.error(`Task not found error during deletion: ${err.message}`);
           return res.status(404).json({
             success: false,
             message: 'Task not found',
