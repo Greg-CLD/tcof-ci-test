@@ -367,35 +367,60 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
       
       try {
         console.log(`Loading tasks with safe project ID: ${safeProjectId}`);
-        // Use SQL template literal from drizzle-orm
-        // Use direct Drizzle query with table definition and UUID casting
-        const tasks = await db.select().from(projectTasksTable)
-          .where(sql`project_id = ${safeProjectId}::uuid`);
         
-        if (!tasks || tasks.length === 0) {
+        // Use a direct SQL query for consistency with other methods
+        const sqlQuery = `
+          SELECT * FROM project_tasks
+          WHERE project_id = $1::uuid
+        `;
+        
+        console.log(`Executing direct SQL query with projectId: ${safeProjectId}`);
+        const result = await db.execute(sqlQuery, [safeProjectId]);
+        
+        const tasks = result.rows || [];
+        
+        if (tasks.length === 0) {
           console.log(`No tasks found for project ${safeProjectId}`);
           return [];
         }
         
         console.log(`Loaded ${tasks.length} tasks from database for project ${safeProjectId}`);
         
-        return tasks.map((task: any) => ({
-          id: String(task.id || ''),
-          // Always use the confirmed project.id from above to avoid type mismatches
-          projectId: safeProjectId,
-          text: String(task.text || ''),
-          stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
-          origin: (String(task.origin || 'custom') as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
-          sourceId: String(task.sourceId || ''),
-          completed: Boolean(task.completed || false),
-          notes: String(task.notes || ''),
-          priority: String(task.priority || ''),
-          dueDate: String(task.dueDate || ''),
-          owner: String(task.owner || ''),
-          status: String(task.status || 'pending'),
-          createdAt: task.createdAt ? new Date(String(task.createdAt)).toISOString() : new Date().toISOString(),
-          updatedAt: task.updatedAt ? new Date(String(task.updatedAt)).toISOString() : new Date().toISOString()
-        }));
+        // Debug output to see the actual field names from the database
+        if (tasks.length > 0) {
+          console.log('Raw task field names from database:', Object.keys(tasks[0]));
+          console.log('Sample raw task data:', JSON.stringify(tasks[0]));
+        }
+        
+        return tasks.map((task: any) => {
+          // Convert to a consistent format and handle snake_case to camelCase conversion
+          const convertedTask = {
+            id: String(task.id || ''),
+            // Always use the confirmed project.id from above to avoid type mismatches
+            projectId: safeProjectId,
+            text: String(task.text || ''),
+            stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
+            origin: (String(task.origin || 'custom') as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
+            // Check for both camelCase and snake_case field names
+            sourceId: String(task.sourceId || task.source_id || ''),
+            completed: Boolean(task.completed || false),
+            notes: String(task.notes || ''),
+            priority: String(task.priority || ''),
+            // Check for both camelCase and snake_case field names
+            dueDate: String(task.dueDate || task.due_date || ''),
+            owner: String(task.owner || ''),
+            status: String(task.status || 'pending'),
+            // Handle both formats for date fields
+            createdAt: task.createdAt || task.created_at ? 
+              new Date(String(task.createdAt || task.created_at)).toISOString() : 
+              new Date().toISOString(),
+            updatedAt: task.updatedAt || task.updated_at ? 
+              new Date(String(task.updatedAt || task.updated_at)).toISOString() : 
+              new Date().toISOString()
+          };
+          
+          return convertedTask;
+        });
       } catch (sqlError) {
         console.error('SQL error loading project tasks:', sqlError);
         return [];
@@ -1369,24 +1394,42 @@ export const projectsDb = {
       
       console.log(`Found ${result.rows.length} tasks for project ${safeProjectId} with sourceId ${safeSourceId}`);
       
+      // Debug output to see the actual field names from the database
+      if (result.rows.length > 0) {
+        console.log('Raw task field names from getProjectTasksBySourceId:', Object.keys(result.rows[0]));
+        console.log('Sample raw task data from getProjectTasksBySourceId:', JSON.stringify(result.rows[0]));
+      }
+      
       // Convert to ProjectTask interface with proper type handling and defaults
       // Always use the safely determined projectId to avoid inconsistencies
-      return result.rows.map(task => ({
-        id: String(task.id || ''),
-        projectId: safeProjectId, // Use the confirmed safe project UUID 
-        text: String(task.text || ''),
-        stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
-        origin: (String(task.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
-        sourceId: String(task.source_id || ''), // Notice source_id in snake_case from direct SQL
-        completed: Boolean(task.completed || false),
-        notes: String(task.notes || ''),
-        priority: String(task.priority || ''),
-        dueDate: String(task.due_date || ''), // Notice due_date in snake_case from direct SQL
-        owner: String(task.owner || ''),
-        status: String(task.status || 'pending'),
-        createdAt: task.created_at ? new Date(String(task.created_at)).toISOString() : new Date().toISOString(),
-        updatedAt: task.updated_at ? new Date(String(task.updated_at)).toISOString() : new Date().toISOString()
-      }));
+      return result.rows.map(task => {
+        // Convert to a consistent format and handle snake_case to camelCase conversion
+        const convertedTask = {
+          id: String(task.id || ''),
+          projectId: safeProjectId, // Use the confirmed safe project UUID 
+          text: String(task.text || ''),
+          stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
+          origin: (String(task.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
+          // Check for both camelCase and snake_case field names
+          sourceId: String(task.sourceId || task.source_id || ''),
+          completed: Boolean(task.completed || false),
+          notes: String(task.notes || ''),
+          priority: String(task.priority || ''),
+          // Check for both camelCase and snake_case field names
+          dueDate: String(task.dueDate || task.due_date || ''),
+          owner: String(task.owner || ''),
+          status: String(task.status || 'pending'),
+          // Handle both formats for date fields
+          createdAt: task.createdAt || task.created_at ? 
+            new Date(String(task.createdAt || task.created_at)).toISOString() : 
+            new Date().toISOString(),
+          updatedAt: task.updatedAt || task.updated_at ? 
+            new Date(String(task.updatedAt || task.updated_at)).toISOString() : 
+            new Date().toISOString()
+        };
+        
+        return convertedTask;
+      });
     } catch (error) {
       console.error('Error getting project tasks by sourceId:', error);
       return [];

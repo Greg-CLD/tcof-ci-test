@@ -617,6 +617,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simply create HTTP server for Express app without WebSocket server 
+  // to avoid port conflicts with Vite HMR WebSocket
   const httpServer = createServer(app);
+  
   return httpServer;
 }
