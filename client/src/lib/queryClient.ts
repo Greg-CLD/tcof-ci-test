@@ -35,10 +35,16 @@ export async function apiRequest(
   const options: RequestInit = {
     method,
     headers: {
-
-"Content-Type": "application/json",
+      "Content-Type": "application/json",
+      // Add a custom header to help with CORS and to identify API requests
+      "X-Requested-With": "XMLHttpRequest",
+      // Add cache prevention headers
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
     },
-    credentials: "include", // Important for cookies/sessions
+    credentials: "include", // Critical for sending cookies/session with requests
+    cache: "no-store", // Prevent caching
+    mode: "same-origin", // Ensure we're only making same-origin requests
   };
 
   if (data) {
@@ -61,6 +67,34 @@ export async function apiRequest(
     
     // Race between the fetch and timeout
     const response = await Promise.race([fetchPromise, timeoutPromise]);
+    
+    // Check for authentication issues and redirect to login if needed
+    if (response.status === 401) {
+      console.warn('Authentication required for API request:', url);
+      
+      // For GET requests, we might want to silently retry after refreshing auth
+      if (method === 'GET') {
+        // Attempt to refresh the session silently
+        try {
+          console.log('Attempting to refresh auth session before retrying request');
+          const authCheckResponse = await fetch('/api/auth/refresh-session', { 
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (authCheckResponse.ok) {
+            console.log('Auth session refreshed, retrying original request');
+            // Retry the original request
+            const retryResponse = await fetch(url, options);
+            await logResponse(retryResponse);
+            return retryResponse;
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing auth session:', refreshError);
+        }
+      }
+    }
     
     // Log the response
     await logResponse(response);
