@@ -21,7 +21,7 @@ router.get("/:projectId/tasks", async (req, res) => {
       console.log(`Converting numeric project ID ${projectId} to UUID format`);
       const uuidProjectId = convertNumericIdToUuid(projectId);
       // Get tasks for this project directly from database using the converted UUID
-      const tasks = await projectsDb.getProjectTasks(uuidProjectId);
+      const tasks = await projectsDb.getTasksForProject(uuidProjectId);
       console.log(`Found ${tasks.length} tasks for converted project ${uuidProjectId} (from ${projectId})`);
       return res.json(tasks);
     } else if (!isValidUUID(projectId)) {
@@ -45,7 +45,7 @@ router.get("/:projectId/tasks", async (req, res) => {
     }
     
     // Get tasks for this project directly from database
-    const tasks = await projectsDb.getProjectTasks(projectId);
+    const tasks = await projectsDb.getTasksForProject(projectId);
     
     console.log(`Found ${tasks.length} tasks for project ${projectId} in database`);
     
