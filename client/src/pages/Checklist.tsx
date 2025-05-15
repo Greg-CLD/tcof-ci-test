@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import TaskCard from '@/components/checklist/TaskCard';
+import CreateTaskForm from '@/components/plan/CreateTaskForm';
 import SummaryBar from '@/components/checklist/SummaryBar';
 import { ChecklistHeader } from '@/components/outcomes/ChecklistHeader';
 import ChecklistFilterBar, {
@@ -872,13 +873,22 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
               
               return (
                 <TabsContent key={stage} value={stage} className="space-y-6">
+                  {/* Add task creation form at the top of every stage tab */}
+                  {currentProjectId && (
+                    <CreateTaskForm 
+                      projectId={currentProjectId}
+                      stage={stage}
+                      onTaskCreated={refreshTasksState}
+                      isAuthenticated={isAuthenticated}
+                    />
+                  )}
+                  
                   {filteredTasks.length === 0 ? (
                     <div className="text-center py-8 border border-dashed rounded-md">
                       <p className="text-gray-500">No tasks found for this stage</p>
-                      <Button variant="outline" className="mt-4">
-                        <PlusSquare className="mr-2 h-4 w-4" />
-                        Add Custom Task
-                      </Button>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Use the form above to add a custom task
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-8">
