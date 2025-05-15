@@ -255,13 +255,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   // Attempt to restore session on mount or when network reconnects
   useEffect(() => {
-    // Check if we already have a user
-    if (user) return;
-    
     // Don't show toast during silent session check
     const silentCheck = async () => {
       try {
         console.log('Attempting silent session restoration');
+        
+        // Try direct API call to refresh the session first
+        try {
+          const refreshResponse = await fetch('/api/auth/refresh-session', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
+            cache: 'no-store'
+          });
+          
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            console.log('Session refresh response:', refreshData);
+            
+            // If successful and we have user data, update our cache
+            if (refreshData.success && refreshData.user) {
+              console.log('Session restored with user:', refreshData.user.username);
+              queryClient.setQueryData(["/api/auth/user"], refreshData.user);
+            }
+          }
+        } catch (refreshError) {
+          console.error('Error during session refresh:', refreshError);
+        }
+        
+        // Regardless of the refresh result, also try the standard auth endpoint
         await refetch();
       } catch (err) {
         console.error('Session restoration error:', err);
@@ -277,8 +304,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       silentCheck();
     };
     
+    // Set up periodic session refresh for long-lived sessions
+    const refreshInterval = setInterval(() => {
+      if (!user) {
+        console.log('Periodic session check - no user currently logged in');
+        silentCheck();
+      } else {
+        console.log('Periodic session refresh for user:', user.username);
+        // Just touch the session to keep it alive
+        fetch('/api/auth/refresh-session', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        }).catch(err => {
+          console.error('Error during periodic session refresh:', err);
+        });
+      }
+    }, 5 * 60 * 1000); // Every 5 minutes
+    
     window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      clearInterval(refreshInterval);
+    };
   }, [refetch, user]);
 
   // Compute derived state

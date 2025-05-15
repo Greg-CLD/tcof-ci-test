@@ -83,8 +83,12 @@ export async function apiRequest(
           credentials: 'include',
           headers: { 
             'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+          // Prevent browser caching
+          cache: 'no-store'
         });
         
         // Log the refresh response
@@ -95,21 +99,46 @@ export async function apiRequest(
           const refreshData = await authCheckResponse.json();
           console.log('Auth refresh response:', refreshData);
           
+          // If session refresh was successful, retry the original request
           if (refreshData.success) {
             console.log('Session successfully refreshed, retrying original request');
             
-            // Retry the original request
+            // If we have user data in the response, update the auth state
+            if (refreshData.user) {
+              // Update the cache with the restored user
+              queryClient.setQueryData(["/api/auth/user"], refreshData.user);
+              console.log('Updated auth cache with user from session:', refreshData.user.username);
+            }
+            
+            // Retry the original request with fresh cookies and updated headers
             const retryResponse = await fetch(url, {
               ...options,
+              headers: {
+                ...options.headers,
+                // Prevent caching to ensure we get fresh data
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+              },
               // Ensure we pass the updated cookies
-              credentials: 'include'
+              credentials: 'include',
+              // Prevent browser caching
+              cache: 'no-store'
             });
             
             console.log(`Retry response status: ${retryResponse.status}`);
             await logResponse(retryResponse);
             return retryResponse;
           } else {
-            console.warn('Session refresh returned success:false - authentication still required');
+            // Log detailed information about authentication failure
+            console.warn('Session refresh returned success:false - authentication still required:', 
+              refreshData.message || 'No details provided');
+            
+            // Check if we need to force login
+            if (refreshData.needsLogin) {
+              console.warn('Session refresh indicated login required');
+              // We can invalidate the current user query to force re-login
+              queryClient.setQueryData(["/api/auth/user"], null);
+            }
           }
         } else {
           console.error('Session refresh failed with status:', authCheckResponse.status);
