@@ -2,10 +2,11 @@
  * Script to test the enhanced task persistence after fixes
  * This tests the new consistent response formats from the API
  */
-const fetch = require('node-fetch');
-const { v4: uuidv4 } = require('uuid');
+import fetch from 'node-fetch';
+import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = 'http://localhost:3000';
+// Use the current server URL since we're running in Replit
+const API_URL = 'https://' + process.env.REPL_SLUG + '.' + process.env.REPL_OWNER + '.repl.co';
 let authCookie = null;
 let projectId = null;
 let taskId = null;
