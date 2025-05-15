@@ -47,6 +47,7 @@ import ProjectPage from "@/pages/ProjectPage";
 import BasicProjectEditPage from "@/pages/BasicProjectEditPage";
 import TestAuth from "@/pages/TestAuth";
 import TestPersistencePage from "@/pages/test-persistence";
+import UUIDTestPage from "@/pages/uuid-test"; // Added UUID utility test page
 import FeedbackDemo from "@/components/FeedbackDemo";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/useAuth";
