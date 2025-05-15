@@ -141,8 +141,12 @@ export function useProjectTasks(projectId?: string) {
         }
         
         const resJson = await res.json();
-        console.log('Task created successfully:', resJson.id);
-        return resJson;
+        if (resJson.success === false) {
+          throw new Error(resJson.message || 'Failed to create task');
+        }
+        console.log('Task created successfully:', resJson.task?.id);
+        // Return the task object directly for consistent access
+        return resJson.task || resJson;
       } catch (err) {
         console.error('Task creation exception:', err);
         throw err;
@@ -181,8 +185,12 @@ export function useProjectTasks(projectId?: string) {
         }
         
         const resJson = await res.json();
-        console.log('Task updated successfully:', resJson.id);
-        return resJson;
+        if (resJson.success === false) {
+          throw new Error(resJson.message || 'Failed to update task');
+        }
+        console.log('Task updated successfully:', resJson.task?.id);
+        // Return the task object directly for consistent access
+        return resJson.task || resJson;
       } catch (err) {
         console.error('Task update exception:', err);
         throw err;
@@ -206,10 +214,32 @@ export function useProjectTasks(projectId?: string) {
   // Mutation to delete a task
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
-      const res = await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${taskId}`);
-      return await res.json();
+      try {
+        console.log(`Deleting task ${taskId} for project ${projectId}`);
+        const res = await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${taskId}`);
+        
+        if (!res.ok) {
+          console.error(`Error deleting task: ${res.status} ${res.statusText}`);
+          // Handle authentication errors specially
+          if (res.status === 401) {
+            throw new Error('Authentication required to delete task');
+          }
+          throw new Error(`Failed to delete task: ${res.status} ${res.statusText}`);
+        }
+        
+        const resJson = await res.json();
+        if (resJson.success === false) {
+          throw new Error(resJson.message || 'Failed to delete task');
+        }
+        console.log('Task deleted successfully:', taskId);
+        return resJson;
+      } catch (err) {
+        console.error('Task deletion exception:', err);
+        throw err;
+      }
     },
     onSuccess: async () => {
+      console.log('Task deleted, invalidating cache and refetching');
       // Use consistent query key format for invalidation
       await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       // Manually refetch to get fresh data
