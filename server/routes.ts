@@ -467,61 +467,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Otherwise, handle as a single task
       try {
+        console.log(`Attempting to save task for project ${projectId} with data:`, JSON.stringify(taskData));
+        
+        // Make sure we have a valid UUID format project ID
+        if (!projectId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          console.error(`Invalid UUID format for project ID: ${projectId}`);
+          return res.status(400).json({
+            message: 'Invalid project ID format',
+            details: 'Project ID must be a valid UUID'
+          });
+        }
+        
+        // Create the task
         const result = await projectsDb.createProjectTask({
-          projectId,
+          projectId, // Using validated project ID
           ...taskData
         });
         
         console.log('Task creation completed. Result:', result ? 'success' : 'null', 
                    'ID:', result?.id, 'Type:', typeof result);
         
-        // Since we've modified createProjectTask to always return a task object,
-        // this condition should never be true, but we'll keep it for safety
+        // Only return success if we actually got a result back
         if (!result) {
-          return res.status(201).json({
-            id: uuidv4(),
-            projectId,
-            text: taskData.text || 'New Task',
-            stage: taskData.stage || 'identification',
-            origin: taskData.origin || 'custom',
-            sourceId: taskData.sourceId || '',
-            completed: taskData.completed || false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+          console.error(`Task creation failed for project ${projectId} - returned null`);
+          return res.status(500).json({
+            message: 'Failed to create task - database operation returned null',
+            details: 'The task was not persisted to the database'
           });
         }
+        
+        // Verify the task was saved
+        console.log(`Task created successfully with ID: ${result.id}`);
         
         // Return the created task with all its properties
         return res.status(201).json(result);
       } catch (taskError) {
         console.error('Error in createProjectTask:', taskError);
-        // Always return a valid response with 201 Created
-        return res.status(201).json({
-          id: uuidv4(),
-          projectId,
-          text: taskData.text || 'New Task',
-          stage: taskData.stage || 'identification',
-          origin: taskData.origin || 'custom',
-          sourceId: taskData.sourceId || '',
-          completed: taskData.completed || false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+        // Return an error response with 500 status
+        return res.status(500).json({
+          message: 'Failed to create task',
+          error: taskError instanceof Error ? taskError.message : 'Unknown error',
+          details: 'The task was not persisted to the database'
         });
       }
     } catch (error) {
       console.error('Error processing project tasks request:', error);
-      // Even in case of error, return a usable response
-      res.status(201).json({
-        id: uuidv4(),
-        projectId: req.params.projectId,
-        text: req.body.text || 'New Task',
-        stage: req.body.stage || 'identification',
-        origin: req.body.origin || 'custom',
-        sourceId: req.body.sourceId || '',
-        completed: req.body.completed || false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        _error: error instanceof Error ? error.message : 'Unknown error'
+      // Return an error status rather than a fake successful response
+      return res.status(500).json({
+        message: 'Failed to process task creation request',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: 'The task was not persisted to the database'
       });
     }
   });
