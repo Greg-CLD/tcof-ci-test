@@ -6,15 +6,13 @@
  * 3. Confirm proper ID tracking and original ID retrieval
  */
 
-// Direct import of the server/uuidUtils file with absolute path
-const path = require('path');
-const { 
+import { 
   convertToUuid, 
   isValidUuid, 
   getOriginalId, 
   wasGeneratedFrom,
   generateUuid
-} = require('./server/uuidUtils');
+} from './server/uuidUtils.js';
 
 // Original success factor IDs
 const originalIds = [
