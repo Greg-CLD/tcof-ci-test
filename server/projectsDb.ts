@@ -394,6 +394,7 @@ export const projectsDb = {
       const normalizedProjectId = validateProjectUUID(taskData.projectId);
       console.log(`Creating task for normalized project ID: ${normalizedProjectId}`);
       
+      // Convert empty values to appropriate defaults
       const task: ProjectTask = {
         id: taskData.id || uuidv4(),
         projectId: normalizedProjectId,
@@ -415,7 +416,10 @@ export const projectsDb = {
       
       // Save the task to the database using Drizzle insert
       console.log('Starting database insert operation');
-      // Create insert values with proper handling for empty fields
+      
+      // Properly sanitize values for database insertion:
+      // 1. Convert empty strings to null for any nullable fields
+      // 2. Ensure dates are handled correctly
       const insertValues = {
         id: task.id,
         projectId: task.projectId,
@@ -424,10 +428,11 @@ export const projectsDb = {
         origin: task.origin || 'custom',
         sourceId: task.sourceId || '',
         completed: Boolean(task.completed), 
-        notes: task.notes || null,  // Use null for empty notes
-        priority: task.priority || null,  // Use null for empty priority
-        dueDate: task.dueDate || null,  // Use null for empty dueDate
-        owner: task.owner || null,  // Use null for empty owner
+        // Handle possible empty strings by converting them to null
+        notes: task.notes === '' ? null : task.notes,
+        priority: task.priority === '' ? null : task.priority,
+        dueDate: task.dueDate === '' ? null : task.dueDate,
+        owner: task.owner === '' ? null : task.owner,
         status: task.status || 'To Do',
         createdAt: new Date(),  // Always use current date
         updatedAt: new Date()   // Always use current date
@@ -455,19 +460,21 @@ export const projectsDb = {
   
   updateTask: async (taskId: string, data: Partial<ProjectTask>): Promise<ProjectTask | null> => {
     try {
-      // Sanitize input data to ensure types match
+      // Sanitize input data to ensure types match and handle empty strings properly
       const updateData: any = {};
       
-      // Only update fields that are provided
+      // Only update fields that are provided, with proper empty string handling
       if (data.text !== undefined) updateData.text = String(data.text);
       if (data.stage !== undefined) updateData.stage = String(data.stage);
       if (data.origin !== undefined) updateData.origin = String(data.origin);
       if (data.sourceId !== undefined) updateData.sourceId = String(data.sourceId);
       if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
-      if (data.notes !== undefined) updateData.notes = String(data.notes);
-      if (data.priority !== undefined) updateData.priority = String(data.priority);
-      if (data.dueDate !== undefined) updateData.dueDate = String(data.dueDate);
-      if (data.owner !== undefined) updateData.owner = String(data.owner);
+      
+      // For nullable fields, convert empty strings to null
+      if (data.notes !== undefined) updateData.notes = data.notes === '' ? null : String(data.notes);
+      if (data.priority !== undefined) updateData.priority = data.priority === '' ? null : String(data.priority);
+      if (data.dueDate !== undefined) updateData.dueDate = data.dueDate === '' ? null : String(data.dueDate);
+      if (data.owner !== undefined) updateData.owner = data.owner === '' ? null : String(data.owner);
       if (data.status !== undefined) updateData.status = String(data.status);
       
       // Always update the updatedAt timestamp
