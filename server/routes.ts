@@ -521,7 +521,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         
         for (const task of taskData) {
           try {
-            const result = await projectsDb.createProjectTask({
+            const result = await projectsDb.createTask({
               projectId,
               ...task
             });
@@ -556,7 +556,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         }
         
         // Create the task
-        const result = await projectsDb.createProjectTask({
+        const result = await projectsDb.createTask({
           projectId, // Using validated project ID
           ...taskData
         });
@@ -602,7 +602,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   app.get('/api/projects/:projectId/tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.params;
-      const tasks = await projectsDb.getProjectTasks(projectId);
+      const tasks = await projectsDb.getTasksForProject(projectId);
       res.json(tasks);
     } catch (error) {
       console.error('Error retrieving project tasks:', error);

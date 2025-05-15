@@ -93,7 +93,7 @@ async function testTaskPersistence() {
     console.log('Successfully created task:', createdTask.id);
     
     // Step 5: Get tasks again to verify the new task exists
-    const tasksAfterResponse = await fetch(`http://localhost:3000/api/projects/${testProject.id}/tasks`, {
+    const tasksAfterResponse = await fetch(`http://localhost:5000/api/projects/${testProject.id}/tasks`, {
       headers: {
         'Cookie': cookies
       }
@@ -120,7 +120,7 @@ async function testTaskPersistence() {
         notes: `Updated notes for test task - ${new Date().toISOString()}`
       };
       
-      const updateResponse = await fetch(`http://localhost:3000/api/projects/${testProject.id}/tasks/${foundTask.id}`, {
+      const updateResponse = await fetch(`http://localhost:5000/api/projects/${testProject.id}/tasks/${foundTask.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
