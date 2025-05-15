@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { useProjectTasks } from '@/hooks/useProjectTasks';
 // Define the Stage type directly here instead of importing
 type Stage = 'identification' | 'definition' | 'delivery' | 'closure';
 
@@ -21,6 +21,9 @@ export default function CreateTaskForm({
 }: CreateTaskFormProps) {
   const [taskText, setTaskText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Use the project tasks hook to handle task creation and persistence
+  const { createTask } = useProjectTasks(projectId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,37 +51,30 @@ export default function CreateTaskForm({
     try {
       setIsSubmitting(true);
       
-      // Generate a unique source ID
-      const sourceId = `custom-${Date.now()}`;
+      // Generate a unique source ID with a prefix that makes it clearly identifiable
+      const sourceId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       
-      console.log('[CREATE_TASK] Creating task on server:', { text: taskText, stage, sourceId });
+      console.log('[CREATE_TASK] Creating task on server:', { 
+        text: taskText, 
+        stage, 
+        sourceId,
+        projectId
+      });
       
-      // Create task on server
-      const response = await apiRequest(
-        "POST",
-        `/api/projects/${projectId}/tasks`,
-        {
-          text: taskText,
-          stage,
-          origin: "custom",
-          sourceId
-        }
-      );
+      // Use the hook's createTask method which handles all cache invalidation
+      // and properly manages response formats
+      const newTask = await createTask({
+        projectId,
+        text: taskText,
+        stage,
+        origin: "custom",
+        sourceId,
+        completed: false,
+        priority: "medium",
+        status: "To Do"
+      });
       
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status} when creating task`);
-      }
-      
-      // Get the response body and log
-      const data = await response.json();
-      console.log('[CREATE_TASK] Task created response:', data);
-      
-      // Extract the task ID from the response, handling different response formats
-      const serverId = data.task?.id || data.id || null;
-      
-      if (!serverId) {
-        throw new Error('No task ID returned from creation response');
-      }
+      console.log('[CREATE_TASK] Task created successfully:', newTask);
       
       toast({
         title: "Task created",
@@ -91,9 +87,23 @@ export default function CreateTaskForm({
       
     } catch (error) {
       console.error('[CREATE_TASK] Error creating task:', error);
+      
+      // More specific error message based on error type
+      let errorMessage = "Failed to create task";
+      
+      if (error instanceof Error) {
+        if (error.message.includes("401") || error.message.includes("Authentication")) {
+          errorMessage = "Authentication error - please refresh the page and try again";
+        } else if (error.message.includes("Failed to fetch") || error.message.includes("Network")) {
+          errorMessage = "Network error - please check your connection";
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+      }
+      
       toast({
         title: "Error creating task",
-        description: "Failed to create task",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
