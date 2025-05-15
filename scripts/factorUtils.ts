@@ -8,6 +8,7 @@ export interface FactorTask {
   id: string;
   title: string;
   description?: string;
+  originalId?: string; // Original "sf-#" format ID for database operations
   tasks: {
     Identification: string[];
     Definition: string[];

@@ -115,18 +115,30 @@ export async function getFactor(id: string): Promise<FactorTask | null> {
     
     // Check if this is a UUID trying to access a success factor
     // In this case, we need to find which "sf-#" ID it corresponds to
-    if (id.includes('-') && id.length === 36) {
+    if (isValidUuid(id)) {
       console.log(`Received UUID format ID: ${id}, attempting to find original ID`);
       
-      // Get all factors to find which one has this UUID
-      const allFactors = await getFactors();
-      const matchingFactor = allFactors.find(f => f.id === id);
+      // First try to get the original ID directly from our mapping
+      const originalId = getOriginalId(id);
       
-      if (matchingFactor && matchingFactor.originalId) {
-        dbQueryId = matchingFactor.originalId;
-        console.log(`Found matching original ID: ${dbQueryId} for UUID: ${id}`);
+      // If we found a mapping (different from the input UUID)
+      if (originalId !== id) {
+        dbQueryId = originalId;
+        console.log(`Found mapping for original ID: ${dbQueryId} for UUID: ${id}`);
       } else {
-        console.log(`No matching original ID found for UUID: ${id}, using as-is`);
+        // If no direct mapping, check all factors as a fallback
+        console.log(`No direct mapping found for UUID: ${id}, checking all factors...`);
+        
+        // Get all factors to find which one has this UUID
+        const allFactors = await getFactors();
+        const matchingFactor = allFactors.find(f => f.id === id);
+        
+        if (matchingFactor && matchingFactor.originalId) {
+          dbQueryId = matchingFactor.originalId;
+          console.log(`Found matching original ID: ${dbQueryId} for UUID: ${id}`);
+        } else {
+          console.log(`No matching original ID found for UUID: ${id}, using as-is`);
+        }
       }
     }
     
