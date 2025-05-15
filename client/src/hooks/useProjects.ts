@@ -74,7 +74,7 @@ export function useProject(projectId?: string) {
 export function useProjects() {
   const queryClient = useQueryClient();
   // Use the ProjectContext to get access to the current project ID
-  const { currentProjectId, setCurrentProjectId, clearCurrentProject } = useProjectContext();
+  const { currentProjectId, setCurrentProjectId, clearCurrentProject, setCurrentProject } = useProjectContext();
 
   // Fetch all projects for the current user
   const { data: allProjects = [], isLoading, error } = useQuery<Project[]>({

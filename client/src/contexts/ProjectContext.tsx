@@ -103,8 +103,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   
   // Extract project ID from route if available
   useEffect(() => {
-    const params = matchProjectRoute?.params || matchProjectToolRoute?.params;
-    const routeProjectId = params?.projectId || null;
+    // Get params from the match objects if they exist
+    let routeProjectId: string | null = null;
+    
+    if (matchProjectRoute && typeof matchProjectRoute === 'object' && 'params' in matchProjectRoute) {
+      routeProjectId = (matchProjectRoute.params as { projectId: string })?.projectId || null;
+    } else if (matchProjectToolRoute && typeof matchProjectToolRoute === 'object' && 'params' in matchProjectToolRoute) {
+      routeProjectId = (matchProjectToolRoute.params as { projectId: string })?.projectId || null;
+    }
     
     if (routeProjectId) {
       setProjectId(routeProjectId);

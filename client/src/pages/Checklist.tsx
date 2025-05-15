@@ -92,6 +92,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
   const queryClient = useQueryClient();
   const params = useParams<{ projectId: string }>();
   const [_, navigate] = useLocation();
+  
+  // Create a wrapper function to match the old API
+  const setSelectedProjectId = (id: string) => {
+    setCurrentProjectId(id);
+  };
 
   // Determine the current project ID with this priority: 
   // 1. URL parameter (highest priority)

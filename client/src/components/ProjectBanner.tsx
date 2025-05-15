@@ -54,7 +54,7 @@ export default function ProjectBanner() {
       setSelectedProjectId(currentProject.id);
     } else {
       // Otherwise, load from localStorage as fallback
-      const storedProjectId = localStorage.getItem('selectedProjectId');
+      const storedProjectId = localStorage.getItem('selectedProjectId') || localStorage.getItem('currentProjectId');
       if (storedProjectId) {
         setSelectedProjectId(storedProjectId);
         
@@ -66,7 +66,7 @@ export default function ProjectBanner() {
         }
       }
     }
-  }, [currentProject, projects, setCurrentProject]);
+  }, [currentProject, projects, setCurrentProject, setSelectedProjectId]);
   
   // Handle project change
   const handleProjectChange = async (projectId: string) => {
