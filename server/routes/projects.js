@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { isOrgMember } from "../middlewares/isOrgMember.js";
 import { isValidUUID, isNumericId, convertNumericIdToUuid } from "../utils/uuid-utils.js";
+import { v4 as uuidv4 } from 'uuid';
+import { projectsDb } from '../projectsDb.js';
 
 /**
  * Middleware to validate a project ID
@@ -372,6 +374,63 @@ router.delete("/:id", isAuthenticated, validateProjectId, async (req, res) => {
   } catch (error) {
     console.error("Error deleting project:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/projects
+ * Create a new project
+ */
+router.post("/", isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const projectData = req.body;
+    
+    console.log(`Creating project for user ${userId}:`, projectData);
+    
+    // Generate a UUID for the project ID
+    const projectId = uuidv4();
+    
+    // Create a project record with the Drizzle ORM
+    const [newProject] = await db.insert(projects)
+      .values({
+        id: projectId,
+        userId: userId,
+        name: projectData.name || 'New Project',
+        description: projectData.description || '',
+        sector: projectData.sector || '',
+        customSector: projectData.customSector || '',
+        orgType: projectData.orgType || '',
+        teamSize: projectData.teamSize || '',
+        currentStage: projectData.currentStage || '',
+        organisationId: projectData.organisationId || null,
+        industry: projectData.industry || '',
+        organisationSize: projectData.organisationSize || '',
+        isProfileComplete: projectData.isProfileComplete || false,
+        createdAt: new Date(),
+        lastUpdated: new Date()
+      })
+      .returning();
+    
+    if (!newProject) {
+      console.error(`Failed to create project for user ${userId}`);
+      return res.status(500).json({ message: "Failed to create project" });
+    }
+    
+    console.log(`Successfully created project ${newProject.id} for user ${userId}`);
+    
+    // Clear the projects cache in the session if it exists
+    if (req.user.projects) {
+      delete req.user.projects;
+    }
+    
+    return res.status(201).json(newProject);
+  } catch (error) {
+    console.error("Error creating project:", error);
+    return res.status(500).json({ 
+      message: "Internal server error", 
+      error: error.message
+    });
   }
 });
 
