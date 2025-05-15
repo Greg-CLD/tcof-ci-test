@@ -46,6 +46,7 @@ import OrganisationHeuristicsPage from "@/pages/OrganisationHeuristicsPage";
 import ProjectPage from "@/pages/ProjectPage";
 import BasicProjectEditPage from "@/pages/BasicProjectEditPage";
 import TestAuth from "@/pages/TestAuth";
+import TestPersistencePage from "@/pages/test-persistence";
 import FeedbackDemo from "@/components/FeedbackDemo";
 import { AuthProtectionProvider, useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/useAuth";
@@ -306,6 +307,24 @@ function Router() {
       <Route path="/pro-tools" component={ProTools} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/test-auth" component={TestAuth} />
+      <Route path="/test-persistence">
+        {isAuthenticated ? (
+          <ProtectedRouteGuard>
+            <TestPersistencePage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
+      <Route path="/test-persistence/:projectId">
+        {isAuthenticated ? (
+          <ProtectedRouteGuard>
+            <TestPersistencePage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
       <Route path="/tools/starter-access" component={StarterAccess} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/feedback-demo" component={FeedbackDemo} />

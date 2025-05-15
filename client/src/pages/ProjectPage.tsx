@@ -398,6 +398,17 @@ export default function ProjectPage() {
                             className="justify-start"
                             onClick={() => {
                               localStorage.setItem('currentProjectId', projectId);
+                              navigate(`/test-persistence/${projectId}`);
+                            }}
+                          >
+                            <Clock className="mr-2 h-4 w-4" />
+                            Test Task Persistence
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="justify-start"
+                            onClick={() => {
+                              localStorage.setItem('currentProjectId', projectId);
                               navigate(`/make-a-plan/${projectId}`);
                             }}
                           >
