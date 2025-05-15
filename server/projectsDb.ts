@@ -206,20 +206,28 @@ function validateProjectUUID(projectId: unknown): string {
     throw new Error('Project ID cannot be null or undefined');
   }
   
+  // Import UUID utilities from our shared utility module
+  const { isValidUUID, isNumericId, convertNumericIdToUuid } = require('./utils/uuid-utils');
+  
   // Convert to string for consistency
   const idString = String(projectId);
   
   // Check if already a valid UUID
-  const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (UUID_PATTERN.test(idString)) {
+  if (isValidUUID(idString)) {
     // If already a valid UUID, use it directly
     return idString.toLowerCase();
   }
   
   // If it's a numeric ID, convert to UUID in a deterministic way
-  // We use a namespace UUID for consistent generation
-  const NAMESPACE_UUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // Standard DNS namespace
-  return uuidv5(idString, NAMESPACE_UUID);
+  if (isNumericId(idString)) {
+    // Use our deterministic conversion function
+    return convertNumericIdToUuid(idString);
+  }
+  
+  // If it's not a valid UUID or numeric ID, use a fallback
+  // This should ideally never happen in production
+  console.warn(`Invalid project ID format detected: ${idString}. Converting to UUID.`);
+  return uuidv5(idString, '6ba7b810-9dad-11d1-80b4-00c04fd430c8');  // Standard DNS namespace
 }
 
 /**

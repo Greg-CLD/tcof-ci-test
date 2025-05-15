@@ -1,6 +1,7 @@
 import express from "express";
 import { projectsDb } from "../projectsDb.js";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
+import { isValidUUID, isNumericId, convertNumericIdToUuid } from "../utils/uuid-utils.js";
 
 const router = express.Router();
 
@@ -12,6 +13,23 @@ router.get("/:projectId/tasks", async (req, res) => {
   try {
     const { projectId } = req.params;
     const userId = req.user.id;
+    
+    // Validate project ID format
+    if (isNumericId(projectId)) {
+      // For backward compatibility - convert to UUID if it's a numeric ID
+      console.log(`Converting numeric project ID ${projectId} to UUID format`);
+      const uuidProjectId = convertNumericIdToUuid(projectId);
+      // Get tasks for this project directly from database using the converted UUID
+      const tasks = await projectsDb.getProjectTasks(uuidProjectId);
+      console.log(`Found ${tasks.length} tasks for converted project ${uuidProjectId} (from ${projectId})`);
+      return res.json(tasks);
+    } else if (!isValidUUID(projectId)) {
+      console.error(`Invalid project ID format: ${projectId}`);
+      return res.status(400).json({ 
+        message: "Invalid project ID format",
+        details: "Project ID must be a valid UUID"
+      });
+    }
     
     // Check if project exists and user has access
     const project = await projectsDb.getProject(projectId);
