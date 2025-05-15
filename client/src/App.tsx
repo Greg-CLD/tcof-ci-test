@@ -326,6 +326,15 @@ function Router() {
           <AuthRequired />
         )}
       </Route>
+      <Route path="/uuid-test">
+        {isAuthenticated ? (
+          <ProtectedRouteGuard>
+            <UUIDTestPage />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
       <Route path="/tools/starter-access" component={StarterAccess} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/feedback-demo" component={FeedbackDemo} />

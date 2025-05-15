@@ -1,5 +1,5 @@
-import { useContext, useEffect, useState } from 'react';
-import { ProjectContext } from '@/contexts/ProjectContext';
+import { useEffect, useState } from 'react';
+import { useProject } from '@/contexts/ProjectContext';
 import UUIDTaskTest from '@/components/UUIDTaskTest';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/queryClient';
@@ -11,7 +11,7 @@ import { generateUuid } from '@/lib/uuid-utils';
  * The page also helps with testing task persistence
  */
 export default function UUIDTestPage() {
-  const { currentProjectId, selectProject } = useContext(ProjectContext);
+  const { currentProjectId, setCurrentProjectId } = useProject();
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -29,7 +29,7 @@ export default function UUIDTestPage() {
           
           // Auto-select the first project if none is selected
           if (projectsData.length > 0 && (!currentProjectId || currentProjectId === '00000000-000b-4000-8000-000000000000')) {
-            selectProject(projectsData[0].id);
+            setCurrentProjectId(projectsData[0].id);
           }
         }
       } catch (error) {
@@ -45,7 +45,7 @@ export default function UUIDTestPage() {
     }
     
     fetchProjects();
-  }, [currentProjectId, selectProject, toast]);
+  }, [currentProjectId, setCurrentProjectId, toast]);
   
   // Create a test project if none exists
   const createTestProject = async () => {
@@ -68,7 +68,7 @@ export default function UUIDTestPage() {
         setProjects(prev => [...prev, newProject]);
         
         // Select the new project
-        selectProject(newProject.id);
+        setCurrentProjectId(newProject.id);
         
         toast({
           title: 'Success',
