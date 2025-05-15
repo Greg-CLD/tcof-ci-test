@@ -440,10 +440,10 @@ export const loadSuccessFactorTasks = async (): Promise<Record<Stage, {
   } catch (error) {
     console.error('Error loading success factor tasks:', error);
     return {
-      Identification: [],
-      Definition: [],
-      Delivery: [],
-      Closure: []
+      identification: [],
+      definition: [],
+      delivery: [],
+      closure: []
     };
   }
 };
