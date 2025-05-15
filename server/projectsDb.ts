@@ -332,10 +332,10 @@ export const projectsDb = {
   },
   
   // Update an existing task
-  async updateTask(taskId, data) {
+  async updateTask(taskId: string, data: Partial<ProjectTask>) {
     try {
       // Sanitize input data to ensure types match and handle empty strings properly
-      const updateData = {};
+      const updateData: Record<string, string | boolean | null | Date> = {};
       
       // Only update fields that are provided, with proper empty string handling
       if (data.text !== undefined) updateData.text = String(data.text);
@@ -374,7 +374,7 @@ export const projectsDb = {
   },
   
   // Delete a task
-  async deleteTask(taskId) {
+  async deleteTask(taskId: string): Promise<boolean> {
     try {
       const result = await db.delete(projectTasksTable)
         .where(eq(projectTasksTable.id, taskId))

@@ -576,12 +576,17 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         // Verify the task was saved
         console.log(`Task created successfully with ID: ${result.id}`);
         
-        // Return the created task with all its properties
-        return res.status(201).json(result);
+        // Return the created task with all its properties in a structured format
+        return res.status(201).json({
+          success: true,
+          task: result,
+          message: 'Task created successfully'
+        });
       } catch (taskError) {
         console.error('Error in createProjectTask:', taskError);
         // Return an error response with 500 status
         return res.status(500).json({
+          success: false,
           message: 'Failed to create task',
           error: taskError instanceof Error ? taskError.message : 'Unknown error',
           details: 'The task was not persisted to the database'
@@ -589,8 +594,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       }
     } catch (error) {
       console.error('Error processing project tasks request:', error);
-      // Return an error status rather than a fake successful response
+      // Return an error status with a consistent format
       return res.status(500).json({
+        success: false,
         message: 'Failed to process task creation request',
         error: error instanceof Error ? error.message : 'Unknown error',
         details: 'The task was not persisted to the database'
@@ -602,11 +608,26 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   app.get('/api/projects/:projectId/tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.params;
+      
+      // Basic validation
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Project ID is required'
+        });
+      }
+      
       const tasks = await projectsDb.getTasksForProject(projectId);
-      res.json(tasks);
+      
+      // Log the number of tasks returned for debugging
+      console.log(`Retrieved ${tasks?.length || 0} tasks for project ${projectId}`);
+      
+      // Return a consistently structured response
+      return res.status(200).json(tasks || []);
     } catch (error) {
       console.error('Error retrieving project tasks:', error);
       res.status(500).json({
+        success: false,
         message: 'Failed to retrieve project tasks',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -621,14 +642,53 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
 
       // Ensure we have the required fields
       if (!taskUpdate) {
-        return res.status(400).json({ message: 'Task data is required' });
+        return res.status(400).json({ 
+          success: false,
+          message: 'Task data is required' 
+        });
       }
 
-      const updatedTask = await projectsDb.updateTask(projectId, taskId, taskUpdate);
-      res.json(updatedTask);
+      // Basic validation of ID format
+      if (!taskId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Task ID is required'
+        });
+      }
+
+      try {
+        // Attempt to update the task
+        const updatedTask = await projectsDb.updateTask(taskId, taskUpdate);
+        
+        if (!updatedTask) {
+          return res.status(404).json({
+            success: false,
+            message: `Task with ID ${taskId} not found`
+          });
+        }
+        
+        // Return the successfully updated task
+        return res.status(200).json({
+          success: true,
+          task: updatedTask,
+          message: 'Task updated successfully'
+        });
+      } catch (err) {
+        // Check if this is a "not found" error
+        if (err instanceof Error && err.message.includes('not found')) {
+          return res.status(404).json({
+            success: false,
+            message: 'Task not found',
+            error: err.message
+          });
+        }
+        // Re-throw any other errors to be caught by the outer catch
+        throw err; 
+      }
     } catch (error) {
       console.error('Error updating project task:', error);
       res.status(500).json({
+        success: false,
         message: 'Failed to update project task',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
