@@ -22,7 +22,7 @@ export type PracticeTaskItem = {
   assignee?: string;
 };
 
-export type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
+export type Stage = 'identification' | 'definition' | 'delivery' | 'closure';
 
 export type SuccessFactorRating = {
   rating: 1 | 2 | 3 | 4 | 5;

@@ -3,12 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
-// Define the Stage type directly here instead of importing
-type Stage = 'identification' | 'definition' | 'delivery' | 'closure';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+// Import Stage type from plan-db to ensure consistency
+import { Stage } from '@/lib/plan-db';
 
 interface CreateTaskFormProps {
   projectId: string;
-  stage: Stage;
+  stage: Stage; // Current active stage (used as default)
   onTaskCreated: () => void;
   isAuthenticated: boolean;
 }
@@ -20,6 +27,7 @@ export default function CreateTaskForm({
   isAuthenticated
 }: CreateTaskFormProps) {
   const [taskText, setTaskText] = useState('');
+  const [selectedStage, setSelectedStage] = useState<Stage>(stage);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Use the project tasks hook to handle task creation and persistence
@@ -56,7 +64,7 @@ export default function CreateTaskForm({
       
       console.log('[CREATE_TASK] Creating task on server:', { 
         text: taskText, 
-        stage, 
+        stage: selectedStage, 
         sourceId,
         projectId
       });
@@ -66,7 +74,7 @@ export default function CreateTaskForm({
       const newTask = await createTask({
         projectId,
         text: taskText,
-        stage,
+        stage: selectedStage,
         origin: "custom",
         sourceId,
         completed: false,
@@ -78,7 +86,7 @@ export default function CreateTaskForm({
       
       toast({
         title: "Task created",
-        description: "New task has been added"
+        description: "New task has been added to the " + selectedStage + " stage"
       });
       
       // Clear the form and notify parent
@@ -110,24 +118,46 @@ export default function CreateTaskForm({
       setIsSubmitting(false);
     }
   };
+  
+  // Helper function to format stage name for display
+  const formatStageName = (stage: string): string => {
+    return stage.charAt(0).toUpperCase() + stage.slice(1);
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center space-x-2 mb-4">
-      <Input
-        type="text"
-        placeholder="Add a new task..."
-        value={taskText}
-        onChange={(e) => setTaskText(e.target.value)}
-        disabled={isSubmitting || !isAuthenticated}
-        className="flex-1"
-      />
-      <Button 
-        type="submit" 
-        disabled={isSubmitting || !taskText.trim() || !isAuthenticated}
-        size="sm"
-      >
-        {isSubmitting ? 'Adding...' : 'Add Task'}
-      </Button>
+    <form onSubmit={handleSubmit} className="flex flex-col space-y-2 mb-4">
+      <div className="flex items-center space-x-2">
+        <Input
+          type="text"
+          placeholder="Add a new task..."
+          value={taskText}
+          onChange={(e) => setTaskText(e.target.value)}
+          disabled={isSubmitting || !isAuthenticated}
+          className="flex-1"
+        />
+        <Select
+          value={selectedStage}
+          onValueChange={(value) => setSelectedStage(value as Stage)}
+          disabled={isSubmitting || !isAuthenticated}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select stage" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="identification">{formatStageName("identification")}</SelectItem>
+            <SelectItem value="definition">{formatStageName("definition")}</SelectItem>
+            <SelectItem value="delivery">{formatStageName("delivery")}</SelectItem>
+            <SelectItem value="closure">{formatStageName("closure")}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || !taskText.trim() || !isAuthenticated}
+          size="sm"
+        >
+          {isSubmitting ? 'Adding...' : 'Add Task'}
+        </Button>
+      </div>
     </form>
   );
 }

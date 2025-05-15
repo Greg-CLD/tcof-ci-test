@@ -1,0 +1,32 @@
+Problem: After the latest changes:
+- The checklist now shows two task creation buttons, but neither can properly create or persist tasks.
+- Tasks do not appear in the correct stage/category tabs; all tasks are grouped under 'Identification', regardless of their actual stage.
+- There is no ability to tag new tasks to the correct category (e.g., User Heuristics or other defined stages).
+- The UI for assigning tasks to a specific stage or heuristic is missing from the creation form.
+
+Expected Outcome:
+- Only one clear task creation button/form should be visible per checklist stage or category.
+- When creating a new task, the user can select or assign it to a specific stage (identification, definition, delivery, closure) and/or user heuristic.
+- After creation, the task is displayed under the correct tab (stage/category) and persists after refresh.
+- All tasks from the API (GET /tasks) are rendered under the correct tabs/categories in the checklist UI.
+
+Tech Details:
+- Task objects include a 'stage' property which should determine their tab/category in the checklist.
+- There are separate concepts for 'stage' (lifecycle phase) and 'user heuristic' (category/heuristic assignment); UI should enable both if both are relevant.
+- Only one method of creating a task should be enabled in the UI (remove duplicate forms/buttons).
+- Any mapping or filtering of tasks by stage should use lowercase (e.g., 'identification') for consistency.
+
+Safeguards:
+- Do not break the task object schema or alter task data structure as returned by the API.
+- Do not alter authentication/session code as part of this change.
+
+**Questions:**
+1. What changes were made to the checklist task creation and rendering flow in the last update? Please summarise which files, functions, and UI elements were affected.
+2. What is the intended behaviour for assigning a task to a specific stage/category during creation? How is this handled in the current code?
+3. Is the current task creation form (CreateTaskForm) correctly assigning new tasks to the selected stage, or is it defaulting all tasks to 'identification'? If so, how do we allow the user to select the desired stage/category?
+4. What is the recommended approach to enable users to tag new tasks to the correct stage and (if relevant) user heuristic during creation? Please outline the UI and code changes required.
+
+Second lane:  
+If you were to audit the Checklist.tsx and CreateTaskForm.tsx for bugs that prevent tasks from being categorised/displayed correctly, what specific lines/logic would you check first?
+
+Please respond with a summary of findings and a step-by-step proposal to restore correct task categorisation and creation functionality.
