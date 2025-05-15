@@ -407,7 +407,13 @@ export const projectTaskInsertSchema = createInsertSchema(projectTasks, {
   text: (schema) => schema.min(1, "Task text is required"),
   stage: (schema) => schema.min(1, "Stage is required"),
   origin: (schema) => schema.min(1, "Origin is required"),
-  sourceId: (schema) => schema.min(1, "Source ID is required"),
+  // Make sourceId optional - allow null or empty
+  sourceId: (schema) => schema.nullable().optional(),
+  // Make these optional fields properly nullable
+  notes: (schema) => schema.nullable().optional(),
+  priority: (schema) => schema.nullable().optional(),
+  dueDate: (schema) => schema.nullable().optional(),
+  owner: (schema) => schema.nullable().optional(),
 });
 export const projectTaskSelectSchema = createSelectSchema(projectTasks);
 

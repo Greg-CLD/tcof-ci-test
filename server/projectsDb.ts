@@ -415,21 +415,22 @@ export const projectsDb = {
       
       // Save the task to the database using Drizzle insert
       console.log('Starting database insert operation');
+      // Create insert values with proper handling for empty fields
       const insertValues = {
         id: task.id,
         projectId: task.projectId,
-        text: task.text,
-        stage: task.stage,
-        origin: task.origin,
-        sourceId: task.sourceId,
-        completed: task.completed, 
-        notes: task.notes,
-        priority: task.priority,
-        dueDate: task.dueDate,
-        owner: task.owner,
-        status: task.status,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        text: task.text || '',
+        stage: task.stage || 'identification',
+        origin: task.origin || 'custom',
+        sourceId: task.sourceId || '',
+        completed: Boolean(task.completed), 
+        notes: task.notes || null,  // Use null for empty notes
+        priority: task.priority || null,  // Use null for empty priority
+        dueDate: task.dueDate || null,  // Use null for empty dueDate
+        owner: task.owner || null,  // Use null for empty owner
+        status: task.status || 'To Do',
+        createdAt: new Date(),  // Always use current date
+        updatedAt: new Date()   // Always use current date
       };
       console.log('Insert values:', JSON.stringify(insertValues, null, 2));
       

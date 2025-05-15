@@ -80,7 +80,7 @@ async function debugTaskPersistence() {
         false,                                  // completed
         'Created by debug script',              // notes
         'medium',                               // priority
-        '',                                     // due_date
+        null,                                   // due_date (null instead of empty string)
         'Debug System',                         // owner
         'pending',                              // status
         now,                                    // created_at
