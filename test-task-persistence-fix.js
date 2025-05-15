@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 async function testTaskPersistence() {
   try {
     // Step 1: Login to get session cookie
-    const loginResponse = await fetch('http://localhost:3000/api/login', {
+    const loginResponse = await fetch('http://localhost:5000/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -23,7 +23,7 @@ async function testTaskPersistence() {
     console.log('Cookies:', cookies);
     
     // Step 2: Get all projects to find a good test project
-    const projectsResponse = await fetch('http://localhost:3000/api/projects', {
+    const projectsResponse = await fetch('http://localhost:5000/api/projects', {
       headers: {
         'Cookie': cookies
       }
@@ -45,7 +45,7 @@ async function testTaskPersistence() {
     console.log('Using test project:', testProject.id, testProject.name);
     
     // Step 3: Get existing tasks for the test project
-    const tasksBeforeResponse = await fetch(`http://localhost:3000/api/projects/${testProject.id}/tasks`, {
+    const tasksBeforeResponse = await fetch(`http://localhost:5000/api/projects/${testProject.id}/tasks`, {
       headers: {
         'Cookie': cookies
       }

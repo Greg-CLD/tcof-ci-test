@@ -246,7 +246,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           origin: task.origin,
           created_at: task.created_at,
           updated_at: task.updated_at,
-          project_id_type: typeof projectId,
+          project_id_type: typeof projectId
+        };
+      });
+      
+      res.json({ tasks: tasksWithAnalysis, count: tasksWithAnalysis.length });
+    } catch (error) {
+      console.error('Error in task debug endpoint:', error);
+      res.status(500).json({ error: 'Server error getting task data' });
+    }
+  });
 
 app.get('/__debug/schema/tasks', isAdmin, async (req: Request, res: Response) => {
   try {
@@ -283,33 +292,65 @@ app.get('/__debug/schema/tasks', isAdmin, async (req: Request, res: Response) =>
   }
 });
 
-          project_id_analysis: {
-            is_numeric: !isNaN(Number(projectId)),
-            is_uuid_format: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(projectId)),
-            string_length: String(projectId).length
-          }
-        };
-      });
-      
-      // Get task counts by project ID for summary
-      const taskCountsByProject = {};
-      tasksWithAnalysis.forEach(task => {
-        const projectId = task.project_id;
-        if (!taskCountsByProject[projectId]) {
-          taskCountsByProject[projectId] = 0;
-        }
-        taskCountsByProject[projectId]++;
-      });
-      
-      return res.json({
-        tasks: tasksWithAnalysis,
-        task_count: tasksWithAnalysis.length,
-        task_counts_by_project: taskCountsByProject,
+// Diagnostic endpoint for tasks by project ID
+app.get('/api/debug/tasks/:projectId', async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    
+    // Verify the project ID exists
+    const projectResult = await db.execute(sql`
+      SELECT * FROM projects WHERE id = ${projectId}
+    `);
+    
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Get all tasks for this project
+    const tasksResult = await db.execute(sql`
+      SELECT * FROM project_tasks WHERE project_id = ${projectId}
+    `);
+    
+    // Return the tasks
+    res.json({ 
+      tasks: tasksResult.rows, 
+      count: tasksResult.rows.length 
+    });
+  } catch (error) {
+    console.error(`Error getting tasks for project:`, error);
+    res.status(500).json({ error: 'Server error getting tasks' });
+  }
+});
+
+// Debug endpoint for task counts
+app.get('/api/debug/task-stats', async (req: Request, res: Response) => {
+  try {
+    const tasksResult = await db.execute(sql`
+      SELECT project_id, COUNT(*) as task_count
+      FROM project_tasks
+      GROUP BY project_id
+    `);
+    
+    res.json({
+        task_counts_by_project: tasksResult.rows,
         timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error getting project tasks:', error);
-      res.status(500).json({
+    });
+  } catch (error) {
+    console.error('Error getting task stats:', error);
+    res.status(500).json({ error: 'Server error getting task stats' });
+  }
+});
+
+// Error reporting endpoint
+app.get('/api/debug/errors', async (req: Request, res: Response) => {
+  try {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error in error reporting endpoint:', error);
+    res.status(500).json({
         message: 'Error retrieving project tasks',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
