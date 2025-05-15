@@ -7,7 +7,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import { db } from './db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, asc, sql } from 'drizzle-orm';
 import { projectTasks as projectTasksTable } from '@shared/schema';
 
 // Path to projects data file
@@ -365,39 +365,36 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
       const safeProjectId = String(project.id);
       console.log(`Using confirmed project ID: ${safeProjectId} (UUID string) to load tasks`);
       
-      // Use direct SQL query with prepared statement to avoid type issues
-      const sql = `
-        SELECT * FROM project_tasks
-        WHERE project_id = $1::uuid
-      `;
-      
       try {
         console.log(`Loading tasks with safe project ID: ${safeProjectId}`);
-        const result = await db.execute(sql, [safeProjectId]);
+        // Use SQL template literal from drizzle-orm
+        // Use direct Drizzle query with table definition and UUID casting
+        const tasks = await db.select().from(projectTasksTable)
+          .where(sql`project_id = ${safeProjectId}::uuid`);
         
-        if (!result.rows || result.rows.length === 0) {
+        if (!tasks || tasks.length === 0) {
           console.log(`No tasks found for project ${safeProjectId}`);
           return [];
         }
         
-        console.log(`Loaded ${result.rows.length} tasks from database for project ${safeProjectId}`);
+        console.log(`Loaded ${tasks.length} tasks from database for project ${safeProjectId}`);
         
-        return result.rows.map(task => ({
+        return tasks.map((task: any) => ({
           id: String(task.id || ''),
           // Always use the confirmed project.id from above to avoid type mismatches
           projectId: safeProjectId,
           text: String(task.text || ''),
           stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
           origin: (String(task.origin || 'custom') as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
-          sourceId: String(task.source_id || ''),
+          sourceId: String(task.sourceId || ''),
           completed: Boolean(task.completed || false),
           notes: String(task.notes || ''),
           priority: String(task.priority || ''),
-          dueDate: String(task.due_date || ''),
+          dueDate: String(task.dueDate || ''),
           owner: String(task.owner || ''),
           status: String(task.status || 'pending'),
-          createdAt: task.created_at ? new Date(String(task.created_at)).toISOString() : new Date().toISOString(),
-          updatedAt: task.updated_at ? new Date(String(task.updated_at)).toISOString() : new Date().toISOString()
+          createdAt: task.createdAt ? new Date(String(task.createdAt)).toISOString() : new Date().toISOString(),
+          updatedAt: task.updatedAt ? new Date(String(task.updatedAt)).toISOString() : new Date().toISOString()
         }));
       } catch (sqlError) {
         console.error('SQL error loading project tasks:', sqlError);
@@ -440,7 +437,30 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
  * Save a project task to the database
  */
 /**
- * Checks if a string is a valid UUID
+ * STRICT UUID validation for project IDs
+ * This now ONLY accepts valid UUIDs and throws an error for non-UUID values
+ */
+function validateProjectUUID(projectId: unknown): string {
+  // Ensure the input is a string
+  if (typeof projectId !== 'string') {
+    throw new Error(`Invalid projectId: Expected string UUID, got ${typeof projectId}`);
+  }
+  
+  const projectIdString = projectId.trim();
+  
+  // Check against strict UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  
+  if (!uuidRegex.test(projectIdString)) {
+    throw new Error(`Invalid projectId format: ${projectIdString} is not a valid UUID`);
+  }
+  
+  return projectIdString;
+}
+
+/**
+ * Legacy function - DEPRECATED
+ * Checks if a string is a valid UUID without throwing
  */
 function isValidUUID(str: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -448,11 +468,12 @@ function isValidUUID(str: string): boolean {
 }
 
 /**
- * Converts a numeric project ID to a UUID format suitable for database storage
- * This is required because the database schema expects project_id to be a UUID,
- * but actual project IDs in the system are often integers.
+ * DEPRECATED - Do not use for new code
+ * This function will be removed in future versions
  */
 function getProjectIdForDb(projectId: string | number): string {
+  console.warn('DEPRECATED: getProjectIdForDb() is deprecated. Use validateProjectUUID() instead.');
+  
   // Convert to string first to handle both string and number inputs
   const projectIdString = String(projectId);
   
@@ -477,13 +498,9 @@ function getProjectIdForDb(projectId: string | number): string {
 
 async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
   try {
-    // Always convert projectId to string to avoid type issues
-    const projectIdString = String(task.projectId);
-    console.log(`Saving task for project ${projectIdString} (string type)`);
-    
-    // Generate a database-compatible UUID from the project ID
-    const projectIdForDb = getProjectIdForDb(projectIdString);
-    console.log(`Using project ID for database: ${projectIdForDb} (derived from ${projectIdString})`);
+    // Use the strict UUID validator to ensure we have a valid UUID
+    const projectIdString = validateProjectUUID(task.projectId);
+    console.log(`Saving task for project ${projectIdString} (validated UUID)`);
     
     // If the task has an ID, update it
     if (task.id && task.id !== 'new') {
@@ -570,8 +587,9 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
     } else {
       // Create a new task with a new UUID if not provided
       const taskId = task.id === 'new' ? uuidv4() : (task.id || uuidv4());
-      console.log(`Creating new task ${taskId} for project ${projectIdString} (DB ID: ${projectIdForDb})`);
+      console.log(`Creating new task ${taskId} for project ${projectIdString} (validated UUID)`);
       
+      // Project ID is now fully validated as UUID
       const now = new Date().toISOString();
       
       try {
@@ -589,7 +607,7 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         // Ensure each parameter is properly prepared and non-null
         const insertParams = [
           taskId,                                       // $1
-          projectIdForDb,                               // $2 - Use UUID format for database
+          projectIdString,                              // $2 - Already validated as UUID
           task.text || '',                              // $3
           task.stage || 'identification',               // $4
           task.origin || 'custom',                      // $5
