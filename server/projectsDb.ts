@@ -218,7 +218,19 @@ export const projectsDb = {
         ))
         .orderBy(asc(projectTasksTable.createdAt));
       
-      return tasks.map(task => convertDbTaskToProjectTask(task));
+      // Use the enhanced convertDbTaskToProjectTask function for consistent ID handling
+      return tasks.map(task => {
+        // For factor-origin tasks with compound IDs, maintain client-side consistency
+        if (task.origin === 'factor' && task.sourceId && task.sourceId.includes('-') && task.sourceId.split('-').length > 5) {
+          return convertDbTaskToProjectTask(task, task.sourceId);
+        }
+        // If the sourceId matches the requested sourceId and it looks like a compound ID
+        // use it for consistency with the client request
+        if (task.sourceId === sourceId && sourceId.includes('-') && sourceId.split('-').length > 5) {
+          return convertDbTaskToProjectTask(task, sourceId);
+        }
+        return convertDbTaskToProjectTask(task);
+      });
     } catch (error) {
       console.error(`Error getting tasks for source ${sourceId}:`, error);
       return [];
@@ -233,7 +245,19 @@ export const projectsDb = {
         .where(eq(projectTasksTable.sourceId, sourceId))
         .orderBy(asc(projectTasksTable.createdAt));
       
-      return tasks.map(task => convertDbTaskToProjectTask(task));
+      // Use the enhanced convertDbTaskToProjectTask function for consistent ID handling
+      return tasks.map(task => {
+        // For factor-origin tasks with compound IDs, maintain client-side consistency
+        if (task.origin === 'factor' && task.sourceId && task.sourceId.includes('-') && task.sourceId.split('-').length > 5) {
+          return convertDbTaskToProjectTask(task, task.sourceId);
+        }
+        // If the sourceId matches the requested sourceId and it looks like a compound ID
+        // use it for consistency with the client request
+        if (task.sourceId === sourceId && sourceId.includes('-') && sourceId.split('-').length > 5) {
+          return convertDbTaskToProjectTask(task, sourceId);
+        }
+        return convertDbTaskToProjectTask(task);
+      });
     } catch (error) {
       console.error(`Error getting tasks for source ${sourceId}:`, error);
       return [];
