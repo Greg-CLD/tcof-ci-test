@@ -84,7 +84,7 @@ interface TaskUpdates {
   status?: 'To Do' | 'Working On It' | 'Done';
 }
 
-export default function Checklist({ projectId: propProjectId }: ChecklistProps) {
+export default function Checklist({ projectId: propProjectId }: ChecklistProps): JSX.Element {
   const { toast } = useToast();
   const { plan } = usePlan() as { plan: any };
   const { getSelectedProject } = useProjects();
@@ -256,7 +256,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
             completed: !!task.completed,
             stage: (task.stage.charAt(0).toUpperCase() + task.stage.slice(1)) as Stage,
             source: task.origin as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
-            sourceId: task.sourceId || '',
+            sourceId: task.sourceId || undefined,
             notes: task.notes || '',
             priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
             dueDate: task.dueDate || '',
@@ -585,9 +585,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
         
         <div className="flex gap-2">
           <CreateTaskForm 
-            projectId={currentProjectId}
+            projectId={currentProjectId || ''}
             onTaskCreated={refreshTasksState}
-            defaultStage={activeTab}
+            stage={activeTab}
           />
           
           <Button variant="outline">
@@ -693,7 +693,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
                   {currentProjectId && (
                     <CreateTaskForm 
                       projectId={currentProjectId}
-                      stage={stage}
+                      stage={stage as Stage}
                       onTaskCreated={refreshTasksState}
                       isAuthenticated={isAuthenticated}
                     />
