@@ -326,10 +326,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       
       // Organize tasks by stage
       const byStage: Record<Stage, UnifiedTask[]> = {
-        Identification: [],
-        Definition: [],
-        Delivery: [],
-        Closure: []
+        identification: [],
+        definition: [],
+        delivery: [],
+        closure: []
       };
       
       allTasks.forEach(task => {
@@ -337,12 +337,12 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         if (byStage[stage]) {
           byStage[stage].push(task);
         } else {
-          byStage.Identification.push({...task, stage: 'Identification'});
+          byStage.identification.push({...task, stage: 'identification'});
         }
       });
       
       console.log(`[CHECKLIST] Final task count: ${allTasks.length} total tasks`);
-      console.log(`[CHECKLIST] Tasks by stage: Identification(${byStage.Identification.length}), Definition(${byStage.Definition.length}), Delivery(${byStage.Delivery.length}), Closure(${byStage.Closure.length})`);
+      console.log(`[CHECKLIST] Tasks by stage: identification(${byStage.identification.length}), definition(${byStage.definition.length}), delivery(${byStage.delivery.length}), closure(${byStage.closure.length})`);
       
       setTasks(allTasks);
       setTasksByStage(byStage);
@@ -398,10 +398,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       
       // Update tasksByStage for UI
       const byStage: Record<Stage, UnifiedTask[]> = {
-        Identification: [],
-        Definition: [],
-        Delivery: [],
-        Closure: []
+        identification: [],
+        definition: [],
+        delivery: [],
+        closure: []
       };
       
       updatedTasks.forEach(task => {
@@ -409,7 +409,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         if (byStage[stage]) {
           byStage[stage].push(task);
         } else {
-          byStage.Identification.push({...task, stage: 'Identification'});
+          byStage.identification.push({...task, stage: 'identification'});
         }
       });
       
@@ -564,7 +564,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       />
       
       <div className="mb-8">
-        <SummaryBar tasks={tasks} plan={plan as any} />
+        <SummaryBar tasks={tasks as any} plan={plan as any} />
       </div>
       
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
@@ -590,6 +590,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             projectId={currentProjectId || ''}
             onTaskCreated={refreshTasksState}
             stage={activeTab}
+            isAuthenticated={isAuthenticated}
           />
           
           <Button variant="outline">
