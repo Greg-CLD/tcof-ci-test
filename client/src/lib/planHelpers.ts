@@ -245,10 +245,10 @@ export const createCustomFramework = async (
       id: frameworkId,
       name,
       tasks: {
-        Identification: [],
-        Definition: [],
-        Delivery: [],
-        Closure: []
+        identification: [],
+        definition: [],
+        delivery: [],
+        closure: []
       }
     };
     
@@ -392,10 +392,10 @@ export const loadSuccessFactorTasks = async (): Promise<Record<Stage, {
       priority?: TaskPriority;
       dueDate?: string;
     }[]> = {
-      Identification: [],
-      Definition: [],
-      Delivery: [],
-      Closure: []
+      identification: [],
+      definition: [],
+      delivery: [],
+      closure: []
     };
     
     // Fetch success factors from API

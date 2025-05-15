@@ -152,10 +152,10 @@ const createEmptyPlanRecord = (name?: string, description?: string, projectId?: 
   description,
   created: new Date().toISOString(),
   stages: {
-    Identification: createEmptyStageData(),
-    Definition: createEmptyStageData(),
-    Delivery: createEmptyStageData(),
-    Closure: createEmptyStageData()
+    identification: createEmptyStageData(),
+    definition: createEmptyStageData(),
+    delivery: createEmptyStageData(),
+    closure: createEmptyStageData()
   }
 });
 
@@ -309,18 +309,18 @@ export const getParentsByStage = (planId: string): Record<Stage, ParentItem[]> =
   const plan = plans[planId];
   if (!plan) {
     return {
-      Identification: [],
-      Definition: [],
-      Delivery: [],
-      Closure: []
+      identification: [],
+      definition: [],
+      delivery: [],
+      closure: []
     };
   }
   
   const result: Record<Stage, ParentItem[]> = {
-    Identification: [],
-    Definition: [],
-    Delivery: [],
-    Closure: []
+    identification: [],
+    definition: [],
+    delivery: [],
+    closure: []
   };
   
   // Process all stages
@@ -590,8 +590,8 @@ export const setZone = async (
   if (!plan) return false;
   
   // Initialize goodPractice if it doesn't exist
-  if (!plan.stages.Identification.goodPractice) {
-    plan.stages.Identification.goodPractice = {
+  if (!plan.stages.identification.goodPractice) {
+    plan.stages.identification.goodPractice = {
       zone: null,
       frameworks: [],
       tasks: [],
