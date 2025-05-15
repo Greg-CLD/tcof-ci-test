@@ -213,7 +213,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
 
   // Helper function to refresh task state
   const refreshTasksState = async () => {
-    if (!currentProjectId || !canonicalTasks || canonicalTasks.length === 0) return;
+    if (!currentProjectId || !canonicalTasks || canonicalTasks.length === 0) {
+      console.log('[CHECKLIST] Cannot refresh tasks: missing project ID or canonical tasks');
+      return;
+    }
     
     // Don't attempt to load tasks if not authenticated
     if (!isAuthenticated) {
@@ -223,6 +226,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
     
     try {
       console.log('[CHECKLIST] Refreshing tasks for project', currentProjectId);
+      setLoading(true);
       
       // Get existing task statuses from the server
       const response = await apiRequest(
@@ -230,11 +234,15 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
         `/api/projects/${currentProjectId}/tasks`
       );
       
+      console.log('[CHECKLIST] Server returned tasks:', response);
+      
       // Store both custom tasks and task status map
       const projectTasks: UnifiedTask[] = [];
       const taskStatusMap: Record<string, boolean> = {};
       
       if (Array.isArray(response)) {
+        console.log(`[CHECKLIST] Processing ${response.length} tasks from server`);
+        
         response.forEach((task: any) => {
           // Track completion status by source ID for referencing canonical tasks
           if (task.sourceId) {
@@ -248,10 +256,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
             completed: !!task.completed,
             stage: (task.stage.charAt(0).toUpperCase() + task.stage.slice(1)) as Stage,
             source: task.origin as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
-            sourceId: task.sourceId,
+            sourceId: task.sourceId || '',
             notes: task.notes || '',
-            priority: task.priority as 'low' | 'medium' | 'high' || 'medium',
-            dueDate: task.dueDate,
+            priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
+            dueDate: task.dueDate || '',
             owner: task.owner || '',
             status: task.status || (task.completed ? 'Done' : 'To Do')
           };
@@ -331,8 +339,12 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
         }
       });
       
+      console.log(`[CHECKLIST] Final task count: ${allTasks.length} total tasks`);
+      console.log(`[CHECKLIST] Tasks by stage: Identification(${byStage.Identification.length}), Definition(${byStage.Definition.length}), Delivery(${byStage.Delivery.length}), Closure(${byStage.Closure.length})`);
+      
       setTasks(allTasks);
       setTasksByStage(byStage);
+      setLoading(false);
     } catch (error) {
       console.error('[CHECKLIST] Error refreshing tasks:', error);
       toast({
@@ -340,6 +352,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
         description: "There was a problem loading the task list.",
         variant: "destructive"
       });
+      setLoading(false);
+    } finally {
+      // Ensure loading state is reset even if there was an error
+      setLoading(false);
     }
   };
 
@@ -461,132 +477,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
     }
   };
   
-  // Handle adding a new task
-  const handleAddTask = async () => {
-    if (!newTaskText.trim()) {
-      toast({
-        title: "Task text is required",
-        description: "Please enter task text",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!currentProjectId) {
-      toast({
-        title: "No project selected",
-        description: "Please select a project first",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      // Create a new task ID
-      const taskId = uuidv4();
-      
-      // Create task data
-      const taskData = {
-        taskId,
-        text: newTaskText,
-        stage: newTaskStage,
-        source: newTaskSource === 'all' ? 'custom' : newTaskSource,
-        projectId: currentProjectId,
-      };
-      
-      // Optimistically update UI
-      const newTaskObject: UnifiedTask = {
-        id: taskId,
-        text: newTaskText,
-        completed: false,
-        stage: newTaskStage,
-        source: newTaskSource === 'all' ? 'custom' : newTaskSource as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
-        sourceId: taskId,
-        notes: '',
-        priority: 'medium',
-        dueDate: '',
-        owner: '',
-        status: 'To Do'
-      };
-      
-      // Add to tasks array
-      setTasks(prev => [...prev, newTaskObject]);
-      
-      // Add to tasks by stage
-      setTasksByStage(prev => {
-        const updatedTasks = { ...prev };
-        updatedTasks[newTaskStage] = [...updatedTasks[newTaskStage], newTaskObject];
-        return updatedTasks;
-      });
-      
-      // Send to server - Use the correct endpoint path and format
-      const response = await apiRequest(
-        "POST",
-        `/api/projects/${currentProjectId}/tasks`,
-        {
-          id: taskId, // Explicitly include the client-generated ID
-          text: newTaskText,
-          stage: newTaskStage.toLowerCase(),
-          origin: newTaskSource === 'all' ? 'custom' : newTaskSource,
-          sourceId: taskId,
-          completed: false,
-          notes: '', // Initialize with empty notes
-          priority: 'medium', // Default priority
-          status: 'To Do', // Default status
-          owner: '' // Initialize with empty owner
-        }
-      );
-      
-      // Handle the response format correctly
-      const responseData = await response.json();
-      console.log('[CHECKLIST] Task created successfully', responseData);
-      
-      // Get the actual task data from response (supports both formats)
-      const savedTask = responseData.task || responseData;
-      
-      // If server returned a different ID, update our local state to match
-      if (savedTask && savedTask.id !== taskId) {
-        console.log(`[CHECKLIST] Server assigned different ID: ${savedTask.id} (client had: ${taskId})`);
-        
-        // Update tasks array with the server-provided ID
-        setTasks(prev => prev.map(task => 
-          task.id === taskId ? { ...task, id: savedTask.id } : task
-        ));
-        
-        // Update tasksByStage with the server-provided ID
-        setTasksByStage(prev => {
-          const updatedTasks = { ...prev };
-          updatedTasks[newTaskStage] = updatedTasks[newTaskStage].map(task =>
-            task.id === taskId ? { ...task, id: savedTask.id } : task
-          );
-          return updatedTasks;
-        });
-      }
-      
-      // Reset form
-      setNewTaskText('');
-      setAddTaskDialogOpen(false);
-      
-      // Set initial stage to match the current tab
-      setNewTaskStage(activeTab);
-      
-      toast({
-        title: "Task added",
-        description: "New task has been added successfully",
-      });
-    } catch (error) {
-      console.error('[CHECKLIST] Error creating task:', error);
-      
-      // Revert local state on error by refreshing from server
-      refreshTasksState();
-      
-      toast({
-        title: "Error adding task",
-        description: "Failed to create new task. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
+  // Task creation is now handled by the CreateTaskForm component
   
   // Handle deleting a task
   const handleDeleteTask = async (taskId: string) => {
