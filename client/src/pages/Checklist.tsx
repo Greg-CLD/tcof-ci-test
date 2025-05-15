@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Stage } from '@/lib/plan-db';
+import { Stage as PlanStage } from '@/lib/plan-db';
+// Define the stage type that matches the one used in CreateTaskForm and the API
+type Stage = 'identification' | 'definition' | 'delivery' | 'closure';
 import { useLocation, useParams } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -140,13 +142,13 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
   // Local state
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<Stage>('Identification');
+  const [activeTab, setActiveTab] = useState<Stage>('identification');
   const [tasks, setTasks] = useState<UnifiedTask[]>([]);
   const [tasksByStage, setTasksByStage] = useState<Record<Stage, UnifiedTask[]>>({
-    Identification: [],
-    Definition: [],
-    Delivery: [],
-    Closure: []
+    identification: [],
+    definition: [],
+    delivery: [],
+    closure: []
   });
 
   // Filters
@@ -608,56 +610,56 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         </div>
       ) : (
         <>
-          <Tabs defaultValue="Identification" className="mb-8">
+          <Tabs defaultValue="identification" className="mb-8">
             <TabsList className="grid grid-cols-4 mb-4">
               <TabsTrigger 
-                value="Identification" 
-                onClick={() => setActiveTab('Identification')}
+                value="identification" 
+                onClick={() => setActiveTab('identification')}
                 className="relative"
               >
                 Identification
-                {tasksByStage.Identification.length > 0 && (
+                {tasksByStage.identification.length > 0 && (
                   <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                    {tasksByStage.Identification.length}
+                    {tasksByStage.identification.length}
                   </Badge>
                 )}
               </TabsTrigger>
               
               <TabsTrigger 
-                value="Definition" 
-                onClick={() => setActiveTab('Definition')}
+                value="definition" 
+                onClick={() => setActiveTab('definition')}
                 className="relative"
               >
                 Definition
-                {tasksByStage.Definition.length > 0 && (
+                {tasksByStage.definition.length > 0 && (
                   <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                    {tasksByStage.Definition.length}
+                    {tasksByStage.definition.length}
                   </Badge>
                 )}
               </TabsTrigger>
               
               <TabsTrigger 
-                value="Delivery" 
-                onClick={() => setActiveTab('Delivery')}
+                value="delivery" 
+                onClick={() => setActiveTab('delivery')}
                 className="relative"
               >
                 Delivery
-                {tasksByStage.Delivery.length > 0 && (
+                {tasksByStage.delivery.length > 0 && (
                   <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                    {tasksByStage.Delivery.length}
+                    {tasksByStage.delivery.length}
                   </Badge>
                 )}
               </TabsTrigger>
               
               <TabsTrigger 
-                value="Closure" 
-                onClick={() => setActiveTab('Closure')}
+                value="closure" 
+                onClick={() => setActiveTab('closure')}
                 className="relative"
               >
                 Closure
-                {tasksByStage.Closure.length > 0 && (
+                {tasksByStage.closure.length > 0 && (
                   <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                    {tasksByStage.Closure.length}
+                    {tasksByStage.closure.length}
                   </Badge>
                 )}
               </TabsTrigger>
