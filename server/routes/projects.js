@@ -9,6 +9,31 @@ import { isOrgMember } from "../middlewares/isOrgMember.js";
 const router = express.Router();
 
 /**
+ * GET /api/projects/debug/list
+ * Debug endpoint to log all project IDs and types
+ */
+router.get("/debug/list", isAuthenticated, async (req, res) => {
+  try {
+    // Load all projects
+    const projects = await db.query.projects.findMany();
+    
+    console.log("\n=== Project ID Debug List ===");
+    projects.forEach(project => {
+      const idType = project.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i) 
+        ? "UUID" 
+        : "number";
+      console.log(`ID: ${project.id} (${idType}) - Name: ${project.name}`);
+    });
+    console.log("=== End Project List ===\n");
+    
+    return res.json({ message: "Project list logged to server console" });
+  } catch (error) {
+    console.error("Error logging projects:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+/**
  * GET /api/projects
  * Get all projects for the logged-in user (across all organisations)
  */
