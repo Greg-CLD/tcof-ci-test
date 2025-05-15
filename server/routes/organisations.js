@@ -174,9 +174,18 @@ router.post('/:id/projects', isOrgMember, async (req, res) => {
       return res.status(400).json({ message: "Project name is required" });
     }
     
+    // Import the v4 UUID generator
+    const { v4: uuidv4 } = await import('uuid');
+    
+    // Generate a UUID for the project ID
+    const projectId = uuidv4();
+    
+    console.log(`Generating UUID for new project: ${projectId}`);
+    
     // Create the project with organization ID - using ONLY fields that actually exist in the database
     const [newProject] = await db.insert(projects)
       .values({
+        id: projectId, // Set explicit UUID for the project
         name: name.trim(),
         description: description?.trim() || null,
         userId: userId, // Include user ID as creator (matches user_id column)
