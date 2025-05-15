@@ -16,7 +16,7 @@ interface ProtectedRouteGuardProps {
  */
 export function ProtectedRouteGuard({ children }: ProtectedRouteGuardProps) {
   const { isLoading, isSelectedProjectProfileComplete, getSelectedProject, setSelectedProjectId } = useProjects();
-  const { currentProjectId, setCurrentProjectId } = useProject(); // Get context directly
+  const { projectId: currentProjectId, setProjectId: setCurrentProjectId } = useProject(); // Get context directly
   const [location, navigate] = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
 
