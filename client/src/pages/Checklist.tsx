@@ -483,6 +483,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
         "POST",
         `/api/projects/${currentProjectId}/tasks`,
         {
+          id: taskId, // Explicitly include the client-generated ID
           text: newTaskText,
           stage: newTaskStage.toLowerCase(),
           origin: newTaskSource === 'all' ? 'custom' : newTaskSource,
@@ -494,7 +495,32 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
           owner: '' // Initialize with empty owner
         }
       );
-      console.log('[CHECKLIST] Task created successfully', response);
+      
+      // Handle the response format correctly
+      const responseData = await response.json();
+      console.log('[CHECKLIST] Task created successfully', responseData);
+      
+      // Get the actual task data from response (supports both formats)
+      const savedTask = responseData.task || responseData;
+      
+      // If server returned a different ID, update our local state to match
+      if (savedTask && savedTask.id !== taskId) {
+        console.log(`[CHECKLIST] Server assigned different ID: ${savedTask.id} (client had: ${taskId})`);
+        
+        // Update tasks array with the server-provided ID
+        setTasks(prev => prev.map(task => 
+          task.id === taskId ? { ...task, id: savedTask.id } : task
+        ));
+        
+        // Update tasksByStage with the server-provided ID
+        setTasksByStage(prev => {
+          const updatedTasks = { ...prev };
+          updatedTasks[newTaskStage] = updatedTasks[newTaskStage].map(task =>
+            task.id === taskId ? { ...task, id: savedTask.id } : task
+          );
+          return updatedTasks;
+        });
+      }
       
       // Reset form
       setNewTaskText('');
