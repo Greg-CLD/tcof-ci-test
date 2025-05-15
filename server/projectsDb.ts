@@ -352,39 +352,30 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
 async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
   try {
     if (projectId) {
-      // Use the improved getProject function to get the project with safe ID handling
-      const project = await projectsDb.getProject(projectId);
-      
-      if (!project) {
-        console.log(`Project with ID ${projectId} not found using reliable lookup`);
-        return [];
-      }
-    
-      // Get the project's string ID and ensure consistent type usage
-      // ALWAYS use the project.id from the object to ensure we have the correct UUID
-      const safeProjectId = String(project.id);
-      console.log(`Using confirmed project ID: ${safeProjectId} (UUID string) to load tasks`);
+      // Convert the project ID to a UUID format if it's not already
+      const normalizedProjectId = validateProjectUUID(projectId);
+      console.log(`Normalized project ID for task loading: ${normalizedProjectId}`);
       
       try {
-        console.log(`Loading tasks with safe project ID: ${safeProjectId}`);
+        console.log(`Loading tasks with normalized project ID: ${normalizedProjectId}`);
         
-        // Use a direct SQL query for consistency with other methods
+        // Use a direct SQL query with proper UUID formatting
         const sqlQuery = `
           SELECT * FROM project_tasks
           WHERE project_id = $1::uuid
         `;
         
-        console.log(`Executing direct SQL query with projectId: ${safeProjectId}`);
-        const result = await db.execute(sqlQuery, [safeProjectId]);
+        console.log(`Executing direct SQL query with projectId: ${normalizedProjectId}`);
+        const result = await db.execute(sqlQuery, [normalizedProjectId]);
         
         const tasks = result.rows || [];
         
         if (tasks.length === 0) {
-          console.log(`No tasks found for project ${safeProjectId}`);
+          console.log(`No tasks found for project ${normalizedProjectId}`);
           return [];
         }
         
-        console.log(`Loaded ${tasks.length} tasks from database for project ${safeProjectId}`);
+        console.log(`Loaded ${tasks.length} tasks from database for project ${normalizedProjectId}`);
         
         // Debug output to see the actual field names from the database
         if (tasks.length > 0) {
@@ -393,30 +384,36 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
         }
         
         return tasks.map((task: any) => {
-          // Convert to a consistent format and handle snake_case to camelCase conversion
+          // First convert any snake_case fields to camelCase for consistency
+          const camelCaseTask = mapToCamelCase(task);
+          
+          // Debug the field conversion
+          if (tasks.indexOf(task) === 0) {
+            console.log('Task field names after camelCase conversion:', Object.keys(camelCaseTask));
+          }
+          
+          // Convert to a consistent format with proper type handling
           const convertedTask = {
-            id: String(task.id || ''),
-            // Always use the confirmed project.id from above to avoid type mismatches
-            projectId: safeProjectId,
-            text: String(task.text || ''),
-            stage: (String(task.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
-            origin: (String(task.origin || 'custom') as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
-            // Check for both camelCase and snake_case field names
-            sourceId: String(task.sourceId || task.source_id || ''),
-            completed: Boolean(task.completed || false),
-            notes: String(task.notes || ''),
-            priority: String(task.priority || ''),
-            // Check for both camelCase and snake_case field names
-            dueDate: String(task.dueDate || task.due_date || ''),
-            owner: String(task.owner || ''),
-            status: String(task.status || 'pending'),
-            // Handle both formats for date fields
-            createdAt: task.createdAt || task.created_at ? 
-              new Date(String(task.createdAt || task.created_at)).toISOString() : 
-              new Date().toISOString(),
-            updatedAt: task.updatedAt || task.updated_at ? 
-              new Date(String(task.updatedAt || task.updated_at)).toISOString() : 
-              new Date().toISOString()
+            id: String(camelCaseTask.id || ''),
+            // Use the normalized project ID for consistency
+            projectId: normalizedProjectId,
+            text: String(camelCaseTask.text || ''),
+            stage: (String(camelCaseTask.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
+            origin: (String(camelCaseTask.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
+            sourceId: String(camelCaseTask.sourceId || ''),
+            completed: Boolean(camelCaseTask.completed || false),
+            notes: String(camelCaseTask.notes || ''),
+            priority: String(camelCaseTask.priority || ''),
+            dueDate: String(camelCaseTask.dueDate || ''),
+            owner: String(camelCaseTask.owner || ''),
+            status: String(camelCaseTask.status || 'pending'),
+            // Handle date format conversion to string
+            createdAt: camelCaseTask.createdAt
+              ? new Date(String(camelCaseTask.createdAt)).toISOString() 
+              : new Date().toISOString(),
+            updatedAt: camelCaseTask.updatedAt
+              ? new Date(String(camelCaseTask.updatedAt)).toISOString() 
+              : new Date().toISOString()
           };
           
           return convertedTask;
@@ -465,22 +462,45 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
  * STRICT UUID validation for project IDs
  * This now ONLY accepts valid UUIDs and throws an error for non-UUID values
  */
+/**
+ * IMPROVED: Handle both numeric IDs and UUIDs
+ * This function normalizes project IDs for database operations
+ * - If it's a number or numeric string, converts to deterministic UUID
+ * - If it's already a UUID, uses it directly
+ */
 function validateProjectUUID(projectId: unknown): string {
-  // Ensure the input is a string
+  // Handle both string and number inputs
+  if (typeof projectId === 'number') {
+    console.log(`Converting numeric projectId ${projectId} to UUID string`);
+    // Use the existing conversion method for numbers
+    return getProjectIdForDb(projectId);
+  }
+  
+  // If not a string, convert to string
   if (typeof projectId !== 'string') {
-    throw new Error(`Invalid projectId: Expected string UUID, got ${typeof projectId}`);
+    console.log(`Converting non-string projectId type ${typeof projectId} to string`);
+    return getProjectIdForDb(String(projectId));
   }
   
   const projectIdString = projectId.trim();
   
+  // Check if it's numeric (legacy style)
+  if (/^\d+$/.test(projectIdString)) {
+    console.log(`Converting numeric string projectId "${projectIdString}" to UUID`);
+    return getProjectIdForDb(projectIdString);
+  }
+  
   // Check against strict UUID format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   
-  if (!uuidRegex.test(projectIdString)) {
-    throw new Error(`Invalid projectId format: ${projectIdString} is not a valid UUID`);
+  // If it's already a UUID, use it directly
+  if (uuidRegex.test(projectIdString)) {
+    return projectIdString;
   }
   
-  return projectIdString;
+  // For any other format, use the conversion method
+  console.log(`Converting non-UUID projectId "${projectIdString}" to UUID`);
+  return getProjectIdForDb(projectIdString);
 }
 
 /**
@@ -493,12 +513,52 @@ function isValidUUID(str: string): boolean {
 }
 
 /**
- * DEPRECATED - Do not use for new code
- * This function will be removed in future versions
+ * Map field names between camelCase and snake_case formats
+ * This handles the inconsistency between code conventions and database column names
+ * 
+ * @param data Object with fields in camelCase format
+ * @returns New object with fields mapped to snake_case for database operations
+ */
+function mapToSnakeCase(data: Record<string, any>): Record<string, any> {
+  if (!data) return {};
+  
+  const result: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    // Convert camelCase to snake_case: projectId -> project_id
+    const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    result[snakeCaseKey] = value;
+  }
+  
+  return result;
+}
+
+/**
+ * Map field names from snake_case to camelCase format
+ * This handles the inconsistency between database column names and code conventions
+ * 
+ * @param data Object with fields in snake_case format from the database
+ * @returns New object with fields mapped to camelCase for code consistency
+ */
+function mapToCamelCase(data: Record<string, any>): Record<string, any> {
+  if (!data) return {};
+  
+  const result: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    // Convert snake_case to camelCase: project_id -> projectId
+    const camelCaseKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    result[camelCaseKey] = value;
+  }
+  
+  return result;
+}
+
+/**
+ * Convert project IDs to UUIDs for database operations
+ * This is critical to handle the type mismatch between different tables
  */
 function getProjectIdForDb(projectId: string | number): string {
-  console.warn('DEPRECATED: getProjectIdForDb() is deprecated. Use validateProjectUUID() instead.');
-  
   // Convert to string first to handle both string and number inputs
   const projectIdString = String(projectId);
   
@@ -514,18 +574,22 @@ function getProjectIdForDb(projectId: string | number): string {
   // Check if it's a numeric ID
   if (/^\d+$/.test(projectIdString)) {
     // Create a deterministic name string for UUID generation
-    return uuidv5(`project-${projectIdString}`, namespace);
+    const generatedUuid = uuidv5(`project-${projectIdString}`, namespace);
+    console.log(`Converted numeric ID ${projectIdString} to UUID ${generatedUuid}`);
+    return generatedUuid;
   } 
   
   // For any other format, still generate a deterministic UUID
-  return uuidv5(projectIdString, namespace);
+  const generatedUuid = uuidv5(projectIdString, namespace);
+  console.log(`Converted non-numeric ID ${projectIdString} to UUID ${generatedUuid}`);
+  return generatedUuid;
 }
 
 async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
   try {
-    // Use the strict UUID validator to ensure we have a valid UUID
+    // Convert any project ID to a valid UUID for database operations
     const projectIdString = validateProjectUUID(task.projectId);
-    console.log(`Saving task for project ${projectIdString} (validated UUID)`);
+    console.log(`Saving task for project ${projectIdString} (normalized ID)`);
     
     // If the task has an ID, update it
     if (task.id && task.id !== 'new') {
@@ -612,7 +676,7 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
     } else {
       // Create a new task with a new UUID if not provided
       const taskId = task.id === 'new' ? uuidv4() : (task.id || uuidv4());
-      console.log(`Creating new task ${taskId} for project ${projectIdString} (validated UUID)`);
+      console.log(`Creating new task ${taskId} for project ${projectIdString} (normalized ID)`);
       
       // Project ID is now fully validated as UUID
       const now = new Date().toISOString();
