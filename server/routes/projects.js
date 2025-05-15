@@ -6,6 +6,45 @@ import { eq } from "drizzle-orm";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { isOrgMember } from "../middlewares/isOrgMember.js";
 
+// Import UUID validation utilities
+const { isValidUUID, isNumericId, convertNumericIdToUuid } = require("../utils/uuid-utils.cjs");
+
+/**
+ * Middleware to validate a project ID
+ * This ensures only UUID format project IDs are accepted
+ */
+function validateProjectId(req, res, next) {
+  const projectId = req.params.projectId || req.params.id || req.body.projectId;
+  
+  if (!projectId) {
+    // ID wasn't provided, proceed to next middleware (which may handle the error)
+    return next();
+  }
+  
+  // Check if it's a numeric ID
+  if (isNumericId(projectId)) {
+    console.error(`Rejected request with numeric project ID: ${projectId}`);
+    return res.status(400).json({ 
+      message: "Invalid project ID format. Numeric IDs are no longer supported.", 
+      error: "NUMERIC_ID_NOT_SUPPORTED",
+      projectId
+    });
+  }
+  
+  // Check if it's a valid UUID
+  if (!isValidUUID(projectId)) {
+    console.error(`Rejected request with invalid project ID format: ${projectId}`);
+    return res.status(400).json({ 
+      message: "Invalid project ID format. Must be a valid UUID.", 
+      error: "INVALID_UUID_FORMAT",
+      projectId
+    });
+  }
+  
+  // Valid UUID provided, continue
+  next();
+}
+
 const router = express.Router();
 
 /**
