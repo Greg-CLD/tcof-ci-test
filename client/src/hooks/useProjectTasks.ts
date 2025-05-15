@@ -95,9 +95,10 @@ export function useProjectTasks(projectId?: string) {
     enabled: !!projectId,
     retry: 3,
     retryDelay: attempt => Math.min(attempt > 1 ? 2000 : 1000, 30 * 1000),
-    staleTime: 10 * 1000, // 10 seconds
+    staleTime: 0, // Don't use stale data at all, always refresh from server
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
+    refetchOnMount: true, // Ensure it refreshes when component mounts
   });
   
   // Log initial data when it changes
@@ -133,17 +134,11 @@ export function useProjectTasks(projectId?: string) {
       }
     },
     onSuccess: async (newTask) => {
-      console.log('Invalidating task cache after create');
-      // First invalidate the query cache with the correct query key format
+      console.log('Task created, invalidating cache and refetching');
+      // Invalidate the query cache with the correct query key format
       await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       
-      // Then optimistically update the cache to avoid waiting for refetch
-      queryClient.setQueryData([`/api/projects/${projectId}/tasks`], (oldData: ProjectTask[] | undefined) => {
-        if (!oldData) return [newTask];
-        return [...oldData, newTask];
-      });
-      
-      // Finally refetch to ensure consistency
+      // Immediately refetch from backend to ensure UI shows persisted state
       const freshData = await refetch();
       console.log(`Refetched ${freshData.data?.length || 0} tasks after create`);
     },
@@ -179,17 +174,11 @@ export function useProjectTasks(projectId?: string) {
       }
     },
     onSuccess: async (updatedTask) => {
-      console.log('Invalidating task cache after update');
-      // First invalidate the query cache with the correct query key format
+      console.log('Task updated, invalidating cache and refetching');
+      // Invalidate the query cache with the correct query key format
       await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       
-      // Then optimistically update the cache to avoid waiting for refetch
-      queryClient.setQueryData([`/api/projects/${projectId}/tasks`], (oldData: ProjectTask[] | undefined) => {
-        if (!oldData) return [updatedTask];
-        return oldData.map(task => task.id === updatedTask.id ? updatedTask : task);
-      });
-      
-      // Finally refetch to ensure consistency
+      // Immediately refetch from backend to ensure UI shows persisted state
       const freshData = await refetch();
       console.log(`Refetched ${freshData.data?.length || 0} tasks after update`);
     },
