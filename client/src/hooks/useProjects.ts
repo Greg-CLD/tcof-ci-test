@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
+import { useMemo } from "react";
 // Directly import the useProjectContext hook - the alias ensures backward compatibility
 import { useProjectContext } from "@/contexts/ProjectContext";
+import { filterUUIDProjects } from "@/lib/uuid-utils";
 
 export interface Project {
   id: string;
@@ -75,10 +77,15 @@ export function useProjects() {
   const { currentProjectId, setCurrentProjectId, clearCurrentProject } = useProjectContext();
 
   // Fetch all projects for the current user
-  const { data: projects = [], isLoading, error } = useQuery<Project[]>({
+  const { data: allProjects = [], isLoading, error } = useQuery<Project[]>({
     queryKey: ['/api/projects'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+  
+  // Filter out any projects with non-UUID IDs to prevent database issues
+  const projects = useMemo(() => {
+    return filterUUIDProjects(allProjects);
+  }, [allProjects]);
 
   // Create a new project
   const createProject = useMutation({
