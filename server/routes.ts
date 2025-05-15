@@ -223,6 +223,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Diagnostic endpoint for project tasks - public for debugging
+  app.get('/api/debug/project-tasks', async (req, res) => {
+    try {
+      // Get all project tasks directly from database
+      const tasksResult = await db.execute(sql`
+        SELECT id, project_id, text, completed, stage, source_id, origin, created_at, updated_at
+        FROM project_tasks
+        ORDER BY created_at DESC
+      `);
+      
+      // Map task data to include helpful diagnostics
+      const tasksWithAnalysis = (tasksResult.rows || []).map(task => {
+        const projectId = task.project_id;
+        return {
+          id: task.id,
+          text: task.text,
+          project_id: projectId,
+          completed: task.completed,
+          stage: task.stage,
+          source_id: task.source_id,
+          origin: task.origin,
+          created_at: task.created_at,
+          updated_at: task.updated_at,
+          project_id_type: typeof projectId,
+          project_id_analysis: {
+            is_numeric: !isNaN(Number(projectId)),
+            is_uuid_format: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(projectId)),
+            string_length: String(projectId).length
+          }
+        };
+      });
+      
+      // Get task counts by project ID for summary
+      const taskCountsByProject = {};
+      tasksWithAnalysis.forEach(task => {
+        const projectId = task.project_id;
+        if (!taskCountsByProject[projectId]) {
+          taskCountsByProject[projectId] = 0;
+        }
+        taskCountsByProject[projectId]++;
+      });
+      
+      return res.json({
+        tasks: tasksWithAnalysis,
+        task_count: tasksWithAnalysis.length,
+        task_counts_by_project: taskCountsByProject,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error getting project tasks:', error);
+      res.status(500).json({
+        message: 'Error retrieving project tasks',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
   // Success factors endpoints for frontend use - both URLs map to the same handler
   async function getFactorsHandler(req: Request, res: Response) {
     try {
