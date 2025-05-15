@@ -1,17 +1,16 @@
 /**
- * Utility functions for validating and working with UUIDs
+ * Utility functions for validating and working with UUIDs server-side
  */
-import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 
 /**
  * Validates if a string is a proper UUID format
  * UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal digit
  * and y is one of 8, 9, A, or B (in UUID v4)
  * 
- * @param id String to validate as UUID
- * @returns Boolean indicating if string is a valid UUID
+ * @param {string|null|undefined} id - String to validate as UUID
+ * @returns {boolean} Boolean indicating if string is a valid UUID
  */
-export function isValidUUID(id: string | null | undefined): boolean {
+function isValidUUID(id) {
   if (!id) return false;
   
   // UUID pattern validation (RFC4122)
@@ -22,10 +21,10 @@ export function isValidUUID(id: string | null | undefined): boolean {
 /**
  * Checks if a value is likely a numeric ID (not a UUID)
  * 
- * @param id String or number to check
- * @returns Boolean indicating if value is numeric
+ * @param {string|number|null|undefined} id - String or number to check
+ * @returns {boolean} Boolean indicating if value is numeric
  */
-export function isNumericId(id: string | number | null | undefined): boolean {
+function isNumericId(id) {
   if (id === null || id === undefined) return false;
   
   // Check if it's a number or a string that represents a number
@@ -36,10 +35,10 @@ export function isNumericId(id: string | number | null | undefined): boolean {
  * Converts a numeric ID to a UUID using a deterministic algorithm
  * This helps with legacy numeric IDs during migration
  * 
- * @param numericId The numeric ID to convert
- * @returns A UUID format string derived from the numeric ID
+ * @param {string|number} numericId - The numeric ID to convert
+ * @returns {string} A UUID format string derived from the numeric ID
  */
-export function convertNumericIdToUuid(numericId: string | number): string {
+function convertNumericIdToUuid(numericId) {
   // Convert to string first
   const idStr = String(numericId);
   
@@ -52,12 +51,8 @@ export function convertNumericIdToUuid(numericId: string | number): string {
   return `${paddedId.substring(0, 8)}-${paddedId.substring(8, 10)}00-4000-8000-000000000000`;
 }
 
-/**
- * Filters an array of projects to only include those with valid UUID IDs
- * 
- * @param projects Array of project objects with id property
- * @returns Filtered array with only UUID-format projects
- */
-export function filterUUIDProjects<T extends { id: string }>(projects: T[]): T[] {
-  return projects.filter(project => isValidUUID(project.id));
-}
+module.exports = {
+  isValidUUID,
+  isNumericId,
+  convertNumericIdToUuid
+};
