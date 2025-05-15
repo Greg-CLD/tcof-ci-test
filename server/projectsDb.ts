@@ -206,8 +206,8 @@ function validateProjectUUID(projectId: unknown): string {
     throw new Error('Project ID cannot be null or undefined');
   }
   
-  // Import UUID utilities from our shared utility module
-  const { isValidUUID, isNumericId, convertNumericIdToUuid } = require('./utils/uuid-utils');
+  // Import UUID utilities from our shared utility module (using .cjs extension for CommonJS compatibility)
+  const { isValidUUID, isNumericId, convertNumericIdToUuid } = require('./utils/uuid-utils.cjs');
   
   // Convert to string for consistency
   const idString = String(projectId);

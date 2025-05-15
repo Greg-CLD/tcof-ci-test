@@ -1,7 +1,8 @@
 import express from "express";
 import { projectsDb } from "../projectsDb.js";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
-import { isValidUUID, isNumericId, convertNumericIdToUuid } from "../utils/uuid-utils.js";
+// Use CommonJS require for uuid-utils
+const { isValidUUID, isNumericId, convertNumericIdToUuid } = require("../utils/uuid-utils.cjs");
 
 const router = express.Router();
 
