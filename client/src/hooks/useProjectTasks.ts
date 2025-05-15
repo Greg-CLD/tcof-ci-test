@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
-import { isValidUUID, isNumericId, convertNumericIdToUuid } from '@/lib/uuid-utils';
+import { isValidUUID, isNumericId } from '@/lib/uuid-utils';
 
 import { ProjectTask as DBProjectTask } from '@shared/schema';
 // Local interface for client-side project tasks
@@ -53,10 +53,15 @@ interface UpdateTaskParams {
 export function useProjectTasks(projectId?: string) {
   const queryClient = useQueryClient();
   
-  // Normalize the project ID if needed
+  // Reject numeric IDs - we no longer convert them to UUIDs
   const normalizedProjectId = projectId ? 
-    (isNumericId(projectId) ? convertNumericIdToUuid(projectId) : projectId) : 
+    (isNumericId(projectId) ? undefined : projectId) : 
     undefined;
+    
+  // Log a warning if we're rejecting a numeric ID
+  if (projectId && isNumericId(projectId)) {
+    console.error(`Numeric project ID rejected: ${projectId}`);
+  }
   
   // If we have a project ID but it's not valid UUID, we can't fetch tasks
   const isValidId = !normalizedProjectId || isValidUUID(normalizedProjectId);

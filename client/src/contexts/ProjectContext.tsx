@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { isValidUUID } from '../lib/uuid-validators';
+import { isNumericId } from '../lib/uuid-utils';
 
 // Project type (simplified)
 export interface Project {
@@ -63,23 +64,36 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [, navigate] = useLocation();
   
   // Check if we're on a project-specific route
-  const [matchProjectRoute] = useRoute('/projects/:projectId');
-  const [matchProjectToolRoute] = useRoute('/projects/:projectId/:toolName');
+  const [, matchProjectParams] = useRoute<{projectId: string}>('/projects/:projectId');
+  const [, matchProjectToolParams] = useRoute<{projectId: string, toolName: string}>('/projects/:projectId/:toolName');
   
   // Wrapper function to set project ID and also update localStorage
   const setProjectId = (id: string | null) => {
+    // Reject numeric IDs completely
+    if (id && isNumericId(id)) {
+      console.error(`Rejected numeric project ID: ${id}`);
+      navigate('/projects');
+      return;
+    }
+    
     setProjectIdState(id);
     
-    // Update localStorage
-    if (id) {
+    // Update localStorage only for valid UUIDs
+    if (id && isValidUUID(id)) {
       localStorage.setItem('currentProjectId', id);
-    } else {
+    } else if (!id) {
       localStorage.removeItem('currentProjectId');
     }
   };
   
   // Function to set current project and extract ID
   const setCurrentProject = (project: Project | null) => {
+    // Make sure project has a valid UUID ID
+    if (project && !isValidUUID(project.id)) {
+      console.error(`Rejected project with invalid ID: ${project.id}`);
+      return;
+    }
+    
     setCurrentProjectState(project);
     
     // Update projectId state
@@ -106,23 +120,37 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     // Get params from the match objects if they exist
     let routeProjectId: string | null = null;
     
-    if (matchProjectRoute && typeof matchProjectRoute === 'object' && 'params' in matchProjectRoute) {
-      routeProjectId = (matchProjectRoute.params as { projectId: string })?.projectId || null;
-    } else if (matchProjectToolRoute && typeof matchProjectToolRoute === 'object' && 'params' in matchProjectToolRoute) {
-      routeProjectId = (matchProjectToolRoute.params as { projectId: string })?.projectId || null;
+    if (matchProjectParams) {
+      routeProjectId = matchProjectParams.projectId || null;
+    } else if (matchProjectToolParams) {
+      routeProjectId = matchProjectToolParams.projectId || null;
     }
     
     if (routeProjectId) {
+      // Check for numeric IDs in URL
+      if (isNumericId(routeProjectId)) {
+        console.error(`Numeric project ID detected in URL: ${routeProjectId}`);
+        navigate('/projects');
+        return;
+      }
+      
       setProjectId(routeProjectId);
     }
-  }, [matchProjectRoute, matchProjectToolRoute]);
+  }, [matchProjectParams, matchProjectToolParams, navigate]);
   
   // Initialize from localStorage if needed
   useEffect(() => {
     if (!projectId) {
       const storedId = localStorage.getItem('currentProjectId');
       if (storedId) {
-        setProjectIdState(storedId); // Use direct state setter to avoid recursion
+        // Make sure the stored ID is a valid UUID
+        if (isValidUUID(storedId)) {
+          setProjectIdState(storedId); // Use direct state setter to avoid recursion
+        } else {
+          // Remove invalid stored ID
+          localStorage.removeItem('currentProjectId');
+          console.error(`Removed invalid project ID from localStorage: ${storedId}`);
+        }
       }
     }
   }, [projectId]);
@@ -134,16 +162,24 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return;
     }
     
+    // Reject numeric IDs
+    if (isNumericId(projectId)) {
+      console.error(`Numeric project ID detected: ${projectId}`);
+      setIsValidProject(false);
+      navigate('/projects');
+      return;
+    }
+    
     // Validate UUID format
     const valid = isValidUUID(projectId);
     setIsValidProject(valid);
     
     // If invalid, redirect to projects list
-    if (!valid && (matchProjectRoute || matchProjectToolRoute)) {
-      console.error(`Invalid project ID detected: ${projectId}`);
+    if (!valid && (matchProjectParams || matchProjectToolParams)) {
+      console.error(`Invalid project ID format detected: ${projectId}`);
       navigate('/projects');
     }
-  }, [projectId, matchProjectRoute, matchProjectToolRoute, navigate]);
+  }, [projectId, matchProjectParams, matchProjectToolParams, navigate]);
   
   return (
     <ProjectContext.Provider 

@@ -21,6 +21,7 @@ export function isValidUUID(id: string | null | undefined): boolean {
 
 /**
  * Checks if a value is likely a numeric ID (not a UUID)
+ * Used for detecting and rejecting numeric IDs
  * 
  * @param id String or number to check
  * @returns Boolean indicating if value is numeric
@@ -30,26 +31,6 @@ export function isNumericId(id: string | number | null | undefined): boolean {
   
   // Check if it's a number or a string that represents a number
   return !isNaN(Number(id)) && String(id).length < 36;
-}
-
-/**
- * Converts a numeric ID to a UUID using a deterministic algorithm
- * This helps with legacy numeric IDs during migration
- * 
- * @param numericId The numeric ID to convert
- * @returns A UUID format string derived from the numeric ID
- */
-export function convertNumericIdToUuid(numericId: string | number): string {
-  // Convert to string first
-  const idStr = String(numericId);
-  
-  // Create a deterministic padding for the ID to ensure the same numeric ID
-  // always generates the same UUID
-  const paddedId = idStr.padStart(10, '0');
-  
-  // Insert hyphens to create UUID format
-  // Using the numeric ID as part of the UUID ensures deterministic mapping
-  return `${paddedId.substring(0, 8)}-${paddedId.substring(8, 10)}00-4000-8000-000000000000`;
 }
 
 /**

@@ -1,7 +1,11 @@
 /**
- * Test script to verify that UUID conversion works properly
+ * Test script to verify that UUID validation works properly
+ * 
+ * Note: The conversion functionality has been removed as part of
+ * the complete UUID migration. The application now only supports
+ * UUID format identifiers and rejects numeric IDs completely.
  */
-const { isValidUUID, isNumericId, convertNumericIdToUuid } = require('./server/utils/uuid-utils.cjs');
+const { isValidUUID, isNumericId } = require('./server/utils/uuid-utils.cjs');
 
 // Test UUID validation
 console.log('UUID validation tests:');
@@ -19,16 +23,7 @@ console.log('Is numeric? (abc):', isNumericId('abc'));
 console.log('Is numeric? (null):', isNumericId(null));
 console.log('Is numeric? (undefined):', isNumericId(undefined));
 
-// Test conversion from numeric ID to UUID
-console.log('\nConversion tests:');
-console.log('Convert 1 to UUID:', convertNumericIdToUuid(1));
-console.log('Convert 12345 to UUID:', convertNumericIdToUuid(12345));
-console.log('Convert "54321" to UUID:', convertNumericIdToUuid('54321'));
-
-// Verify deterministic behavior (same input should always produce same output)
-const uuid1 = convertNumericIdToUuid(42);
-const uuid2 = convertNumericIdToUuid(42);
-console.log('\nDeterministic behavior test:');
-console.log('UUID for 42 (first call):', uuid1);
-console.log('UUID for 42 (second call):', uuid2);
-console.log('Same output?', uuid1 === uuid2);
+// Print message about removed conversion functionality
+console.log('\nNOTE: Numeric ID to UUID conversion has been removed.');
+console.log('The application now only supports UUID format identifiers.');
+console.log('Any numeric IDs are rejected at all levels (URL, API, context).');

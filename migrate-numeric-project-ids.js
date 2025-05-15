@@ -5,21 +5,31 @@
  * 1. Finds all projects with numeric IDs
  * 2. Converts them to UUIDs using our deterministic algorithm
  * 3. Updates the database records
+ * 
+ * NOTE: This script contains a local implementation of the convertNumericIdToUuid
+ * function that has been removed from the main codebase as part of the UUID migration.
+ * The application now only supports UUID format and rejects numeric IDs.
  */
 
 import pg from 'pg';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// Load uuid-utils.cjs as a string and extract the needed functions
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uuidUtilsPath = path.join(__dirname, 'server', 'utils', 'uuid-utils.cjs');
-const uuidUtilsContent = fs.readFileSync(uuidUtilsPath, 'utf8');
-
-// Extract and evaluate the functions we need
-const convertNumericIdToUuidFn = new Function('exports', uuidUtilsContent + '\nreturn exports.convertNumericIdToUuid;')({});
+/**
+ * Converts a numeric ID to a UUID using a deterministic algorithm
+ * This is a local implementation for the migration script only
+ * 
+ * @param {string|number} numericId The numeric ID to convert
+ * @returns {string} A UUID format string derived from the numeric ID
+ */
+function convertNumericIdToUuid(numericId) {
+  // Convert to string first
+  const idStr = String(numericId);
+  
+  // Convert to hexadecimal and pad to 4 characters
+  const hexId = parseInt(idStr, 10).toString(16).padStart(4, '0');
+  
+  // Create deterministic UUID following our PostgreSQL format
+  return `00000000-${hexId}-4000-8000-000000000000`;
+}
 
 // Create a connection pool
 const { Pool } = pg;
@@ -49,7 +59,7 @@ async function migrateNumericProjectIds() {
     const migrations = [];
     for (const project of projects) {
       const numericId = project.id;
-      const uuidId = convertNumericIdToUuidFn(numericId);
+      const uuidId = convertNumericIdToUuid(numericId);
       
       console.log(`Converting project ID: ${numericId} -> ${uuidId}`);
       
