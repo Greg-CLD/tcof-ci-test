@@ -4,7 +4,8 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
+import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import { db } from './db';
 import { eq, and } from 'drizzle-orm';
 import { projectTasks as projectTasksTable } from '@shared/schema';
@@ -438,11 +439,51 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
 /**
  * Save a project task to the database
  */
+/**
+ * Checks if a string is a valid UUID
+ */
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+/**
+ * Converts a numeric project ID to a UUID format suitable for database storage
+ * This is required because the database schema expects project_id to be a UUID,
+ * but actual project IDs in the system are often integers.
+ */
+function getProjectIdForDb(projectId: string | number): string {
+  // Convert to string first to handle both string and number inputs
+  const projectIdString = String(projectId);
+  
+  // If it's already a valid UUID, use it directly
+  if (isValidUUID(projectIdString)) {
+    return projectIdString;
+  }
+  
+  // Generate a deterministic UUID from the project ID
+  // Uses the numeric project ID to create a namespace UUID
+  const namespace = '9e107d9d-7b6f-4eee-a5ba-f221c5f9bfb2'; // Namespace for project IDs
+  
+  // Check if it's a numeric ID
+  if (/^\d+$/.test(projectIdString)) {
+    // Create a deterministic name string for UUID generation
+    return uuidv5(`project-${projectIdString}`, namespace);
+  } 
+  
+  // For any other format, still generate a deterministic UUID
+  return uuidv5(projectIdString, namespace);
+}
+
 async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
   try {
     // Always convert projectId to string to avoid type issues
     const projectIdString = String(task.projectId);
     console.log(`Saving task for project ${projectIdString} (string type)`);
+    
+    // Generate a database-compatible UUID from the project ID
+    const projectIdForDb = getProjectIdForDb(projectIdString);
+    console.log(`Using project ID for database: ${projectIdForDb} (derived from ${projectIdString})`);
     
     // If the task has an ID, update it
     if (task.id && task.id !== 'new') {
@@ -508,7 +549,7 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         // Convert to ProjectTask with careful null handling
         return {
           id: String(updatedTask.id),
-          projectId: String(updatedTask.project_id || projectIdString),
+          projectId: projectIdString, // Keep original project ID for client consistency
           text: String(updatedTask.text || ''),
           stage: (String(updatedTask.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
           origin: (String(updatedTask.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
@@ -529,7 +570,7 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
     } else {
       // Create a new task with a new UUID if not provided
       const taskId = task.id === 'new' ? uuidv4() : (task.id || uuidv4());
-      console.log(`Creating new task ${taskId} for project ${projectIdString}`);
+      console.log(`Creating new task ${taskId} for project ${projectIdString} (DB ID: ${projectIdForDb})`);
       
       const now = new Date().toISOString();
       
@@ -548,7 +589,7 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         // Ensure each parameter is properly prepared and non-null
         const insertParams = [
           taskId,                                       // $1
-          projectIdString,                              // $2
+          projectIdForDb,                               // $2 - Use UUID format for database
           task.text || '',                              // $3
           task.stage || 'identification',               // $4
           task.origin || 'custom',                      // $5
@@ -579,10 +620,10 @@ async function saveProjectTask(task: ProjectTask): Promise<ProjectTask | null> {
         const newTask = insertResult.rows[0];
         console.log(`Created new task ${newTask.id} in database`);
         
-        // Convert to ProjectTask with careful null handling
+        // Convert to ProjectTask with careful null handling - use original projectId for client
         return {
           id: String(newTask.id),
-          projectId: String(newTask.project_id || projectIdString),
+          projectId: projectIdString, // Keep original project ID for client consistency
           text: String(newTask.text || ''),
           stage: (String(newTask.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
           origin: (String(newTask.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
