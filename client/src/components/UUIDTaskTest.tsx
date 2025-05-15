@@ -1,389 +1,424 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
-import { useProjectTasks } from '@/hooks/useProjectTasks';
-import { convertToUuid, getOriginalId, wasGeneratedFrom, isValidUUID } from '@/lib/uuid-utils';
-
 /**
- * Component for testing UUID task persistence
- * This component creates, updates, and deletes tasks using the UUID utilities
+ * Test component for verifying UUID handling in tasks
+ * This component provides a UI for testing task creation, retrieval, and updating
+ * with compound UUID format IDs
  */
-const UUIDTaskTest: React.FC<{ projectId: string }> = ({ projectId }) => {
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { apiRequest } from '@/lib/queryClient';
+import { v4 as uuidv4 } from 'uuid';
+
+// UUID format compatible with task IDs
+function createCompoundId() {
+  const baseUuid = uuidv4();
+  return `${baseUuid}-test-${Date.now()}`;
+}
+
+export function UUIDTaskTest() {
   const { toast } = useToast();
-  const [testTaskId, setTestTaskId] = useState<string | undefined>();
-  const [taskText, setTaskText] = useState('');
-  const [taskNotes, setTaskNotes] = useState('');
-  const [stage, setStage] = useState<'identification' | 'definition' | 'delivery' | 'closure'>('identification');
-  const [testUuid, setTestUuid] = useState('');
-  const [originalId, setOriginalId] = useState('');
-  const [completed, setCompleted] = useState(false);
-  const [status, setStatus] = useState('');
-  const [conversionResult, setConversionResult] = useState('');
-  
-  // Use the project tasks hook to access task operations
-  const { 
-    tasks, 
-    isLoading, 
-    error, 
-    createTask, 
-    updateTask, 
-    deleteTask 
-  } = useProjectTasks(projectId);
-  
+  const { user } = useAuth();
+  const [projectId, setProjectId] = useState<string>('');
+  const [taskId, setTaskId] = useState<string>('');
+  const [taskText, setTaskText] = useState<string>('Test Task');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [result, setResult] = useState<string>('');
+  const [projects, setProjects] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+
+  // Load projects on mount
   useEffect(() => {
-    // Log all tasks whenever they change
-    if (tasks) {
-      console.log('Current tasks:', tasks);
+    async function loadProjects() {
+      try {
+        const response = await apiRequest('GET', '/api/projects');
+        const data = await response.json();
+        setProjects(data);
+        if (data.length > 0) {
+          setProjectId(data[0].id);
+        }
+      } catch (error) {
+        console.error('Error loading projects:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load projects',
+          variant: 'destructive',
+        });
+      }
     }
-  }, [tasks]);
-  
-  // Test UUID conversion function
-  const testConversion = () => {
-    try {
-      const uuid = convertToUuid(originalId);
-      setTestUuid(uuid);
-      setConversionResult(`
-Converted "${originalId}" to UUID "${uuid}"
-Is Valid UUID: ${isValidUUID(uuid) ? 'Yes' : 'No'}
-Generated From "${originalId}": ${wasGeneratedFrom(uuid, originalId) ? 'Yes' : 'No'}
-Original ID from UUID: "${getOriginalId(uuid)}"
-`);
-      toast({
-        title: "UUID Conversion Test",
-        description: `Successfully converted "${originalId}" to UUID format.`,
-      });
-    } catch (error) {
-      console.error('Conversion error:', error);
-      setConversionResult(`Error: ${error instanceof Error ? error.message : String(error)}`);
-      toast({
-        title: "UUID Conversion Error",
-        description: String(error),
-        variant: "destructive"
-      });
+
+    if (user) {
+      loadProjects();
     }
-  };
-  
-  // Create a new test task
-  const handleCreateTask = async () => {
-    if (!taskText) {
+  }, [user, toast]);
+
+  // Load tasks when project selected
+  useEffect(() => {
+    async function loadTasks() {
+      if (!projectId) return;
+      
+      try {
+        setLoading(true);
+        const response = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+        const data = await response.json();
+        setTasks(data);
+        console.log('Fetched tasks:', data);
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load tasks',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (projectId) {
+      loadTasks();
+    }
+  }, [projectId, toast]);
+
+  const createTask = async () => {
+    if (!projectId) {
       toast({
-        title: "Validation Error",
-        description: "Task text is required",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Please select a project',
+        variant: 'destructive',
       });
       return;
     }
-    
+
     try {
-      // Use sourceId to test our UUID conversion from a non-UUID format
-      const sourceId = `test-${Date.now()}`;
+      setLoading(true);
+      const compoundId = createCompoundId();
+      setTaskId(compoundId);
       
-      // Create the task using our hook
-      const newTask = await createTask({
-        projectId,
-        text: taskText,
-        stage,
-        origin: 'custom',
-        sourceId,
-        notes: taskNotes || undefined,
-        completed,
-        status: status || undefined
-      });
+      const taskData = {
+        id: compoundId,
+        text: taskText || `UUID Test Task ${new Date().toISOString()}`,
+        stage: 'identification',
+        origin: 'factor',
+        sourceId: compoundId,
+        completed: false,
+        priority: 'medium',
+        owner: 'Test Component',
+        status: 'pending',
+      };
       
-      // Update the test task ID
-      setTestTaskId(newTask.id);
+      console.log('Creating task with data:', taskData);
+      
+      const response = await apiRequest(
+        'POST',
+        `/api/projects/${projectId}/tasks`,
+        taskData
+      );
+      
+      const data = await response.json();
+      setResult(JSON.stringify(data, null, 2));
+      console.log('Task created:', data);
+      
+      // Refresh tasks list
+      const tasksResponse = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+      const tasksData = await tasksResponse.json();
+      setTasks(tasksData);
       
       toast({
-        title: "Task Created",
-        description: `Successfully created task with ID: ${newTask.id}`,
+        title: 'Success',
+        description: 'Task created successfully',
       });
-      
-      console.log('Created task:', newTask);
-      console.log('Task ID is a valid UUID:', isValidUUID(newTask.id));
-      
-      // Check if the source ID was converted to a UUID internally
-      const sourceUuid = convertToUuid(sourceId, false);
-      console.log('Source ID converted to UUID:', sourceUuid);
-      console.log('Task was created with source ID:', newTask.sourceId);
-      
     } catch (error) {
       console.error('Error creating task:', error);
+      setResult(JSON.stringify(error, null, 2));
       toast({
-        title: "Task Creation Error",
-        description: String(error),
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Update the test task
-  const handleUpdateTask = async () => {
-    if (!testTaskId) {
+
+  const updateTask = async () => {
+    if (!taskId) {
       toast({
-        title: "No Task Selected",
-        description: "Create a task first or select an existing task",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Please create a task first or select one from the list',
+        variant: 'destructive',
       });
       return;
     }
-    
+
     try {
-      const updatedTask = await updateTask(testTaskId, {
-        text: taskText,
-        stage,
-        notes: taskNotes || undefined,
-        completed,
-        status: status || undefined
-      });
+      setLoading(true);
+      
+      const updateData = {
+        text: `Updated: ${taskText} (${new Date().toLocaleTimeString()})`,
+        completed: true,
+      };
+      
+      console.log(`Updating task ${taskId} with data:`, updateData);
+      
+      const response = await apiRequest(
+        'PATCH',
+        `/api/projects/${projectId}/tasks/${taskId}`,
+        updateData
+      );
+      
+      const data = await response.json();
+      setResult(JSON.stringify(data, null, 2));
+      console.log('Task updated:', data);
+      
+      // Refresh tasks list
+      const tasksResponse = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+      const tasksData = await tasksResponse.json();
+      setTasks(tasksData);
       
       toast({
-        title: "Task Updated",
-        description: `Successfully updated task ID: ${updatedTask.id}`,
+        title: 'Success',
+        description: 'Task updated successfully',
       });
-      
-      console.log('Updated task:', updatedTask);
-      
     } catch (error) {
       console.error('Error updating task:', error);
+      setResult(JSON.stringify(error, null, 2));
       toast({
-        title: "Task Update Error",
-        description: String(error),
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to update task',
+        variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Delete the test task
-  const handleDeleteTask = async () => {
-    if (!testTaskId) {
+
+  const getSourceTasks = async () => {
+    if (!taskId) {
       toast({
-        title: "No Task Selected",
-        description: "Create a task first or select an existing task",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Please create a task first or select one from the list',
+        variant: 'destructive',
       });
       return;
     }
-    
+
     try {
-      await deleteTask(testTaskId);
+      setLoading(true);
+      console.log(`Fetching tasks for source ID: ${taskId}`);
+      
+      const response = await apiRequest(
+        'GET',
+        `/api/projects/${projectId}/tasks/source/${taskId}`
+      );
+      
+      const data = await response.json();
+      setResult(JSON.stringify(data, null, 2));
+      console.log('Tasks for source:', data);
       
       toast({
-        title: "Task Deleted",
-        description: `Successfully deleted task ID: ${testTaskId}`,
+        title: 'Success',
+        description: `Found ${data.length} tasks with source ID ${taskId}`,
       });
-      
-      // Clear the test task ID
-      setTestTaskId(undefined);
-      
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error('Error fetching tasks by source:', error);
+      setResult(JSON.stringify(error, null, 2));
       toast({
-        title: "Task Deletion Error",
-        description: String(error),
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to fetch tasks by source',
+        variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Select an existing task
-  const handleSelectTask = (taskId: string) => {
-    if (!tasks) return;
-    
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-    
-    setTestTaskId(task.id);
+
+  const deleteTask = async () => {
+    if (!taskId) {
+      toast({
+        title: 'Error',
+        description: 'Please select a task to delete',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log(`Deleting task with ID: ${taskId}`);
+      
+      const response = await apiRequest(
+        'DELETE',
+        `/api/projects/${projectId}/tasks/${taskId}`
+      );
+      
+      const data = await response.json();
+      setResult(JSON.stringify(data, null, 2));
+      console.log('Task deletion result:', data);
+      
+      // Refresh tasks list
+      const tasksResponse = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+      const tasksData = await tasksResponse.json();
+      setTasks(tasksData);
+      
+      toast({
+        title: 'Success',
+        description: 'Task deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setResult(JSON.stringify(error, null, 2));
+      toast({
+        title: 'Error',
+        description: 'Failed to delete task',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectTask = (task: any) => {
+    setTaskId(task.id);
     setTaskText(task.text);
-    setTaskNotes(task.notes || '');
-    setStage(task.stage as any);
-    setCompleted(task.completed || false);
-    setStatus(task.status || '');
-    
+    setResult(JSON.stringify(task, null, 2));
     toast({
-      title: "Task Selected",
+      title: 'Task Selected',
       description: `Selected task: ${task.text}`,
     });
   };
-  
+
   return (
-    <div className="mx-auto max-w-4xl p-4">
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>UUID Task Persistence Test</CardTitle>
-          <CardDescription>
-            Test task persistence operations with UUID conversion utilities.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="taskText">Task Text</Label>
-            <Input
-              id="taskText"
-              value={taskText}
-              onChange={(e) => setTaskText(e.target.value)}
-              placeholder="Enter task text"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="taskNotes">Task Notes</Label>
-            <Textarea
-              id="taskNotes"
-              value={taskNotes}
-              onChange={(e) => setTaskNotes(e.target.value)}
-              placeholder="Enter task notes (optional)"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="taskStage">Task Stage</Label>
-            <Select value={stage} onValueChange={(value) => setStage(value as any)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select stage" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="identification">Identification</SelectItem>
-                <SelectItem value="definition">Definition</SelectItem>
-                <SelectItem value="delivery">Delivery</SelectItem>
-                <SelectItem value="closure">Closure</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="taskStatus">Task Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">None</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="deferred">Deferred</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="taskCompleted"
-              checked={completed}
-              onCheckedChange={(checked) => setCompleted(!!checked)}
-            />
-            <Label htmlFor="taskCompleted">Task Completed</Label>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="selectedTask">Current Test Task</Label>
-            <div className="p-2 border rounded-md bg-muted/50">
-              {testTaskId ? (
-                <div>
-                  <p><strong>ID:</strong> {testTaskId}</p>
-                  <p><strong>Is Valid UUID:</strong> {isValidUUID(testTaskId || '') ? 'Yes' : 'No'}</p>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No task selected</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <div className="space-x-2">
-            <Button onClick={handleCreateTask}>Create Task</Button>
-            <Button onClick={handleUpdateTask} variant="outline" disabled={!testTaskId}>Update Task</Button>
-            <Button onClick={handleDeleteTask} variant="destructive" disabled={!testTaskId}>Delete Task</Button>
-          </div>
-        </CardFooter>
-      </Card>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">UUID Task Test</h1>
       
-      <Card className="mb-8">
+      {/* Project Selection */}
+      <Card className="mb-4">
         <CardHeader>
-          <CardTitle>UUID Conversion Test</CardTitle>
-          <CardDescription>
-            Test UUID conversion utilities directly.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="originalId">Original ID</Label>
-            <Input
-              id="originalId"
-              value={originalId}
-              onChange={(e) => setOriginalId(e.target.value)}
-              placeholder="e.g., sf-1, custom-id, etc."
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="conversionResult">Conversion Result</Label>
-            <Textarea
-              id="conversionResult"
-              value={conversionResult}
-              readOnly
-              className="font-mono h-32"
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button onClick={testConversion} disabled={!originalId}>Test Conversion</Button>
-        </CardFooter>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Existing Tasks</CardTitle>
-          <CardDescription>
-            Select an existing task to test update and delete operations.
-          </CardDescription>
+          <CardTitle>Project Selection</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center p-4">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="project">Select Project</Label>
+              <select
+                id="project"
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="w-full p-2 border rounded"
+                disabled={loading}
+              >
+                <option value="">Select a project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          ) : error ? (
-            <div className="text-destructive p-4 border border-destructive rounded-md">
-              Error loading tasks: {String(error)}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Task Creation */}
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Create/Update Task</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="taskText">Task Text</Label>
+              <Input
+                id="taskText"
+                value={taskText}
+                onChange={(e) => setTaskText(e.target.value)}
+                placeholder="Enter task text"
+                disabled={loading}
+              />
             </div>
-          ) : tasks && tasks.length > 0 ? (
-            <div className="space-y-4">
-              {tasks.map((task) => (
-                <div 
-                  key={task.id}
-                  className={`p-4 border rounded-md cursor-pointer hover:bg-accent ${
-                    testTaskId === task.id ? 'bg-accent border-primary' : ''
-                  }`}
-                  onClick={() => handleSelectTask(task.id)}
-                >
-                  <div className="font-medium">{task.text}</div>
-                  <div className="text-sm text-muted-foreground">
-                    ID: {task.id} | Stage: {task.stage} | Origin: {task.origin}
-                  </div>
-                  {task.sourceId && (
-                    <div className="text-sm text-muted-foreground">
-                      Source ID: {task.sourceId} | Source UUID: {convertToUuid(task.sourceId, false)}
-                    </div>
-                  )}
-                </div>
-              ))}
+            
+            <div className="space-y-2">
+              <Label htmlFor="taskId">Task ID (Generated or Selected)</Label>
+              <Input
+                id="taskId"
+                value={taskId}
+                onChange={(e) => setTaskId(e.target.value)}
+                placeholder="Task ID will appear here after creation"
+                disabled
+              />
             </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button onClick={createTask} disabled={loading || !projectId}>
+            Create Task
+          </Button>
+          <Button onClick={updateTask} disabled={loading || !taskId || !projectId}>
+            Update Task
+          </Button>
+          <Button onClick={getSourceTasks} disabled={loading || !taskId || !projectId}>
+            Get Source Tasks
+          </Button>
+          <Button onClick={deleteTask} disabled={loading || !taskId || !projectId} variant="destructive">
+            Delete Task
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      {/* Tasks List */}
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Project Tasks</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center p-4">Loading tasks...</div>
+          ) : tasks.length === 0 ? (
+            <div className="text-center p-4">No tasks found</div>
           ) : (
-            <div className="text-center text-muted-foreground p-4">
-              No tasks found. Create your first task using the form above.
-            </div>
+            <ul className="divide-y">
+              {tasks.map((task) => (
+                <li 
+                  key={task.id} 
+                  className="py-2 px-4 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => selectTask(task)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
+                        {task.text}
+                      </p>
+                      <p className="text-xs text-gray-500">ID: {task.id}</p>
+                      <p className="text-xs text-gray-500">Source: {task.sourceId}</p>
+                    </div>
+                    <div className="text-xs bg-gray-200 px-2 py-1 rounded">
+                      {task.origin}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
+        </CardContent>
+      </Card>
+      
+      {/* Results */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
+            {result || 'No results yet'}
+          </pre>
         </CardContent>
       </Card>
     </div>
   );
-};
+}
 
 export default UUIDTaskTest;
