@@ -1,6 +1,7 @@
 /**
  * Utility functions for validating and working with UUIDs
  */
+import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 
 /**
  * Validates if a string is a proper UUID format
@@ -39,16 +40,8 @@ export function isNumericId(id: string | number | null | undefined): boolean {
  * @returns A UUID format string derived from the numeric ID
  */
 export function convertNumericIdToUuid(numericId: string | number): string {
-  // Use a namespace UUID approach for deterministic generation
-  // This must match the server implementation
-  
-  // npm install uuid is likely already present
-  // Import the v5 function for namespace-based UUIDs
-  import { v5 as uuidv5 } from 'uuid';
-  
-  // Standard DNS namespace from RFC4122
+  // Standard DNS namespace from RFC4122 - this must match the server implementation
   const NAMESPACE_UUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-  
   return uuidv5(String(numericId), NAMESPACE_UUID);
 }
 
