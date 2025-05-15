@@ -209,18 +209,26 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
     return tasks;
   }, [successFactors]);
   
-  // Refresh tasks state when canonical tasks change
+  // Refresh tasks state when canonical tasks change or auth state changes
   useEffect(() => {
-    if (canonicalTasks && canonicalTasks.length > 0) {
+    if (canonicalTasks && canonicalTasks.length > 0 && isAuthenticated) {
       refreshTasksState();
     }
-  }, [canonicalTasks]);
+  }, [canonicalTasks, isAuthenticated, currentProjectId]);
 
   // Helper function to refresh task state
   const refreshTasksState = async () => {
     if (!currentProjectId || !canonicalTasks || canonicalTasks.length === 0) return;
     
+    // Don't attempt to load tasks if not authenticated
+    if (!isAuthenticated) {
+      console.log('[CHECKLIST] Cannot refresh tasks: not authenticated');
+      return;
+    }
+    
     try {
+      console.log('[CHECKLIST] Refreshing tasks for project', currentProjectId);
+      
       // Get existing task statuses from the server
       const response = await apiRequest(
         "GET", 
@@ -347,13 +355,20 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
       return;
     }
 
+    // Check if user is authenticated before loading tasks
+    if (!isAuthenticated) {
+      console.log('[CHECKLIST] Waiting for authentication before loading tasks...');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     console.log('[CHECKLIST] Building task list for project', currentProjectId);
     
     refreshTasksState()
       .finally(() => setLoading(false));
       
-  }, [currentProjectId, canonicalTasks]);
+  }, [currentProjectId, canonicalTasks, isAuthenticated]);
 
   // Handle task updates - now always plan-free
   const handleTaskUpdate = async (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
@@ -404,7 +419,38 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
         updatedFields
       );
       
-      console.log('[CHECKLIST] Task update sent successfully', response);
+      // Parse the response to handle different response formats
+      try {
+        const responseData = await response.json();
+        console.log('[CHECKLIST] Task update sent successfully', responseData);
+        
+        // Get the actual task data from response (supports both formats)
+        const savedTask = responseData.task || responseData;
+        
+        // If the server returned a different ID, update our local state
+        if (savedTask && savedTask.id && savedTask.id !== taskId) {
+          console.log(`[CHECKLIST] Server assigned different ID: ${savedTask.id} (client had: ${taskId})`);
+          
+          // Update tasks array with server ID
+          setTasks(prev => prev.map(task => 
+            task.id === taskId ? { ...task, id: savedTask.id } : task
+          ));
+          
+          // Update tasksByStage with server ID
+          setTasksByStage(prev => {
+            const updatedTasks = { ...prev };
+            Object.keys(updatedTasks).forEach(key => {
+              updatedTasks[key as Stage] = updatedTasks[key as Stage].map(task =>
+                task.id === taskId ? { ...task, id: savedTask.id } : task
+              );
+            });
+            return updatedTasks;
+          });
+        }
+      } catch (e) {
+        // Response might not be JSON, or might be empty
+        console.log('[CHECKLIST] Task update successful, but no JSON response');
+      }
       
     } catch (error) {
       console.error('[CHECKLIST] Error updating task:', error);
@@ -575,10 +621,18 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
       });
       
       // Delete from server - use the correct endpoint
-      await apiRequest(
+      const response = await apiRequest(
         "DELETE",
         `/api/projects/${currentProjectId}/tasks/${taskId}`
       );
+      
+      // Check if the deletion was successful
+      if (!response.ok) {
+        console.error('[CHECKLIST] Server returned error when deleting task:', response.status);
+        throw new Error(`Server returned ${response.status} when deleting task`);
+      }
+      
+      console.log('[CHECKLIST] Task deleted successfully');
       
       toast({
         title: "Task deleted",
