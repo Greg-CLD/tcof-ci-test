@@ -2,15 +2,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
+import { isValidUUID, isNumericId, convertNumericIdToUuid } from '@/lib/uuid-utils';
 
 import { ProjectTask as DBProjectTask } from '@shared/schema';
-
-
-// Validate UUID format
-function isValidUUID(uuid: string) {
-  const regexExp = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return regexExp.test(uuid);
-}
 // Local interface for client-side project tasks
 interface ProjectTask {
   id: string;
@@ -59,6 +53,18 @@ interface UpdateTaskParams {
 export function useProjectTasks(projectId?: string) {
   const queryClient = useQueryClient();
   
+  // Normalize the project ID if needed
+  const normalizedProjectId = projectId ? 
+    (isNumericId(projectId) ? convertNumericIdToUuid(projectId) : projectId) : 
+    undefined;
+  
+  // If we have a project ID but it's not valid UUID, we can't fetch tasks
+  const isValidId = !normalizedProjectId || isValidUUID(normalizedProjectId);
+  
+  if (projectId && !isValidId) {
+    console.error(`Invalid project ID format: ${projectId}`);
+  }
+  
   // Query to fetch tasks for the project directly from database
   const { 
     data: tasks,
@@ -66,14 +72,14 @@ export function useProjectTasks(projectId?: string) {
     error,
     refetch
   } = useQuery<ProjectTask[]>({
-    queryKey: projectId ? [`/api/projects/${projectId}/tasks`] : [],
+    queryKey: normalizedProjectId && isValidId ? [`/api/projects/${normalizedProjectId}/tasks`] : [],
     queryFn: async () => {
-      if (!projectId) return [];
+      if (!normalizedProjectId || !isValidId) return [];
       
       try {
         // Use native fetch for more control over error handling
-        console.log(`Fetching tasks for project ${projectId}`);
-        const res = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+        console.log(`Fetching tasks for project ${normalizedProjectId}`);
+        const res = await apiRequest('GET', `/api/projects/${normalizedProjectId}/tasks`);
         
         if (!res.ok) {
           console.error(`Error fetching tasks: ${res.status} ${res.statusText}`);
@@ -81,18 +87,22 @@ export function useProjectTasks(projectId?: string) {
           if (res.status === 401) {
             throw new Error('Authentication required');
           }
+          // If we get a 400, it might be an invalid UUID format
+          if (res.status === 400) {
+            console.error(`Invalid UUID format for project ID: ${normalizedProjectId}`);
+          }
           return [];
         }
         
         const data = await res.json();
-        console.log(`Fetched ${data.length} tasks for project ${projectId}`);
+        console.log(`Fetched ${data.length} tasks for project ${normalizedProjectId}`);
         return data;
       } catch (err) {
         console.error('Error in task query:', err);
         return [];
       }
     },
-    enabled: !!projectId,
+    enabled: !!normalizedProjectId && isValidId,
     retry: 3,
     retryDelay: attempt => Math.min(attempt > 1 ? 2000 : 1000, 30 * 1000),
     staleTime: 0, // Don't use stale data at all, always refresh from server

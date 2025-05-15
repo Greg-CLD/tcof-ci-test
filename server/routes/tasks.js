@@ -68,6 +68,27 @@ router.post("/:projectId/tasks", isAuthenticated, async (req, res) => {
     const { projectId } = req.params;
     const userId = req.user.id;
     
+    // Validate project ID format
+    if (isNumericId(projectId)) {
+      // For backward compatibility - convert to UUID if it's a numeric ID
+      console.log(`Converting numeric project ID ${projectId} to UUID format for task creation`);
+      const uuidProjectId = convertNumericIdToUuid(projectId);
+      
+      // Redirect to the UUID version of the endpoint
+      // This maintains compatibility while enforcing UUID usage
+      return res.status(307).json({
+        message: "Project ID format has been updated",
+        details: "Please use UUID format for project IDs",
+        redirectTo: `/api/projects/${uuidProjectId}/tasks`
+      });
+    } else if (!isValidUUID(projectId)) {
+      console.error(`Invalid project ID format for task creation: ${projectId}`);
+      return res.status(400).json({ 
+        message: "Invalid project ID format",
+        details: "Project ID must be a valid UUID"
+      });
+    }
+    
     // Check if we're in plan-free update mode (from Checklist.tsx)
     if (req.body.taskId && req.body.updates) {
       const { taskId, updates, stage, source } = req.body;
@@ -212,6 +233,27 @@ router.put("/:projectId/tasks/:taskId", isAuthenticated, async (req, res) => {
   try {
     const { projectId, taskId } = req.params;
     const userId = req.user.id;
+    
+    // Validate project ID format
+    if (isNumericId(projectId)) {
+      // For backward compatibility - convert to UUID if it's a numeric ID
+      console.log(`Converting numeric project ID ${projectId} to UUID format for task update`);
+      const uuidProjectId = convertNumericIdToUuid(projectId);
+      
+      // Redirect to the UUID version of the endpoint
+      return res.status(307).json({
+        message: "Project ID format has been updated",
+        details: "Please use UUID format for project IDs",
+        redirectTo: `/api/projects/${uuidProjectId}/tasks/${taskId}`
+      });
+    } else if (!isValidUUID(projectId)) {
+      console.error(`Invalid project ID format for task update: ${projectId}`);
+      return res.status(400).json({ 
+        message: "Invalid project ID format",
+        details: "Project ID must be a valid UUID"
+      });
+    }
+    
     const { 
       text, 
       stage, 
@@ -282,6 +324,26 @@ router.delete("/:projectId/tasks/:taskId", isAuthenticated, async (req, res) => 
   try {
     const { projectId, taskId } = req.params;
     const userId = req.user.id;
+    
+    // Validate project ID format
+    if (isNumericId(projectId)) {
+      // For backward compatibility - convert to UUID if it's a numeric ID
+      console.log(`Converting numeric project ID ${projectId} to UUID format for task deletion`);
+      const uuidProjectId = convertNumericIdToUuid(projectId);
+      
+      // Redirect to the UUID version of the endpoint
+      return res.status(307).json({
+        message: "Project ID format has been updated",
+        details: "Please use UUID format for project IDs",
+        redirectTo: `/api/projects/${uuidProjectId}/tasks/${taskId}`
+      });
+    } else if (!isValidUUID(projectId)) {
+      console.error(`Invalid project ID format for task deletion: ${projectId}`);
+      return res.status(400).json({ 
+        message: "Invalid project ID format",
+        details: "Project ID must be a valid UUID"
+      });
+    }
     
     // Check if project exists and user has access
     const project = await projectsDb.getProject(projectId);
