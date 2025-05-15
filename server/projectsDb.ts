@@ -349,35 +349,43 @@ async function ensureProjectTasksSeeded(projectId: string): Promise<boolean> {
 /**
  * Load all project tasks from the database
  */
+/**
+ * Load project tasks from the database with improved error handling and type safety
+ * @param projectId Optional project ID to filter tasks
+ * @returns Array of ProjectTask objects
+ */
 async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
   try {
     if (projectId) {
-      // Convert the project ID to a UUID format if it's not already
+      // Always convert the project ID to a UUID format for database operations
       const normalizedProjectId = validateProjectUUID(projectId);
       console.log(`Normalized project ID for task loading: ${normalizedProjectId}`);
       
       try {
         console.log(`Loading tasks with normalized project ID: ${normalizedProjectId}`);
         
-        // Use a direct SQL query with proper UUID formatting
+        // Use a prepared statement with explicit parameter binding
         const sqlQuery = `
           SELECT * FROM project_tasks
           WHERE project_id = $1::uuid
         `;
         
+        // Make sure we're using a proper UUID string as parameter
         console.log(`Executing direct SQL query with projectId: ${normalizedProjectId}`);
-        const result = await db.execute(sqlQuery, [normalizedProjectId]);
+        // Explicitly cast to string and make sure it's not undefined or null
+        const safeProjectIdParam = String(normalizedProjectId || '');
+        const result = await db.execute(sqlQuery, [safeProjectIdParam]);
         
-        const tasks = result.rows || [];
-        
-        if (tasks.length === 0) {
+        // Handle empty results
+        if (!result || !result.rows || result.rows.length === 0) {
           console.log(`No tasks found for project ${normalizedProjectId}`);
           return [];
         }
         
+        const tasks = result.rows;
         console.log(`Loaded ${tasks.length} tasks from database for project ${normalizedProjectId}`);
         
-        // Debug output to see the actual field names from the database
+        // Debug output for the first task
         if (tasks.length > 0) {
           console.log('Raw task field names from database:', Object.keys(tasks[0]));
           console.log('Sample raw task data:', JSON.stringify(tasks[0]));
@@ -392,28 +400,62 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
             console.log('Task field names after camelCase conversion:', Object.keys(camelCaseTask));
           }
           
-          // Convert to a consistent format with proper type handling
-          const convertedTask = {
-            id: String(camelCaseTask.id || ''),
-            // Use the normalized project ID for consistency
+          // Always use String() for string fields with null/undefined fallbacks
+          const safeText = task.text !== null && task.text !== undefined ? String(task.text) : '';
+          
+          // Safely determine stage with proper fallback
+          let stage: 'identification' | 'definition' | 'delivery' | 'closure' = 'identification';
+          if (task.stage) {
+            const stageStr = String(task.stage).toLowerCase();
+            if (['identification', 'definition', 'delivery', 'closure'].includes(stageStr)) {
+              stage = stageStr as 'identification' | 'definition' | 'delivery' | 'closure';
+            }
+          }
+          
+          // Safely determine origin with proper fallback
+          let origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework' = 'custom';
+          if (task.origin) {
+            const originStr = String(task.origin).toLowerCase();
+            if (['heuristic', 'factor', 'policy', 'custom', 'framework'].includes(originStr)) {
+              origin = originStr as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
+            }
+          }
+          
+          // Handle timestamps with proper safety checks
+          let createdAt = new Date().toISOString();
+          if (task.created_at) {
+            try {
+              createdAt = new Date(String(task.created_at)).toISOString();
+            } catch (e) {
+              console.error('Error parsing createdAt date:', e);
+            }
+          }
+          
+          let updatedAt = new Date().toISOString();
+          if (task.updated_at) {
+            try {
+              updatedAt = new Date(String(task.updated_at)).toISOString();
+            } catch (e) {
+              console.error('Error parsing updatedAt date:', e);
+            }
+          }
+          
+          // Create a well-typed ProjectTask object
+          const convertedTask: ProjectTask = {
+            id: task.id ? String(task.id) : '',
             projectId: normalizedProjectId,
-            text: String(camelCaseTask.text || ''),
-            stage: (String(camelCaseTask.stage || 'identification').toLowerCase() as 'identification' | 'definition' | 'delivery' | 'closure'),
-            origin: (String(camelCaseTask.origin || 'custom').toLowerCase() as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'),
-            sourceId: String(camelCaseTask.sourceId || ''),
-            completed: Boolean(camelCaseTask.completed || false),
-            notes: String(camelCaseTask.notes || ''),
-            priority: String(camelCaseTask.priority || ''),
-            dueDate: String(camelCaseTask.dueDate || ''),
-            owner: String(camelCaseTask.owner || ''),
-            status: String(camelCaseTask.status || 'pending'),
-            // Handle date format conversion to string
-            createdAt: camelCaseTask.createdAt
-              ? new Date(String(camelCaseTask.createdAt)).toISOString() 
-              : new Date().toISOString(),
-            updatedAt: camelCaseTask.updatedAt
-              ? new Date(String(camelCaseTask.updatedAt)).toISOString() 
-              : new Date().toISOString()
+            text: safeText,
+            stage: stage,
+            origin: origin,
+            sourceId: task.source_id ? String(task.source_id) : '',
+            completed: Boolean(task.completed),
+            notes: task.notes ? String(task.notes) : '',
+            priority: task.priority ? String(task.priority) : '',
+            dueDate: task.due_date ? String(task.due_date) : '',
+            owner: task.owner ? String(task.owner) : '',
+            status: task.status ? String(task.status) : 'pending',
+            createdAt: createdAt,
+            updatedAt: updatedAt
           };
           
           return convertedTask;
@@ -423,27 +465,85 @@ async function loadProjectTasks(projectId?: string): Promise<ProjectTask[]> {
         return [];
       }
     } else {
-      // If no projectId, get all tasks using ORM
+      // If no projectId, get all tasks using direct SQL for consistency
       try {
-        const tasks = await db.select().from(projectTasksTable);
+        // Using the same SQL approach for better consistency with parameterized query
+        const sqlQuery = `SELECT * FROM project_tasks`;
+        console.log('Fetching all tasks from database using SQL');
+        
+        const result = await db.execute(sqlQuery);
+        
+        if (!result || !result.rows || result.rows.length === 0) {
+          console.log('No tasks found in database');
+          return [];
+        }
+        
+        const tasks = result.rows;
         console.log(`Loaded ${tasks.length} tasks from database (all projects)`);
         
-        return tasks.map(task => ({
-          id: String(task.id),
-          projectId: String(task.projectId),
-          text: String(task.text),
-          stage: String(task.stage) as 'identification' | 'definition' | 'delivery' | 'closure',
-          origin: String(task.origin) as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework',
-          sourceId: String(task.sourceId || ''),
-          completed: Boolean(task.completed),
-          notes: task.notes ? String(task.notes) : '',
-          priority: task.priority ? String(task.priority) : '',
-          dueDate: task.dueDate ? String(task.dueDate) : '',
-          owner: task.owner ? String(task.owner) : '',
-          status: task.status ? String(task.status) : '',
-          createdAt: task.createdAt ? new Date(String(task.createdAt)).toISOString() : new Date().toISOString(),
-          updatedAt: task.updatedAt ? new Date(String(task.updatedAt)).toISOString() : new Date().toISOString()
-        }));
+        // Use the same conversion logic as the project-specific case for consistency
+        return tasks.map((task: any) => {
+          // Always use String() for string fields with null/undefined fallbacks
+          const safeText = task.text !== null && task.text !== undefined ? String(task.text) : '';
+          const safeProjectId = task.project_id !== null ? String(task.project_id) : '';
+          
+          // Safely determine stage with proper fallback
+          let stage: 'identification' | 'definition' | 'delivery' | 'closure' = 'identification';
+          if (task.stage) {
+            const stageStr = String(task.stage).toLowerCase();
+            if (['identification', 'definition', 'delivery', 'closure'].includes(stageStr)) {
+              stage = stageStr as 'identification' | 'definition' | 'delivery' | 'closure';
+            }
+          }
+          
+          // Safely determine origin with proper fallback
+          let origin: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework' = 'custom';
+          if (task.origin) {
+            const originStr = String(task.origin).toLowerCase();
+            if (['heuristic', 'factor', 'policy', 'custom', 'framework'].includes(originStr)) {
+              origin = originStr as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
+            }
+          }
+          
+          // Handle timestamps with proper safety checks
+          let createdAt = new Date().toISOString();
+          if (task.created_at) {
+            try {
+              createdAt = new Date(String(task.created_at)).toISOString();
+            } catch (e) {
+              console.error('Error parsing createdAt date:', e);
+            }
+          }
+          
+          let updatedAt = new Date().toISOString();
+          if (task.updated_at) {
+            try {
+              updatedAt = new Date(String(task.updated_at)).toISOString();
+            } catch (e) {
+              console.error('Error parsing updatedAt date:', e);
+            }
+          }
+          
+          // Create a well-typed ProjectTask object
+          const convertedTask: ProjectTask = {
+            id: task.id ? String(task.id) : '',
+            projectId: safeProjectId,
+            text: safeText,
+            stage: stage,
+            origin: origin,
+            sourceId: task.source_id ? String(task.source_id) : '',
+            completed: Boolean(task.completed),
+            notes: task.notes ? String(task.notes) : '',
+            priority: task.priority ? String(task.priority) : '',
+            dueDate: task.due_date ? String(task.due_date) : '',
+            owner: task.owner ? String(task.owner) : '',
+            status: task.status ? String(task.status) : 'pending',
+            createdAt: createdAt,
+            updatedAt: updatedAt
+          };
+          
+          return convertedTask;
+        });
       } catch (error) {
         console.error('Error loading all tasks:', error);
         return [];
@@ -519,15 +619,42 @@ function isValidUUID(str: string): boolean {
  * @param data Object with fields in camelCase format
  * @returns New object with fields mapped to snake_case for database operations
  */
+/**
+ * Map field names between camelCase and snake_case formats
+ * This handles the inconsistency between code conventions and database column names
+ * 
+ * @param data Object with fields in camelCase format
+ * @returns New object with fields mapped to snake_case for database operations
+ */
 function mapToSnakeCase(data: Record<string, any>): Record<string, any> {
-  if (!data) return {};
+  if (!data || typeof data !== 'object') return {};
   
   const result: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(data)) {
-    // Convert camelCase to snake_case: projectId -> project_id
-    const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-    result[snakeCaseKey] = value;
+    // Handle special cases for common field names to ensure consistency
+    if (key === 'id' || key === 'projectId' || key === 'sourceId') {
+      // Explicitly handle critical fields needed for task operations
+      switch(key) {
+        case 'id':
+          result.id = value !== null && value !== undefined ? String(value) : '';
+          break;
+        case 'projectId':
+          result.project_id = value !== null && value !== undefined ? String(value) : '';
+          break;
+        case 'sourceId':
+          result.source_id = value !== null && value !== undefined ? String(value) : '';
+          break;
+        default:
+          // Shouldn't get here but handle it anyway
+          const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+          result[snakeKey] = value;
+      }
+    } else {
+      // Convert general camelCase to snake_case: someField -> some_field
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      result[snakeCaseKey] = value;
+    }
   }
   
   return result;
@@ -540,15 +667,42 @@ function mapToSnakeCase(data: Record<string, any>): Record<string, any> {
  * @param data Object with fields in snake_case format from the database
  * @returns New object with fields mapped to camelCase for code consistency
  */
+/**
+ * Map field names from snake_case to camelCase format
+ * Handles the inconsistency between database column names and code conventions
+ * 
+ * @param data Object with fields in snake_case format from the database
+ * @returns New object with fields mapped to camelCase for code consistency
+ */
 function mapToCamelCase(data: Record<string, any>): Record<string, any> {
-  if (!data) return {};
+  if (!data || typeof data !== 'object') return {};
   
   const result: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(data)) {
-    // Convert snake_case to camelCase: project_id -> projectId
-    const camelCaseKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    result[camelCaseKey] = value;
+    // Handle special cases for common field names to ensure consistency
+    if (key === 'id' || key === 'project_id' || key === 'source_id') {
+      // Explicitly handle critical fields needed for task lookup
+      switch(key) {
+        case 'id':
+          result.id = value !== null ? String(value) : '';
+          break;
+        case 'project_id':
+          result.projectId = value !== null ? String(value) : '';
+          break;
+        case 'source_id':
+          result.sourceId = value !== null ? String(value) : '';
+          break;
+        default:
+          // Shouldn't get here but handle it anyway
+          const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+          result[camelKey] = value;
+      }
+    } else {
+      // Convert general snake_case to camelCase: some_field -> someField
+      const camelCaseKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      result[camelCaseKey] = value;
+    }
   }
   
   return result;
@@ -1301,21 +1455,54 @@ export const projectsDb = {
       if (!uuidRegex.test(taskId)) {
         // If not a UUID, try to find the task by source_id AND project ID
         console.log(`Task ID ${taskId} is not a valid UUID, looking up by source_id for project ${safeProjectId}`);
-        const tasksBySourceId = await db
-          .select()
-          .from(projectTasksTable)
-          .where(and(
-            eq(projectTasksTable.sourceId, taskId),
-            eq(projectTasksTable.projectId, safeProjectId) // Use the safe project ID
-          ))
-          .limit(1);
-          
-        if (tasksBySourceId.length > 0) {
-          // We found a task using source_id instead
-          taskIdValue = tasksBySourceId[0].id;
-          console.log(`Found task using source_id lookup: ${taskIdValue} for project ${safeProjectId}`);
-        } else {
-          console.error(`No task found with source_id ${taskId} for project ${safeProjectId}`);
+        
+        try {
+          // First try an exact match on source_id
+          const tasksBySourceId = await db
+            .select()
+            .from(projectTasksTable)
+            .where(and(
+              eq(projectTasksTable.sourceId, taskId),
+              eq(projectTasksTable.projectId, safeProjectId)
+            ))
+            .limit(1);
+            
+          if (tasksBySourceId.length > 0) {
+            // We found a task using source_id exact match
+            taskIdValue = tasksBySourceId[0].id;
+            console.log(`Found task using exact source_id lookup: ${taskIdValue} for project ${safeProjectId}`);
+          } else {
+            // If exact match fails, try a SQL LIKE pattern match for source_id
+            // This handles cases like "sf-1-26aa6ab9" where only a prefix might match
+            const sqlQueryForPartialMatch = `
+              SELECT * FROM project_tasks 
+              WHERE project_id = $1::uuid
+              AND (
+                source_id = $2
+                OR source_id LIKE $3
+                OR id::text = $2
+              )
+              LIMIT 1
+            `;
+            
+            // Create pattern for partial match (prefix-based)
+            const sourceIdPattern = `${taskId}%`;
+            console.log(`Trying partial match with pattern: ${sourceIdPattern}`);
+            
+            const result = await db.execute(
+              sqlQueryForPartialMatch, 
+              [safeProjectId, taskId, sourceIdPattern]
+            );
+            
+            if (result.rows && result.rows.length > 0) {
+              taskIdValue = result.rows[0].id;
+              console.log(`Found task using partial source_id match: ${taskIdValue} for project ${safeProjectId}`);
+            } else {
+              console.error(`No task found with source_id ${taskId} for project ${safeProjectId}`);
+            }
+          }
+        } catch (lookupError) {
+          console.error('Error during task lookup by source_id:', lookupError);
         }
       }
       
