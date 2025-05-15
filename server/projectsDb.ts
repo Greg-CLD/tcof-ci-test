@@ -334,6 +334,8 @@ export const projectsDb = {
   // Update an existing task
   async updateTask(taskId: string, data: Partial<ProjectTask>) {
     try {
+      console.log(`Updating task ${taskId} with data:`, data);
+      
       // Sanitize input data to ensure types match and handle empty strings properly
       const updateData: Record<string, string | boolean | null | Date> = {};
       
@@ -354,6 +356,8 @@ export const projectsDb = {
       // Always update the updatedAt timestamp
       updateData.updatedAt = new Date();
       
+      console.log(`Prepared update data:`, updateData);
+      
       // Update the task using Drizzle
       const [updatedTask] = await db.update(projectTasksTable)
         .set(updateData)
@@ -361,7 +365,10 @@ export const projectsDb = {
         .returning();
       
       if (updatedTask) {
-        return convertDbTaskToProjectTask(updatedTask);
+        console.log(`Task ${taskId} updated successfully:`, updatedTask);
+        const converted = convertDbTaskToProjectTask(updatedTask);
+        console.log('Converted task:', converted);
+        return converted;
       }
       
       // If no task was found/updated, throw an error instead of returning null

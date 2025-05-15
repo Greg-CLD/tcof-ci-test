@@ -667,6 +667,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           });
         }
         
+        // Log the updated task before returning to verify data
+        console.log('Successfully updated task:', updatedTask);
+        
         // Return the successfully updated task
         return res.status(200).json({
           success: true,
