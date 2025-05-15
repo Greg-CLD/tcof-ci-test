@@ -34,6 +34,7 @@ function isNumericId(id) {
 /**
  * Converts a numeric ID to a UUID using a deterministic algorithm
  * This helps with legacy numeric IDs during migration
+ * Matches the PostgreSQL function integer_to_uuid()
  * 
  * @param {string|number} numericId - The numeric ID to convert
  * @returns {string} A UUID format string derived from the numeric ID
@@ -42,13 +43,12 @@ function convertNumericIdToUuid(numericId) {
   // Convert to string first
   const idStr = String(numericId);
   
-  // Create a deterministic padding for the ID to ensure the same numeric ID
-  // always generates the same UUID
-  const paddedId = idStr.padStart(10, '0');
+  // Convert to hexadecimal and pad to 4 characters
+  // This matches our PostgreSQL function: LPAD(to_hex(int_id), 4, '0')
+  const hexId = parseInt(idStr, 10).toString(16).padStart(4, '0');
   
-  // Insert hyphens to create UUID format
-  // Using the numeric ID as part of the UUID ensures deterministic mapping
-  return `${paddedId.substring(0, 8)}-${paddedId.substring(8, 10)}00-4000-8000-000000000000`;
+  // Create deterministic UUID following our PostgreSQL format
+  return `00000000-${hexId}-4000-8000-000000000000`;
 }
 
 module.exports = {
