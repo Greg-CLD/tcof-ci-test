@@ -278,6 +278,37 @@ export const projectsDb = {
     }
   },
   
+  getProjectTasksBySourceId: async (projectId: string, sourceId: string): Promise<ProjectTask[]> => {
+    try {
+      const tasks = await loadProjectTasks(projectId);
+      return tasks.filter(task => task.sourceId === sourceId);
+    } catch (error) {
+      console.error(`Error getting tasks for source ${sourceId}:`, error);
+      return [];
+    }
+  },
+  
+  getProjectTasks: async (projectId: string): Promise<ProjectTask[]> => {
+    try {
+      return await loadProjectTasks(projectId);
+    } catch (error) {
+      console.error(`Error getting tasks for project ${projectId}:`, error);
+      return [];
+    }
+  },
+  
+  createProjectTask: async (taskData: Partial<ProjectTask>): Promise<ProjectTask | null> => {
+    return await projectsDb.createTask(taskData);
+  },
+  
+  updateProjectTask: async (taskId: string, data: Partial<ProjectTask>): Promise<ProjectTask | null> => {
+    return await projectsDb.updateTask(taskId, data);
+  },
+  
+  deleteProjectTask: async (taskId: string): Promise<boolean> => {
+    return await projectsDb.deleteTask(taskId);
+  },
+  
   getTasksForProject: async (projectId: string): Promise<ProjectTask[]> => {
     try {
       return await loadProjectTasks(projectId);
