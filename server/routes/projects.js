@@ -109,15 +109,22 @@ router.get("/", isAuthenticated, async (req, res) => {
  * GET /api/projects/:id
  * Get a specific project by ID
  */
-router.get("/:id", isAuthenticated, async (req, res) => {
+router.get("/:id", isAuthenticated, validateProjectId, async (req, res) => {
   try {
-    const projectId = parseInt(req.params.id);
+    const rawProjectId = req.params.id;
     
-    if (isNaN(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
+    // Log the request
+    console.log(`Fetching detailed project: ${rawProjectId}`);
+    
+    // If we've reached here, the ID passed validation
+    // Attempt to find by direct UUID match or convert numeric ID to UUID
+    let projectId = rawProjectId;
+    
+    // If it's a numeric ID (shouldn't happen with middleware) convert it
+    if (isNumericId(rawProjectId)) {
+      projectId = convertNumericIdToUuid(rawProjectId);
+      console.log(`Converted numeric ID ${rawProjectId} to UUID ${projectId}`);
     }
-    
-    console.log(`Fetching detailed project: ${projectId}`);
     
     // Find the project
     const project = await db.query.projects.findFirst({
@@ -169,30 +176,25 @@ router.get("/:id", isAuthenticated, async (req, res) => {
  * PUT /api/projects/:id
  * Update a specific project by ID
  */
-router.put("/:id", isAuthenticated, async (req, res) => {
+router.put("/:id", isAuthenticated, validateProjectId, async (req, res) => {
   try {
-    console.log('Updating project', req.params.id, req.body);
+    const rawProjectId = req.params.id;
+    console.log('Updating project', rawProjectId, req.body);
     
-    // Get the project ID as integer (since our schema uses serial)
-    const projectId = parseInt(req.params.id);
+    // If we've reached here, the ID passed validation
+    // Attempt to find by direct UUID match or convert numeric ID to UUID
+    let projectId = rawProjectId;
     
-    if (isNaN(projectId)) {
-      console.error(`Invalid project ID format: ${req.params.id}`);
-      return res.status(400).json({ message: "Invalid project ID" });
+    // If it's a numeric ID (shouldn't happen with middleware) convert it
+    if (isNumericId(rawProjectId)) {
+      projectId = convertNumericIdToUuid(rawProjectId);
+      console.log(`Converted numeric ID ${rawProjectId} to UUID ${projectId}`);
     }
     
     // First, check if project exists and user has permission
-    console.log(`Getting project with ID: ${projectId} (type: ${typeof projectId})`);
+    console.log(`Getting project with ID: ${projectId}`);
     
     // Find the project
-    const allProjects = await db.query.projects.findMany();
-    console.log("Available projects:", allProjects.map(p => ({ id: p.id, type: typeof p.id })));
-    
-    // Debug log to check all project IDs
-    for (const project of allProjects) {
-      console.log(`Comparing project ID: ${project.id} (${typeof project.id}) with searchId: ${projectId} (${typeof projectId})`);
-    }
-    
     const project = await db.query.projects.findFirst({
       where: eq(projects.id, projectId)
     });
@@ -288,35 +290,32 @@ router.put("/:id", isAuthenticated, async (req, res) => {
  * DELETE /api/projects/:id
  * Delete a specific project by ID
  */
-router.delete("/:id", isAuthenticated, async (req, res) => {
+router.delete("/:id", isAuthenticated, validateProjectId, async (req, res) => {
   try {
     const rawProjectId = req.params.id;
     
-    // Try to parse as integer first
-    const projectId = parseInt(rawProjectId);
-    const isValidNumericId = !isNaN(projectId);
+    // If we've reached here, the ID passed validation
+    // Attempt to find by direct UUID match or convert numeric ID to UUID
+    let projectId = rawProjectId;
     
-    console.log(`Attempting to delete project with ID: ${rawProjectId} (${isValidNumericId ? 'numeric' : 'string'} format)`);
-    
-    // Find the project first to verify it exists and user has permission
-    let project;
-    
-    if (isValidNumericId) {
-      project = await db.query.projects.findFirst({
-        where: eq(projects.id, projectId)
-      });
-    } else {
-      // If not a valid numeric ID, try using it as a string ID (UUID)
-      project = await db.query.projects.findFirst({
-        where: eq(projects.id, rawProjectId)
-      });
+    // If it's a numeric ID (shouldn't happen with middleware) convert it
+    if (isNumericId(rawProjectId)) {
+      projectId = convertNumericIdToUuid(rawProjectId);
+      console.log(`Converted numeric ID ${rawProjectId} to UUID ${projectId}`);
     }
     
+    console.log(`Attempting to delete project with ID: ${projectId}`);
+    
+    // Find the project first to verify it exists and user has permission
+    const project = await db.query.projects.findFirst({
+      where: eq(projects.id, projectId)
+    });
+    
     if (!project) {
-      console.log(`Project not found for deletion: ${rawProjectId}`);
+      console.log(`Project not found for deletion: ${projectId}`);
       return res.status(404).json({ 
         message: "Project not found", 
-        details: `No project found with ID: ${rawProjectId}`
+        details: `No project found with ID: ${projectId}`
       });
     }
     
@@ -356,14 +355,8 @@ router.delete("/:id", isAuthenticated, async (req, res) => {
       return res.status(403).json({ message: "You don't have permission to delete this project" });
     }
     
-    // Perform the deletion using the correct ID format
-    let result;
-    
-    if (isValidNumericId) {
-      result = await db.delete(projects).where(eq(projects.id, projectId));
-    } else {
-      result = await db.delete(projects).where(eq(projects.id, rawProjectId));
-    }
+    // Perform the deletion using the validated project ID
+    const result = await db.delete(projects).where(eq(projects.id, projectId));
     
     console.log(`Project deletion result:`, result);
     
@@ -376,7 +369,7 @@ router.delete("/:id", isAuthenticated, async (req, res) => {
     
     return res.status(200).json({ 
       message: "Project deleted successfully", 
-      id: rawProjectId 
+      id: projectId
     });
   } catch (error) {
     console.error("Error deleting project:", error);
