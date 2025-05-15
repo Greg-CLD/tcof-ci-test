@@ -309,12 +309,51 @@ export const projectsDb = {
     return await projectsDb.createTask(taskData);
   },
   
-  updateProjectTask: async (taskId: string, data: Partial<ProjectTask>): Promise<ProjectTask | null> => {
-    return await projectsDb.updateTask(taskId, data);
+  updateProjectTask: async (projectId: string, taskId: string, data: Partial<ProjectTask>): Promise<ProjectTask | null> => {
+    console.log(`Updating task ${taskId} for project ${projectId}`);
+    // Ensure task belongs to the specified project for safety
+    try {
+      // Normalize project ID
+      const normalizedProjectId = validateProjectUUID(projectId);
+      
+      // First get the task to ensure it exists and belongs to this project
+      const tasks = await loadProjectTasks(normalizedProjectId);
+      const taskExists = tasks.find(t => t.id === taskId);
+      
+      if (!taskExists) {
+        console.error(`Task ${taskId} not found in project ${normalizedProjectId}`);
+        return null;
+      }
+      
+      // If task exists and belongs to the project, update it
+      return await projectsDb.updateTask(taskId, data);
+    } catch (error) {
+      console.error(`Error updating task ${taskId} for project ${projectId}:`, error);
+      return null;
+    }
   },
   
-  deleteProjectTask: async (taskId: string): Promise<boolean> => {
-    return await projectsDb.deleteTask(taskId);
+  deleteProjectTask: async (projectId: string, taskId: string): Promise<boolean> => {
+    console.log(`Deleting task ${taskId} from project ${projectId}`);
+    try {
+      // Normalize project ID
+      const normalizedProjectId = validateProjectUUID(projectId);
+      
+      // First get the task to ensure it exists and belongs to this project
+      const tasks = await loadProjectTasks(normalizedProjectId);
+      const taskExists = tasks.find(t => t.id === taskId);
+      
+      if (!taskExists) {
+        console.error(`Task ${taskId} not found in project ${normalizedProjectId}`);
+        return false;
+      }
+      
+      // If task exists and belongs to the project, delete it
+      return await projectsDb.deleteTask(taskId);
+    } catch (error) {
+      console.error(`Error deleting task ${taskId} from project ${projectId}:`, error);
+      return false;
+    }
   },
   
   getTasksForProject: async (projectId: string): Promise<ProjectTask[]> => {
