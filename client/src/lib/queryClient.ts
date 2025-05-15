@@ -72,27 +72,50 @@ export async function apiRequest(
     if (response.status === 401) {
       console.warn('Authentication required for API request:', url);
       
-      // For GET requests, we might want to silently retry after refreshing auth
-      if (method === 'GET') {
-        // Attempt to refresh the session silently
-        try {
-          console.log('Attempting to refresh auth session before retrying request');
-          const authCheckResponse = await fetch('/api/auth/refresh-session', { 
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-          });
+      // For all requests (not just GET), try to refresh auth session first
+      try {
+        console.log('Authentication required for API request:', url);
+        console.log('Attempting to refresh auth session before retrying request');
+        
+        // Try session refresh with more detailed logging
+        const authCheckResponse = await fetch('/api/auth/refresh-session', { 
+          method: 'POST',
+          credentials: 'include',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+        
+        // Log the refresh response
+        console.log(`Auth refresh response status: ${authCheckResponse.status}`);
+        
+        if (authCheckResponse.ok) {
+          // Parse the response to see if we successfully restored the session
+          const refreshData = await authCheckResponse.json();
+          console.log('Auth refresh response:', refreshData);
           
-          if (authCheckResponse.ok) {
-            console.log('Auth session refreshed, retrying original request');
+          if (refreshData.success) {
+            console.log('Session successfully refreshed, retrying original request');
+            
             // Retry the original request
-            const retryResponse = await fetch(url, options);
+            const retryResponse = await fetch(url, {
+              ...options,
+              // Ensure we pass the updated cookies
+              credentials: 'include'
+            });
+            
+            console.log(`Retry response status: ${retryResponse.status}`);
             await logResponse(retryResponse);
             return retryResponse;
+          } else {
+            console.warn('Session refresh returned success:false - authentication still required');
           }
-        } catch (refreshError) {
-          console.error('Error refreshing auth session:', refreshError);
+        } else {
+          console.error('Session refresh failed with status:', authCheckResponse.status);
         }
+      } catch (refreshError) {
+        console.error('Error during auth session refresh:', refreshError);
       }
     }
     

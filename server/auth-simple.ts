@@ -224,7 +224,7 @@ export function setupAuth(app: Express) {
   });
   
   // Session refresh endpoint
-  app.post('/api/auth/refresh-session', (req, res) => {
+  app.post('/api/auth/refresh-session', async (req, res) => {
     console.log('Session refresh requested');
     
     // Log current session state
@@ -254,6 +254,92 @@ export function setupAuth(app: Express) {
         user: safeUser 
       });
       return;
+    }
+    
+    // SESSION RECOVERY: If we have a session but missing passport data
+    // This is the critical fix for the task persistence issue
+    if (req.session && req.sessionID) {
+      try {
+        // First, check if this user has an active session in the database
+        console.log('Attempting session recovery with sessionID:', req.sessionID);
+        
+        // Using direct DB query to check for active sessions
+        const sessionResult = await query(
+          'SELECT * FROM sessions WHERE sid = $1',
+          [req.sessionID]
+        );
+        
+        if (sessionResult && sessionResult.length > 0) {
+          // We found a session record, try to extract user ID from sess JSON
+          const sessionData = sessionResult[0];
+          const sessObj = typeof sessionData.sess === 'string' 
+            ? JSON.parse(sessionData.sess) 
+            : sessionData.sess;
+          
+          console.log('Found session data:', {
+            sid: sessionData.sid,
+            hasPassport: !!sessObj.passport,
+            passportUserId: sessObj.passport?.user
+          });
+          
+          // If we have a user ID in the session, try to restore the user
+          if (sessObj.passport && sessObj.passport.user) {
+            const userId = sessObj.passport.user;
+            console.log(`Attempting to restore user with ID: ${userId}`);
+            
+            // Find user by ID
+            const user = await storage.getUser(userId);
+            
+            if (user) {
+              console.log(`Successfully found user ${user.username}, restoring session`);
+              
+              // Manually restore the session passport data
+              if (!req.session.passport) {
+                req.session.passport = { user: userId };
+                await new Promise<void>((resolve, reject) => {
+                  req.session.save((err) => {
+                    if (err) {
+                      console.error('Error saving session:', err);
+                      reject(err);
+                    } else {
+                      console.log('Session passport data restored');
+                      resolve();
+                    }
+                  });
+                });
+              }
+              
+              // Manually login the user (sets req.user)
+              await new Promise<void>((resolve, reject) => {
+                req.login(user, (err) => {
+                  if (err) {
+                    console.error('Session login error:', err);
+                    reject(err);
+                  } else {
+                    console.log('User logged in via session restoration');
+                    resolve();
+                  }
+                });
+              });
+              
+              // Return the user data
+              const { password, ...safeUser } = user;
+              return res.status(200).json({
+                success: true, 
+                message: 'Session successfully restored',
+                user: safeUser,
+                restored: true
+              });
+            } else {
+              console.log(`No user found with ID: ${userId}`);
+            }
+          }
+        } else {
+          console.log('No active session found in database for ID:', req.sessionID);
+        }
+      } catch (error) {
+        console.error('Error during session recovery:', error);
+      }
     }
     
     // If not authenticated but we have login details in the request body, try to authenticate
