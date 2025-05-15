@@ -256,7 +256,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             id: task.id,
             text: task.text,
             completed: !!task.completed,
-            stage: (task.stage.charAt(0).toUpperCase() + task.stage.slice(1)) as Stage,
+            stage: task.stage.toLowerCase() as Stage,
             source: task.origin as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
             sourceId: task.sourceId || undefined,
             notes: task.notes || '',
@@ -305,7 +305,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           id: task.id,
           text: task.title,
           completed,
-          stage: task.stage || 'Identification',
+          stage: (task.stage || 'identification').toLowerCase() as Stage,
           source: 'factor',
           sourceName: task.factorCode || task.factorId,
           sourceId: task.id
@@ -419,12 +419,16 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       // Ensure we send the correct data to match the backend expectations
       const updatedFields = {
         ...updates,
+        // Always normalize stage to lowercase
         stage: stage.toLowerCase(),
         // Convert priority from TaskPriority type to string if present
         priority: updates.priority ? String(updates.priority) : undefined,
         // Ensure we convert status to string
         status: updates.status ? String(updates.status) : undefined
       };
+      
+      console.log(`[CHECKLIST] Sending task update to API: ${JSON.stringify(updatedFields)}`);
+      
       
       const response = await apiRequest(
         "PUT",
@@ -585,14 +589,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           />
         </div>
         
-        <div className="flex gap-2">
-          <CreateTaskForm 
-            projectId={currentProjectId || ''}
-            onTaskCreated={refreshTasksState}
-            stage={activeTab}
-            isAuthenticated={isAuthenticated}
-          />
-          
+        <div className="flex gap-2 justify-end">
           <Button variant="outline">
             <FileText className="mr-2 h-4 w-4" />
             Export PDF
@@ -694,19 +691,22 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 <TabsContent key={stage} value={stage} className="space-y-6">
                   {/* Add task creation form at the top of every stage tab */}
                   {currentProjectId && (
-                    <CreateTaskForm 
-                      projectId={currentProjectId}
-                      stage={stage as Stage}
-                      onTaskCreated={refreshTasksState}
-                      isAuthenticated={isAuthenticated}
-                    />
+                    <div className="bg-card rounded-md p-4 shadow-sm mb-4 border">
+                      <h3 className="text-lg font-medium mb-2">Add a new task to {stage.charAt(0).toUpperCase() + stage.slice(1)}</h3>
+                      <CreateTaskForm 
+                        projectId={currentProjectId}
+                        stage={stage as Stage}
+                        onTaskCreated={refreshTasksState}
+                        isAuthenticated={isAuthenticated}
+                      />
+                    </div>
                   )}
                   
                   {filteredTasks.length === 0 ? (
                     <div className="text-center py-8 border border-dashed rounded-md">
                       <p className="text-gray-500">No tasks found for this stage</p>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Use the form above to add a custom task
+                        Use the "Add a new task" form above to create tasks for this stage
                       </p>
                     </div>
                   ) : (
