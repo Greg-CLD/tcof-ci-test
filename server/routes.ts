@@ -183,6 +183,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
   
+  // Diagnostic endpoint for project IDs - public for debugging
+  app.get('/api/debug/projects', async (req, res) => {
+    try {
+      // Get all projects directly from database
+      const projectsResult = await db.execute(sql`
+        SELECT id, name, created_at 
+        FROM projects 
+        ORDER BY created_at DESC
+      `);
+      
+      // Map each project to include the ID type information
+      const projectsWithTypes = (projectsResult.rows || []).map(project => {
+        const id = project.id;
+        return {
+          id,
+          name: project.name,
+          created_at: project.created_at,
+          id_type: typeof id,
+          id_analysis: {
+            is_numeric: !isNaN(Number(id)),
+            is_uuid_format: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id)),
+            string_length: String(id).length
+          }
+        };
+      });
+      
+      return res.json({
+        projects: projectsWithTypes,
+        project_count: projectsWithTypes.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error getting project IDs:', error);
+      res.status(500).json({ 
+        message: 'Error retrieving project IDs',
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+  
   // Success factors endpoints for frontend use - both URLs map to the same handler
   async function getFactorsHandler(req: Request, res: Response) {
     try {
