@@ -383,15 +383,39 @@ export const projectsDb = {
   // Delete a task
   async deleteTask(taskId: string): Promise<boolean> {
     try {
+      console.log(`Attempting to delete task ${taskId}`);
+      
+      // First verify the task exists before trying to delete it
+      try {
+        const existingTasks = await db.select()
+          .from(projectTasksTable)
+          .where(eq(projectTasksTable.id, taskId));
+        
+        if (existingTasks.length === 0) {
+          console.warn(`Task ${taskId} not found in database before deletion attempt`);
+          throw new Error(`Task with ID ${taskId} not found`);
+        }
+        
+        console.log(`Found task to delete:`, existingTasks[0]);
+      } catch (verifyErr) {
+        console.error(`Error verifying task ${taskId} existence:`, verifyErr);
+        // Continue with deletion attempt
+      }
+      
+      // Perform the deletion with returning to verify success
       const result = await db.delete(projectTasksTable)
         .where(eq(projectTasksTable.id, taskId))
         .returning({ id: projectTasksTable.id });
       
+      console.log(`Deletion result for task ${taskId}:`, result);
+      
       if (result && result.length > 0) {
+        console.log(`Successfully deleted task ${taskId}`);
         return true;
       }
       
       // If no rows were affected, the task doesn't exist
+      console.warn(`No rows affected when deleting task ${taskId}`);
       throw new Error(`Task with ID ${taskId} not found or couldn't be deleted`);
     } catch (error) {
       console.error(`Error deleting task ${taskId}:`, error);

@@ -702,7 +702,16 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   app.delete('/api/projects/:projectId/tasks/:taskId', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId, taskId } = req.params;
-      const userId = req.user.id;
+      // Handle edge case where user might not be defined
+      if (!req.user) {
+        console.warn('User not found in DELETE request for task');
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+      
+      const userId = req.user.id || req.user;
       
       console.log(`DELETE request for task ${taskId} in project ${projectId} by user ${userId}`);
       
