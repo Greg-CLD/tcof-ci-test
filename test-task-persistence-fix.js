@@ -76,7 +76,7 @@ async function testTaskPersistence() {
     
     console.log('Creating new task...');
     
-    const createTaskResponse = await fetch(`http://localhost:3000/api/projects/${testProject.id}/tasks`, {
+    const createTaskResponse = await fetch(`http://localhost:5000/api/projects/${testProject.id}/tasks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
