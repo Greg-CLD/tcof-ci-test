@@ -1,0 +1,37 @@
+Problem: Task creation, update, and retrieval endpoints return 201/200, but tasks do not persist after page refresh. The GET /api/projects/{projectId}/tasks endpoint returns an empty array or payload, even though POST/PUT to the same projectId succeed with status 201/200.
+
+Expected outcome: When a new task is added or updated for a project (UUID ID), the GET /tasks endpoint should return the new/updated task after refresh, and the UI should display the latest state.
+
+Tech details:
+- Frontend and backend now use UUIDs for projectId.
+- POST and PUT requests appear successful in the network tab, but GET requests after refresh do not return the updated tasks.
+- No visible errors in frontend console, all endpoints return 200-series status codes.
+
+Plan for diagnosis:
+1. Add server-side logging for the following in the tasks API:
+   - The incoming projectId (from route param) for POST/PUT/GET.
+   - The value written to the database for projectId on task creation/update.
+   - The value used in the database query for GET /tasks.
+   - The actual SQL/ORM query result returned by GET /tasks.
+2. Directly inspect the database after adding/updating a task:
+   - Is the task record present in the database?
+   - Does it have the correct (UUID) projectId value?
+3. Compare projectId values between what is written and what is read.
+4. Confirm all code paths (API, ORM, queries) now use UUID for projectId and do not fall back to integers anywhere.
+5. Verify that after creating a task, GET /tasks returns it without requiring a server/application restart.
+
+Acceptance criteria:
+- Adding/updating a task for a project returns the correct result from a subsequent GET /tasks.
+- The database, API, and UI all show the same data after refresh.
+
+Safeguards:
+- No change to unrelated endpoints or data.
+- Database backup before any direct modification.
+- Only modify code relating to projectId handling in tasks endpoints and database access.
+
+Please implement this step-by-step debug plan and report:
+- What is stored in the database after a POST/PUT for a task?
+- What is returned by GET /tasks for the same projectId?
+- Are there any mismatches or missing/incorrect projectId values?
+
+If you find a mismatch or missing projectId in the database or query, propose and apply a fix to ensure full UUID alignment for projectId across all API routes and data models.
