@@ -295,7 +295,14 @@ export const projectsDb = {
       }
       
       // Convert and return tasks
-      return tasks.map(task => convertDbTaskToProjectTask(task));
+      // Process each task to handle possible compound IDs and maintain client-side consistency
+      return tasks.map(task => {
+        // For factor-origin tasks with compound IDs in sourceId, use consistent ID handling
+        if (task.origin === 'factor' && task.sourceId && task.sourceId.includes('-') && task.sourceId.split('-').length > 5) {
+          return convertDbTaskToProjectTask(task, task.sourceId);
+        }
+        return convertDbTaskToProjectTask(task);
+      });
     } catch (error) {
       console.error(`Error getting tasks for project ${projectId}:`, error);
       console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
@@ -429,7 +436,8 @@ export const projectsDb = {
           console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
           console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
           
-          return convertDbTaskToProjectTask(savedTask);
+          // Pass the original task ID (from client request) to maintain client-side consistency
+          return convertDbTaskToProjectTask(savedTask, taskData.id);
         }
         
         console.error('Task creation failed: Database returned null after insert');
