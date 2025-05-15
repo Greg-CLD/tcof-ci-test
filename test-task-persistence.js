@@ -4,7 +4,7 @@
 import fetch from 'node-fetch';
 
 const baseUrl = 'http://localhost:5000';
-const testProjectId = '1'; // Replace with a valid project ID if needed
+const testProjectId = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8'; // Using existing project ID from the database
 
 // Test task data
 const testTask = {

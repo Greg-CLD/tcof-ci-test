@@ -624,7 +624,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Task data is required' });
       }
 
-      const updatedTask = await projectsDb.updateProjectTask(projectId, taskId, taskUpdate);
+      const updatedTask = await projectsDb.updateTask(projectId, taskId, taskUpdate);
       res.json(updatedTask);
     } catch (error) {
       console.error('Error updating project task:', error);
@@ -639,7 +639,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   app.delete('/api/projects/:projectId/tasks/:taskId', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId, taskId } = req.params;
-      await projectsDb.deleteProjectTask(projectId, taskId);
+      await projectsDb.deleteTask(projectId, taskId);
       res.status(204).send();
     } catch (error) {
       console.error('Error deleting project task:', error);
