@@ -300,19 +300,45 @@ export const projectsDb = {
       };
       console.log('Insert values:', JSON.stringify(insertValues, null, 2));
       
-      const [savedTask] = await db.insert(projectTasksTable)
+      // Generate the SQL for logging (before executing)
+      const insertSQL = db.insert(projectTasksTable)
         .values(insertValues)
-        .returning();
+        .toSQL();
       
-      console.log('Database operation result:', savedTask ? 'Success' : 'Failed (null)');
+      console.log('SQL to be executed:', insertSQL.sql);
+      console.log('SQL parameters:', JSON.stringify(insertSQL.params, null, 2));
       
-      if (savedTask) {
-        console.log('Saved task from DB:', JSON.stringify(savedTask, null, 2));
-        return convertDbTaskToProjectTask(savedTask);
+      try {
+        // Execute the actual insert
+        const [savedTask] = await db.insert(projectTasksTable)
+          .values(insertValues)
+          .returning();
+        
+        console.log('Database operation result:', savedTask ? 'Success' : 'Failed (null)');
+        console.log('Rows affected:', savedTask ? '1' : '0');
+        
+        if (savedTask) {
+          console.log('Saved task from DB:', JSON.stringify(savedTask, null, 2));
+          
+          // Verify the task exists immediately after creation with a direct query
+          const verifyResult = await db.select()
+            .from(projectTasksTable)
+            .where(eq(projectTasksTable.id, savedTask.id));
+          
+          console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
+          console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
+          
+          return convertDbTaskToProjectTask(savedTask);
+        }
+        
+        console.error('Task creation failed: Database returned null after insert');
+        return null;
+      } catch (insertError) {
+        console.error('Database insert exception:', insertError);
+        console.error('Error details:', insertError instanceof Error ? insertError.message : 'Unknown error');
+        console.error('Error stack:', insertError instanceof Error ? insertError.stack : '');
+        throw insertError;
       }
-      
-      console.error('Task creation failed: Database returned null after insert');
-      return null;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorDetails = error instanceof Error ? error.stack : '';
@@ -356,19 +382,47 @@ export const projectsDb = {
       // Always update the updatedAt timestamp
       updateData.updatedAt = new Date();
       
-      console.log(`Prepared update data:`, updateData);
+      console.log(`Prepared update data:`, JSON.stringify(updateData, null, 2));
       
-      // Update the task using Drizzle
-      const [updatedTask] = await db.update(projectTasksTable)
+      // Generate the SQL for logging purposes (before executing)
+      const updateSQL = db.update(projectTasksTable)
         .set(updateData)
         .where(eq(projectTasksTable.id, taskId))
-        .returning();
+        .toSQL();
       
-      if (updatedTask) {
-        console.log(`Task ${taskId} updated successfully:`, updatedTask);
-        const converted = convertDbTaskToProjectTask(updatedTask);
-        console.log('Converted task:', converted);
-        return converted;
+      console.log('SQL to be executed:', updateSQL.sql);
+      console.log('SQL parameters:', JSON.stringify(updateSQL.params, null, 2));
+      
+      try {
+        // Update the task using Drizzle
+        const [updatedTask] = await db.update(projectTasksTable)
+          .set(updateData)
+          .where(eq(projectTasksTable.id, taskId))
+          .returning();
+        
+        console.log('Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
+        console.log('Rows affected:', updatedTask ? '1' : '0');
+        
+        if (updatedTask) {
+          console.log(`Task ${taskId} updated successfully:`, JSON.stringify(updatedTask, null, 2));
+          
+          // Verify the task exists and was updated with a direct query
+          const verifyResult = await db.select()
+            .from(projectTasksTable)
+            .where(eq(projectTasksTable.id, taskId));
+          
+          console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
+          console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
+          
+          const converted = convertDbTaskToProjectTask(updatedTask);
+          console.log('Converted task:', JSON.stringify(converted, null, 2));
+          return converted;
+        }
+      } catch (updateError) {
+        console.error('Database update exception:', updateError);
+        console.error('Error details:', updateError instanceof Error ? updateError.message : 'Unknown error');
+        console.error('Error stack:', updateError instanceof Error ? updateError.stack : '');
+        throw updateError;
       }
       
       // If no task was found/updated, throw an error instead of returning null
