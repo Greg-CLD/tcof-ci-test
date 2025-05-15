@@ -364,23 +364,31 @@ export const projectsDb = {
         return convertDbTaskToProjectTask(updatedTask);
       }
       
-      return null;
+      // If no task was found/updated, throw an error instead of returning null
+      throw new Error(`Task with ID ${taskId} not found or couldn't be updated`);
     } catch (error) {
       console.error(`Error updating task ${taskId}:`, error);
-      return null;
+      // Re-throw the error so it can be properly handled by the API route
+      throw error;
     }
   },
   
   // Delete a task
   async deleteTask(taskId) {
     try {
-      await db.delete(projectTasksTable)
-        .where(eq(projectTasksTable.id, taskId));
+      const result = await db.delete(projectTasksTable)
+        .where(eq(projectTasksTable.id, taskId))
+        .returning({ id: projectTasksTable.id });
       
-      return true;
+      if (result && result.length > 0) {
+        return true;
+      }
+      
+      // If no rows were affected, the task doesn't exist
+      throw new Error(`Task with ID ${taskId} not found or couldn't be deleted`);
     } catch (error) {
       console.error(`Error deleting task ${taskId}:`, error);
-      return false;
+      throw error;
     }
   },
   

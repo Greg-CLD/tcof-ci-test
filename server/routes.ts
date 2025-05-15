@@ -639,11 +639,34 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   app.delete('/api/projects/:projectId/tasks/:taskId', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId, taskId } = req.params;
-      await projectsDb.deleteTask(projectId, taskId);
-      res.status(204).send();
+      
+      // Make sure the task exists and belongs to the project
+      try {
+        await projectsDb.deleteTask(taskId);
+        
+        // Return a JSON response with success data instead of an empty 204
+        // This helps with debugging and provides feedback to the frontend
+        return res.status(200).json({
+          success: true,
+          taskId,
+          message: 'Task successfully deleted'
+        });
+      } catch (err) {
+        // Check if this is a "not found" error
+        if (err instanceof Error && err.message.includes('not found')) {
+          return res.status(404).json({
+            success: false,
+            message: 'Task not found',
+            error: err.message
+          });
+        }
+        // If not a not-found error, re-throw to be handled by the outer catch
+        throw err;
+      }
     } catch (error) {
       console.error('Error deleting project task:', error);
       res.status(500).json({
+        success: false,
         message: 'Failed to delete project task',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
