@@ -364,6 +364,34 @@ export function useProjectTasks(projectId?: string) {
   };
   
   const deleteTask = async (taskId: string) => {
+    // Validate the task ID format before sending to the server
+    if (!isValidUUID(taskId)) {
+      console.error(`Invalid task ID format for deletion: ${taskId}. Task IDs must be valid UUIDs.`);
+      
+      // Check if this is a source-based ID (like sf-1-f8af97e9)
+      if (taskId.includes('-')) {
+        console.warn(`Task ID ${taskId} appears to be a source-based ID, not a database UUID`);
+        
+        // Try to find the actual UUID for this task from our existing tasks array
+        if (tasks && tasks.length > 0) {
+          // Look for a task with this sourceId
+          const matchingTask = tasks.find(t => t.sourceId === taskId);
+          
+          if (matchingTask) {
+            console.log(`Found matching task with UUID ${matchingTask.id} for source ID ${taskId}`);
+            
+            // Use the actual UUID for the API call
+            return await deleteTaskMutation.mutateAsync(matchingTask.id);
+          } else {
+            console.error(`No matching task found with sourceId ${taskId}`);
+            throw new Error(`Cannot delete task: No database record found for task ID ${taskId}`);
+          }
+        }
+      }
+      
+      throw new Error(`Invalid task ID format: ${taskId}. Task IDs must be valid UUIDs.`);
+    }
+    
     return await deleteTaskMutation.mutateAsync(taskId);
   };
   

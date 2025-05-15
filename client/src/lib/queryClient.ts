@@ -4,7 +4,8 @@ import { QueryClient } from "@tanstack/react-query";
 async function logRequest(url: string, config: any) {
   console.log(`API Request to ${url}:`, {
     headers: config.headers,
-    method: config.method
+    method: config.method,
+    body: config.body ? JSON.parse(config.body) : undefined
   });
 }
 
@@ -14,6 +15,15 @@ async function logResponse(response: Response) {
     headers: Object.fromEntries(response.headers),
     url: response.url
   });
+  
+  // Clone the response to read the body without consuming it
+  const clonedResponse = response.clone();
+  try {
+    const responseData = await clonedResponse.json();
+    console.log('API Response Body:', responseData);
+  } catch (error) {
+    console.log('API Response Body: Cannot parse as JSON');
+  }
 }
 
 // HTTP request function for mutations
