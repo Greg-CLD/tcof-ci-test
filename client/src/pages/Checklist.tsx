@@ -51,6 +51,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { TaskPersistenceHelper } from '@/components/TaskPersistenceHelper';
+import { useProjectContext } from '@/contexts/ProjectContext';
 
 interface ChecklistProps {
   projectId?: string;
@@ -85,7 +86,8 @@ interface TaskUpdates {
 export default function Checklist({ projectId: propProjectId }: ChecklistProps) {
   const { toast } = useToast();
   const { plan } = usePlan() as { plan: any };
-  const { getSelectedProject, setSelectedProjectId } = useProjects();
+  const { getSelectedProject } = useProjects();
+  const { setCurrentProjectId } = useProjectContext(); // Use the ProjectContext's setter
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const params = useParams<{ projectId: string }>();
@@ -111,8 +113,8 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
       localStorage.setItem('currentProjectId', currentProjectId);
       localStorage.setItem('selectedProjectId', currentProjectId);
       
-      // Also update the selected project in our hook
-      setSelectedProjectId(currentProjectId);
+      // Also update the selected project in our hook using Context
+      setCurrentProjectId(currentProjectId);
       
       // If we're on the non-specific /checklist route but have a project ID, 
       // update URL to include project ID for better persistence on refresh
@@ -125,7 +127,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps) 
       console.log('Checklist: No project ID available, redirecting to organisations');
       navigate('/organisations');
     }
-  }, [currentProjectId, urlProjectId, isAuthenticated, navigate, setSelectedProjectId]);
+  }, [currentProjectId, urlProjectId, isAuthenticated, navigate, setCurrentProjectId]);
 
   // Success factors
   const { factors } = useFactors();
