@@ -101,7 +101,7 @@ process.on('uncaughtException', (error) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the API routes and static files
   if (process.env.NODE_ENV !== "production") {
-    await setupVite(app);
+    await setupVite(app, server);
   } else {
     app.use(express.static("dist/public"));
     app.get("*", (_req, res) => {
