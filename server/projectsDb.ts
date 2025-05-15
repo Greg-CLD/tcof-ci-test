@@ -389,6 +389,24 @@ export const projectsDb = {
       console.error('Cannot create task: missing projectId');
       return null;
     }
+
+    console.log('Validating task data:', {
+      projectId: taskData.projectId,
+      text: taskData.text,
+      stage: taskData.stage,
+      hasId: !!taskData.id
+    });
+
+    try {
+      // Validate UUID format
+      if (!taskData.projectId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        throw new Error(`Invalid UUID format for project ID: ${taskData.projectId}`);
+      }
+
+      // Check required fields
+      if (!taskData.text) {
+        throw new Error('Task text is required');
+      }
     
     try {
       const normalizedProjectId = validateProjectUUID(taskData.projectId);
@@ -453,7 +471,20 @@ export const projectsDb = {
       console.error('Task creation failed: Database returned null after insert');
       return null;
     } catch (error) {
-      console.error('Error creating task:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorDetails = error instanceof Error ? error.stack : '';
+      
+      console.error('Error creating task:', {
+        message: errorMessage,
+        stack: errorDetails,
+        taskData: {
+          id: taskData.id,
+          projectId: taskData.projectId,
+          text: taskData.text,
+          stage: taskData.stage
+        }
+      });
+      
       return null;
     }
   },

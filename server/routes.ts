@@ -247,6 +247,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           created_at: task.created_at,
           updated_at: task.updated_at,
           project_id_type: typeof projectId,
+
+app.get('/__debug/schema/tasks', isAdmin, async (req: Request, res: Response) => {
+  try {
+    const schemaInfo = await db.execute(sql`
+      SELECT 
+        column_name,
+        data_type,
+        is_nullable,
+        column_default,
+        character_maximum_length
+      FROM information_schema.columns 
+      WHERE table_name = 'project_tasks'
+      ORDER BY ordinal_position;
+    `);
+
+    const constraints = await db.execute(sql`
+      SELECT 
+        tc.constraint_name, 
+        tc.constraint_type,
+        kcu.column_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu 
+        ON tc.constraint_name = kcu.constraint_name
+      WHERE tc.table_name = 'project_tasks';
+    `);
+
+    res.json({
+      schema: schemaInfo.rows,
+      constraints: constraints.rows
+    });
+  } catch (error) {
+    console.error('Schema verification error:', error);
+    res.status(500).json({ error: 'Failed to verify schema' });
+  }
+});
+
           project_id_analysis: {
             is_numeric: !isNaN(Number(projectId)),
             is_uuid_format: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(projectId)),
