@@ -324,6 +324,42 @@ export function useProjectTasks(projectId?: string) {
   };
   
   const updateTask = async (taskId: string, data: UpdateTaskParams) => {
+    // Validate the task ID format before sending to the server
+    if (!isValidUUID(taskId)) {
+      console.error(`Invalid task ID format for update: ${taskId}. Task IDs must be valid UUIDs.`);
+      
+      // Check if this is a source-based ID (like sf-1-f8af97e9)
+      if (taskId.includes('-')) {
+        console.warn(`Task ID ${taskId} appears to be a source-based ID, not a database UUID`);
+        
+        // Try to find the actual UUID for this task from our existing tasks array
+        if (tasks && tasks.length > 0) {
+          // Check if we can find a matching task by sourceId
+          const sourceIdParts = taskId.split('-');
+          
+          if (sourceIdParts.length >= 2) {
+            const sourceType = sourceIdParts[0]; // 'sf', 'h', etc.
+            const sourceId = taskId; // Use the full string as sourceId
+            
+            // Look for a task with this sourceId
+            const matchingTask = tasks.find(t => t.sourceId === sourceId);
+            
+            if (matchingTask) {
+              console.log(`Found matching task with UUID ${matchingTask.id} for source ID ${sourceId}`);
+              
+              // Use the actual UUID for the API call
+              return await updateTaskMutation.mutateAsync({ taskId: matchingTask.id, data });
+            } else {
+              console.error(`No matching task found with sourceId ${sourceId}`);
+              throw new Error(`Cannot update task: No database record found for task ID ${taskId}`);
+            }
+          }
+        }
+      }
+      
+      throw new Error(`Invalid task ID format: ${taskId}. Task IDs must be valid UUIDs.`);
+    }
+    
     return await updateTaskMutation.mutateAsync({ taskId, data });
   };
   
