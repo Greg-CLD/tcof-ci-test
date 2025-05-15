@@ -207,27 +207,24 @@ function validateProjectUUID(projectId: unknown): string {
   }
   
   // Import UUID utilities from our shared utility module (using .cjs extension for CommonJS compatibility)
-  const { isValidUUID, isNumericId, convertNumericIdToUuid } = require('./utils/uuid-utils.cjs');
+  const { isValidUUID, isNumericId } = require('./utils/uuid-utils.cjs');
   
   // Convert to string for consistency
   const idString = String(projectId);
   
-  // Check if already a valid UUID
+  // Reject numeric IDs - no longer supported
+  if (isNumericId(idString)) {
+    throw new Error(`Numeric project IDs are no longer supported: ${idString}`);
+  }
+  
+  // Check if a valid UUID
   if (isValidUUID(idString)) {
-    // If already a valid UUID, use it directly
+    // If a valid UUID, use it directly
     return idString.toLowerCase();
   }
   
-  // If it's a numeric ID, convert to UUID in a deterministic way
-  if (isNumericId(idString)) {
-    // Use our deterministic conversion function
-    return convertNumericIdToUuid(idString);
-  }
-  
-  // If it's not a valid UUID or numeric ID, use a fallback
-  // This should ideally never happen in production
-  console.warn(`Invalid project ID format detected: ${idString}. Converting to UUID.`);
-  return uuidv5(idString, '6ba7b810-9dad-11d1-80b4-00c04fd430c8');  // Standard DNS namespace
+  // If not a valid UUID, throw an error
+  throw new Error(`Invalid project ID format: ${idString}`);
 }
 
 /**
