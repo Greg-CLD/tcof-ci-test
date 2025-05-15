@@ -222,6 +222,82 @@ export function setupAuth(app: Express) {
     console.log(`Current user: ${safeUser.username}`);
     res.status(200).json(safeUser);
   });
+  
+  // Session refresh endpoint
+  app.post('/api/auth/refresh-session', (req, res) => {
+    console.log('Session refresh requested');
+    
+    // Log current session state
+    console.log('Session debug before refresh:', {
+      hasSession: !!req.session,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+      passport: req.session?.passport,
+      cookie: req.session?.cookie
+    });
+
+    // If already authenticated, update the session and return success
+    if (req.isAuthenticated()) {
+      console.log('Session already authenticated, updating expiry');
+      
+      // Touch the session to update its expiry
+      if (req.session) {
+        req.session.touch();
+      }
+      
+      // Remove password from response
+      const { password, ...safeUser } = req.user as any;
+      
+      res.status(200).json({ 
+        success: true, 
+        message: 'Session refreshed successfully',
+        user: safeUser 
+      });
+      return;
+    }
+    
+    // If not authenticated but we have login details in the request body, try to authenticate
+    if (req.body.username && req.body.password) {
+      console.log('Attempting login during session refresh');
+      passport.authenticate('local', (err: any, user: any, info: any) => {
+        if (err) {
+          console.error('Auth error during refresh:', err);
+          return res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+        
+        if (!user) {
+          console.log('Authentication failed during refresh:', info?.message);
+          return res.status(401).json({ success: false, message: info?.message || 'Invalid credentials' });
+        }
+        
+        req.login(user, (err) => {
+          if (err) {
+            console.error('Session error during refresh:', err);
+            return res.status(500).json({ success: false, message: 'Failed to create session' });
+          }
+          
+          // Remove password from response
+          const { password, ...safeUser } = user;
+          console.log(`Session refreshed with user: ${user.username}`);
+          return res.status(200).json({ 
+            success: true, 
+            message: 'Session refreshed with new login',
+            user: safeUser 
+          });
+        });
+      })(req, res);
+      return;
+    }
+    
+    // If not authenticated and no login details, return a status code but don't fail
+    // This allows the client to know it needs to show a login screen
+    console.log('Session not authenticated and no credentials provided');
+    res.status(200).json({ 
+      success: false, 
+      message: 'Session refresh successful, but not authenticated',
+      needsLogin: true
+    });
+  });
 
   // Registration route
   app.post('/api/register', async (req, res) => {
