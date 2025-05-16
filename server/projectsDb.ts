@@ -442,13 +442,20 @@ export const projectsDb = {
       // Properly sanitize values for database insertion:
       // 1. Convert empty strings to null for any nullable fields
       // 2. Ensure dates are handled correctly
+      // Generate a default UUID for sourceId if it would be null
+      // This is necessary because the sourceId column has a NOT NULL constraint
+      const validatedSourceId = validateSourceId(task.sourceId);
+      const finalSourceId = validatedSourceId || uuidv4(); // Use a new UUID if source id is invalid or null
+      
+      console.log(`Source ID validation: original=${task.sourceId}, validated=${validatedSourceId}, final=${finalSourceId}`);
+      
       const insertValues = {
         id: task.id,
         projectId: task.projectId,
         text: task.text || '',
         stage: task.stage || 'identification',
         origin: task.origin || 'custom',
-        sourceId: validateSourceId(task.sourceId),
+        sourceId: finalSourceId,
         completed: Boolean(task.completed), 
         // Handle possible empty strings by converting them to null
         notes: task.notes === '' ? null : task.notes,
