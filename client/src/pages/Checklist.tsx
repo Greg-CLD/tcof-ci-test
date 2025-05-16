@@ -761,13 +761,13 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       {/* Task testing functionality removed */}
       
       {/* Debug component for testing UUID validation fix */}
-      {projectId && (
+      {currentProjectId && (
         <div className="mt-8 border-t pt-6">
           <div className="text-sm text-muted-foreground mb-4">
             <h3 className="font-semibold text-tcof-dark mb-1">Debug Tools</h3>
             <p>The following tools are for testing and debugging purposes only.</p>
           </div>
-          <UuidWarningTester projectId={projectId} />
+          <UuidWarningTester projectId={currentProjectId} />
         </div>
       )}
     </div>
