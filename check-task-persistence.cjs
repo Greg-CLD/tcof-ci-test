@@ -65,7 +65,7 @@ async function checkTaskPersistence() {
         status, created_at, priority
       ) VALUES (
         gen_random_uuid(), $1, $2, 'identification', 'custom', 
-        'test-direct-' || floor(random()*1000000)::text, 
+        gen_random_uuid(), 
         'pending', NOW(), 'medium'
       ) RETURNING id, text, stage, origin, source_id
     `, [project.id, taskText]);
