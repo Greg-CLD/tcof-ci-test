@@ -24,6 +24,8 @@ export type PracticeTaskItem = {
 
 export type Stage = 'identification' | 'definition' | 'delivery' | 'closure';
 
+export const STAGES: Stage[] = ['identification', 'definition', 'delivery', 'closure'];
+
 export type SuccessFactorRating = {
   rating: 1 | 2 | 3 | 4 | 5;
   notes: string;

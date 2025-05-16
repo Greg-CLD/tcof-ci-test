@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Stage as PlanStage } from '@/lib/plan-db';
-// Define the stage type that matches the one used in CreateTaskForm and the API
-type Stage = 'identification' | 'definition' | 'delivery' | 'closure';
+import { Stage as PlanStage, STAGES } from '@/lib/plan-db';
+// Use the Stage type from plan-db.ts for consistency throughout the application
+type Stage = PlanStage;
 import { useLocation, useParams } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -142,14 +142,16 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
   // Local state
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<Stage>('identification');
+  const [activeTab, setActiveTab] = useState<Stage>(STAGES[0]); // Start with 'identification'
   const [tasks, setTasks] = useState<UnifiedTask[]>([]);
-  const [tasksByStage, setTasksByStage] = useState<Record<Stage, UnifiedTask[]>>({
-    identification: [],
-    definition: [],
-    delivery: [],
-    closure: []
-  });
+  
+  // Initialize tasks by stage using the STAGES constant
+  const [tasksByStage, setTasksByStage] = useState<Record<Stage, UnifiedTask[]>>(
+    STAGES.reduce((acc, stage) => ({
+      ...acc,
+      [stage]: []
+    }), {} as Record<Stage, UnifiedTask[]>)
+  );
 
   // Filters
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
@@ -324,13 +326,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       // Combine both task types
       const allTasks: UnifiedTask[] = [...filteredCanonicalTasks, ...projectTasks];
       
-      // Organize tasks by stage
-      const byStage: Record<Stage, UnifiedTask[]> = {
-        identification: [],
-        definition: [],
-        delivery: [],
-        closure: []
-      };
+      // Organize tasks by stage using the STAGES constant
+      const byStage: Record<Stage, UnifiedTask[]> = STAGES.reduce((acc, stage) => ({
+        ...acc,
+        [stage]: []
+      }), {} as Record<Stage, UnifiedTask[]>);
       
       allTasks.forEach(task => {
         const stage = task.stage as Stage;
@@ -396,13 +396,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       );
       setTasks(updatedTasks);
       
-      // Update tasksByStage for UI
-      const byStage: Record<Stage, UnifiedTask[]> = {
-        identification: [],
-        definition: [],
-        delivery: [],
-        closure: []
-      };
+      // Update tasksByStage for UI using the STAGES constant
+      const byStage: Record<Stage, UnifiedTask[]> = STAGES.reduce((acc, stage) => ({
+        ...acc,
+        [stage]: []
+      }), {} as Record<Stage, UnifiedTask[]>);
       
       updatedTasks.forEach(task => {
         const stage = task.stage as Stage;
@@ -608,59 +606,23 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         </div>
       ) : (
         <>
-          <Tabs defaultValue="identification" className="mb-8">
+          <Tabs defaultValue={STAGES[0]} className="mb-8">
             <TabsList className="grid grid-cols-4 mb-4">
-              <TabsTrigger 
-                value="identification" 
-                onClick={() => setActiveTab('identification')}
-                className="relative"
-              >
-                Identification
-                {tasksByStage.identification.length > 0 && (
-                  <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                    {tasksByStage.identification.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              
-              <TabsTrigger 
-                value="definition" 
-                onClick={() => setActiveTab('definition')}
-                className="relative"
-              >
-                Definition
-                {tasksByStage.definition.length > 0 && (
-                  <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                    {tasksByStage.definition.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              
-              <TabsTrigger 
-                value="delivery" 
-                onClick={() => setActiveTab('delivery')}
-                className="relative"
-              >
-                Delivery
-                {tasksByStage.delivery.length > 0 && (
-                  <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                    {tasksByStage.delivery.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              
-              <TabsTrigger 
-                value="closure" 
-                onClick={() => setActiveTab('closure')}
-                className="relative"
-              >
-                Closure
-                {tasksByStage.closure.length > 0 && (
-                  <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                    {tasksByStage.closure.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
+              {STAGES.map(stage => (
+                <TabsTrigger 
+                  key={stage}
+                  value={stage} 
+                  onClick={() => setActiveTab(stage)}
+                  className="relative"
+                >
+                  {stage.charAt(0).toUpperCase() + stage.slice(1)}
+                  {tasksByStage[stage]?.length > 0 && (
+                    <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
+                      {tasksByStage[stage].length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ))}
             </TabsList>
             
             {Object.entries(tasksByStage).map(([stage, stageTasks]) => {

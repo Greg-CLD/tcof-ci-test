@@ -10,8 +10,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-// Import Stage type from plan-db to ensure consistency
-import { Stage } from '@/lib/plan-db';
+// Import Stage type and STAGES constant from plan-db to ensure consistency
+import { Stage, STAGES } from '@/lib/plan-db';
 
 interface CreateTaskFormProps {
   projectId: string;
@@ -144,10 +144,11 @@ export default function CreateTaskForm({
             <SelectValue placeholder="Select stage" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="identification">{formatStageName("identification")}</SelectItem>
-            <SelectItem value="definition">{formatStageName("definition")}</SelectItem>
-            <SelectItem value="delivery">{formatStageName("delivery")}</SelectItem>
-            <SelectItem value="closure">{formatStageName("closure")}</SelectItem>
+            {STAGES.map(stage => (
+              <SelectItem key={stage} value={stage}>
+                {formatStageName(stage)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Button 
