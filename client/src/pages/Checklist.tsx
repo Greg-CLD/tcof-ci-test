@@ -186,10 +186,14 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         
         // Add each task to our flat list with metadata
         (stageTasks as string[]).forEach((taskText: string) => {
+          // Ensure stage name is always lowercase for consistency
+          const normalizedStage = stageName.toLowerCase();
+          console.log(`[CHECKLIST_DEBUG] Normalizing stage name from "${stageName}" to "${normalizedStage}"`);
+          
           tasks.push({
             id: `${factor.id}-${uuidv4().substring(0, 8)}`,
             title: taskText,
-            stage: stageName,
+            stage: normalizedStage,
             factorId: factor.id,
             factorCode: factor.title.split(' ')[0],
           });
@@ -618,8 +622,20 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             </TabsList>
             
             {Object.entries(tasksByStage).map(([stage, stageTasks]) => {
+              // Always ensure stage is lowercase for consistent filtering
+              const normalizedStage = stage.toLowerCase() as Stage;
+              console.log(`[CHECKLIST_DEBUG] Processing stage "${stage}" with ${stageTasks.length} tasks`);
+              
               // Apply filters to tasks
               const filteredTasks = stageTasks.filter(task => {
+                // Ensure task stage is also normalized
+                const taskStage = task.stage.toLowerCase() as Stage;
+                
+                // Debug task stage check
+                if (taskStage !== normalizedStage) {
+                  console.log(`[CHECKLIST_DEBUG] Task stage mismatch: task has "${taskStage}", tab expects "${normalizedStage}"`);
+                }
+                
                 // Filter by source
                 if (sourceFilter !== 'all' && task.source !== sourceFilter) {
                   return false;
@@ -646,10 +662,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                   {/* Add task creation form at the top of every stage tab */}
                   {currentProjectId && (
                     <div className="bg-card rounded-md p-4 shadow-sm mb-4 border">
-                      <h3 className="text-lg font-medium mb-2">Add a new task to {stage.charAt(0).toUpperCase() + stage.slice(1)}</h3>
+                      <h3 className="text-lg font-medium mb-2">Add a new task to {normalizedStage.charAt(0).toUpperCase() + normalizedStage.slice(1)}</h3>
                       <CreateTaskForm 
                         projectId={currentProjectId}
-                        stage={stage as Stage}
+                        stage={normalizedStage}
                         onTaskCreated={refreshTasksState}
                         isAuthenticated={isAuthenticated}
                       />
