@@ -196,22 +196,28 @@ export default function TaskCard({
   };
   
   const getSourceLabel = (): string => {
+    // Handle special case for good practice tasks with framework code
     if (isGoodPractice) {
       return frameworkCode ? `Good Practice: ${frameworkCode}` : 'Good Practice';
     }
     
-    switch (source) {
-      case 'heuristic':
-        return 'Personal Heuristic';
-      case 'factor':
-        return sourceName ? `Success Factor: ${sourceName}` : 'Success Factor';
-      case 'policy':
-        return 'Company Policy';
-      case 'framework':
-        return 'Good Practice';
-      default:
-        return 'Custom Task';
+    // Use the origin labels from constants file
+    // Import directly here to avoid circular dependencies with Checklist.tsx
+    const originLabels: Record<string, string> = {
+      heuristic: 'Your Heuristic',
+      factor: 'TCOF Success Factor',
+      policy: 'Policy', 
+      custom: 'General',
+      framework: 'Good Practice'
+    };
+    
+    // Add the source name for factors if available
+    if (source === 'factor' && sourceName) {
+      return `${originLabels[source]}: ${sourceName}`;
     }
+    
+    // Return the mapped friendly label or a default
+    return originLabels[source] || 'Custom Task';
   };
   
   const getStatusColor = (status: string): string => {

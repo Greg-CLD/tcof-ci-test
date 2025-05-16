@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 // Import Stage type and STAGES constant from plan-db to ensure consistency
 import { Stage, STAGES } from '@/lib/plan-db';
+// Import origin types and constants
+import { TaskOrigin, ORIGIN_LABELS, DEFAULT_ORIGIN, AVAILABLE_ORIGINS } from '@/constants/origin';
 
 interface CreateTaskFormProps {
   projectId: string;
@@ -28,6 +30,7 @@ export default function CreateTaskForm({
 }: CreateTaskFormProps) {
   const [taskText, setTaskText] = useState('');
   const [selectedStage, setSelectedStage] = useState<Stage>(stage);
+  const [selectedOrigin, setSelectedOrigin] = useState<TaskOrigin>(DEFAULT_ORIGIN);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Use the project tasks hook to handle task creation and persistence
@@ -60,11 +63,12 @@ export default function CreateTaskForm({
       setIsSubmitting(true);
       
       // Generate a unique source ID with a prefix that makes it clearly identifiable
-      const sourceId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const sourceId = `${selectedOrigin}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       
       console.log('[CREATE_TASK] Creating task on server:', { 
         text: taskText, 
-        stage: selectedStage, 
+        stage: selectedStage,
+        origin: selectedOrigin,
         sourceId,
         projectId
       });
@@ -75,7 +79,7 @@ export default function CreateTaskForm({
         projectId,
         text: taskText,
         stage: selectedStage,
-        origin: "custom",
+        origin: selectedOrigin,
         sourceId,
         completed: false,
         priority: "medium",
@@ -91,6 +95,8 @@ export default function CreateTaskForm({
       
       // Clear the form and notify parent
       setTaskText('');
+      // Reset origin to default after task creation
+      setSelectedOrigin(DEFAULT_ORIGIN);
       onTaskCreated();
       
     } catch (error) {
@@ -126,38 +132,59 @@ export default function CreateTaskForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col space-y-2 mb-4">
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 flex-wrap md:flex-nowrap">
         <Input
           type="text"
           placeholder="Add a new task..."
           value={taskText}
           onChange={(e) => setTaskText(e.target.value)}
           disabled={isSubmitting || !isAuthenticated}
-          className="flex-1"
+          className="flex-1 min-w-[200px] mb-2 md:mb-0"
         />
-        <Select
-          value={selectedStage}
-          onValueChange={(value) => setSelectedStage(value as Stage)}
-          disabled={isSubmitting || !isAuthenticated}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select stage" />
-          </SelectTrigger>
-          <SelectContent>
-            {STAGES.map(stage => (
-              <SelectItem key={stage} value={stage}>
-                {formatStageName(stage)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button 
-          type="submit" 
-          disabled={isSubmitting || !taskText.trim() || !isAuthenticated}
-          size="sm"
-        >
-          {isSubmitting ? 'Adding...' : 'Add Task'}
-        </Button>
+        <div className="flex items-center space-x-2 w-full md:w-auto">
+          <Select
+            value={selectedStage}
+            onValueChange={(value) => setSelectedStage(value as Stage)}
+            disabled={isSubmitting || !isAuthenticated}
+          >
+            <SelectTrigger className="w-full md:w-[140px]">
+              <SelectValue placeholder="Select stage" />
+            </SelectTrigger>
+            <SelectContent>
+              {STAGES.map(stage => (
+                <SelectItem key={stage} value={stage}>
+                  {formatStageName(stage)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select
+            value={selectedOrigin}
+            onValueChange={(value) => setSelectedOrigin(value as TaskOrigin)}
+            disabled={isSubmitting || !isAuthenticated}
+          >
+            <SelectTrigger className="w-full md:w-[140px]">
+              <SelectValue placeholder="Select origin" />
+            </SelectTrigger>
+            <SelectContent>
+              {AVAILABLE_ORIGINS.map(origin => (
+                <SelectItem key={origin} value={origin}>
+                  {ORIGIN_LABELS[origin]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || !taskText.trim() || !isAuthenticated}
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            {isSubmitting ? 'Adding...' : 'Add Task'}
+          </Button>
+        </div>
       </div>
     </form>
   );

@@ -547,14 +547,16 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
   // Helper function for source labels
   const getSourceLabel = (source: string) => {
-    switch (source) {
-      case 'factor': return 'Success Factor Tasks';
-      case 'heuristic': return 'Personal Heuristic Tasks';
-      case 'policy': return 'Company Policy Tasks';
-      case 'framework': return 'Good Practice Tasks';
-      case 'custom': return 'Custom Tasks';
-      default: return 'Tasks';
-    }
+    // Import from our origin constants - using the same values here for consistency
+    const originGroupLabels: Record<string, string> = {
+      factor: 'TCOF Success Factor Tasks',
+      heuristic: 'Your Heuristic Tasks', 
+      policy: 'Policy Tasks',
+      framework: 'Good Practice Tasks',
+      custom: 'General Tasks'
+    };
+    
+    return originGroupLabels[source] || 'Tasks';
   };
 
   // Render UI
