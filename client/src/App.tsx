@@ -789,5 +789,36 @@ function App() {
   );
 }
 
-export default App;
-<ReactQueryDevtools initialIsOpen={true} />
+export default function App() {
+  // Check if we're in development mode
+  const isDev = import.meta.env.DEV;
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AuthProtectionProvider>
+          {/* Only enable accessibility audits in development */}
+          <A11yAuditProvider disabled={!isDev}>
+            <FeedbackProvider>
+              <ProgressProvider>
+                <PlanProvider>
+                  <ProjectProvider>
+                    {/* Use AppInitializer to wait for both contexts to hydrate */}
+                    <AppInitializer>
+                      <AppLayout>
+                        <Router />
+                        {/* Add the feedback container to display notifications */}
+                        <FeedbackContainer />
+                      </AppLayout>
+                    </AppInitializer>
+                  </ProjectProvider>
+                </PlanProvider>
+              </ProgressProvider>
+            </FeedbackProvider>
+          </A11yAuditProvider>
+        </AuthProtectionProvider>
+      </AuthProvider>
+      <ReactQueryDevtools initialIsOpen={true} />
+    </QueryClientProvider>
+  );
+}
