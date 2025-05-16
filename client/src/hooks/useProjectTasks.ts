@@ -129,9 +129,8 @@ export function useProjectTasks(projectId?: string) {
     mutationFn: async (taskData: CreateTaskParams) => {
       console.log(`Creating task for project ${projectId}:`, taskData.text);
       
-      // Validate sourceId is a valid UUID before sending to server
+      // Silently normalize invalid UUID sourceId to null
       if (taskData.sourceId && !isValidUUID(taskData.sourceId)) {
-        console.warn(`Invalid UUID format for sourceId: "${taskData.sourceId}". Setting to null to prevent database errors.`);
         taskData.sourceId = null;
       }
       
@@ -199,9 +198,8 @@ export function useProjectTasks(projectId?: string) {
     mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
       console.log(`Updating task ${taskId} for project ${projectId}:`, data);
       
-      // Validate sourceId is a valid UUID before sending to server
+      // Silently normalize invalid UUID sourceId to null
       if (data.sourceId && !isValidUUID(data.sourceId)) {
-        console.warn(`Invalid UUID format for sourceId: "${data.sourceId}". Setting to null to prevent database errors.`);
         data.sourceId = null;
       }
       
@@ -332,10 +330,9 @@ export function useProjectTasks(projectId?: string) {
   
   // Convenience functions
   const createTask = async (taskData: CreateTaskParams) => {
-    // Validate sourceId is a valid UUID before sending to server
+    // Silently normalize invalid UUID sourceId to null
     // This prevents database constraint errors
     if (taskData.sourceId && !isValidUUID(taskData.sourceId)) {
-      console.warn(`Invalid UUID format for sourceId: "${taskData.sourceId}". Setting to null to prevent database errors.`);
       taskData.sourceId = null;
     }
     
