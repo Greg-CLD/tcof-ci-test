@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +31,7 @@ type TestProps = {
   projectId: string;
 };
 
-export function TaskPersistenceTest({ projectId }: TestProps) {
+export default function TaskPersistenceTest({ projectId }: TestProps) {
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +42,7 @@ export function TaskPersistenceTest({ projectId }: TestProps) {
   const fetchTasks = async () => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+      const response = await apiRequest('GET', `/projects/${projectId}/tasks`);
       const data = await response.json();
       setTasks(data);
       return data;
@@ -61,15 +60,15 @@ export function TaskPersistenceTest({ projectId }: TestProps) {
   };
 
   useEffect(() => {
-    if (projectId) {
-      fetchTasks();
-    }
+    fetchTasks();
   }, [projectId]);
 
   const createTask = async (stage: string): Promise<Task | null> => {
     try {
+      // Generate random origin for test variety
       const origin = AVAILABLE_ORIGINS[Math.floor(Math.random() * AVAILABLE_ORIGINS.length)] || DEFAULT_ORIGIN;
       
+      // Create unique task data
       const taskId = uuidv4();
       const sourceId = `test-${uuidv4().slice(0, 8)}`;
       const timestamp = new Date().toISOString();
@@ -87,7 +86,7 @@ export function TaskPersistenceTest({ projectId }: TestProps) {
         notes: "Created by browser persistence test"
       };
       
-      const response = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
+      const response = await apiRequest('POST', `/projects/${projectId}/tasks`, taskData);
       const createdTask = await response.json();
       
       return createdTask;
@@ -102,10 +101,12 @@ export function TaskPersistenceTest({ projectId }: TestProps) {
     setResults([]);
     
     try {
+      // Record initial task count
       const initialTasks = await fetchTasks();
       const initialCount = initialTasks.length;
       log(`Initial task count: ${initialCount}`);
       
+      // Create a task for each stage
       log('Creating test tasks for each stage...');
       const createdTasks: Task[] = [];
       
@@ -119,15 +120,18 @@ export function TaskPersistenceTest({ projectId }: TestProps) {
         }
       }
       
+      // Verify tasks were persisted
       log('Verifying task persistence...');
       const updatedTasks = await fetchTasks();
       const updatedCount = updatedTasks.length;
       
       log(`Updated task count: ${updatedCount} (${updatedCount - initialCount} added)`);
       
-      const createdIds = new Set(createdTasks.map(task => task.id));
-      const fetchedIds = new Set(updatedTasks.map(task => task.id));
+      // Verify all created tasks exist in the fetched list
+      const createdIds = new Set(createdTasks.map((task: Task) => task.id));
+      const fetchedIds = new Set(updatedTasks.map((task: Task) => task.id));
       
+      // Convert Set to Array before filtering
       const createdIdsArray = Array.from(createdIds);
       const missingIds = createdIdsArray.filter(id => !fetchedIds.has(id));
       
@@ -137,12 +141,14 @@ export function TaskPersistenceTest({ projectId }: TestProps) {
         log('✅ All created tasks were successfully persisted');
       }
       
+      // Final result
       if (missingIds.length === 0 && createdTasks.length === STAGES.length) {
         log(`🎉 Test PASSED! Successfully created and verified ${createdTasks.length} tasks.`);
       } else {
         log(`❌ Test FAILED! ${createdTasks.length} tasks created, ${missingIds.length} tasks missing.`);
       }
       
+      // Invalidate the tasks cache to ensure UI is updated
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
       
     } catch (error) {
