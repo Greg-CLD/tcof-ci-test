@@ -168,6 +168,12 @@ export function useProjectTasks(projectId?: string) {
       // First log the new task that was created
       console.log('Created task:', newTask);
       
+      // Update cache optimistically to show the new task immediately
+      queryClient.setQueryData(tasksQueryKey, (oldTasks: ProjectTask[] = []) => {
+        console.log('Optimistically adding task to UI:', newTask);
+        return [...oldTasks, newTask];
+      });
+      
       // Ensure cache invalidation and refetching with 100% guarantee
       try {
         // Invalidate the query cache with the consistent query key format
@@ -237,6 +243,14 @@ export function useProjectTasks(projectId?: string) {
       // First log the updated task
       console.log('Updated task:', updatedTask);
       
+      // Update cache optimistically to show the updated task immediately
+      queryClient.setQueryData(tasksQueryKey, (oldTasks: ProjectTask[] = []) => {
+        console.log('Optimistically updating task in UI:', updatedTask);
+        return oldTasks.map(task => 
+          task.id === updatedTask.id ? updatedTask : task
+        );
+      });
+      
       // Robust cache invalidation and refetching
       try {
         // Invalidate the query cache with the consistent query key format
@@ -302,6 +316,12 @@ export function useProjectTasks(projectId?: string) {
       console.log('Task deleted, invalidating cache and refetching');
       console.log('Delete result:', result);
       console.log('Deleted task ID:', deletedTaskId);
+      
+      // Update cache optimistically to remove the deleted task immediately
+      queryClient.setQueryData(tasksQueryKey, (oldTasks: ProjectTask[] = []) => {
+        console.log('Optimistically removing deleted task from UI:', deletedTaskId);
+        return oldTasks.filter(task => task.id !== deletedTaskId);
+      });
       
       // Robust cache invalidation and refetching
       try {
