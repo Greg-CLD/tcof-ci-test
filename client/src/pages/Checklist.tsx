@@ -329,10 +329,15 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       }), {} as Record<Stage, UnifiedTask[]>);
       
       allTasks.forEach(task => {
-        const stage = task.stage as Stage;
-        if (byStage[stage]) {
-          byStage[stage].push(task);
+        // Always normalize stage to lowercase for consistent filtering
+        const normalizedStage = task.stage.toLowerCase() as Stage;
+        console.log(`[CHECKLIST_DEBUG] Task distribution: "${task.text}" (original stage: "${task.stage}", normalized: "${normalizedStage}")`);
+        
+        if (byStage[normalizedStage]) {
+          byStage[normalizedStage].push({...task, stage: normalizedStage});
         } else {
+          // If stage is invalid, default to identification stage
+          console.log(`[CHECKLIST_DEBUG] Invalid stage "${normalizedStage}" for task "${task.text}" - defaulting to identification`);
           byStage.identification.push({...task, stage: 'identification'});
         }
       });
@@ -604,21 +609,30 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         <>
           <Tabs defaultValue={STAGES[0]} className="mb-8">
             <TabsList className="grid grid-cols-4 mb-4">
-              {STAGES.map(stage => (
-                <TabsTrigger 
-                  key={stage}
-                  value={stage} 
-                  onClick={() => setActiveTab(stage)}
-                  className="relative"
-                >
-                  {stage.charAt(0).toUpperCase() + stage.slice(1)}
-                  {tasksByStage[stage]?.length > 0 && (
-                    <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
-                      {tasksByStage[stage].length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              ))}
+              {STAGES.map(stage => {
+                // Always work with lowercase stage values
+                const normalizedStage = stage.toLowerCase() as Stage;
+                const stageTaskCount = tasksByStage[normalizedStage]?.length || 0;
+                
+                // Add debug logging to track stage distribution
+                console.log(`[CHECKLIST_DEBUG] Tab for stage "${normalizedStage}" has ${stageTaskCount} tasks`);
+                
+                return (
+                  <TabsTrigger 
+                    key={normalizedStage}
+                    value={normalizedStage} 
+                    onClick={() => setActiveTab(normalizedStage)}
+                    className="relative"
+                  >
+                    {normalizedStage.charAt(0).toUpperCase() + normalizedStage.slice(1)}
+                    {stageTaskCount > 0 && (
+                      <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
+                        {stageTaskCount}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
             
             {Object.entries(tasksByStage).map(([stage, stageTasks]) => {
