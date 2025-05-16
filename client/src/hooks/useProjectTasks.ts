@@ -50,6 +50,14 @@ interface UpdateTaskParams {
   status?: string;
 }
 
+// Helper function to get consistent task query keys
+function getTasksKey(projectId: string | null | undefined): string[] {
+  if (!projectId) return [];
+  if (isNumericId(projectId)) return []; // Reject numeric IDs
+  if (!isValidUUID(projectId)) return []; // Reject invalid UUIDs
+  return ['projectTasks', projectId];
+}
+
 export function useProjectTasks(projectId?: string) {
   const queryClient = useQueryClient();
   
@@ -70,8 +78,8 @@ export function useProjectTasks(projectId?: string) {
     console.error(`Invalid project ID format: ${projectId}`);
   }
   
-  // Define a consistent query key format for both fetching and invalidation
-  const tasksQueryKey = normalizedProjectId && isValidId ? ['projectTasks', normalizedProjectId] : [];
+  // Get the tasks query key using our helper function
+  const tasksQueryKey = getTasksKey(normalizedProjectId);
   
   // Query to fetch tasks for the project directly from database
   const { 
@@ -162,22 +170,26 @@ export function useProjectTasks(projectId?: string) {
         throw err;
       }
     },
-    onSuccess: async (newTask) => {
+    onSuccess: async (newTask, variables) => {
       console.log('Task created, invalidating cache and refetching');
       
       // First log the new task that was created
       console.log('Created task:', newTask);
       
+      // Use our helper to compute the precise query key for this project
+      const key = getTasksKey(variables.projectId);
+      console.log('Using exact query key for created task:', key);
+      
       // Update cache optimistically to show the new task immediately
-      queryClient.setQueryData(tasksQueryKey, (oldTasks: ProjectTask[] = []) => {
+      queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
         console.log('Optimistically adding task to UI:', newTask);
         return [...oldTasks, newTask];
       });
       
       // Ensure cache invalidation and refetching with 100% guarantee
       try {
-        // Invalidate the query cache with the consistent query key format
-        await queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+        // Invalidate the query cache with the consistent query key format and exact matching
+        await queryClient.invalidateQueries({ queryKey: key, exact: true });
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
@@ -237,14 +249,18 @@ export function useProjectTasks(projectId?: string) {
         throw err;
       }
     },
-    onSuccess: async (updatedTask) => {
+    onSuccess: async (updatedTask, variables) => {
       console.log('Task updated, invalidating cache and refetching');
       
       // First log the updated task
       console.log('Updated task:', updatedTask);
       
+      // Use our helper to compute the precise query key for this project
+      const key = getTasksKey(projectId);
+      console.log('Using exact query key for updated task:', key);
+      
       // Update cache optimistically to show the updated task immediately
-      queryClient.setQueryData(tasksQueryKey, (oldTasks: ProjectTask[] = []) => {
+      queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
         console.log('Optimistically updating task in UI:', updatedTask);
         return oldTasks.map(task => 
           task.id === updatedTask.id ? updatedTask : task
@@ -253,8 +269,8 @@ export function useProjectTasks(projectId?: string) {
       
       // Robust cache invalidation and refetching
       try {
-        // Invalidate the query cache with the consistent query key format
-        await queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+        // Invalidate the query cache with the consistent query key format and exact matching
+        await queryClient.invalidateQueries({ queryKey: key, exact: true });
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
@@ -317,16 +333,20 @@ export function useProjectTasks(projectId?: string) {
       console.log('Delete result:', result);
       console.log('Deleted task ID:', deletedTaskId);
       
+      // Use our helper to compute the precise query key for this project
+      const key = getTasksKey(projectId);
+      console.log('Using exact query key for deleted task:', key);
+      
       // Update cache optimistically to remove the deleted task immediately
-      queryClient.setQueryData(tasksQueryKey, (oldTasks: ProjectTask[] = []) => {
+      queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
         console.log('Optimistically removing deleted task from UI:', deletedTaskId);
         return oldTasks.filter(task => task.id !== deletedTaskId);
       });
       
       // Robust cache invalidation and refetching
       try {
-        // Use consistent query key format for invalidation
-        await queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+        // Use consistent query key format for invalidation with exact matching
+        await queryClient.invalidateQueries({ queryKey: key, exact: true });
         
         // Manually refetch to get fresh data
         const freshData = await refetch();
