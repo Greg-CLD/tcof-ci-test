@@ -751,11 +751,8 @@ function Router() {
   );
 }
 
-// Use existing imports from the top of the file
-// Import feedback components directly from their source files
-
-// Import our new AppInitializer component
-import { AppInitializer } from '@/components/AppInitializer';
+// Use existing imports from the top of the file - already imported above
+// All providers and components needed are already imported at the top of the file
 
 function App() {
   // Check if we're in development mode
