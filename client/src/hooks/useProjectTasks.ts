@@ -167,7 +167,7 @@ export function useProjectTasks(projectId?: string) {
       // Ensure cache invalidation and refetching with 100% guarantee
       try {
         // Invalidate the query cache with the correct query key format
-        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+        await queryClient.invalidateQueries(['projectTasks', projectId]);
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
@@ -236,7 +236,7 @@ export function useProjectTasks(projectId?: string) {
       // Robust cache invalidation and refetching
       try {
         // Invalidate the query cache with the correct query key format
-        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+        await queryClient.invalidateQueries(['projectTasks', projectId]);
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
