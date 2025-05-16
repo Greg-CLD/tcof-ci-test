@@ -320,6 +320,13 @@ export function useProjectTasks(projectId?: string) {
   
   // Convenience functions
   const createTask = async (taskData: CreateTaskParams) => {
+    // Validate sourceId is a valid UUID before sending to server
+    // This prevents database constraint errors
+    if (taskData.sourceId && !isValidUUID(taskData.sourceId)) {
+      console.warn(`Invalid UUID format for sourceId: "${taskData.sourceId}". Setting to null to prevent database errors.`);
+      taskData.sourceId = null;
+    }
+    
     return await createTaskMutation.mutateAsync(taskData);
   };
   

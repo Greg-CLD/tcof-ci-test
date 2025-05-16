@@ -380,6 +380,12 @@ export const projectsDb = {
       let taskId = taskData.id || uuidv4();
       let sourceId = taskData.sourceId || '';
       
+      // Check if the sourceId is a valid UUID, and set to null if not
+      if (sourceId && !validateUuid(sourceId)) {
+        console.warn(`Invalid UUID format for sourceId: "${sourceId}". Will be set to null.`);
+        sourceId = null;
+      }
+      
       // If task ID is a compound ID (likely from a factor), store as sourceId
       if (taskData.id && taskData.id.includes('-') && taskData.id.split('-').length > 5) {
         console.log(`Detected compound ID for task: ${taskData.id}`);
