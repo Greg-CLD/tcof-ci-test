@@ -1,8 +1,10 @@
 /**
  * Simple script to test case sensitivity fixes in the Checklist component
  */
-const { Client } = require('pg');
-const { v4: uuidv4 } = require('uuid');
+import pg from 'pg';
+import { v4 as uuidv4 } from 'uuid';
+
+const { Client } = pg;
 
 async function testCaseSensitivityFixes() {
   console.log('Testing case sensitivity fixes for stages...');
