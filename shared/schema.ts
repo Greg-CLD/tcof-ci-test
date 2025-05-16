@@ -119,7 +119,7 @@ export const projects = pgTable("projects", {
 export const successFactorRatings = pgTable("success_factor_ratings", {
   id: uuid("id").primaryKey(),
   projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  factorId: varchar("factor_id", { length: 255 }).notNull(),
+  factorId: uuid("factor_id").notNull().references(() => successFactors.id, { onDelete: "cascade" }),
   resonance: integer("resonance").notNull(), // Rating from 1-5
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -178,8 +178,8 @@ export const projectTasks = pgTable("project_tasks", {
   projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   text: text("text").notNull(),
   stage: varchar("stage", { length: 50 }).notNull(), // 'identification', 'definition', 'delivery', 'closure'
-  origin: varchar("origin", { length: 50 }).notNull(), // 'heuristic', 'factor', 'policy', 'custom', 'framework'
-  sourceId: text("source_id"), // Using text to match actual database schema
+  origin: varchar("origin", { length: 50 }).notNull(), // 'heuristic', 'factor', 'policy', 'custom', 'framework' 
+  sourceId: uuid("source_id").notNull(), // Updated to UUID type with NOT NULL constraint
   completed: boolean("completed").default(false),
   notes: text("notes"),
   priority: varchar("priority", { length: 50 }),
@@ -192,6 +192,7 @@ export const projectTasks = pgTable("project_tasks", {
   return {
     projectIdIdx: index("project_tasks_project_id_idx").on(table.projectId),
     stageIdx: index("project_tasks_stage_idx").on(table.stage),
+    sourceIdIdx: index("project_tasks_source_id_idx").on(table.sourceId), // Add index on sourceId for faster lookups
   };
 });
 
@@ -407,8 +408,8 @@ export const projectTaskInsertSchema = createInsertSchema(projectTasks, {
   text: (schema) => schema.min(1, "Task text is required"),
   stage: (schema) => schema.min(1, "Stage is required"),
   origin: (schema) => schema.min(1, "Origin is required"),
-  // Make sourceId optional - allow null or empty
-  sourceId: (schema) => schema.nullable().optional(),
+  // Require sourceId to be a valid UUID format
+  sourceId: (schema) => schema.uuid("Source ID must be a valid UUID"),
   // Make these optional fields properly nullable
   notes: (schema) => schema.nullable().optional(),
   priority: (schema) => schema.nullable().optional(),
@@ -472,7 +473,7 @@ export const stageEnum = pgEnum('success_factor_stage', [
 
 // Success Factors - Main table
 export const successFactors = pgTable('success_factors', {
-  id: varchar('id', { length: 36 }).primaryKey().notNull(), // Using varchar rather than uuid to match existing sf-X format
+  id: uuid('id').primaryKey().notNull(), // Updated to UUID type to standardize ID formats
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -482,7 +483,7 @@ export const successFactors = pgTable('success_factors', {
 // Success Factors - Tasks table
 export const successFactorTasks = pgTable('success_factor_tasks', {
   id: uuid('id').defaultRandom().primaryKey(),
-  factorId: varchar('factor_id', { length: 36 }).notNull()
+  factorId: uuid('factor_id').notNull()
     .references(() => successFactors.id, { onDelete: 'cascade' }),
   stage: stageEnum('stage').notNull(),
   text: text('text').notNull(),
