@@ -1,0 +1,49 @@
+# === CLI Smoke-Test Only — No UI / Auth Edits ===
+Objective: Deliver a single shell command (`npm run smoke`) that
+  • POSTs one dummy task per stage to the given project (UUIDs only)
+  • GETs tasks for that project
+  • Verifies ≥ <EXPECTED_COUNT> tasks exist and all IDs are valid UUIDs
+  • Prints JSON result + “SUCCESS” or “FAIL”, exits 0/1 accordingly
+
+Scope:
+- **Files you may edit / add**
+  • scripts/assert-checklist.mjs  (the test script)
+  • package.json  (add `"smoke": "node scripts/assert-checklist.mjs"`)
+
+- **Files you must NOT touch**
+  • Any React/UI, server auth logic, DB schema, migrations, or routes
+
+Implementation notes:
+1. Use `fetch` (Node ≥ v20) or `axios` — whichever is simplest without extra config.
+2. Base API URL: `http://localhost:5173/api` (adjust if env var `API_BASE_URL` exists).
+3. Endpoint pattern: `POST /tasks` and `GET /tasks?projectId=<UUID>` (uses existing routes).
+4. Generate UUIDs with `import { v4 as uuidv4 } from "uuid";`.
+5. Dummy tasks:
+   [
+     { stage:"identification", text:"Smoke-ID" },
+     { stage:"definition",     text:"Smoke-DEF" },
+     { stage:"delivery",       text:"Smoke-DEL" },
+     { stage:"closure",        text:"Smoke-CLO" }
+   ]
+   Each payload must include projectId, unique id, origin:"custom", completed:false.
+
+6. If the API requires a cookie or token:
+   • Accept `SMOKE_AUTH_HEADER="Authorization: Bearer <token>"` env var.
+   • If the var is absent, send the request without auth and fail fast on 401.
+   **Do not modify auth code**.
+
+7. On success, print:
+   {
+     "created": 4,
+     "totalTasks": <number>,
+     "tasks": [ ...array trimmed to first 4... ]
+   }
+   then `console.log("SUCCESS")`.
+
+8. Exit 1 on any error (network, non-200, <EXPECTED_COUNT> tasks, invalid UUIDs).
+
+### After coding
+- Run: `npm run smoke -- bc55c1a2-0cdf-4108-aa9e-44b44baea3b8 4`
+- Paste the full stdout/stderr here.
+
+Do not perform any other refactors. Stay within this exact brief and complete in one commit.
