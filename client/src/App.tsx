@@ -1,3 +1,4 @@
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Switch, Route, Link, useLocation, useParams, Redirect } from "wouter";
 import { useEffect, useRef, useState } from "react";
 import { queryClient } from "./lib/queryClient";
@@ -789,3 +790,4 @@ function App() {
 }
 
 export default App;
+<ReactQueryDevtools initialIsOpen={true} />
