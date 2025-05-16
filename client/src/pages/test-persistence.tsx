@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'wouter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TaskPersistenceTest } from '@/components/TaskPersistenceTest';
+import TaskPersistenceTest from '@/components/TaskPersistenceTest';
 import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';

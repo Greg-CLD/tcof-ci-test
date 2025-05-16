@@ -5,7 +5,7 @@ import { Breadcrumb } from "@/components/Breadcrumb";
 import ProjectBanner from "@/components/ProjectBanner";
 import { Toaster } from "@/components/ui/toaster";
 import { QuickAuthDebug } from "@/components/QuickAuthDebug";
-import { TaskPersistenceTest } from "@/components/TaskPersistenceTest";
+import TaskPersistenceTest from "@/components/TaskPersistenceTest";
 
 interface AppLayoutProps {
   children: React.ReactNode;
