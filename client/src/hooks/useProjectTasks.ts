@@ -147,6 +147,7 @@ export function useProjectTasks(projectId?: string) {
         }
         
         const resJson = await res.json();
+        
         if (resJson.success === false) {
           throw new Error(resJson.message || 'Failed to create task');
         }
@@ -166,8 +167,8 @@ export function useProjectTasks(projectId?: string) {
       
       // Ensure cache invalidation and refetching with 100% guarantee
       try {
-        // Invalidate the query cache with the correct query key format
-        await queryClient.invalidateQueries(['projectTasks', projectId]);
+        // Invalidate the query cache with the correct query key format for React Query v5
+        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
@@ -235,8 +236,8 @@ export function useProjectTasks(projectId?: string) {
       
       // Robust cache invalidation and refetching
       try {
-        // Invalidate the query cache with the correct query key format
-        await queryClient.invalidateQueries(['projectTasks', projectId]);
+        // Invalidate the query cache with the correct query key format for React Query v5
+        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
@@ -301,7 +302,7 @@ export function useProjectTasks(projectId?: string) {
       
       // Robust cache invalidation and refetching
       try {
-        // Use consistent query key format for invalidation
+        // Use consistent query key format for invalidation - React Query v5
         await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
         
         // Manually refetch to get fresh data
@@ -411,14 +412,15 @@ export function useProjectTasks(projectId?: string) {
     return await deleteTaskMutation.mutateAsync(taskId);
   };
   
-  // Helper function to get tasks by source ID and stage
-  const getTasksBySource = (sourceId: string, stage?: string) => {
+  // Filter tasks by stage
+  const getTasksByStage = (stage: string) => {
     if (!tasks) return [];
-    
-    if (stage) {
-      return tasks.filter(task => task.sourceId === sourceId && task.stage === stage);
-    }
-    
+    return tasks.filter(task => task.stage.toLowerCase() === stage.toLowerCase());
+  };
+  
+  // Find tasks by their sourceId
+  const getTasksBySourceId = (sourceId: string) => {
+    if (!tasks || !sourceId) return [];
     return tasks.filter(task => task.sourceId === sourceId);
   };
   
@@ -426,13 +428,11 @@ export function useProjectTasks(projectId?: string) {
     tasks,
     isLoading,
     error,
-    refetch,
     createTask,
     updateTask,
     deleteTask,
-    getTasksBySource,
-    isCreating: createTaskMutation.isPending,
-    isUpdating: updateTaskMutation.isPending,
-    isDeleting: deleteTaskMutation.isPending,
+    getTasksByStage,
+    getTasksBySourceId,
+    refetch
   };
 }
