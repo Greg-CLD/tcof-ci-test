@@ -331,10 +331,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       
       allTasks.forEach(task => {
         // Always normalize stage to lowercase for consistent filtering
-        const normalizedStage = task.stage.toLowerCase() as Stage;
+        // Also handle undefined or null stage values with a default
+        const normalizedStage = (task.stage || 'identification').toLowerCase() as Stage;
         console.log(`[CHECKLIST_DEBUG] Task distribution: "${task.text}" (original stage: "${task.stage}", normalized: "${normalizedStage}")`);
         
-        if (byStage[normalizedStage]) {
+        if (STAGES.includes(normalizedStage as Stage)) {
           byStage[normalizedStage].push({...task, stage: normalizedStage});
         } else {
           // If stage is invalid, default to identification stage
@@ -405,10 +406,13 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       }), {} as Record<Stage, UnifiedTask[]>);
       
       updatedTasks.forEach(task => {
-        const stage = task.stage as Stage;
-        if (byStage[stage]) {
-          byStage[stage].push(task);
+        // Normalize stage to lowercase and handle undefined/null values
+        const normalizedStage = (task.stage || 'identification').toLowerCase() as Stage;
+        
+        if (STAGES.includes(normalizedStage as Stage)) {
+          byStage[normalizedStage].push({...task, stage: normalizedStage});
         } else {
+          console.log(`[CHECKLIST_DEBUG] Invalid stage "${normalizedStage}" during update - defaulting to identification`);
           byStage.identification.push({...task, stage: 'identification'});
         }
       });
@@ -419,8 +423,8 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       // Ensure we send the correct data to match the backend expectations
       const updatedFields = {
         ...updates,
-        // Always normalize stage to lowercase
-        stage: stage.toLowerCase(),
+        // Always normalize stage to lowercase and handle null/undefined
+        stage: (stage || 'identification').toLowerCase(),
         // Convert priority from TaskPriority type to string if present
         priority: updates.priority ? String(updates.priority) : undefined,
         // Ensure we convert status to string
@@ -645,10 +649,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
               
               // Apply filters to tasks
               const filteredTasks = stageTasks.filter(task => {
-                // Ensure task stage is also normalized
-                const taskStage = task.stage.toLowerCase() as Stage;
+                // Make sure task stage is normalized to lowercase
+                const taskStage = (task.stage || 'identification').toLowerCase() as Stage;
                 
-                // Debug task stage check
+                // Debug task stage check - stage should match regardless of case
                 if (taskStage !== normalizedStage) {
                   console.log(`[CHECKLIST_DEBUG] Task stage mismatch: task has "${taskStage}", tab expects "${normalizedStage}"`);
                 }
