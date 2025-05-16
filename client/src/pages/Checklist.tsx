@@ -3,6 +3,7 @@ import { Stage as PlanStage, STAGES, STAGE_CONFIGS } from '@/lib/plan-db';
 // Use the Stage type from plan-db.ts for consistency throughout the application
 type Stage = PlanStage;
 import { useLocation, useParams } from 'wouter';
+import UuidWarningTester from '@/components/debug/UuidWarningTester';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -758,6 +759,17 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       
       {/* Task Smoke Test Panel */}
       {/* Task testing functionality removed */}
+      
+      {/* Debug component for testing UUID validation fix */}
+      {projectId && (
+        <div className="mt-8 border-t pt-6">
+          <div className="text-sm text-muted-foreground mb-4">
+            <h3 className="font-semibold text-tcof-dark mb-1">Debug Tools</h3>
+            <p>The following tools are for testing and debugging purposes only.</p>
+          </div>
+          <UuidWarningTester projectId={projectId} />
+        </div>
+      )}
     </div>
   );
 }
