@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ORIGIN_LABELS, AVAILABLE_ORIGINS, DEFAULT_ORIGIN } from '@/constants/origin';
 
+// Use the same stages as the rest of the application
 const STAGES = ['identification', 'definition', 'delivery', 'closure'];
 
 type Task = {
@@ -27,11 +28,17 @@ type Task = {
   updatedAt?: string;
 };
 
-type TestProps = {
+type TaskTesterProps = {
   projectId: string;
 };
 
-export default function TaskPersistenceTest({ projectId }: TestProps) {
+/**
+ * TaskTester Component
+ * 
+ * A simplified test tool for verifying task persistence
+ * Creates tasks for all stages and verifies they're properly saved
+ */
+export function TaskTester({ projectId }: TaskTesterProps) {
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +49,7 @@ export default function TaskPersistenceTest({ projectId }: TestProps) {
   const fetchTasks = async () => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('GET', `/projects/${projectId}/tasks`);
+      const response = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
       const data = await response.json();
       setTasks(data);
       return data;
@@ -60,7 +67,9 @@ export default function TaskPersistenceTest({ projectId }: TestProps) {
   };
 
   useEffect(() => {
-    fetchTasks();
+    if (projectId) {
+      fetchTasks();
+    }
   }, [projectId]);
 
   const createTask = async (stage: string): Promise<Task | null> => {
@@ -86,7 +95,7 @@ export default function TaskPersistenceTest({ projectId }: TestProps) {
         notes: "Created by browser persistence test"
       };
       
-      const response = await apiRequest('POST', `/projects/${projectId}/tasks`, taskData);
+      const response = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
       const createdTask = await response.json();
       
       return createdTask;

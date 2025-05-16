@@ -3,7 +3,7 @@ import { Stage as PlanStage, STAGES } from '@/lib/plan-db';
 // Use the Stage type from plan-db.ts for consistency throughout the application
 type Stage = PlanStage;
 import { useLocation, useParams } from 'wouter';
-import TaskPersistenceTest from '@/components/TaskPersistenceTest';
+// Remove duplicate import - TaskPersistenceHelper is already imported below
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -758,7 +758,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
               🧪 Task Persistence Test Tool
             </summary>
             <div className="pt-2">
-              <TaskPersistenceTest projectId={currentProjectId} />
+              <TaskPersistenceHelper projectId={currentProjectId} />
             </div>
           </details>
         </div>
