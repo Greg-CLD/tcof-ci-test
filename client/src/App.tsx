@@ -516,6 +516,17 @@ function Router() {
         )}
       </Route>
 
+      {/* Project-specific checklist route */}
+      <Route path="/project/:projectId/checklist">
+        {isAuthenticated ? (
+          <ProtectedRouteGuard>
+            <Checklist />
+          </ProtectedRouteGuard>
+        ) : (
+          <AuthRequired />
+        )}
+      </Route>
+
       <Route path="/final-checklist">
         {isAuthenticated ? (
           <ProtectedRouteGuard>

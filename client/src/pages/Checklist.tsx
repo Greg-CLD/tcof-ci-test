@@ -607,7 +607,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         </div>
       ) : (
         <>
-          <Tabs defaultValue={STAGES[0]} className="mb-8">
+          <Tabs defaultValue={STAGES[0].toLowerCase()} className="mb-8">
             <TabsList className="grid grid-cols-4 mb-4">
               {STAGES.map(stage => {
                 // Always work with lowercase stage values
@@ -672,7 +672,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
               });
               
               return (
-                <TabsContent key={stage} value={stage} className="space-y-6">
+                <TabsContent key={normalizedStage} value={normalizedStage} className="space-y-6">
                   {/* Add task creation form at the top of every stage tab */}
                   {currentProjectId && (
                     <div className="bg-card rounded-md p-4 shadow-sm mb-4 border">
