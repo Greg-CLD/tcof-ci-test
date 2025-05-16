@@ -66,6 +66,7 @@ interface UnifiedTask {
   dueDate?: string;
   owner?: string;
   status?: 'To Do' | 'Working On It' | 'Done';
+  createdAt?: string; // ISO date string for creation time
 }
 
 // Task updates
@@ -263,7 +264,8 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
             dueDate: task.dueDate || '',
             owner: task.owner || '',
-            status: task.status || (task.completed ? 'Done' : 'To Do')
+            status: task.status || (task.completed ? 'Done' : 'To Do'),
+            createdAt: task.createdAt || new Date().toISOString() // Use server timestamp or current time
           };
           
           // Add source name based on origin
@@ -651,7 +653,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
               console.log(`[CHECKLIST_DEBUG] Processing stage "${stage}" (display as: "${stageConfig?.label}") with ${stageTasks.length} tasks`);
               
               // Apply filters to tasks
-              const filteredTasks = stageTasks.filter(task => {
+              let filteredTasks = stageTasks.filter(task => {
                 // Make sure task stage is normalized to lowercase
                 const taskStage = (task.stage || 'identification').toLowerCase() as Stage;
                 
@@ -680,6 +682,53 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 
                 return true;
               });
+              
+              // Apply sorting based on selected option
+              if (sortOption === 'date') {
+                filteredTasks.sort((a, b) => {
+                  const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+              } else if (sortOption === 'stage') {
+                // Existing stage-based sorting
+                const stageOrder = { identification: 1, definition: 2, delivery: 3, closure: 4 };
+                filteredTasks.sort((a, b) => {
+                  const stageA = (a.stage || 'identification').toLowerCase() as Stage;
+                  const stageB = (b.stage || 'identification').toLowerCase() as Stage;
+                  return sortDirection === 'asc' 
+                    ? stageOrder[stageA] - stageOrder[stageB]
+                    : stageOrder[stageB] - stageOrder[stageA];
+                });
+              } else if (sortOption === 'status') {
+                // Status-based sorting
+                filteredTasks.sort((a, b) => {
+                  const statusOrder = { 'Done': 2, 'Working On It': 1, 'To Do': 0 };
+                  const statusA = a.completed ? 'Done' : a.status || 'To Do';
+                  const statusB = b.completed ? 'Done' : b.status || 'To Do';
+                  return sortDirection === 'asc'
+                    ? statusOrder[statusA] - statusOrder[statusB]
+                    : statusOrder[statusB] - statusOrder[statusA];
+                });
+              } else if (sortOption === 'source') {
+                // Source-based sorting
+                filteredTasks.sort((a, b) => {
+                  const sourceA = a.source || 'custom';
+                  const sourceB = b.source || 'custom';
+                  return sortDirection === 'asc'
+                    ? sourceA.localeCompare(sourceB)
+                    : sourceB.localeCompare(sourceA);
+                });
+              }
+              
+              // Default to newest tasks first when no other sorting is specified
+              if (sortOption !== 'date' && !sortOption) {
+                filteredTasks.sort((a, b) => {
+                  const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  return dateB - dateA; // Newest first
+                });
+              }
               
               return (
                 <TabsContent key={normalizedStage} value={normalizedStage} className="space-y-6">

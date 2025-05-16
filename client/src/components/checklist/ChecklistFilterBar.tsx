@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 export type StageFilter = 'all' | 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 export type StatusFilter = 'all' | 'completed' | 'incomplete';
 export type SourceFilter = 'all' | 'heuristic' | 'factor' | 'policy' | 'framework' | 'custom';
-export type SortOption = 'stage' | 'status' | 'source';
+export type SortOption = 'stage' | 'status' | 'source' | 'date';
 export type SortDirection = 'asc' | 'desc';
 
 // Props interface for the component
@@ -250,6 +250,7 @@ export default function ChecklistFilterBar({
                   <SelectValue placeholder="Sort by..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="date">Created Date</SelectItem>
                   <SelectItem value="stage">Stage</SelectItem>
                   <SelectItem value="status">Status</SelectItem>
                   <SelectItem value="source">Source</SelectItem>
