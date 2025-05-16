@@ -83,7 +83,8 @@ export default function CreateTaskForm({
         sourceId,
         completed: false,
         priority: "medium",
-        status: "To Do"
+        status: "To Do",
+        createdAt: new Date().toISOString() // Add current timestamp for proper date sorting
       });
       
       console.log('[CREATE_TASK] Task created successfully:', newTask);
