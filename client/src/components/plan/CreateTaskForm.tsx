@@ -11,7 +11,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 // Import Stage type and STAGES constant from plan-db to ensure consistency
-import { Stage, STAGES } from '@/lib/plan-db';
+import { Stage, STAGES, STAGE_CONFIGS } from '@/lib/plan-db';
 // Import origin types and constants
 import { TaskOrigin, ORIGIN_LABELS, DEFAULT_ORIGIN, AVAILABLE_ORIGINS } from '@/constants/origin';
 
@@ -90,7 +90,7 @@ export default function CreateTaskForm({
       
       toast({
         title: "Task created",
-        description: "New task has been added to the " + selectedStage + " stage"
+        description: "New task has been added to the " + getStageLabel(selectedStage) + " stage"
       });
       
       // Clear the form and notify parent
@@ -125,9 +125,10 @@ export default function CreateTaskForm({
     }
   };
   
-  // Helper function to format stage name for display
-  const formatStageName = (stage: string): string => {
-    return stage.charAt(0).toUpperCase() + stage.slice(1);
+  // Helper function to get the display label for a stage value
+  const getStageLabel = (stageValue: string): string => {
+    const stageConfig = STAGE_CONFIGS.find(config => config.value.toLowerCase() === stageValue.toLowerCase());
+    return stageConfig?.label || stageValue.charAt(0).toUpperCase() + stageValue.slice(1);
   };
 
   return (
@@ -151,9 +152,9 @@ export default function CreateTaskForm({
               <SelectValue placeholder="Select stage" />
             </SelectTrigger>
             <SelectContent>
-              {STAGES.map(stage => (
-                <SelectItem key={stage} value={stage}>
-                  {formatStageName(stage)}
+              {STAGE_CONFIGS.map(stageConfig => (
+                <SelectItem key={stageConfig.value} value={stageConfig.value.toLowerCase()}>
+                  {stageConfig.label}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -645,7 +645,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             {Object.entries(tasksByStage).map(([stage, stageTasks]) => {
               // Always ensure stage is lowercase for consistent filtering
               const normalizedStage = stage.toLowerCase() as Stage;
-              console.log(`[CHECKLIST_DEBUG] Processing stage "${stage}" with ${stageTasks.length} tasks`);
+              // Find the corresponding stage config to get the proper label
+              const stageConfig = STAGE_CONFIGS.find(cfg => cfg.value.toLowerCase() === normalizedStage);
+              console.log(`[CHECKLIST_DEBUG] Processing stage "${stage}" (display as: "${stageConfig?.label}") with ${stageTasks.length} tasks`);
               
               // Apply filters to tasks
               const filteredTasks = stageTasks.filter(task => {
@@ -683,7 +685,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                   {/* Add task creation form at the top of every stage tab */}
                   {currentProjectId && (
                     <div className="bg-card rounded-md p-4 shadow-sm mb-4 border">
-                      <h3 className="text-lg font-medium mb-2">Add a new task to {normalizedStage.charAt(0).toUpperCase() + normalizedStage.slice(1)}</h3>
+                      <h3 className="text-lg font-medium mb-2">Add a new task to {stageConfig?.label || normalizedStage.charAt(0).toUpperCase() + normalizedStage.slice(1)}</h3>
                       <CreateTaskForm 
                         projectId={currentProjectId}
                         stage={normalizedStage}
