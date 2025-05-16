@@ -5,10 +5,33 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
+import { v4 as uuidv4, v5 as uuidv5, validate as validateUuid } from 'uuid';
 import { db } from './db';
 import { eq, and, asc, sql } from 'drizzle-orm';
 import { projectTasks as projectTasksTable } from '@shared/schema';
+
+/**
+ * Validates sourceId to ensure it's either a valid UUID or null
+ * Non-UUID strings will be converted to null to prevent database errors
+ * 
+ * @param sourceId The source ID to validate
+ * @returns Either a valid UUID string or null
+ */
+function validateSourceId(sourceId: string | null | undefined): string | null {
+  // If sourceId is empty/null/undefined, return null
+  if (!sourceId) return null;
+  
+  // Check if it's already a valid UUID
+  if (validateUuid(sourceId)) {
+    return sourceId;
+  }
+  
+  // Log warning about invalid sourceId
+  console.warn(`Invalid UUID format for sourceId: "${sourceId}". Converting to null to prevent database errors.`);
+  
+  // Return null for invalid UUIDs to avoid database constraint errors
+  return null;
+}
 
 // Path to projects data file
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -419,7 +442,7 @@ export const projectsDb = {
         text: task.text || '',
         stage: task.stage || 'identification',
         origin: task.origin || 'custom',
-        sourceId: task.sourceId || '',
+        sourceId: validateSourceId(task.sourceId),
         completed: Boolean(task.completed), 
         // Handle possible empty strings by converting them to null
         notes: task.notes === '' ? null : task.notes,
