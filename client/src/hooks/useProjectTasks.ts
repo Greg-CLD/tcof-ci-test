@@ -70,6 +70,9 @@ export function useProjectTasks(projectId?: string) {
     console.error(`Invalid project ID format: ${projectId}`);
   }
   
+  // Define a consistent query key format for both fetching and invalidation
+  const tasksQueryKey = normalizedProjectId && isValidId ? ['projectTasks', normalizedProjectId] : [];
+  
   // Query to fetch tasks for the project directly from database
   const { 
     data: tasks,
@@ -77,7 +80,7 @@ export function useProjectTasks(projectId?: string) {
     error,
     refetch
   } = useQuery<ProjectTask[]>({
-    queryKey: normalizedProjectId && isValidId ? [`/api/projects/${normalizedProjectId}/tasks`] : [],
+    queryKey: tasksQueryKey,
     queryFn: async () => {
       if (!normalizedProjectId || !isValidId) return [];
       
@@ -120,9 +123,9 @@ export function useProjectTasks(projectId?: string) {
   useEffect(() => {
     if (tasks) {
       console.log('Initial fetch:', tasks);
-      console.log('Current query key:', `/api/projects/${projectId}/tasks`);
+      console.log('Current query key:', tasksQueryKey);
     }
-  }, [tasks, projectId]);
+  }, [tasks, tasksQueryKey]);
   
   // Mutation to create a new task
   const createTaskMutation = useMutation({
@@ -167,8 +170,8 @@ export function useProjectTasks(projectId?: string) {
       
       // Ensure cache invalidation and refetching with 100% guarantee
       try {
-        // Invalidate the query cache with the correct query key format for React Query v5
-        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+        // Invalidate the query cache with the consistent query key format
+        await queryClient.invalidateQueries({ queryKey: tasksQueryKey });
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
@@ -236,8 +239,8 @@ export function useProjectTasks(projectId?: string) {
       
       // Robust cache invalidation and refetching
       try {
-        // Invalidate the query cache with the correct query key format for React Query v5
-        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+        // Invalidate the query cache with the consistent query key format
+        await queryClient.invalidateQueries({ queryKey: tasksQueryKey });
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
@@ -302,8 +305,8 @@ export function useProjectTasks(projectId?: string) {
       
       // Robust cache invalidation and refetching
       try {
-        // Use consistent query key format for invalidation - React Query v5
-        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/tasks`] });
+        // Use consistent query key format for invalidation
+        await queryClient.invalidateQueries({ queryKey: tasksQueryKey });
         
         // Manually refetch to get fresh data
         const freshData = await refetch();
