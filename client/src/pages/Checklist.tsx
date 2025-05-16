@@ -981,15 +981,19 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         </>
       )}
       
-      {/* Task Persistence Testing Tool - visible in development mode or for admin users */}
-      {(process.env.NODE_ENV === 'development' || true) && currentProjectId && (
+      {/* Task Smoke Test Panel */}
+      {currentProjectId && (
         <div className="mt-8 border-t pt-6">
           <details className="rounded-lg">
             <summary className="cursor-pointer font-medium text-base mb-2 text-muted-foreground hover:text-foreground transition-colors">
-              🧪 Task Persistence Test Tool
+              🧪 Task Smoke Test
             </summary>
             <div className="pt-2">
-              <InlineTaskPersistenceTester projectId={currentProjectId} />
+              <TaskTester 
+                projectId={currentProjectId}
+                createTask={createTask}
+                fetchTasks={async () => tasks || []}
+              />
             </div>
           </details>
         </div>
