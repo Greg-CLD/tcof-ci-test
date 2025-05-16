@@ -24,7 +24,19 @@ export type PracticeTaskItem = {
 
 export type Stage = 'identification' | 'definition' | 'delivery' | 'closure';
 
+export type StageConfig = {
+  value: Stage;
+  label: string;
+};
+
 export const STAGES: Stage[] = ['identification', 'definition', 'delivery', 'closure'];
+
+export const STAGE_CONFIGS: StageConfig[] = [
+  { value: 'identification', label: 'Identification' },
+  { value: 'definition', label: 'Definition' },
+  { value: 'delivery', label: 'Delivery' },
+  { value: 'closure', label: 'Closure' }
+];
 
 export type SuccessFactorRating = {
   rating: 1 | 2 | 3 | 4 | 5;

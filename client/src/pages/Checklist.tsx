@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Stage as PlanStage, STAGES } from '@/lib/plan-db';
+import { Stage as PlanStage, STAGES, STAGE_CONFIGS } from '@/lib/plan-db';
 // Use the Stage type from plan-db.ts for consistency throughout the application
 type Stage = PlanStage;
 import { useLocation, useParams } from 'wouter';
@@ -614,24 +614,24 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         </div>
       ) : (
         <>
-          <Tabs defaultValue={STAGES[0].toLowerCase()} className="mb-8">
+          <Tabs defaultValue={STAGE_CONFIGS[0].value.toLowerCase()} className="mb-8">
             <TabsList className="grid grid-cols-4 mb-4">
-              {STAGES.map(stage => {
-                // Always work with lowercase stage values
-                const normalizedStage = stage.toLowerCase() as Stage;
-                const stageTaskCount = tasksByStage[normalizedStage]?.length || 0;
+              {STAGE_CONFIGS.map(stageConfig => {
+                // Always work with lowercase values for state, proper labels for display
+                const normalizedValue = stageConfig.value.toLowerCase() as Stage;
+                const stageTaskCount = tasksByStage[normalizedValue]?.length || 0;
                 
                 // Add debug logging to track stage distribution
-                console.log(`[CHECKLIST_DEBUG] Tab for stage "${normalizedStage}" has ${stageTaskCount} tasks`);
+                console.log(`[CHECKLIST_DEBUG] Tab for stage "${normalizedValue}" has ${stageTaskCount} tasks`);
                 
                 return (
                   <TabsTrigger 
-                    key={normalizedStage}
-                    value={normalizedStage} 
-                    onClick={() => setActiveTab(normalizedStage)}
+                    key={normalizedValue}
+                    value={normalizedValue} 
+                    onClick={() => setActiveTab(normalizedValue)}
                     className="relative"
                   >
-                    {normalizedStage.charAt(0).toUpperCase() + normalizedStage.slice(1)}
+                    {stageConfig.label}
                     {stageTaskCount > 0 && (
                       <Badge variant="outline" className="ml-2 bg-tcof-teal text-white">
                         {stageTaskCount}
