@@ -3,12 +3,18 @@ import { Switch, Route, Link, useLocation, useParams, Redirect } from "wouter";
 import { useEffect, useRef, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { PlanProvider } from '@/contexts/PlanContext';
+import { ProjectProvider } from '@/contexts/ProjectContext';
+import { FeedbackProvider } from '@/components/ui/feedback/feedback-context';
+import { FeedbackContainer } from '@/components/ui/feedback/feedback-container';
+import { AppInitializer } from '@/components/AppInitializer';
+import A11yAuditProvider from '@/components/A11yAuditProvider';
 
+// Import all your components and routes...
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import AllProjects from "@/pages/AllProjects";
 import ProTools from "@/pages/ProTools";
-
 import SuccessFactorsTest from './components/test/SuccessFactorsTest';
 import StarterAccess from "@/pages/StarterAccess";
 import GetYourBearings from "@/pages/GetYourBearings";
@@ -785,40 +791,9 @@ function App() {
           </A11yAuditProvider>
         </AuthProtectionProvider>
       </AuthProvider>
-    </QueryClientProvider>
-  );
-}
-
-export default function App() {
-  // Check if we're in development mode
-  const isDev = import.meta.env.DEV;
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AuthProtectionProvider>
-          {/* Only enable accessibility audits in development */}
-          <A11yAuditProvider disabled={!isDev}>
-            <FeedbackProvider>
-              <ProgressProvider>
-                <PlanProvider>
-                  <ProjectProvider>
-                    {/* Use AppInitializer to wait for both contexts to hydrate */}
-                    <AppInitializer>
-                      <AppLayout>
-                        <Router />
-                        {/* Add the feedback container to display notifications */}
-                        <FeedbackContainer />
-                      </AppLayout>
-                    </AppInitializer>
-                  </ProjectProvider>
-                </PlanProvider>
-              </ProgressProvider>
-            </FeedbackProvider>
-          </A11yAuditProvider>
-        </AuthProtectionProvider>
-      </AuthProvider>
       <ReactQueryDevtools initialIsOpen={true} />
     </QueryClientProvider>
   );
 }
+
+export default App
