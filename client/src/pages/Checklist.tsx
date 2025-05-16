@@ -3,6 +3,7 @@ import { Stage as PlanStage, STAGES } from '@/lib/plan-db';
 // Use the Stage type from plan-db.ts for consistency throughout the application
 type Stage = PlanStage;
 import { useLocation, useParams } from 'wouter';
+import TaskPersistenceTest from '@/components/TaskPersistenceTest';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -749,8 +750,19 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         </>
       )}
       
-      {/* Add the task persistence helper for testing */}
-      {currentProjectId && <TaskPersistenceHelper projectId={currentProjectId} />}
+      {/* Task Persistence Testing Tool - visible in development mode or for admin users */}
+      {(process.env.NODE_ENV === 'development' || true) && currentProjectId && (
+        <div className="mt-8 border-t pt-6">
+          <details className="rounded-lg">
+            <summary className="cursor-pointer font-medium text-base mb-2 text-muted-foreground hover:text-foreground transition-colors">
+              🧪 Task Persistence Test Tool
+            </summary>
+            <div className="pt-2">
+              <TaskPersistenceTest projectId={currentProjectId} />
+            </div>
+          </details>
+        </div>
+      )}
     </div>
   );
 }

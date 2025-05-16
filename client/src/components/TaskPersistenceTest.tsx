@@ -31,7 +31,7 @@ type TestProps = {
   projectId: string;
 };
 
-export default function TaskPersistenceTest({ projectId }: TestProps) {
+function TaskPersistenceTest({ projectId }: TestProps) {
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -128,10 +128,12 @@ export default function TaskPersistenceTest({ projectId }: TestProps) {
       log(`Updated task count: ${updatedCount} (${updatedCount - initialCount} added)`);
       
       // Verify all created tasks exist in the fetched list
-      const createdIds = new Set(createdTasks.map(task => task.id));
-      const fetchedIds = new Set(updatedTasks.map(task => task.id));
+      const createdIds = new Set(createdTasks.map((task: Task) => task.id));
+      const fetchedIds = new Set(updatedTasks.map((task: Task) => task.id));
       
-      const missingIds = [...createdIds].filter(id => !fetchedIds.has(id));
+      // Convert Set to Array before filtering
+      const createdIdsArray = Array.from(createdIds);
+      const missingIds = createdIdsArray.filter(id => !fetchedIds.has(id));
       
       if (missingIds.length > 0) {
         log(`❌ Some tasks are missing: ${missingIds.map(id => id.substring(0, 8)).join(', ')}`);
