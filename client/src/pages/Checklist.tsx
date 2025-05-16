@@ -47,6 +47,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { TaskPersistenceHelper } from '@/components/TaskPersistenceHelper';
+import { TaskTester } from '@/components/TaskTester';
 import { useProjectContext } from '@/contexts/ProjectContext';
 
 interface ChecklistProps {
@@ -758,7 +759,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
               🧪 Task Persistence Test Tool
             </summary>
             <div className="pt-2">
-              <TaskPersistenceHelper projectId={currentProjectId} />
+              <TaskTester projectId={currentProjectId} />
             </div>
           </details>
         </div>
