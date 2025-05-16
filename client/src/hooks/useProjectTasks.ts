@@ -129,6 +129,12 @@ export function useProjectTasks(projectId?: string) {
     mutationFn: async (taskData: CreateTaskParams) => {
       console.log(`Creating task for project ${projectId}:`, taskData.text);
       
+      // Validate sourceId is a valid UUID before sending to server
+      if (taskData.sourceId && !isValidUUID(taskData.sourceId)) {
+        console.warn(`Invalid UUID format for sourceId: "${taskData.sourceId}". Setting to null to prevent database errors.`);
+        taskData.sourceId = null;
+      }
+      
       try {
         const res = await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
         
@@ -192,6 +198,12 @@ export function useProjectTasks(projectId?: string) {
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
       console.log(`Updating task ${taskId} for project ${projectId}:`, data);
+      
+      // Validate sourceId is a valid UUID before sending to server
+      if (data.sourceId && !isValidUUID(data.sourceId)) {
+        console.warn(`Invalid UUID format for sourceId: "${data.sourceId}". Setting to null to prevent database errors.`);
+        data.sourceId = null;
+      }
       
       try {
         const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, data);
