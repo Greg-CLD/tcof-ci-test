@@ -258,7 +258,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             text: task.text,
             completed: !!task.completed,
             stage: task.stage.toLowerCase() as Stage,
-            source: task.origin as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
+            // Fix: Properly identify custom tasks - ensure origin is consistently mapped to source
+            // If origin is undefined/null, treat it as a custom task
+            source: (task.origin || 'custom') as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
             sourceId: task.sourceId || undefined,
             notes: task.notes || '',
             priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
@@ -663,8 +665,17 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 }
                 
                 // Filter by source
-                if (sourceFilter !== 'all' && task.source !== sourceFilter) {
-                  return false;
+                // Fix: Ensure custom tasks appear when 'custom' is selected AND when 'all' is selected
+                if (sourceFilter !== 'all') {
+                  // For custom filter, include both tasks with source='custom' and undefined/null sources
+                  if (sourceFilter === 'custom') {
+                    if (task.source !== 'custom' && task.source !== undefined && task.source !== null) {
+                      return false;
+                    }
+                  } else if (task.source !== sourceFilter) {
+                    // For other source filters, require exact match
+                    return false;
+                  }
                 }
                 
                 // Filter by status
