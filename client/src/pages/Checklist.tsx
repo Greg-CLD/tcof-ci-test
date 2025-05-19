@@ -265,7 +265,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       );
       
       // DEBUG: Log all raw tasks to make sure we're getting the right data
-      if (Array.isArray(data) && data.length > 0) {
+      if (DEBUG_TASKS && Array.isArray(data) && data.length > 0) {
         console.log('[RAW_TASKS_SAMPLE] First 2 tasks sample:', 
           data.slice(0, 2).map((t: any) => ({
             id: t.id,
@@ -276,7 +276,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         );
       }
 
-      console.log('[CHECKLIST] Server returned tasks:', response);
+      if (DEBUG_TASKS) console.log('[CHECKLIST] Server returned tasks:', response);
 
       // Store both custom tasks and task status map
       const projectTasks: UnifiedTask[] = [];
@@ -319,7 +319,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           };
           
           // DEBUG: Log individual task transformation for custom tasks
-          if (task.origin === 'custom') {
+          if (DEBUG_TASKS && task.origin === 'custom') {
             console.log('[UNIFIED_TASK_DEBUG] Raw → Transformed:', {
               raw: {
                 id: task.id,
@@ -349,7 +349,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         });
       }
 
-      console.log('[CHECKLIST_DEBUG] projectTasks (custom only):', projectTasks.filter(t => t.source === 'custom').map(t => ({id: t.id, text: t.text})));
+      if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] projectTasks (custom only):', projectTasks.filter(t => t.source === 'custom').map(t => ({id: t.id, text: t.text})));
 
       // Start with canonical tasks
       const canonicalTasksList: UnifiedTask[] = canonicalTasks.map((task: any) => {
@@ -395,8 +395,8 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
       // DEBUG: How many custom tasks survived the transformation to UnifiedTask?
       const customUnifiedTasks = projectTasks.filter(task => task.origin === 'custom' || task.source === 'custom');
-      console.log('[POST_MAPPING] Custom UnifiedTasks count:', customUnifiedTasks.length);
-      console.log('[POST_MAPPING] Custom UnifiedTasks:', customUnifiedTasks.map(t => ({
+      if (DEBUG_TASKS) console.log('[POST_MAPPING] Custom UnifiedTasks count:', customUnifiedTasks.length);
+      if (DEBUG_TASKS) console.log('[POST_MAPPING] Custom UnifiedTasks:', customUnifiedTasks.map(t => ({
         id: t.id,
         text: t.text.substring(0, 20) + '...',
         source: t.source,
@@ -409,8 +409,8 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
       // DEBUG: How many custom tasks made it to the final merged list?
       const customAllTasks = allTasks.filter(t => t.origin === 'custom' || t.source === 'custom');
-      console.log('[MERGED_TASKS] Custom tasks in final merged list:', customAllTasks.length);
-      console.log('[MERGED_TASKS] Custom tasks sample:', customAllTasks.slice(0, 3).map(t => ({
+      if (DEBUG_TASKS) console.log('[MERGED_TASKS] Custom tasks in final merged list:', customAllTasks.length);
+      if (DEBUG_TASKS) console.log('[MERGED_TASKS] Custom tasks sample:', customAllTasks.slice(0, 3).map(t => ({
         id: t.id,
         text: t.text.substring(0, 20) + '...',
         source: t.source,
@@ -419,7 +419,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       })));
 
       // Debug log to see all tasks before stage grouping
-      console.log('[CHECKLIST_DEBUG] All merged tasks (pre-stage-grouping):', allTasks);
+      if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] All merged tasks (pre-stage-grouping):', allTasks);
 
       // Organize tasks by stage using the STAGES constant
       const byStage: Record<Stage, UnifiedTask[]> = STAGES.reduce((acc, stage) => ({
