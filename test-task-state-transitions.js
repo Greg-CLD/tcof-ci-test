@@ -10,7 +10,7 @@ import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
 
 // Common configuration
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:5000';
 const TEST_CREDENTIALS = {
   username: 'greg@confluity.co.uk',
   password: 'password'

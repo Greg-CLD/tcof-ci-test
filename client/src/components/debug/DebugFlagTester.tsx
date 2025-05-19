@@ -22,12 +22,20 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, CheckCircle, Bug } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { 
+  AlertCircle, 
+  CheckCircle, 
+  Info, 
+  HelpCircle, 
+  Bug, 
+  Terminal 
+} from "lucide-react";
 
 /**
  * Advanced Debug Flag Tester component
  * This component allows developers to view and toggle debug flags at runtime
- * Note: Settings are now saved to localStorage and persist across page reloads
+ * Note: Settings are saved to localStorage and persist across page reloads
  */
 export default function DebugFlagTester() {
   const { toast } = useToast();
@@ -55,18 +63,19 @@ export default function DebugFlagTester() {
   const [taskPersistenceDebug, setTaskPersistenceDebug] = useState(() => getInitialState('task_persistence', DEBUG_TASK_PERSISTENCE));
   const [taskStateDebug, setTaskStateDebug] = useState(() => getInitialState('task_state', DEBUG_TASK_STATE));
   
-  // Additional state for test logging confirmation
+  // Additional state for UI controls
   const [testLogConfirmation, setTestLogConfirmation] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
-  // Get overall diagnostics status
+  // Compute overall diagnostics status
   const isDiagnosticsActive = generalDebug || taskDebug || filterDebug || fileDebug;
   const isTaskDiagnosticsActive = taskDebug && (
     taskApiDebug || taskMappingDebug || taskCompletionDebug || 
     taskValidationDebug || taskPersistenceDebug || taskStateDebug
   );
 
+  // Log diagnostics status when flags change
   useEffect(() => {
-    // Log current debug flag status
     console.log('[DEBUG_TESTER] Debug Flag Status:', {
       DEBUG: generalDebug,
       DEBUG_TASKS: taskDebug,
@@ -117,7 +126,63 @@ export default function DebugFlagTester() {
     }
   }, [testLogConfirmation]);
   
-  // Helper function to toggle debug flags in localStorage and show toast notification
+  // Master toggle for all diagnostics
+  const toggleAllDiagnostics = (enabled) => {
+    // Set all flags to the specified value
+    setGeneralDebug(enabled);
+    setTaskDebug(enabled);
+    
+    if (enabled) {
+      // Only set task-specific flags when enabling
+      setTaskApiDebug(true);
+      setTaskCompletionDebug(true);
+      setTaskPersistenceDebug(true);
+      setTaskStateDebug(true);
+    } else {
+      // Turn off all task-specific flags when disabling
+      setTaskApiDebug(false);
+      setTaskMappingDebug(false);
+      setTaskCompletionDebug(false);
+      setTaskValidationDebug(false);
+      setTaskPersistenceDebug(false);
+      setTaskStateDebug(false);
+    }
+    
+    // Save all settings to localStorage
+    localStorage.setItem('debug_general', enabled ? 'true' : 'false');
+    localStorage.setItem('debug_tasks', enabled ? 'true' : 'false');
+    localStorage.setItem('debug_filters', enabled ? 'true' : 'false');
+    localStorage.setItem('debug_files', enabled ? 'true' : 'false');
+    
+    if (enabled) {
+      // Set task-specific flags in localStorage
+      localStorage.setItem('debug_task_api', 'true');
+      localStorage.setItem('debug_task_completion', 'true');
+      localStorage.setItem('debug_task_persistence', 'true');
+      localStorage.setItem('debug_task_state', 'true');
+    } else {
+      // Clear task-specific flags in localStorage
+      localStorage.setItem('debug_task_api', 'false');
+      localStorage.setItem('debug_task_mapping', 'false');
+      localStorage.setItem('debug_task_completion', 'false');
+      localStorage.setItem('debug_task_validation', 'false');
+      localStorage.setItem('debug_task_persistence', 'false');
+      localStorage.setItem('debug_task_state', 'false');
+    }
+    
+    // Show notifications
+    toast({
+      title: enabled ? "Diagnostics Enabled" : "Diagnostics Disabled",
+      description: enabled 
+        ? "Diagnostic logging is now active - results visible in browser console" 
+        : "All diagnostic logging has been turned off",
+      variant: enabled ? "default" : "secondary",
+    });
+    
+    console.log(`[DEBUG_TESTER] ${enabled ? 'Enabled' : 'Disabled'} all diagnostic flags`);
+  };
+  
+  // Helper function to toggle individual debug flags
   const toggleDebugFlag = (flag, value) => {
     try {
       localStorage.setItem(`debug_${flag}`, value ? 'true' : 'false');
@@ -146,12 +211,6 @@ export default function DebugFlagTester() {
         localStorage.setItem('debug_task_validation', 'false');
         localStorage.setItem('debug_task_persistence', 'false');
         localStorage.setItem('debug_task_state', 'false');
-        
-        toast({
-          title: "Task Diagnostics Disabled",
-          description: "All task-specific diagnostic flags have been turned off",
-          variant: "secondary",
-        });
       }
     } catch (e) {
       console.error('Error setting debug flag:', e);
@@ -163,7 +222,7 @@ export default function DebugFlagTester() {
     }
   };
   
-  // Enable a special debug mode for SuccessFactor task debugging
+  // Enable special SuccessFactor task debugging preset
   const enableSuccessFactorDebugging = () => {
     // Enable all task-related debugging focused on the SuccessFactor task completion bug
     setTaskDebug(true);
@@ -180,44 +239,11 @@ export default function DebugFlagTester() {
     localStorage.setItem('debug_task_state', 'true');
     
     console.log('[DEBUG_TESTER] SuccessFactor Task Debugging Mode Enabled');
-    console.log('[DEBUG_TESTER] Ready to track task completion persistence issues');
     
     // Show toast notification
     toast({
       title: "SuccessFactor Task Debugging Enabled",
-      description: "Logging activated for API, completion, persistence, and state transitions",
-      variant: "default",
-    });
-  };
-  
-  // Enable comprehensive task diagnostics
-  const enableTaskDiagnostics = () => {
-    // Enable all task-related debugging
-    setGeneralDebug(true);
-    setTaskDebug(true);
-    setTaskApiDebug(true);
-    setTaskMappingDebug(true);
-    setTaskCompletionDebug(true);
-    setTaskValidationDebug(true);
-    setTaskPersistenceDebug(true);
-    setTaskStateDebug(true);
-    
-    // Save to localStorage
-    localStorage.setItem('debug_general', 'true');
-    localStorage.setItem('debug_tasks', 'true');
-    localStorage.setItem('debug_task_api', 'true');
-    localStorage.setItem('debug_task_mapping', 'true');
-    localStorage.setItem('debug_task_completion', 'true');
-    localStorage.setItem('debug_task_validation', 'true');
-    localStorage.setItem('debug_task_persistence', 'true');
-    localStorage.setItem('debug_task_state', 'true');
-    
-    console.log('[DEBUG_TESTER] Full Task Diagnostics Mode Enabled');
-    
-    // Show toast notification
-    toast({
-      title: "Full Task Diagnostics Enabled",
-      description: "All diagnostic flags are now active",
+      description: "Logging activated for critical task operations",
       variant: "default",
     });
   };
@@ -251,267 +277,311 @@ export default function DebugFlagTester() {
   
   return (
     <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
-      {/* Diagnostics Status Indicator */}
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Debug Controls</h3>
-        <div className="flex items-center">
-          <Badge 
-            variant={isDiagnosticsActive ? "default" : "outline"}
-            className={`px-3 py-1 flex items-center gap-1 ${isDiagnosticsActive ? 'bg-green-600' : 'text-gray-500'}`}
-          >
-            {isDiagnosticsActive ? (
-              <>
-                <CheckCircle className="h-4 w-4" />
-                <span>Diagnostics ON</span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-4 w-4" />
-                <span>Diagnostics OFF</span>
-              </>
+      {/* Main Diagnostics Control Panel */}
+      <div className="flex flex-col gap-4">
+        {/* Header with main toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-medium">Diagnostics</h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="p-1 h-7 w-7" 
+              onClick={() => setShowHelp(!showHelp)}
+            >
+              <HelpCircle className="h-5 w-5 text-gray-500" />
+              <span className="sr-only">Toggle help</span>
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <Switch
+              id="master-diagnostics-toggle"
+              checked={isDiagnosticsActive}
+              onCheckedChange={toggleAllDiagnostics}
+              className="data-[state=checked]:bg-green-600"
+            />
+            <Badge 
+              variant={isDiagnosticsActive ? "default" : "outline"}
+              className={`px-3 py-1 flex items-center gap-1 ${isDiagnosticsActive ? 'bg-green-600' : 'text-gray-500'}`}
+            >
+              {isDiagnosticsActive ? (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Diagnostics ON</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Diagnostics OFF</span>
+                </>
+              )}
+            </Badge>
+          </div>
+        </div>
+        
+        {/* Help section */}
+        {showHelp && (
+          <Card className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 mb-2">
+            <CardContent className="pt-4 px-4 pb-2 text-sm">
+              <h4 className="font-medium mb-1 flex items-center gap-1 text-blue-700 dark:text-blue-300">
+                <Info className="h-4 w-4" />
+                About Diagnostics
+              </h4>
+              <p className="mb-2 text-blue-600 dark:text-blue-400">
+                Diagnostics provide detailed logging information to help troubleshoot issues in the application.
+              </p>
+              
+              <h5 className="font-medium mt-2 text-blue-700 dark:text-blue-300">When to use:</h5>
+              <ul className="list-disc list-inside mb-2 text-blue-600 dark:text-blue-400">
+                <li>When experiencing task persistence issues</li>
+                <li>To debug SuccessFactor task completion problems</li>
+                <li>When investigating API or state management bugs</li>
+              </ul>
+              
+              <h5 className="font-medium mt-2 text-blue-700 dark:text-blue-300">How it works:</h5>
+              <p className="mb-2 text-blue-600 dark:text-blue-400">
+                1. Toggle diagnostics ON to enable logging<br />
+                2. Perform the actions that need troubleshooting<br />
+                3. Check the browser console (F12) for detailed logs<br />
+                4. Toggle diagnostics OFF when finished to improve performance
+              </p>
+              
+              <div className="text-xs text-blue-500 dark:text-blue-400 mt-2">
+                Note: Diagnostic logs only appear in the browser console. Settings persist across page reloads.
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Active flags */}
+        {isDiagnosticsActive && (
+          <div className="flex flex-wrap gap-2 mb-1">
+            {taskDebug && (
+              <Badge variant="secondary" className="px-2 py-0.5">
+                Tasks
+              </Badge>
             )}
-          </Badge>
-        </div>
+            {taskApiDebug && (
+              <Badge variant="secondary" className="px-2 py-0.5">
+                API
+              </Badge>
+            )}
+            {taskCompletionDebug && (
+              <Badge variant="secondary" className="px-2 py-0.5">
+                Completion
+              </Badge>
+            )}
+            {taskPersistenceDebug && (
+              <Badge variant="secondary" className="px-2 py-0.5">
+                Persistence
+              </Badge>
+            )}
+            {taskStateDebug && (
+              <Badge variant="secondary" className="px-2 py-0.5">
+                State
+              </Badge>
+            )}
+            {filterDebug && (
+              <Badge variant="secondary" className="px-2 py-0.5">
+                Filters
+              </Badge>
+            )}
+            {fileDebug && (
+              <Badge variant="secondary" className="px-2 py-0.5">
+                Files
+              </Badge>
+            )}
+          </div>
+        )}
+        
+        {/* Quick Action Buttons */}
+        {isDiagnosticsActive && (
+          <div className="flex gap-2 mb-1 mt-1 flex-wrap">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={testLogConfirmation ? "bg-green-100 text-green-800 border-green-300" : ""}
+              onClick={testLogging}
+            >
+              <Terminal className="h-3.5 w-3.5 mr-1" />
+              {testLogConfirmation ? "✓ Log Written" : "Test Logging"}
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={enableSuccessFactorDebugging}
+            >
+              <Bug className="h-3.5 w-3.5 mr-1" />
+              Debug SuccessFactor Tasks
+            </Button>
+          </div>
+        )}
+        
+        {/* Advanced Controls - only visible when diagnostics are active */}
+        {isDiagnosticsActive && (
+          <Accordion type="single" collapsible className="mb-2">
+            <AccordionItem value="advanced-controls">
+              <AccordionTrigger className="text-sm font-medium py-1">
+                Advanced Controls
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2 pt-2">
+                  {/* Primary Debug Flags */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between py-1">
+                      <Label htmlFor="general-debug" className="text-sm">DEBUG:</Label>
+                      <Switch 
+                        id="general-debug" 
+                        checked={generalDebug} 
+                        onCheckedChange={(checked) => {
+                          setGeneralDebug(checked);
+                          toggleDebugFlag('general', checked);
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between py-1">
+                      <Label htmlFor="task-debug" className="text-sm">TASKS:</Label>
+                      <Switch 
+                        id="task-debug" 
+                        checked={taskDebug} 
+                        onCheckedChange={(checked) => {
+                          setTaskDebug(checked);
+                          toggleDebugFlag('tasks', checked);
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between py-1">
+                      <Label htmlFor="filter-debug" className="text-sm">FILTERS:</Label>
+                      <Switch 
+                        id="filter-debug" 
+                        checked={filterDebug} 
+                        onCheckedChange={(checked) => {
+                          setFilterDebug(checked);
+                          toggleDebugFlag('filters', checked);
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between py-1">
+                      <Label htmlFor="file-debug" className="text-sm">FILES:</Label>
+                      <Switch 
+                        id="file-debug" 
+                        checked={fileDebug} 
+                        onCheckedChange={(checked) => {
+                          setFileDebug(checked);
+                          toggleDebugFlag('files', checked);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Task-specific Debug Flags - Only shown when task debugging is enabled */}
+                  {taskDebug && (
+                    <>
+                      <div className="bg-gray-200/50 dark:bg-gray-700/50 p-2 rounded-md mt-3">
+                        <h4 className="text-sm font-medium mb-2">Granular Task Debugging</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-between py-1">
+                            <Label htmlFor="task-api-debug" className="text-xs sm:text-sm">
+                              API:
+                            </Label>
+                            <Switch 
+                              id="task-api-debug" 
+                              checked={taskApiDebug} 
+                              onCheckedChange={(checked) => {
+                                setTaskApiDebug(checked);
+                                toggleDebugFlag('task_api', checked);
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between py-1">
+                            <Label htmlFor="task-mapping-debug" className="text-xs sm:text-sm">
+                              Mapping:
+                            </Label>
+                            <Switch 
+                              id="task-mapping-debug" 
+                              checked={taskMappingDebug} 
+                              onCheckedChange={(checked) => {
+                                setTaskMappingDebug(checked);
+                                toggleDebugFlag('task_mapping', checked);
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between py-1">
+                            <Label htmlFor="task-completion-debug" className="text-xs sm:text-sm">
+                              Completion:
+                            </Label>
+                            <Switch 
+                              id="task-completion-debug" 
+                              checked={taskCompletionDebug} 
+                              onCheckedChange={(checked) => {
+                                setTaskCompletionDebug(checked);
+                                toggleDebugFlag('task_completion', checked);
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between py-1">
+                            <Label htmlFor="task-validation-debug" className="text-xs sm:text-sm">
+                              Validation:
+                            </Label>
+                            <Switch 
+                              id="task-validation-debug" 
+                              checked={taskValidationDebug} 
+                              onCheckedChange={(checked) => {
+                                setTaskValidationDebug(checked);
+                                toggleDebugFlag('task_validation', checked);
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between py-1">
+                            <Label htmlFor="task-persistence-debug" className="text-xs sm:text-sm">
+                              Persistence:
+                            </Label>
+                            <Switch 
+                              id="task-persistence-debug" 
+                              checked={taskPersistenceDebug} 
+                              onCheckedChange={(checked) => {
+                                setTaskPersistenceDebug(checked);
+                                toggleDebugFlag('task_persistence', checked);
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between py-1">
+                            <Label htmlFor="task-state-debug" className="text-xs sm:text-sm">
+                              State:
+                            </Label>
+                            <Switch 
+                              id="task-state-debug" 
+                              checked={taskStateDebug} 
+                              onCheckedChange={(checked) => {
+                                setTaskStateDebug(checked);
+                                toggleDebugFlag('task_state', checked);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
       </div>
       
-      {/* Task Diagnostics Status */}
-      {isDiagnosticsActive && (
-        <div className="flex mb-4 flex-wrap gap-2">
-          {taskDebug && (
-            <Badge variant="secondary" className="px-2 py-0.5">
-              Tasks
-            </Badge>
-          )}
-          {taskApiDebug && (
-            <Badge variant="secondary" className="px-2 py-0.5">
-              API
-            </Badge>
-          )}
-          {taskCompletionDebug && (
-            <Badge variant="secondary" className="px-2 py-0.5">
-              Completion
-            </Badge>
-          )}
-          {taskPersistenceDebug && (
-            <Badge variant="secondary" className="px-2 py-0.5">
-              Persistence
-            </Badge>
-          )}
-          {taskStateDebug && (
-            <Badge variant="secondary" className="px-2 py-0.5">
-              State
-            </Badge>
-          )}
-          {taskMappingDebug && (
-            <Badge variant="secondary" className="px-2 py-0.5">
-              Mapping
-            </Badge>
-          )}
-          {taskValidationDebug && (
-            <Badge variant="secondary" className="px-2 py-0.5">
-              Validation
-            </Badge>
-          )}
-        </div>
-      )}
-      
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Manage diagnostic logging for development and troubleshooting
-      </p>
-      
-      <Accordion type="single" collapsible className="mb-4">
-        <AccordionItem value="debug-flags">
-          <AccordionTrigger className="text-sm font-medium">
-            Debug Flag Status
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2">
-              {/* Primary Debug Flags */}
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="general-debug" className="w-32 text-sm">DEBUG:</Label>
-                <Switch 
-                  id="general-debug" 
-                  checked={generalDebug} 
-                  onCheckedChange={(checked) => {
-                    setGeneralDebug(checked);
-                    toggleDebugFlag('general', checked);
-                  }}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="task-debug" className="w-32 text-sm">DEBUG_TASKS:</Label>
-                <Switch 
-                  id="task-debug" 
-                  checked={taskDebug} 
-                  onCheckedChange={(checked) => {
-                    setTaskDebug(checked);
-                    toggleDebugFlag('tasks', checked);
-                  }}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="filter-debug" className="w-32 text-sm">DEBUG_FILTERS:</Label>
-                <Switch 
-                  id="filter-debug" 
-                  checked={filterDebug} 
-                  onCheckedChange={(checked) => {
-                    setFilterDebug(checked);
-                    toggleDebugFlag('filters', checked);
-                  }}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="file-debug" className="w-32 text-sm">DEBUG_FILES:</Label>
-                <Switch 
-                  id="file-debug" 
-                  checked={fileDebug} 
-                  onCheckedChange={(checked) => {
-                    setFileDebug(checked);
-                    toggleDebugFlag('files', checked);
-                  }}
-                />
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-        
-        <AccordionItem value="task-debug-flags">
-          <AccordionTrigger className="text-sm font-medium">
-            Task Debugging Controls
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2">
-              {/* Granular Task Debug Flags */}
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="task-api-debug" className="text-xs sm:text-sm">
-                  API Requests/Responses:
-                </Label>
-                <Switch 
-                  id="task-api-debug" 
-                  checked={taskApiDebug} 
-                  disabled={!taskDebug}
-                  onCheckedChange={(checked) => {
-                    setTaskApiDebug(checked);
-                    toggleDebugFlag('task_api', checked);
-                  }}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="task-mapping-debug" className="text-xs sm:text-sm">
-                  Data Transformations:
-                </Label>
-                <Switch 
-                  id="task-mapping-debug" 
-                  checked={taskMappingDebug} 
-                  disabled={!taskDebug}
-                  onCheckedChange={(checked) => {
-                    setTaskMappingDebug(checked);
-                    toggleDebugFlag('task_mapping', checked);
-                  }}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="task-completion-debug" className="text-xs sm:text-sm">
-                  Task Completion Status:
-                </Label>
-                <Switch 
-                  id="task-completion-debug" 
-                  checked={taskCompletionDebug} 
-                  disabled={!taskDebug}
-                  onCheckedChange={(checked) => {
-                    setTaskCompletionDebug(checked);
-                    toggleDebugFlag('task_completion', checked);
-                  }}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="task-validation-debug" className="text-xs sm:text-sm">
-                  Data Validation:
-                </Label>
-                <Switch 
-                  id="task-validation-debug" 
-                  checked={taskValidationDebug} 
-                  disabled={!taskDebug}
-                  onCheckedChange={(checked) => {
-                    setTaskValidationDebug(checked);
-                    toggleDebugFlag('task_validation', checked);
-                  }}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="task-persistence-debug" className="text-xs sm:text-sm">
-                  Storage/Persistence:
-                </Label>
-                <Switch 
-                  id="task-persistence-debug" 
-                  checked={taskPersistenceDebug} 
-                  disabled={!taskDebug}
-                  onCheckedChange={(checked) => {
-                    setTaskPersistenceDebug(checked);
-                    toggleDebugFlag('task_persistence', checked);
-                  }}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between py-1">
-                <Label htmlFor="task-state-debug" className="text-xs sm:text-sm">
-                  State Transitions:
-                </Label>
-                <Switch 
-                  id="task-state-debug" 
-                  checked={taskStateDebug} 
-                  disabled={!taskDebug}
-                  onCheckedChange={(checked) => {
-                    setTaskStateDebug(checked);
-                    toggleDebugFlag('task_state', checked);
-                  }}
-                />
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-      
-      <div className="flex flex-col sm:flex-row gap-2 mt-4">
-        <Button 
-          variant="secondary" 
-          size="sm"
-          className="flex items-center gap-1"
-          onClick={enableSuccessFactorDebugging}
-        >
-          <Bug className="h-4 w-4" />
-          Track SuccessFactor Tasks
-        </Button>
-        
-        <Button 
-          variant="default" 
-          size="sm"
-          className="flex items-center gap-1"
-          onClick={enableTaskDiagnostics}
-        >
-          <CheckCircle className="h-4 w-4" />
-          Enable Task Diagnostics
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm"
-          className={testLogConfirmation ? "bg-green-100 text-green-800 border-green-300" : ""}
-          onClick={testLogging}
-        >
-          {testLogConfirmation ? "✓ Log Written" : "Test Logging"}
-        </Button>
-      </div>
-      
-      <div className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-        Note: Debug settings are now saved to localStorage and will persist across page reloads
+      {/* Footer note */}
+      <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        Settings are saved automatically and persist across page reloads
       </div>
     </div>
   );
