@@ -9,7 +9,7 @@ import { v4 as uuidv4, v5 as uuidv5, validate as validateUuid } from 'uuid';
 import { db } from './db';
 import { eq, and, asc, sql } from 'drizzle-orm';
 import { projectTasks as projectTasksTable } from '@shared/schema';
-import { DEBUG_TASKS } from '@shared/constants.debug';
+import { DEBUG_TASKS, DEBUG_FILES } from '@shared/constants.debug';
 
 /**
  * Validates sourceId to ensure it's either a valid UUID or null
@@ -997,7 +997,7 @@ function saveProjectPolicies(policies: ProjectPolicy[]): boolean {
     fs.writeFileSync(POLICIES_FILE, JSON.stringify(policies, null, 2));
     return true;
   } catch (error) {
-    console.error('Error saving project policies:', error);
+    if (DEBUG_FILES) console.error('Error saving project policies:', error);
     return false;
   }
 }
@@ -1019,7 +1019,7 @@ function loadProjectPlans(): ProjectPlan[] {
     const data = fs.readFileSync(PLANS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error loading project plans:', error);
+    if (DEBUG_FILES) console.error('Error loading project plans:', error);
     return [];
   }
 }
