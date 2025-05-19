@@ -651,6 +651,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
               const normalizedStage = stage.toLowerCase() as Stage;
               // Find the corresponding stage config to get the proper label
               const stageConfig = STAGE_CONFIGS.find(cfg => cfg.value.toLowerCase() === normalizedStage);
+              
+              // Debug log raw tasks before any filtering
+              console.log('[CHECKLIST_DEBUG] Raw tasks for stage', normalizedStage, stageTasks);
+              
               console.log(`[CHECKLIST_DEBUG] Processing stage "${stage}" (display as: "${stageConfig?.label}") with ${stageTasks.length} tasks`);
               
               // Apply filters to tasks
