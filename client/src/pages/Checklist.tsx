@@ -61,6 +61,7 @@ interface UnifiedTask {
   source: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceName?: string;
   sourceId?: string;
+  origin?: string; // Added to fix custom task filtering
   notes?: string;
   priority?: 'low' | 'medium' | 'high';
   dueDate?: string;
@@ -267,6 +268,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             // Fix: Properly identify custom tasks - ensure origin is consistently mapped to source
             // If origin is undefined/null, treat it as a custom task
             source: (task.origin || 'custom') as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
+            origin: task.origin, // Pass through the origin property for custom task filtering
             sourceId: task.sourceId || undefined,
             notes: task.notes || '',
             priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
@@ -684,9 +686,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 // Filter by source
                 // Fix: Ensure custom tasks appear when 'custom' is selected AND when 'all' is selected
                 if (sourceFilter !== 'all') {
-                  // For custom filter, include both tasks with source='custom' and undefined/null sources
+                  // For custom filter, include tasks with source='custom' OR origin='custom'
                   if (sourceFilter === 'custom') {
-                    if (task.source !== 'custom' && task.source !== undefined && task.source !== null) {
+                    if (task.source !== 'custom' && task.origin !== 'custom') {
                       return false;
                     }
                   } else if (task.source !== sourceFilter) {
@@ -770,7 +772,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 }))
               );
               
-              // TEMP DEBUG: Log custom tasks specifically to identify the issue
+              // TEMP DEBUG: Log custom tasks specifically to verify our fix is working
               const customTasks = stageTasks.filter(t => t.origin === 'custom' || t.source === 'custom');
               console.log(
                 '[CUSTOM_TASK_DEBUG] Stage:', normalizedStage,
@@ -781,6 +783,15 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                   origin: t.origin,
                   id: t.id
                 }))
+              );
+              
+              // Extra verification of our filter logic
+              const filteredCustomTasks = stageTasks.filter(task => 
+                task.source === 'custom' || task.origin === 'custom'
+              );
+              console.log(
+                '[FILTER_CHECK] Stage:', normalizedStage,
+                '| Custom tasks that would pass our filter:', filteredCustomTasks.length
               );
 
               return (
