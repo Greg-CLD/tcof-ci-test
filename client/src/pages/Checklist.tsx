@@ -237,8 +237,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         `/api/projects/${currentProjectId}/tasks`
       );
       
-      // Debug log to see raw server response
+      const data = await response.json();
+      
+      // Debug log to see raw server response and parsed data
       console.log('[CHECKLIST_DEBUG] Raw server tasks response:', response);
+      console.log('[CHECKLIST_DEBUG] Raw server tasks data:', data);
       
       console.log('[CHECKLIST] Server returned tasks:', response);
       
