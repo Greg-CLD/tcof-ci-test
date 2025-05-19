@@ -237,6 +237,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         `/api/projects/${currentProjectId}/tasks`
       );
       
+      // Debug log to see raw server response
+      console.log('[CHECKLIST_DEBUG] Raw server tasks response:', response);
+      
       console.log('[CHECKLIST] Server returned tasks:', response);
       
       // Store both custom tasks and task status map
