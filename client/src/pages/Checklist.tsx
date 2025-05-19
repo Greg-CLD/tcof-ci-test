@@ -728,7 +728,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         </div>
       ) : (
         <>
-          <Tabs defaultValue={STAGE_CONFIGS[0].value.toLowerCase()} className="mb-8">
+          <Tabs value={activeTab} defaultValue={STAGE_CONFIGS[0].value.toLowerCase()} className="mb-8">
             <TabsList className="grid grid-cols-4 mb-4">
               {STAGE_CONFIGS.map(stageConfig => {
                 // Always work with lowercase values for state, proper labels for display
