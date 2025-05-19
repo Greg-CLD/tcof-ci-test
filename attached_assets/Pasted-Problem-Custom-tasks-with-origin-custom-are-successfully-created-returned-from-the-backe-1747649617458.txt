@@ -1,0 +1,38 @@
+Problem:
+Custom tasks (with `"origin": "custom"`) are successfully created, returned from the backend API, and visible in the API response. However, these custom tasks do **not** appear in the checklist UI—neither under "All Sources", "Custom Tasks", nor after a page refresh. Console logs confirm the tasks are present in the server data, but disappear after the grouping/filtering step on the client.
+
+Expected outcome:
+Custom tasks (origin: "custom") should appear in the checklist UI:
+- Under "All Sources", they should be visible in the appropriate stage tab.
+- Under "Custom Tasks" or "General", they should always appear.
+- After a page reload, they should persist and still be visible.
+- They should never disappear at any filter setting.
+
+Tech details:
+- Server API response returns these tasks with `"origin": "custom"` and correct `projectId`, `stage`, etc.
+- ChecklistFilterBar uses `source`/`origin` values for filters (see mappings).
+- Grouping and filtering code is in `Checklist.tsx`, including state like `projectTasks`, `allTasks`, `tasksByStage`, and `filteredTasks`.
+- UI filter dropdowns map "Custom Tasks" and "General" to `"custom"` internally.
+- No code should drop or filter out tasks with `origin: "custom"`.
+
+Safeguards:
+- Do **not** change server-side task creation or API logic—API is correct.
+- Do **not** change filter dropdown display names or mappings unless necessary.
+- Do **not** remove any existing task types.
+- Do **not** introduce new task fields; use existing `origin` and `source` fields only.
+
+Steps:
+1. Investigate how custom tasks are mapped, grouped, and filtered after fetching.
+2. Fix any mismatch or logic error so that all custom tasks (`origin: "custom"`) flow correctly from API response to UI, regardless of filter.
+3. Confirm that:
+   - A new custom task appears instantly in the correct stage and under "All Sources" and "Custom Tasks".
+   - It persists after page reload.
+   - All existing custom tasks in the server response are visible and never disappear.
+4. Add a brief comment in the codebase referencing this bug and its fix.
+5. Do **not** change unrelated functionality or introduce excessive logging.
+
+Definition of done:
+- Custom tasks show up consistently in the UI and survive all filter and reload scenarios.
+- At least one manual test (by user) confirms "Debug-XYZ" or similar test task appears after adding.
+
+After the fix, run the full checklist smoke test and confirm that the bug is resolved.

@@ -769,6 +769,19 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                   id: t.id
                 }))
               );
+              
+              // TEMP DEBUG: Log custom tasks specifically to identify the issue
+              const customTasks = stageTasks.filter(t => t.origin === 'custom' || t.source === 'custom');
+              console.log(
+                '[CUSTOM_TASK_DEBUG] Stage:', normalizedStage,
+                '| Total custom tasks:', customTasks.length,
+                '| Tasks:', customTasks.map(t => ({
+                  text: t.text,
+                  source: t.source,
+                  origin: t.origin,
+                  id: t.id
+                }))
+              );
 
               return (
                 <TabsContent key={normalizedStage} value={normalizedStage} className="space-y-6">
