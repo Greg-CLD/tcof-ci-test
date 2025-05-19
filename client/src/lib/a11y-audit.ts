@@ -27,8 +27,8 @@ const defaultOptions: AuditOptions = {
  * @param options Configuration options for the audit
  */
 export const runAccessibilityAudit = async (options: AuditOptions = defaultOptions): Promise<void> => {
-  // Only run in development
-  if (import.meta.env.PROD) {
+  // Only run in development and when explicitly enabled
+  if (import.meta.env.PROD || !(window as any).enableA11yAudits) {
     return;
   }
 

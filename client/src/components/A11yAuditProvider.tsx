@@ -17,7 +17,7 @@ interface A11yAuditProviderProps {
  */
 export function A11yAuditProvider({ 
   children, 
-  disabled = false,
+  disabled = true, // Default to disabled to prevent console logs
   skipRoutes = ['/auth'], // Skip auth page by default
   throttleMs = 3000 // Default throttle of 3 seconds
 }: A11yAuditProviderProps) {
@@ -25,14 +25,15 @@ export function A11yAuditProvider({
   const [lastAuditTime, setLastAuditTime] = useState(0);
   
   useEffect(() => {
-    // Skip if disabled or in production
-    if (disabled || import.meta.env.PROD) {
+    // Always skip in development to prevent console flooding
+    // You can re-enable by setting window.enableA11yAudits = true in console
+    if (disabled || import.meta.env.PROD || !(window as any).enableA11yAudits) {
       return;
     }
     
     // Check if current route should be skipped
     if (skipRoutes.some(route => location.startsWith(route))) {
-      console.log(`%c🔍 Skipping accessibility audit for: ${location}`, 'color: #74b9ff; font-style: italic;');
+      // Removed console.log to reduce noise
       return;
     }
     
@@ -43,10 +44,12 @@ export function A11yAuditProvider({
     
     // Wait for the page to fully render before running audit
     const timeoutId = setTimeout(() => {
-      // Log audit start
-      console.log(`%c📋 Running accessibility audit for: ${location}`, 'color: #0984e3; font-weight: bold;');
+      // Only log when explicitly enabled
+      if ((window as any).enableA11yAudits) {
+        console.log(`%c📋 Running accessibility audit for: ${location}`, 'color: #0984e3; font-weight: bold;');
+      }
       
-      // Local fix for any specific route
+      // Local fix for any specific route - still apply fixes without logging
       const fixElementsBeforeAudit = () => {
         try {
           // Example fix for specific components
@@ -78,19 +81,21 @@ export function A11yAuditProvider({
             }
           });
         } catch (error) {
-          console.error('Error in pre-audit fixes:', error);
+          // Silent error handling to avoid console noise
         }
       };
       
-      // Run pre-audit fixes
+      // Run pre-audit fixes silently
       fixElementsBeforeAudit();
       
-      // Run the audit
-      runAccessibilityAudit({
-        minSeverity: 'moderate',
-        verbose: true,
-        autoFix: true
-      });
+      // Only run the audit when explicitly enabled
+      if ((window as any).enableA11yAudits) {
+        runAccessibilityAudit({
+          minSeverity: 'moderate',
+          verbose: false, // Set to false to reduce console output
+          autoFix: true
+        });
+      }
       
       // Update last audit time
       setLastAuditTime(Date.now());
