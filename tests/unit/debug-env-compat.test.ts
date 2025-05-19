@@ -27,18 +27,32 @@ import { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } from '@shared/constant
 describe('Debug Environment Constants', () => {
   // Setup and teardown to reset mocks
   let originalImportMeta;
+  let originalEnv;
   
   beforeEach(() => {
-    // Save original import.meta to restore later
-    originalImportMeta = global.import.meta;
+    // Save original import.meta and env to restore later
+    originalImportMeta = global.import?.meta ? { ...global.import.meta } : undefined;
+    originalEnv = originalImportMeta?.env ? { ...originalImportMeta.env } : undefined;
+    
+    // Create a fresh import.meta.env object for each test to avoid leaking state
+    global.import = global.import || {};
+    global.import.meta = global.import.meta || {};
+    global.import.meta.env = {};
     
     // Reset all mocks
     vi.resetAllMocks();
   });
   
   afterEach(() => {
-    // Restore original import.meta
-    global.import.meta = originalImportMeta;
+    // Restore original import.meta and env
+    if (originalImportMeta) {
+      global.import.meta = originalImportMeta;
+    } else {
+      delete global.import.meta;
+    }
+    
+    // Explicitly clean up any test variables
+    vi.restoreAllMocks();
   });
   
   // Production environment tests
@@ -190,6 +204,27 @@ describe('Debug Environment Constants', () => {
     const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
     
     expect(DEBUG).toBe(true);
+    expect(DEBUG_TASKS).toBe(false);
+    expect(DEBUG_FILTERS).toBe(false);
+    expect(DEBUG_FILES).toBe(false);
+  });
+  
+  it('should keep all debug flags false in production even if VITE_DEBUG_* are set to true', () => {
+    // Mock production environment with all debug flags set to true
+    global.import.meta = {
+      env: {
+        MODE: 'production',
+        VITE_DEBUG_TASKS: 'true',
+        VITE_DEBUG_FILTERS: 'true',
+        VITE_DEBUG_FILES: 'true'
+      }
+    };
+    
+    // Re-import to get fresh constants
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    // Production should override all debug flags to false
+    expect(DEBUG).toBe(false);
     expect(DEBUG_TASKS).toBe(false);
     expect(DEBUG_FILTERS).toBe(false);
     expect(DEBUG_FILES).toBe(false);
