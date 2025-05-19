@@ -149,8 +149,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
     }), {} as Record<Stage, UnifiedTask[]>)
   );
 
-  // Filters
-  const [stageFilter, setStageFilter] = useState<StageFilter>('all');
+  // Filters (removed stageFilter as it's redundant with the tabs)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [sortOption, setSortOption] = useState<SortOption>('stage');
@@ -685,8 +684,6 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="flex-1">
           <ChecklistFilterBar
-            stageFilter={stageFilter}
-            setStageFilter={setStageFilter}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
             sourceFilter={sourceFilter}
