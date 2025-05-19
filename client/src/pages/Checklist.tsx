@@ -112,7 +112,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   // Store the project ID in localStorage for consistency across refreshes
   useEffect(() => {
     if (currentProjectId) {
-      console.log('Checklist: Setting project ID to localStorage and state:', currentProjectId);
+      if (DEBUG_TASKS) console.log('Checklist: Setting project ID to localStorage and state:', currentProjectId);
 
       // Always keep storage consistent - use both keys for backward compatibility
       localStorage.setItem('currentProjectId', currentProjectId);
