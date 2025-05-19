@@ -124,12 +124,12 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       // If we're on the non-specific /checklist route but have a project ID, 
       // update URL to include project ID for better persistence on refresh
       if (!urlProjectId && window.location.pathname === '/checklist') {
-        console.log('Checklist: Updating URL to include project ID:', currentProjectId);
+        if (DEBUG_TASKS) console.log('Checklist: Updating URL to include project ID:', currentProjectId);
         navigate(`/projects/${currentProjectId}/checklist`, { replace: true });
       }
     } else if (isAuthenticated && !currentProjectId) {
       // If no project ID available but user is logged in, redirect to projects page
-      console.log('Checklist: No project ID available, redirecting to organisations');
+      if (DEBUG_TASKS) console.log('Checklist: No project ID available, redirecting to organisations');
       navigate('/organisations');
     }
   }, [currentProjectId, urlProjectId, isAuthenticated, navigate, setCurrentProjectId]);
@@ -163,14 +163,14 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   const { data: successFactors } = useQuery({
     queryKey: ['/__tcof/public-checklist-tasks'],
     queryFn: async () => {
-      console.log('[CHECKLIST] Fetching tasks from public endpoint...');
+      if (DEBUG_TASKS) console.log('[CHECKLIST] Fetching tasks from public endpoint...');
       const res = await fetch('/__tcof/public-checklist-tasks');
       if (!res.ok) {
         console.error('[CHECKLIST] Failed to load tasks:', await res.text());
         throw new Error('Failed to load canonical tasks');
       }
       const data = await res.json();
-      console.log('[CHECKLIST] Successfully loaded tasks:', data?.length || 0);
+      if (DEBUG_TASKS) console.log('[CHECKLIST] Successfully loaded tasks:', data?.length || 0);
       return data;
     }
   });
@@ -219,18 +219,18 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   // Helper function to refresh task state
   const refreshTasksState = async () => {
     if (!currentProjectId || !canonicalTasks || canonicalTasks.length === 0) {
-      console.log('[CHECKLIST] Cannot refresh tasks: missing project ID or canonical tasks');
+      if (DEBUG_TASKS) console.log('[CHECKLIST] Cannot refresh tasks: missing project ID or canonical tasks');
       return;
     }
 
     // Don't attempt to load tasks if not authenticated
     if (!isAuthenticated) {
-      console.log('[CHECKLIST] Cannot refresh tasks: not authenticated');
+      if (DEBUG_TASKS) console.log('[CHECKLIST] Cannot refresh tasks: not authenticated');
       return;
     }
 
     try {
-      console.log('[CHECKLIST] Refreshing tasks for project', currentProjectId);
+      if (DEBUG_TASKS) console.log('[CHECKLIST] Refreshing tasks for project', currentProjectId);
       setLoading(true);
 
       // Get existing task statuses from the server
@@ -283,11 +283,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       const taskStatusMap: Record<string, boolean> = {};
 
       if (Array.isArray(data)) {
-        console.log(`[CHECKLIST] Processing ${data.length} tasks from server`);
+        if (DEBUG_TASKS) console.log(`[CHECKLIST] Processing ${data.length} tasks from server`);
         
         // DEBUG: Check specifically how many custom tasks we have before mapping
         const customTasksPreMap = data.filter((t: any) => t.origin === 'custom');
-        console.log(`[PRE_MAPPING] Found ${customTasksPreMap.length} custom tasks before mapping process`);
+        if (DEBUG_TASKS) console.log(`[PRE_MAPPING] Found ${customTasksPreMap.length} custom tasks before mapping process`);
 
         data.forEach((task: any) => {
           // Track completion status by source ID for referencing canonical tasks
@@ -429,7 +429,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
       // DEBUG: Count custom tasks before stage distribution
       const customTasksPreStageDistribution = allTasks.filter(t => t.origin === 'custom' || t.source === 'custom');
-      console.log('[PRE_STAGE_DISTRIBUTION] Custom tasks count before stage distribution:', customTasksPreStageDistribution.length);
+      if (DEBUG_TASKS) console.log('[PRE_STAGE_DISTRIBUTION] Custom tasks count before stage distribution:', customTasksPreStageDistribution.length);
 
       allTasks.forEach(task => {
         // Always normalize stage to lowercase for consistent filtering
