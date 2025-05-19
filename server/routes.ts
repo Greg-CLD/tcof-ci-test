@@ -688,25 +688,78 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       }
 
       try {
-        // Get the original task to check if it's a SuccessFactor task
-        if (DEBUG_TASK_API) {
-          const originalTask = await projectsDb.getTaskById(taskId);
+        // Enhanced diagnostic logging for task updates with specific focus on SuccessFactor tasks
+        let originalTask;
+        
+        // Import the debug flags directly from the constants file
+        const { 
+          DEBUG_TASK_API, 
+          DEBUG_TASK_COMPLETION, 
+          DEBUG_TASK_PERSISTENCE 
+        } = require('@shared/constants.debug');
+        
+        try {
+          // Get the original task to check if it's a SuccessFactor task
+          originalTask = await projectsDb.getTaskById(taskId);
+          
           if (originalTask) {
-            console.log(`[DEBUG_TASK_API] Original task details:`);
-            console.log(`[DEBUG_TASK_API]  - ID: ${originalTask.id}`);
-            console.log(`[DEBUG_TASK_API]  - Origin: ${originalTask.origin}`);
-            console.log(`[DEBUG_TASK_API]  - Source ID: ${originalTask.sourceId}`);
-            console.log(`[DEBUG_TASK_API]  - Current completion: ${originalTask.completed}`);
-            
-            // Special focus on SuccessFactor tasks
-            if (originalTask.origin === 'success-factor') {
-              console.log(`[DEBUG_TASK_API] *** SuccessFactor task update operation ***`);
+            // Standard task update logging
+            if (DEBUG_TASK_API) {
+              console.log(`[DEBUG_TASK_API] Original task details:`);
+              console.log(`[DEBUG_TASK_API]  - ID: ${originalTask.id}`);
+              console.log(`[DEBUG_TASK_API]  - Text: ${originalTask.text?.substring(0, 30)}...`);
+              console.log(`[DEBUG_TASK_API]  - Origin: ${originalTask.origin}`);
+              console.log(`[DEBUG_TASK_API]  - Source ID: ${originalTask.sourceId}`);
+              console.log(`[DEBUG_TASK_API]  - Current completion: ${originalTask.completed}`);
             }
+            
+            // Success factor specific completion logging
+            if ((originalTask.origin === 'factor' || originalTask.origin === 'success-factor') && 
+                (DEBUG_TASK_COMPLETION || DEBUG_TASK_PERSISTENCE)) {
+              console.log(`[DEBUG_TASK_COMPLETION] *** SuccessFactor task update operation ***`);
+              console.log(`[DEBUG_TASK_COMPLETION]  - Task ID: ${originalTask.id}`);
+              console.log(`[DEBUG_TASK_COMPLETION]  - Current completion state: ${originalTask.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION]  - Requested completion state: ${taskUpdate.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION]  - Source ID: ${originalTask.sourceId}`);
+              
+              // Log the entire task update object for comprehensive debugging
+              if (DEBUG_TASK_PERSISTENCE) {
+                console.log(`[DEBUG_TASK_PERSISTENCE] Full task update object:`, taskUpdate);
+              }
+            }
+          }
+        } catch (taskLookupError) {
+          console.error('[DEBUG_TASK_API] Error looking up original task:', taskLookupError);
+        }
+        
+        // Add detailed logging before the database call
+        if (DEBUG_TASK_PERSISTENCE) {
+          console.log(`[DEBUG_TASK_PERSISTENCE] Preparing to update task in database`);
+          console.log(`[DEBUG_TASK_PERSISTENCE]  - Task ID: ${taskId}`);
+          console.log(`[DEBUG_TASK_PERSISTENCE]  - Project ID: ${projectId}`);
+          console.log(`[DEBUG_TASK_PERSISTENCE]  - Update fields:`, Object.keys(taskUpdate));
+          
+          if (taskUpdate.hasOwnProperty('completed')) {
+            console.log(`[DEBUG_TASK_PERSISTENCE]  - Completion value being set: ${taskUpdate.completed}`);
           }
         }
         
-        // Attempt to update the task
-        const updatedTask = await projectsDb.updateTask(taskId, taskUpdate);
+        // Attempt to update the task with error tracking
+        let updatedTask;
+        try {
+          updatedTask = await projectsDb.updateTask(taskId, taskUpdate);
+        } catch (dbError) {
+          // Log database errors immediately
+          console.error('[ERROR] Database error during task update:', dbError);
+          
+          if (DEBUG_TASK_PERSISTENCE) {
+            console.error(`[DEBUG_TASK_PERSISTENCE] Task update database operation failed:`);
+            console.error(`[DEBUG_TASK_PERSISTENCE]  - Task ID: ${taskId}`);
+            console.error(`[DEBUG_TASK_PERSISTENCE]  - Error: ${dbError.message}`);
+          }
+          
+          throw dbError; // Re-throw to be caught by outer try/catch
+        }
         
         if (!updatedTask) {
           if (DEBUG_TASK_API) {
@@ -723,12 +776,53 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           console.log(`[DEBUG_TASK_API] Task update successful:`);
           console.log(`[DEBUG_TASK_API]  - ID: ${updatedTask.id}`);
           console.log(`[DEBUG_TASK_API]  - New completion status: ${updatedTask.completed}`);
+        }
+        
+        // Critical validation: verify the update was applied correctly
+        if (taskUpdate.hasOwnProperty('completed')) {
+          const completionUpdated = updatedTask.completed === taskUpdate.completed;
           
-          // Verify the update happened correctly
-          if (taskUpdate.hasOwnProperty('completed') && updatedTask.completed !== taskUpdate.completed) {
-            console.log(`[DEBUG_TASK_API] WARNING: Task completion mismatch!`);
-            console.log(`[DEBUG_TASK_API]  - Requested: ${taskUpdate.completed}`);
-            console.log(`[DEBUG_TASK_API]  - Actual: ${updatedTask.completed}`);
+          if (!completionUpdated) {
+            // This would indicate the critical bug we're tracking!
+            console.error(`[ERROR] CRITICAL: Task completion state mismatch after update!`);
+            console.error(`[ERROR]  - Task ID: ${updatedTask.id}`);
+            console.error(`[ERROR]  - Requested state: ${taskUpdate.completed}`);
+            console.error(`[ERROR]  - Actual state: ${updatedTask.completed}`);
+            
+            if (DEBUG_TASK_COMPLETION) {
+              console.error(`[DEBUG_TASK_COMPLETION] *** CRITICAL ERROR: Task completion mismatch! ***`);
+              console.error(`[DEBUG_TASK_COMPLETION]  - This is likely the SuccessFactor task completion bug`);
+              console.error(`[DEBUG_TASK_COMPLETION]  - Requested completion: ${taskUpdate.completed}`);
+              console.error(`[DEBUG_TASK_COMPLETION]  - Actual completion: ${updatedTask.completed}`);
+              console.error(`[DEBUG_TASK_COMPLETION]  - Origin: ${originalTask?.origin || updatedTask.origin}`);
+              console.error(`[DEBUG_TASK_COMPLETION]  - Source ID: ${originalTask?.sourceId || updatedTask.sourceId}`);
+            }
+          } else if (DEBUG_TASK_COMPLETION) {
+            // Successful completion update confirmation
+            console.log(`[DEBUG_TASK_COMPLETION] Task completion successfully updated:`);
+            console.log(`[DEBUG_TASK_COMPLETION]  - Value correctly set to: ${updatedTask.completed}`);
+          }
+        }
+        
+        // Double-check after update by fetching the task again directly from the database
+        if (DEBUG_TASK_PERSISTENCE && taskUpdate.hasOwnProperty('completed')) {
+          try {
+            const verifiedTask = await projectsDb.getTaskById(taskId);
+            
+            if (verifiedTask) {
+              console.log(`[DEBUG_TASK_PERSISTENCE] Verification check after update:`);
+              console.log(`[DEBUG_TASK_PERSISTENCE]  - Re-fetched task completion state: ${verifiedTask.completed}`);
+              console.log(`[DEBUG_TASK_PERSISTENCE]  - Expected completion state: ${taskUpdate.completed}`);
+              
+              if (verifiedTask.completed !== taskUpdate.completed) {
+                console.error(`[DEBUG_TASK_PERSISTENCE] *** CRITICAL: Verification check failed! ***`);
+                console.error(`[DEBUG_TASK_PERSISTENCE]  - Task data was not correctly persisted in database`);
+              } else {
+                console.log(`[DEBUG_TASK_PERSISTENCE] ✓ Verification successful - task persisted correctly`);
+              }
+            }
+          } catch (verifyError) {
+            console.error('[DEBUG_TASK_PERSISTENCE] Error during verification check:', verifyError);
           }
         }
         

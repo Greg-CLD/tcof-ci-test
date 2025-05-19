@@ -236,6 +236,32 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       return;
     }
 
+    // Store previous task completion states for validation
+    const previousTaskStates: Record<string, {completed: boolean, origin: string, sourceId?: string}> = {};
+    if (DEBUG_TASK_COMPLETION || DEBUG_TASK_PERSISTENCE) {
+      // Create a lookup of task IDs to their completion states before refresh
+      tasks.forEach(task => {
+        previousTaskStates[task.id] = {
+          completed: !!task.completed,
+          origin: task.origin || 'unknown',
+          sourceId: task.sourceId
+        };
+        
+        // Special tracking for SuccessFactor tasks
+        if ((task.origin === 'factor' || task.origin === 'success-factor') && DEBUG_TASK_COMPLETION) {
+          console.log(`[DEBUG_TASK_COMPLETION] Pre-refresh state for SuccessFactor task:`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Task ID: ${task.id}`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Text: ${task.text.substring(0, 30)}...`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Source ID: ${task.sourceId || 'none'}`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Current completion state: ${task.completed}`);
+        }
+      });
+      
+      if (DEBUG_TASK_COMPLETION) {
+        console.log(`[DEBUG_TASK_COMPLETION] Stored ${Object.keys(previousTaskStates).length} task states for validation after refresh`);
+      }
+    }
+
     try {
       if (DEBUG_TASKS) console.log('[CHECKLIST] Refreshing tasks for project', currentProjectId);
       setLoading(true);
@@ -259,6 +285,44 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] Raw server tasks response status:', response.status);
       if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] Raw server tasks data type:', Array.isArray(data) ? 'array' : typeof data);
       if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] Raw server tasks data count:', Array.isArray(data) ? data.length : 'N/A');
+      
+      // Enhanced validation for task completion persistence
+      if (DEBUG_TASK_PERSISTENCE || DEBUG_TASK_COMPLETION) {
+        if (Array.isArray(data)) {
+          const successFactorTasks = data.filter((t: any) => t.origin === 'factor' || t.origin === 'success-factor');
+          console.log(`[DEBUG_TASK_PERSISTENCE] Found ${successFactorTasks.length} SuccessFactor tasks in server response`);
+          
+          // Validate each SuccessFactor task against previous state
+          successFactorTasks.forEach((task: any) => {
+            const prevState = previousTaskStates[task.id];
+            
+            if (prevState) {
+              // Log each SuccessFactor task's state comparison
+              if (DEBUG_TASK_COMPLETION) {
+                console.log(`[DEBUG_TASK_COMPLETION] SuccessFactor task state comparison:`);
+                console.log(`[DEBUG_TASK_COMPLETION]   - Task ID: ${task.id}`);
+                console.log(`[DEBUG_TASK_COMPLETION]   - Previous completion: ${prevState.completed}`);
+                console.log(`[DEBUG_TASK_COMPLETION]   - Server completion: ${!!task.completed}`);
+              }
+              
+              // Detect state mismatch that could indicate the bug
+              if (prevState.completed !== !!task.completed) {
+                console.error(`[DEBUG_TASK_COMPLETION] *** CRITICAL: Task completion state changed during refresh! ***`);
+                console.error(`[DEBUG_TASK_COMPLETION]   - Task ID: ${task.id}`);
+                console.error(`[DEBUG_TASK_COMPLETION]   - Task Text: ${task.text.substring(0, 30)}...`);
+                console.error(`[DEBUG_TASK_COMPLETION]   - Previous state: ${prevState.completed}`);
+                console.error(`[DEBUG_TASK_COMPLETION]   - New state from server: ${!!task.completed}`);
+                console.error(`[DEBUG_TASK_COMPLETION]   - Source ID: ${task.sourceId || 'none'}`);
+              }
+            } else if (DEBUG_TASK_COMPLETION) {
+              console.log(`[DEBUG_TASK_COMPLETION] New SuccessFactor task found during refresh:`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Task ID: ${task.id}`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Completion: ${!!task.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Source ID: ${task.sourceId || 'none'}`);
+            }
+          });
+        }
+      }
       
       // DETAILED DEBUG: Log all tasks with origin="custom" from the raw API response
       const customTasks = Array.isArray(data) ? data.filter((t: any) => t.origin === 'custom') : [];
@@ -587,6 +651,50 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
         // Get the actual task data from response (supports both formats)
         const savedTask = responseData.task || responseData;
+        
+        // Enhanced diagnostic for SuccessFactor task completion tracking
+        if (DEBUG_TASK_COMPLETION) {
+          console.log(`[DEBUG_TASK_COMPLETION] Server response for task update:`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Task ID: ${savedTask?.id || 'unknown'}`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Completion state in response: ${savedTask?.completed}`);
+          
+          // Check if original task was a SuccessFactor task
+          if (taskBeingUpdated?.origin === 'factor' || taskBeingUpdated?.origin === 'success-factor') {
+            console.log(`[DEBUG_TASK_COMPLETION] *** SuccessFactor task response received ***`);
+            console.log(`[DEBUG_TASK_COMPLETION]   - Original completion state: ${taskBeingUpdated.completed}`);
+            console.log(`[DEBUG_TASK_COMPLETION]   - Requested completion state: ${updates.completed}`);
+            console.log(`[DEBUG_TASK_COMPLETION]   - Received completion state: ${savedTask?.completed}`);
+            
+            // Check for mismatch between request and response
+            if (updates.completed !== savedTask?.completed) {
+              console.error(`[DEBUG_TASK_COMPLETION] *** CRITICAL ERROR: Completion value mismatch in response! ***`);
+              console.error(`[DEBUG_TASK_COMPLETION]   - This suggests server didn't properly save the completion state.`);
+            }
+          }
+        }
+        
+        // Add task persistence debugging 
+        if (DEBUG_TASK_PERSISTENCE) {
+          console.log(`[DEBUG_TASK_PERSISTENCE] Server response received for task update:`);
+          console.log(`[DEBUG_TASK_PERSISTENCE]   - Status code: ${response.status}`);
+          console.log(`[DEBUG_TASK_PERSISTENCE]   - Response data:`, responseData);
+          
+          // Verify data consistency
+          if (savedTask) {
+            const allFieldsMatch = Object.keys(updatedFields).every(key => 
+              key === 'completed' 
+                ? updatedFields[key] === savedTask[key] 
+                : true
+            );
+            
+            if (!allFieldsMatch) {
+              console.error(`[DEBUG_TASK_PERSISTENCE] *** Field mismatch between request and response ***`);
+              console.error(`[DEBUG_TASK_PERSISTENCE]   - This could indicate a server-side persistence issue`);
+            } else {
+              console.log(`[DEBUG_TASK_PERSISTENCE] All update fields matched in server response`);
+            }
+          }
+        }
 
         // If the server returned a different ID, update our local state
         if (savedTask && savedTask.id && savedTask.id !== taskId) {
@@ -607,6 +715,29 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             });
             return updatedTasks;
           });
+        }
+        
+        // Add specific verification of task state after update
+        if (DEBUG_TASK_COMPLETION && updates.hasOwnProperty('completed')) {
+          // Set up a verification check after a short delay to ensure state is stable
+          setTimeout(() => {
+            // Re-query the task from our local state
+            const currentTask = tasks.find(t => t.id === (savedTask?.id || taskId));
+            
+            if (currentTask) {
+              console.log(`[DEBUG_TASK_COMPLETION] Task state verification check:`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Task ID: ${currentTask.id}`); 
+              console.log(`[DEBUG_TASK_COMPLETION]   - Current completion state: ${currentTask.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Expected completion state: ${updates.completed}`);
+              
+              if (currentTask.completed !== updates.completed) {
+                console.error(`[DEBUG_TASK_COMPLETION] *** STATE MISMATCH AFTER UPDATE! ***`);
+                console.error(`[DEBUG_TASK_COMPLETION]   - Completion value was not properly persisted in UI state`);
+              }
+            } else {
+              console.error(`[DEBUG_TASK_COMPLETION] Task not found in state after update!`);
+            }
+          }, 500); // Small delay to ensure state updates have completed
         }
       } catch (e) {
         // Response might not be JSON, or might be empty
