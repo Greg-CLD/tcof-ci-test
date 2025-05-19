@@ -437,7 +437,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         const normalizedStage = (task.stage || 'identification').toLowerCase() as Stage;
         
         // DEBUG: For custom tasks, log their distribution in detail
-        if (task.origin === 'custom' || task.source === 'custom') {
+        if (DEBUG_TASKS && (task.origin === 'custom' || task.source === 'custom')) {
           console.log(`[CUSTOM_TASK_DISTRIBUTION] Custom task "${task.text.substring(0, 20)}..." going to stage "${normalizedStage}" (original: "${task.stage}")`);
         }
 
@@ -445,16 +445,16 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           byStage[normalizedStage].push({...task, stage: normalizedStage});
         } else {
           // If stage is invalid, default to identification stage
-          console.log(`[CHECKLIST_DEBUG] Invalid stage "${normalizedStage}" for task "${task.text}" - defaulting to identification`);
+          if (DEBUG_TASKS) console.log(`[CHECKLIST_DEBUG] Invalid stage "${normalizedStage}" for task "${task.text}" - defaulting to identification`);
           byStage.identification.push({...task, stage: 'identification'});
         }
       });
-      console.log(`[CHECKLIST] Final task count: ${allTasks.length} total tasks`);
-      console.log(`[CHECKLIST] Tasks by stage: identification(${byStage.identification.length}), definition(${byStage.definition.length}), delivery(${byStage.delivery.length}), closure(${byStage.closure.length})`);
+      if (DEBUG_TASKS) console.log(`[CHECKLIST] Final task count: ${allTasks.length} total tasks`);
+      if (DEBUG_TASKS) console.log(`[CHECKLIST] Tasks by stage: identification(${byStage.identification.length}), definition(${byStage.definition.length}), delivery(${byStage.delivery.length}), closure(${byStage.closure.length})`);
 
       setTasks(allTasks);
       setTasksByStage(byStage);
-      console.log('[CHECKLIST_DEBUG] tasksByStage[identification]:', byStage['identification'].map(t => t.text));
+      if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] tasksByStage[identification]:', byStage['identification'].map(t => t.text));
       setLoading(false);
     } catch (error) {
       console.error('[CHECKLIST] Error refreshing tasks:', error);
@@ -518,7 +518,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         if (STAGES.includes(normalizedStage as Stage)) {
           byStage[normalizedStage].push({...task, stage: normalizedStage});
         } else {
-          console.log(`[CHECKLIST_DEBUG] Invalid stage "${normalizedStage}" during update - defaulting to identification`);
+          if (DEBUG_TASKS) console.log(`[CHECKLIST_DEBUG] Invalid stage "${normalizedStage}" during update - defaulting to identification`);
           byStage.identification.push({...task, stage: 'identification'});
         }
       });
@@ -728,7 +728,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 const stageTaskCount = tasksByStage[normalizedValue]?.length || 0;
 
                 // Add debug logging to track stage distribution
-                console.log(`[CHECKLIST_DEBUG] Tab for stage "${normalizedValue}" has ${stageTaskCount} tasks`);
+                if (DEBUG_TASKS) console.log(`[CHECKLIST_DEBUG] Tab for stage "${normalizedValue}" has ${stageTaskCount} tasks`);
 
                 return (
                   <TabsTrigger 
@@ -755,9 +755,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
               const stageConfig = STAGE_CONFIGS.find(cfg => cfg.value.toLowerCase() === normalizedStage);
 
               // Debug log raw tasks before any filtering
-              console.log('[CHECKLIST_DEBUG] Raw tasks for stage', normalizedStage, stageTasks);
+              if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] Raw tasks for stage', normalizedStage, stageTasks);
 
-              console.log(`[CHECKLIST_DEBUG] Processing stage "${stage}" (display as: "${stageConfig?.label}") with ${stageTasks.length} tasks`);
+              if (DEBUG_TASKS) console.log(`[CHECKLIST_DEBUG] Processing stage "${stage}" (display as: "${stageConfig?.label}") with ${stageTasks.length} tasks`);
 
               // Apply filters to tasks
               let filteredTasks = stageTasks.filter(task => {
@@ -765,7 +765,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 const taskStage = (task.stage || 'identification').toLowerCase() as Stage;
 
                 // Debug task stage check - stage should match regardless of case
-                if (taskStage !== normalizedStage) {
+                if (DEBUG_TASKS && taskStage !== normalizedStage) {
                   console.log(`[CHECKLIST_DEBUG] Task stage mismatch: task has "${taskStage}", tab expects "${normalizedStage}"`);
                 }
 
@@ -779,7 +779,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                     const isCustomTask = task.source === 'custom' || task.origin === 'custom';
                     
                     // Only add debug logging in development
-                    console.log('[FILTER_DEBUG] Task checked for custom filter:', {
+                    if (DEBUG_FILTERS) console.log('[FILTER_DEBUG] Task checked for custom filter:', {
                       text: task.text.substring(0, 20) + '...',
                       source: task.source,
                       origin: task.origin,
