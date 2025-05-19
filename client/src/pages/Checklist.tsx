@@ -348,7 +348,6 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           byStage.identification.push({...task, stage: 'identification'});
         }
       });
-      
       console.log(`[CHECKLIST] Final task count: ${allTasks.length} total tasks`);
       console.log(`[CHECKLIST] Tasks by stage: identification(${byStage.identification.length}), definition(${byStage.definition.length}), delivery(${byStage.delivery.length}), closure(${byStage.closure.length})`);
       
