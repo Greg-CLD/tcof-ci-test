@@ -219,7 +219,7 @@ export function useProjectTasks(projectId?: string) {
   // Mutation to update an existing task
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
-      console.log(`Updating task ${taskId} for project ${projectId}:`, data);
+      if (DEBUG_TASKS) console.log(`Updating task ${taskId} for project ${projectId}:`, data);
       
       // Silently normalize invalid UUID sourceId to null
       if (data.sourceId && !isValidUUID(data.sourceId)) {
@@ -242,7 +242,7 @@ export function useProjectTasks(projectId?: string) {
         if (resJson.success === false) {
           throw new Error(resJson.message || 'Failed to update task');
         }
-        console.log('Task updated successfully:', resJson.task?.id);
+        if (DEBUG_TASKS) console.log('Task updated successfully:', resJson.task?.id);
         // Return the task object directly for consistent access
         return resJson.task || resJson;
       } catch (err) {
@@ -251,17 +251,17 @@ export function useProjectTasks(projectId?: string) {
       }
     },
     onSuccess: async (updatedTask, variables) => {
-      console.log('Task updated, invalidating cache and refetching');
+      if (DEBUG_TASKS) console.log('Task updated, invalidating cache and refetching');
       
       // First log the updated task
-      console.log('Updated task:', updatedTask);
+      if (DEBUG_TASKS) console.log('Updated task:', updatedTask);
       
       // Get the exact query key using our helper
       const key = getTasksKey(projectId);
       
       // Update cache optimistically to show the updated task immediately
       queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
-        console.log('Optimistically updating task in UI:', updatedTask);
+        if (DEBUG_TASKS) console.log('Optimistically updating task in UI:', updatedTask);
         return oldTasks.map(task => 
           task.id === updatedTask.id ? updatedTask : task
         );
@@ -274,12 +274,12 @@ export function useProjectTasks(projectId?: string) {
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
-        console.log(`Refetched ${freshData.data?.length || 0} tasks after update`);
+        if (DEBUG_TASKS) console.log(`Refetched ${freshData.data?.length || 0} tasks after update`);
         
         // Verify the update was reflected in the fetched data
         if (updatedTask && updatedTask.id) {
           const taskInData = freshData.data?.find(task => task.id === updatedTask.id);
-          console.log('Updated task in refetched data:', taskInData);
+          if (DEBUG_TASKS) console.log('Updated task in refetched data:', taskInData);
           
           if (!taskInData) {
             console.warn('Updated task not found in refetched data. Forcing another refetch...');
@@ -305,7 +305,7 @@ export function useProjectTasks(projectId?: string) {
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
       try {
-        console.log(`Deleting task ${taskId} for project ${projectId}`);
+        if (DEBUG_TASKS) console.log(`Deleting task ${taskId} for project ${projectId}`);
         const res = await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${taskId}`);
         
         if (!res.ok) {
@@ -321,7 +321,7 @@ export function useProjectTasks(projectId?: string) {
         if (resJson.success === false) {
           throw new Error(resJson.message || 'Failed to delete task');
         }
-        console.log('Task deleted successfully:', taskId);
+        if (DEBUG_TASKS) console.log('Task deleted successfully:', taskId);
         return resJson;
       } catch (err) {
         console.error('Task deletion exception:', err);
