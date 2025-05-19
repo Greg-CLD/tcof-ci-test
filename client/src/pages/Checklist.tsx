@@ -328,6 +328,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       // Combine both task types
       const allTasks: UnifiedTask[] = [...filteredCanonicalTasks, ...projectTasks];
       
+      // Debug log to see all tasks before stage grouping
+      console.log('[CHECKLIST_DEBUG] All merged tasks (pre-stage-grouping):', allTasks);
+      
       // Organize tasks by stage using the STAGES constant
       const byStage: Record<Stage, UnifiedTask[]> = STAGES.reduce((acc, stage) => ({
         ...acc,
