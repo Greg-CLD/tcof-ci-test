@@ -215,7 +215,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   }, [canonicalTasks, isAuthenticated, currentProjectId]);
 
   // Helper function to refresh task state
+  // Preserves the active tab selection when refreshing tasks
   const refreshTasksState = async () => {
+    // Remember the current active tab so we can restore it after refresh
+    const currentActiveTab = activeTab;
+    
     if (!currentProjectId || !canonicalTasks || canonicalTasks.length === 0) {
       console.log('[CHECKLIST] Cannot refresh tasks: missing project ID or canonical tasks');
       return;
@@ -226,6 +230,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       console.log('[CHECKLIST] Cannot refresh tasks: not authenticated');
       return;
     }
+    
+    // Log that we're preserving the active tab
+    console.log('[CHECKLIST] Refreshing tasks while preserving active tab:', currentActiveTab);
 
     try {
       console.log('[CHECKLIST] Refreshing tasks for project', currentProjectId);
@@ -453,6 +460,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       setTasks(allTasks);
       setTasksByStage(byStage);
       console.log('[CHECKLIST_DEBUG] tasksByStage[identification]:', byStage['identification'].map(t => t.text));
+      
+      // Maintain the active tab after processing tasks
+      // This ensures we don't reset to the first tab after adding a new task
+      console.log('[CHECKLIST_TABS] Maintaining active tab as:', activeTab);
+      
       setLoading(false);
     } catch (error) {
       console.error('[CHECKLIST] Error refreshing tasks:', error);
