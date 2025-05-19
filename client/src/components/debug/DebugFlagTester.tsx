@@ -8,7 +8,8 @@ import {
   DEBUG_TASK_MAPPING,
   DEBUG_TASK_COMPLETION,
   DEBUG_TASK_VALIDATION,
-  DEBUG_TASK_PERSISTENCE
+  DEBUG_TASK_PERSISTENCE,
+  DEBUG_TASK_STATE
 } from '@shared/constants.debug';
 import { Button } from '@/components/ui/button';
 import { 
@@ -38,6 +39,7 @@ export default function DebugFlagTester() {
   const [taskCompletionDebug, setTaskCompletionDebug] = useState(DEBUG_TASK_COMPLETION);
   const [taskValidationDebug, setTaskValidationDebug] = useState(DEBUG_TASK_VALIDATION);
   const [taskPersistenceDebug, setTaskPersistenceDebug] = useState(DEBUG_TASK_PERSISTENCE);
+  const [taskStateDebug, setTaskStateDebug] = useState(DEBUG_TASK_STATE);
 
   useEffect(() => {
     // Log current debug flag status
@@ -50,7 +52,8 @@ export default function DebugFlagTester() {
       DEBUG_TASK_MAPPING,
       DEBUG_TASK_COMPLETION,
       DEBUG_TASK_VALIDATION,
-      DEBUG_TASK_PERSISTENCE
+      DEBUG_TASK_PERSISTENCE,
+      DEBUG_TASK_STATE
     });
     
     // Runtime controls are simulated as real environment variables can't be changed at runtime
@@ -65,6 +68,7 @@ export default function DebugFlagTester() {
     if (taskCompletionDebug) console.log('[DEBUG_TASK_COMPLETION] Task completion debugging is enabled');
     if (taskValidationDebug) console.log('[DEBUG_TASK_VALIDATION] Task validation debugging is enabled');
     if (taskPersistenceDebug) console.log('[DEBUG_TASK_PERSISTENCE] Task persistence debugging is enabled');
+    if (taskStateDebug) console.log('[DEBUG_TASK_STATE] Task state transition debugging is enabled');
   }, [
     generalDebug, 
     taskDebug, 
@@ -74,7 +78,8 @@ export default function DebugFlagTester() {
     taskMappingDebug,
     taskCompletionDebug,
     taskValidationDebug,
-    taskPersistenceDebug
+    taskPersistenceDebug,
+    taskStateDebug
   ]);
   
   // Helper function to toggle debug flags in localStorage 
@@ -265,6 +270,21 @@ export default function DebugFlagTester() {
                   onCheckedChange={(checked) => {
                     setTaskPersistenceDebug(checked);
                     toggleDebugFlag('task_persistence', checked);
+                  }}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between py-1">
+                <Label htmlFor="task-state-debug" className="text-xs sm:text-sm">
+                  State Transitions:
+                </Label>
+                <Switch 
+                  id="task-state-debug" 
+                  checked={taskStateDebug} 
+                  disabled={!taskDebug}
+                  onCheckedChange={(checked) => {
+                    setTaskStateDebug(checked);
+                    toggleDebugFlag('task_state', checked);
                   }}
                 />
               </div>

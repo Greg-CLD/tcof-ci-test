@@ -77,6 +77,17 @@ export const DEBUG_TASK_PERSISTENCE = isDev && (
   getEnvVar('DEBUG_TASK_PERSISTENCE', 'false') === 'true'
 );
 
+/**
+ * Debug flag for tracking task state transitions
+ * Used to trace the changes in task state during the task lifecycle
+ * Especially helpful for diagnosing the SuccessFactor task completion bug
+ */
+export const DEBUG_TASK_STATE = isDev && (
+  DEBUG_TASKS || 
+  getEnvVar('VITE_DEBUG_TASK_STATE', 'false') === 'true' || 
+  getEnvVar('DEBUG_TASK_STATE', 'false') === 'true'
+);
+
 // Never enable debug flags in production
 if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
   Object.keys(exports).forEach(key => {

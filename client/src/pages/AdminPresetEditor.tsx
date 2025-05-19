@@ -497,12 +497,14 @@ export default function AdminPresetEditor() {
             variant="outline"
             onClick={() => {
               // Enable debug flags for SuccessFactor task diagnostics
+              // This enables comprehensive diagnostic logging targeted at the SuccessFactor task completion bug
               localStorage.setItem('debug_tasks', 'true');
               localStorage.setItem('debug_task_completion', 'true');
               localStorage.setItem('debug_task_persistence', 'true');
+              localStorage.setItem('debug_task_state', 'true'); // Enable state transition tracking
               toast({
                 title: "Debug Mode Enabled",
-                description: "SuccessFactor task diagnostic logging activated",
+                description: "SuccessFactor task diagnostic logging activated with state transition tracking",
               });
               // Force page reload to apply debug settings
               window.location.reload();
