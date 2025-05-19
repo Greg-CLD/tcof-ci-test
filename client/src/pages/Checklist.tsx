@@ -544,7 +544,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         // Convert priority from TaskPriority type to string if present
         priority: updates.priority ? String(updates.priority) : undefined,
         // Ensure we convert status to string
-        status: updates.status ? String(updates.status) : undefined
+        status: updates.status ? String(updates.status) : undefined,
+        // CRITICAL FIX: Ensure origin field is preserved or updated from source value
+        // This fixes Success Factor task completion persistence by mapping source → origin
+        origin: updates.origin || source
       };
 
       console.log(`[CHECKLIST] Sending task update to API: ${JSON.stringify(updatedFields)}`);

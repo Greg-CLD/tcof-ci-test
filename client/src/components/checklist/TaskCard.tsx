@@ -125,20 +125,28 @@ export default function TaskCard({
     setEditedStatus(newStatus);
     onUpdate(id, { 
       completed: !completed,
-      status: newStatus
+      status: newStatus,
+      // Add origin field to match source - fixes success factor task persistence
+      origin: source
     }, isGoodPractice);
   };
   
   // Handle priority change
   const handlePriorityChange = (newPriority: TaskPriority | undefined) => {
-    onUpdate(id, { priority: newPriority }, isGoodPractice);
+    onUpdate(id, { 
+      priority: newPriority,
+      origin: source 
+    }, isGoodPractice);
   };
   
   // Handle date change
   const handleDateChange = (date: Date | undefined) => {
     // Convert Date to ISO string, or undefined if no date
     const dateString = date ? date.toISOString() : undefined;
-    onUpdate(id, { dueDate: dateString }, isGoodPractice);
+    onUpdate(id, { 
+      dueDate: dateString,
+      origin: source 
+    }, isGoodPractice);
   };
   
   // Handle save all edited details
@@ -150,7 +158,8 @@ export default function TaskCard({
       notes: editedNotes,
       owner: editedOwner,
       status: editedStatus,
-      completed: isCompletedStatus
+      completed: isCompletedStatus,
+      origin: source // Crucial for maintaining source/origin consistency
     }, isGoodPractice);
     
     setIsExpanded(false);
