@@ -885,8 +885,8 @@ return null;
       }
 
       return null;
-    } catch (error) {
-      console.error(`Error getting plan block for project ${projectId}:`, error);
+    } catch (err) {
+      console.error("Error getting plan block for project " + projectId + ":", err);
       return null;
     }
   },
@@ -904,7 +904,7 @@ return null;
 
       return false;
     } catch (error) {
-      console.error(`Error deleting plan for project ${projectId}:`, error);
+      console.error("Error deleting plan for project " + projectId + ":", error);
       return false;
     }
   },

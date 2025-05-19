@@ -4,1037 +4,158 @@
  */
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
-import { v4 as uuidv4, v5 as uuidv5, validate as validateUuid } from 'uuid';
+import { fileURLToPath } from 'url';
+import { v4 as uuidv4, validate as validateUuid } from 'uuid';
 import { db } from './db';
-import { eq, and, asc, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { projectTasks as projectTasksTable } from '@shared/schema';
 
 /**
  * Validates sourceId to ensure it's either a valid UUID or null
- * Non-UUID strings will be converted to null to prevent database errors
- * 
- * @param sourceId The source ID to validate
- * @returns Either a valid UUID string or null
  */
 function validateSourceId(sourceId: string | null | undefined): string | null {
-  // If sourceId is empty/null/undefined, return null
   if (!sourceId) return null;
-
-  // Check if it's already a valid UUID
-  if (validateUuid(sourceId)) {
-    return sourceId;
-  }
-
-  // Log warning about invalid sourceId
-  console.warn(`Invalid UUID format for sourceId: "${sourceId}". Converting to null to prevent database errors.`);
-
-  // Return null for invalid UUIDs to avoid database constraint errors
-  return null;
+  return validateUuid(sourceId) ? sourceId : null;
 }
 
-// Path to projects data file
-const DATA_DIR = path.join(process.cwd(), 'data');
+/**
+ * Data directory for file-based storage
+ */
+// Create dirname equivalent for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DATA_DIR = path.join(__dirname, '..', 'data');
 const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json');
-const TASKS_FILE = path.join(DATA_DIR, 'project_tasks.json');
-const POLICIES_FILE = path.join(DATA_DIR, 'project_policies.json');
-const PLANS_FILE = path.join(DATA_DIR, 'project_plans.json');
-
-// Project data type
-export interface Project {
-  id: string;
-  userId: number;
-  name: string;
-  description?: string;
-  sector?: string;
-  customSector?: string;
-  orgType?: string;
-  teamSize?: string;
-  currentStage?: string;
-  budget?: string;
-  technicalContext?: string;
-  timelineMonths?: string;
-  nextStage?: string;
-  progress?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Project task data type
-export interface ProjectTask {
-  id: string;
-  projectId: string;
-  text: string;
-  stage: string;
-  origin: string;
-  sourceId: string;
-  completed: boolean;
-  notes: string;
-  priority: string;
-  dueDate: string;
-  owner: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Project policy data type
-export interface ProjectPolicy {
-  projectId: string;
-  type: string;
-  enabled: boolean;
-  config: any;
-}
-
-// Project plan data type
-export interface ProjectPlan {
-  projectId: string;
-  block1: BlockData;
-  block2: BlockData;
-  block3: BlockData;
-  checklistOutput: any;
-}
-
-// Block data type for plan storage
-export interface BlockData {
-  completed: boolean;
-  data: any;
-  stepStatus: Record<string, boolean>;
-}
+const PLANS_FILE = path.join(DATA_DIR, 'plans.json');
 
 /**
- * Helper to convert a numeric ID to a UUID
- * This helps migrate from old numeric IDs to UUIDs
- * WARNING: This is for compatibility with existing data only
- * New projects should always use UUIDs directly
+ * Project database interface
  */
-export function validateProjectUUID(idString: string): string {
-  // If it's already a UUID, return it directly
-  if (idString.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-    return idString;
-  }
-
-  // Otherwise it's likely an old numeric ID format
-  // Throw an error as we no longer support non-UUID formats
-  throw new Error(`Invalid project ID format: ${idString}`);
-}
-
-/**
- * Helper to convert a DB task to a ProjectTask
- */
-function convertDbTaskToProjectTask(dbTask: any, clientTaskId?: string): ProjectTask {
-  // Convert dates to strings for consistent interface
-  let createdAt = dbTask.createdAt;
-  if (createdAt instanceof Date) {
-    try {
-      createdAt = createdAt.toISOString();
-    } catch (e) {
-      console.error('Error parsing createdAt date:', e);
-    }
-  }
-
-  let updatedAt = dbTask.updatedAt;
-  if (updatedAt instanceof Date) {
-    try {
-      updatedAt = updatedAt.toISOString();
-    } catch (e) {
-      console.error('Error parsing updatedAt date:', e);
-    }
-  }
-
-  // Check if this is a compound factor ID situation
-  // If sourceId has the pattern of a compound UUID-suffix ID and looks like it came from a factor
-  // use it as the client-facing ID for consistency
-  let effectiveId = dbTask.id;
-
-  if (clientTaskId) {
-    // If we're explicitly given the client ID to use, use it
-    effectiveId = clientTaskId;
-  } else if (dbTask.sourceId && 
-             dbTask.sourceId.includes('-') && 
-             dbTask.sourceId.split('-').length > 5 && 
-             dbTask.origin === 'factor') {
-    // This is likely a task created from a factor with a compound ID
-    // Use the sourceId as the client-facing ID for consistency
-    effectiveId = dbTask.sourceId;
-    console.log(`Using sourceId ${dbTask.sourceId} as client-facing ID for task ${dbTask.id}`);
-  }
-
-  return {
-    id: effectiveId,
-    projectId: dbTask.projectId,
-    text: dbTask.text || '',
-    stage: dbTask.stage || '',
-    origin: dbTask.origin || 'custom',
-    sourceId: dbTask.sourceId || '',
-    completed: !!dbTask.completed,
-    notes: dbTask.notes || '',
-    priority: dbTask.priority || '',
-    dueDate: dbTask.dueDate || '',
-    owner: dbTask.owner || '',
-    status: dbTask.status || 'To Do',
-    createdAt: createdAt || new Date().toISOString(),
-    updatedAt: updatedAt || new Date().toISOString()
-  };
-}
-
-/**
- * Project database operations
- */
-export const projectsDb = {
+const projectsDb = {
   /**
-   * Create a new project
+   * Get all tasks for a project from the database
    */
-  createProject(userId, data) {
+  async getProjectTasks(projectId: string) {
     try {
-      const now = new Date().toISOString();
-      const project = {
-        id: uuidv4(),
-        userId,
-        name: data.name || 'New Project',
-        description: data.description || '',
-        sector: data.sector || '',
-        customSector: data.customSector || '',
-        orgType: data.orgType || '',
-        teamSize: data.teamSize || '',
-        currentStage: data.currentStage || '',
-        budget: data.budget || '',
-        technicalContext: data.technicalContext || '',
-        timelineMonths: data.timelineMonths || '',
-        nextStage: data.nextStage || '',
-        progress: data.progress || 0,
-        createdAt: now,
-        updatedAt: now
-      };
-
-      const projects = loadProjects();
-      projects.push(project);
-      saveProjects(projects);
-
-      // Also create an empty plan structure for this project
-      const plans = loadProjectPlans();
-      const emptyPlan = {
-        projectId: project.id,
-        block1: { completed: false, data: {}, stepStatus: {} },
-        block2: { completed: false, data: {}, stepStatus: {} },
-        block3: { completed: false, data: {}, stepStatus: {} },
-        checklistOutput: null
-      };
-      plans.push(emptyPlan);
-      saveProjectPlans(plans);
-
-      return project;
-    } catch (error) {
-      console.error('Error creating project:', error);
-      return null;
-    }
-  },
-
-  // Get tasks for source
-  async getTasksForSource(projectId, sourceId) {
-    try {
-      const tasks = await db.select()
-        .from(projectTasksTable)
-        .where(and(
-          eq(projectTasksTable.projectId, projectId),
-          eq(projectTasksTable.sourceId, sourceId)
-        ))
-        .orderBy(asc(projectTasksTable.createdAt));
-
-      // Use the enhanced convertDbTaskToProjectTask function for consistent ID handling
-      return tasks.map(task => {
-        // For factor-origin tasks with compound IDs, maintain client-side consistency
-        if (task.origin === 'factor' && task.sourceId && task.sourceId.includes('-') && task.sourceId.split('-').length > 5) {
-          return convertDbTaskToProjectTask(task, task.sourceId);
-        }
-        // If the sourceId matches the requested sourceId and it looks like a compound ID
-        // use it for consistency with the client request
-        if (task.sourceId === sourceId && sourceId.includes('-') && sourceId.split('-').length > 5) {
-          return convertDbTaskToProjectTask(task, sourceId);
-        }
-        return convertDbTaskToProjectTask(task);
-      });
-    } catch (error) {
-      console.error(`Error getting tasks for source ${sourceId}:`, error);
-      return [];
-    }
-  },
-
-  // Alias to match naming conventions
-  async getSourceTasks(sourceId) {
-    try {
-      const tasks = await db.select()
-        .from(projectTasksTable)
-        .where(eq(projectTasksTable.sourceId, sourceId))
-        .orderBy(asc(projectTasksTable.createdAt));
-
-      // Use the enhanced convertDbTaskToProjectTask function for consistent ID handling
-      return tasks.map(task => {
-        // For factor-origin tasks with compound IDs, maintain client-side consistency
-        if (task.origin === 'factor' && task.sourceId && task.sourceId.includes('-') && task.sourceId.split('-').length > 5) {
-          return convertDbTaskToProjectTask(task, task.sourceId);
-        }
-        // If the sourceId matches the requested sourceId and it looks like a compound ID
-        // use it for consistency with the client request
-        if (task.sourceId === sourceId && sourceId.includes('-') && sourceId.split('-').length > 5) {
-          return convertDbTaskToProjectTask(task, sourceId);
-        }
-        return convertDbTaskToProjectTask(task);
-      });
-    } catch (error) {
-      console.error(`Error getting tasks for source ${sourceId}:`, error);
-      return [];
-    }
-  },
-
-  // Get all tasks for a project
-  async getTasksForProject(projectId) {
-    try {
-      console.log(`Getting tasks for project ${projectId}`);
-
-      // Generate SQL for logging
-      const querySQL = db.select()
-        .from(projectTasksTable)
+      // Query the database for all tasks related to this project
+      console.log("Getting tasks for project", projectId);
+      const tasks = await db.select().from(projectTasksTable)
         .where(eq(projectTasksTable.projectId, projectId))
-        .orderBy(asc(projectTasksTable.createdAt))
-        .toSQL();
-
-      console.log('SQL query to be executed:', querySQL.sql);
-      console.log('SQL parameters:', JSON.stringify(querySQL.params, null, 2));
-
-      // Execute the query
-      const tasks = await db.select()
-        .from(projectTasksTable)
-        .where(eq(projectTasksTable.projectId, projectId))
-        .orderBy(asc(projectTasksTable.createdAt));
-
+        .orderBy(projectTasksTable.createdAt);
+      
       console.log(`Retrieved ${tasks.length} tasks for project ${projectId}`);
-
       if (tasks.length > 0) {
-        console.log('First task sample:', JSON.stringify(tasks[0], null, 2));
-      } else {
-        console.log('No tasks found for this project.');
-
-        // Additional diagnostic query for this project
-        console.log('Running diagnostics for project tasks...');
-
-        // Check if any tasks exist in the system at all
-        const allTasksCount = await db.select({ count: sql`count(*)` })
-          .from(projectTasksTable);
-        console.log(`Total tasks in database: ${allTasksCount[0]?.count || 0}`);
-
-        // Check for tasks with similar projectId (partial match)
-        try {
-          const similarProjectTasks = await db.execute(sql`
-            SELECT id, project_id, text 
-            FROM project_tasks 
-            WHERE project_id::text LIKE ${projectId.substring(0, 8) + '%'}
-            LIMIT 5
-          `);
-
-          if (similarProjectTasks.rows?.length > 0) {
-            console.log(`Found ${similarProjectTasks.rows.length} tasks with similar project ID prefixes:`);
-            console.log(JSON.stringify(similarProjectTasks.rows, null, 2));
-          }
-        } catch (diagError) {
-          console.error('Diagnostic query error:', diagError);
-        }
+        console.log("First task sample:", tasks[0]);
       }
-
-      // Convert and return tasks
-      // Process each task to handle possible compound IDs and maintain client-side consistency
-      return tasks.map(task => {
-        // For factor-origin tasks with compound IDs in sourceId, use consistent ID handling
-        if (task.origin === 'factor' && task.sourceId && task.sourceId.includes('-') && task.sourceId.split('-').length > 5) {
-          return convertDbTaskToProjectTask(task, task.sourceId);
-        }
-        return convertDbTaskToProjectTask(task);
-      });
+      
+      return tasks;
     } catch (error) {
-      console.error(`Error getting tasks for project ${projectId}:`, error);
-      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Error stack:', error instanceof Error ? error.stack : '');
+      console.error("Error getting project tasks:", error);
       return [];
     }
   },
 
-  // Create a task for a project
-  async createTask(taskData) {
-    if (!taskData.projectId) {
-      console.error('Cannot create task: missing projectId');
-      return null;
-    }
-
-    console.log('Validating task data:', {
-      projectId: taskData.projectId,
-      text: taskData.text,
-      stage: taskData.stage,
-      hasId: !!taskData.id
-    });
-
+  /**
+   * Create a new task for a project
+   */
+  async createTask(taskData: any) {
     try {
-      const normalizedProjectId = validateProjectUUID(taskData.projectId);
-      console.log(`Creating task for normalized project ID: ${normalizedProjectId}`);
-
-      // Check if we have a compound ID from a factor task
-      let taskId = taskData.id || uuidv4();
-      let sourceId = taskData.sourceId || '';
-
-      // Check if the sourceId is a valid UUID, and set to null if not
-      if (sourceId && !validateUuid(sourceId)) {
-        console.warn(`Invalid UUID format for sourceId: "${sourceId}". Will be set to null.`);
-        sourceId = null;
-      }
-
-      // If task ID is a compound ID (likely from a factor), store as sourceId
-      if (taskData.id && taskData.id.includes('-') && taskData.id.split('-').length > 5) {
-        console.log(`Detected compound ID for task: ${taskData.id}`);
-
-        // In this case, use the compound ID as sourceId for tracking, but generate a proper UUID
-        sourceId = taskData.id;
-        taskId = uuidv4();
-
-        console.log(`Using compound ID as sourceId: ${sourceId}`);
-        console.log(`Generated new valid UUID for task: ${taskId}`);
-
-        // Check if task already exists with this sourceId
-        try {
-          const existingTasks = await db.select()
-            .from(projectTasksTable)
-            .where(eq(projectTasksTable.sourceId, sourceId))
-            .limit(1);
-
-          if (existingTasks.length > 0) {
-            console.log(`Task with sourceId ${sourceId} already exists, using its data for update`);
-
-            // Return the existing task (client can use update endpoint if needed)
-            return convertDbTaskToProjectTask(existingTasks[0]);
-          }
-        } catch (lookupErr) {
-          console.warn(`Error checking for existing tasks with sourceId ${sourceId}:`, lookupErr);
-          // Continue with task creation regardless
-        }
-      }
-
-      // Convert empty values to appropriate defaults
-      const task = {
-        id: taskId,
-        projectId: normalizedProjectId,
-        text: taskData.text || '',
-        stage: taskData.stage || 'identification',
-        origin: taskData.origin || 'custom',
-        sourceId: sourceId,
-        completed: taskData.completed || false,
-        notes: taskData.notes || '',
-        priority: taskData.priority || '',
-        dueDate: taskData.dueDate || '',
-        owner: taskData.owner || '',
-        status: taskData.status || 'To Do',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      console.log("Creating task with data:", taskData);
+      
+      // Validate sourceId to prevent database errors
+      const validatedSourceId = validateSourceId(taskData.sourceId);
+      
+      // Prepare the data for insertion
+      const dataToInsert = {
+        ...taskData,
+        sourceId: validatedSourceId,
+        id: uuidv4(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
-
-      console.log('Task object prepared for insert:', JSON.stringify(task, null, 2));
-
-      // Save the task to the database using Drizzle insert
-      console.log('Starting database insert operation');
-
-      // Properly sanitize values for database insertion:
-      // 1. Convert empty strings to null for any nullable fields
-      // 2. Ensure dates are handled correctly
-      // Generate a default UUID for sourceId if it would be null
-      // This is necessary because the sourceId column has a NOT NULL constraint
-      const validatedSourceId = validateSourceId(task.sourceId);
-      const finalSourceId = validatedSourceId || uuidv4(); // Use a new UUID if source id is invalid or null
-
-      console.log(`Source ID validation: original=${task.sourceId}, validated=${validatedSourceId}, final=${finalSourceId}`);
-
-      const insertValues = {
-        id: task.id,
-        projectId: task.projectId,
-        text: task.text || '',
-        stage: task.stage || 'identification',
-        origin: task.origin || 'custom',
-        sourceId: finalSourceId,
-        completed: Boolean(task.completed), 
-        // Handle possible empty strings by converting them to null
-        notes: task.notes === '' ? null : task.notes,
-        priority: task.priority === '' ? null : task.priority,
-        dueDate: task.dueDate === '' ? null : task.dueDate,
-        owner: task.owner === '' ? null : task.owner,
-        status: task.status || 'To Do',
-        createdAt: new Date(),  // Always use current date
-        updatedAt: new Date()   // Always use current date
-      };
-      console.log('Insert values:', JSON.stringify(insertValues, null, 2));
-
-      // Generate the SQL for logging (before executing)
-      const insertSQL = db.insert(projectTasksTable)
-        .values(insertValues)
-        .toSQL();
-
-      console.log('SQL to be executed:', insertSQL.sql);
-      console.log('SQL parameters:', JSON.stringify(insertSQL.params, null, 2));
-
-      try {
-        // Execute the actual insert
-        const [savedTask] = await db.insert(projectTasksTable)
-          .values(insertValues)
-          .returning();
-
-        console.log('Database operation result:', savedTask ? 'Success' : 'Failed (null)');
-        console.log('Rows affected:', savedTask ? '1' : '0');
-
-        if (savedTask) {
-          console.log('Saved task from DB:', JSON.stringify(savedTask, null, 2));
-
-          // Verify the task exists immediately after creation with a direct query
-          const verifyResult = await db.select()
-            .from(projectTasksTable)
-            .where(eq(projectTasksTable.id, savedTask.id));
-
-          console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
-          console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
-
-          // Pass the original task ID (from client request) to maintain client-side consistency
-          return convertDbTaskToProjectTask(savedTask, taskData.id);
-        }
-
-        console.error('Task creation failed: Database returned null after insert');
-        return null;
-      } catch (insertError) {
-        console.error('Database insert exception:', insertError);
-        console.error('Error details:', insertError instanceof Error ? insertError.message : 'Unknown error');
-        console.error('Error stack:', insertError instanceof Error ? insertError.stack : '');
-        throw insertError;
-      }
+      
+      // Insert the task into the database
+      const [task] = await db.insert(projectTasksTable)
+        .values(dataToInsert)
+        .returning();
+      
+      console.log("Task created successfully:", task.id);
+      return task;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorDetails = error instanceof Error ? error.stack : '';
-
-      console.error('Error creating task:', {
-        message: errorMessage,
-        stack: errorDetails,
-        taskData: {
-          id: taskData.id,
-          projectId: taskData.projectId,
-          text: taskData.text,
-          stage: taskData.stage
-        }
-      });
-      return null;
-    }
-  },
-
-  // Update an existing task
-  async updateTask(taskId: string, data: Partial<ProjectTask>) {
-    try {
-      console.log(`Updating task ${taskId} with data:`, data);
-
-      // Normalize source/origin field
-      if (data.source && !data.origin) {
-        data.origin = data.source;
-        delete data.source;
-      }
-
-      // Check for factor-task compound IDs (like "f219d47b-39b5-5be1-86f2-e0ec3afc8e3b-c1332bc7")
-      let validTaskId = taskId;
-
-      if (taskId.includes('-') && taskId.split('-').length > 5) {
-        console.log(`Detected compound ID: ${taskId}`);
-
-        try {
-          // First check if this is a sourceId for an existing task
-          const existingTasksBySource = await db.select()
-            .from(projectTasksTable)
-            .where(eq(projectTasksTable.sourceId, taskId));
-
-          if (existingTasksBySource.length > 0) {
-            // Task exists with this source ID, use its actual UUID instead
-            validTaskId = existingTasksBySource[0].id as string;
-            console.log(`Found task with sourceId ${taskId}, using its ID ${validTaskId} for update`);
-          } else {
-            // Check if task exists with the ID directly (unlikely but possible)
-            const existingTasksById = await db.select()
-              .from(projectTasksTable)
-              .where(eq(projectTasksTable.id, taskId))
-              .limit(1);
-
-            if (existingTasksById.length === 0) {
-              // Task doesn't exist yet, we need to handle this as a special case
-              console.log(`Task with ID/sourceId ${taskId} not found, treating as a task to be created`);
-              throw new Error(`Task with ID ${taskId} does not exist. This appears to be a factor task reference. Try creating the task first using createTask API.`);
-            }
-          }
-        } catch (err) {
-          if (err instanceof Error && err.message.includes('Try creating')) {
-            // Pass through our custom error
-            throw err;
-          }
-          console.error(`Error looking up task by compound ID ${taskId}:`, err);
-          throw new Error(`Failed to process task ID ${taskId}: ${err instanceof Error ? err.message : String(err)}`);
-        }
-      }
-
-      // Sanitize input data to ensure types match and handle empty strings properly
-      const updateData: Record<string, string | boolean | null | Date> = {};
-
-      // Only update fields that are provided, with proper empty string handling
-      if (data.text !== undefined) updateData.text = String(data.text);
-      if (data.stage !== undefined) updateData.stage = String(data.stage);
-      if (data.origin !== undefined) updateData.origin = String(data.origin);
-      if (data.sourceId !== undefined) updateData.sourceId = String(data.sourceId);
-      if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
-
-      // For nullable fields, convert empty strings to null
-      if (data.notes !== undefined) updateData.notes = data.notes === '' ? null : String(data.notes);
-      if (data.priority !== undefined) updateData.priority = data.priority === '' ? null : String(data.priority);
-      if (data.dueDate !== undefined) updateData.dueDate = data.dueDate === '' ? null : String(data.dueDate);
-      if (data.owner !== undefined) updateData.owner = data.owner === '' ? null : String(data.owner);
-      if (data.status !== undefined) updateData.status = String(data.status);
-
-      // Always update the updatedAt timestamp
-      updateData.updatedAt = new Date();
-
-      console.log(`Prepared update data for task ${validTaskId}:`, JSON.stringify(updateData, null, 2));
-
-      // Generate the SQL for logging purposes (before executing)
-      const updateSQL = db.update(projectTasksTable)
-        .set(updateData)
-        .where(eq(projectTasksTable.id, validTaskId))
-        .toSQL();
-
-      console.log('SQL to be executed:', updateSQL.sql);
-      console.log('SQL parameters:', JSON.stringify(updateSQL.params, null, 2));
-
-      try {
-        // Update the task using Drizzle
-        const [updatedTask] = await db.update(projectTasksTable)
-          .set(updateData)
-          .where(eq(projectTasksTable.id, validTaskId))
-          .returning();
-
-        console.log('Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
-        console.log('Rows affected:', updatedTask ? '1' : '0');
-
-        if (updatedTask) {
-          console.log(`Task ${validTaskId} updated successfully:`, JSON.stringify(updatedTask, null, 2));
-
-          // Verify the task exists and was updated with a direct query
-          const verifyResult = await db.select()
-            .from(projectTasksTable)
-            .where(eq(projectTasksTable.id, validTaskId));
-
-          console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
-          console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
-
-          // Pass the original taskId to maintain client-side consistency
-          const converted = convertDbTaskToProjectTask(updatedTask, taskId);
-
-          console.log('Converted task:', JSON.stringify(converted, null, 2));
-          return converted;
-        }
-      } catch (updateError) {
-        console.error('Database update exception:', updateError);
-        console.error('Error details:', updateError instanceof Error ? updateError.message : 'Unknown error');
-        console.error('Error stack:', updateError instanceof Error ? updateError.stack : '');
-        throw updateError;
-      }
-
-      // If no task was found/updated, throw an error instead of returning null
-      throw new Error(`Task with ID ${validTaskId} not found or couldn't be updated`);
-    } catch (error) {
-      console.error(`Error updating task ${taskId}:`, error);
-      // Re-throw the error so it can be properly handled by the API route
+      console.error("Error creating task:", error);
       throw error;
     }
   },
-
-  // Delete a task
-  async deleteTask(taskId: string): Promise<boolean> {
+  
+  /**
+   * Update an existing task
+   */
+  async updateTask(taskId: string, projectId: string, updateData: any) {
     try {
-      console.log(`Attempting to delete task ${taskId}`);
-
-      // First verify the task exists before trying to delete it
-      try {
-        const existingTasks = await db.select()
-          .from(projectTasksTable)
-          .where(eq(projectTasksTable.id, taskId));
-
-        if (existingTasks.length === 0) {
-          console.warn(`Task ${taskId} not found in database before deletion attempt`);
-          throw new Error(`Task with ID ${taskId} not found`);
-        }
-
-        console.log(`Found task to delete:`, existingTasks[0]);
-      } catch (verifyErr) {
-        console.error(`Error verifying task ${taskId} existence:`, verifyErr);
-        // Continue with deletion attempt
+      console.log(`Updating task ${taskId} for project ${projectId}:`, updateData);
+      
+      // If sourceId is being updated, validate it
+      if (updateData.sourceId !== undefined) {
+        updateData.sourceId = validateSourceId(updateData.sourceId);
       }
-
-      // Perform the deletion with returning to verify success
-      const result = await db.delete(projectTasksTable)
-        .where(eq(projectTasksTable.id, taskId))
-        .returning({ id: projectTasksTable.id });
-
-      console.log(`Deletion result for task ${taskId}:`, result);
-
-      if (result && result.length > 0) {
-        console.log(`Successfully deleted task ${taskId}`);
-        return true;
+      
+      // Always update the updatedAt timestamp
+      updateData.updatedAt = new Date();
+      
+      // Update the task in the database
+      const [updatedTask] = await db.update(projectTasksTable)
+        .set(updateData)
+        .where(
+          and(
+            eq(projectTasksTable.id, taskId),
+            eq(projectTasksTable.projectId, projectId)
+          )
+        )
+        .returning();
+      
+      if (!updatedTask) {
+        console.error(`Task ${taskId} not found or not updated`);
+        throw new Error(`Task with ID ${taskId} not found or couldn't be updated`);
       }
-
-      // If no rows were affected, the task doesn't exist
-      console.warn(`No rows affected when deleting task ${taskId}`);
-      throw new Error(`Task with ID ${taskId} not found or couldn't be deleted`);
+      
+      console.log("Task updated successfully:", updatedTask);
+      return updatedTask;
+    } catch (error) {
+      console.error(`Error updating task ${taskId}:`, error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Delete a task
+   */
+  async deleteTask(taskId: string, projectId: string) {
+    try {
+      console.log(`Deleting task ${taskId} for project ${projectId}`);
+      
+      // Delete the task from the database
+      const [deletedTask] = await db.delete(projectTasksTable)
+        .where(
+          and(
+            eq(projectTasksTable.id, taskId),
+            eq(projectTasksTable.projectId, projectId)
+          )
+        )
+        .returning();
+      
+      if (!deletedTask) {
+        console.error(`Task ${taskId} not found or not deleted`);
+        throw new Error(`Task with ID ${taskId} not found or couldn't be deleted`);
+      }
+      
+      console.log("Task deleted successfully:", deletedTask.id);
+      return deletedTask;
     } catch (error) {
       console.error(`Error deleting task ${taskId}:`, error);
       throw error;
     }
-  },
-
-  // Get all projects
-  getProjects() {
-    try {
-      return loadProjects();
-    } catch (error) {
-      console.error('Error getting all projects:', error);
-      return [];
-    }
-  },
-
-  // Get projects for a specific user
-  getUserProjects(userId) {
-    try {
-      const projects = loadProjects().filter(project => project.userId === userId);
-      return projects;
-    } catch (error) {
-      console.error(`Error getting projects for user ${userId}:`, error);
-      return [];
-    }
-  },
-
-  // Get a specific project by ID
-  getProject(projectId) {
-    try {
-      const projects = loadProjects();
-      const project = projects.find(p => p.id === projectId);
-      return project || null;
-    } catch (error) {
-      console.error(`Error getting project ${projectId}:`, error);
-      return null;
-    }
-  },
-
-  // Update a project
-  updateProject(projectId, data) {
-    try {
-      const projects = loadProjects();
-      const index = projects.findIndex(p => p.id === projectId);
-
-      if (index !== -1) {
-        // Update only the fields that are provided
-        const project = projects[index];
-        const updatedProject = {
-          ...project,
-          name: data.name !== undefined ? data.name : project.name,
-          description: data.description !== undefined ? data.description : project.description,
-          sector: data.sector !== undefined ? data.sector : project.sector,
-          customSector: data.customSector !== undefined ? data.customSector : project.customSector,
-          orgType: data.orgType !== undefined ? data.orgType : project.orgType,
-          teamSize: data.teamSize !== undefined ? data.teamSize : project.teamSize,
-          currentStage: data.currentStage !== undefined ? data.currentStage : project.currentStage,
-          budget: data.budget !== undefined ? data.budget : project.budget,
-          technicalContext: data.technicalContext !== undefined ? data.technicalContext : project.technicalContext,
-          timelineMonths: data.timelineMonths !== undefined ? data.timelineMonths : project.timelineMonths,
-          nextStage: data.nextStage !== undefined ? data.nextStage : project.nextStage,
-          progress: data.progress !== undefined ? data.progress : project.progress,
-          updatedAt: new Date().toISOString()
-        };
-
-        projects[index] = updatedProject;
-        saveProjects(projects);
-
-        return updatedProject;
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Error updating project ${projectId}:`, error);
-      return null;
-    }
-  },
-
-  // Delete a project
-  deleteProject(projectId) {
-    try {
-      const projects = loadProjects();
-      const filteredProjects = projects.filter(p => p.id !== projectId);
-
-      if (filteredProjects.length !== projects.length) {
-        saveProjects(filteredProjects);
-
-        // Also remove project plans
-        const plans = loadProjectPlans();
-        const filteredPlans = plans.filter(p => p.projectId !== projectId);
-        saveProjectPlans(filteredPlans);
-
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error(`Error deleting project ${projectId}:`, error);
-      return false;
-    }
-  },
-
-  // Get a plan for a project
-  getPlan(projectId) {
-    try {
-      const plans = loadProjectPlans();
-      const plan = plans.find(p => p.projectId === projectId);
-
-      if (plan) {
-        return plan;
-      }
-
-      // Create a new plan if one doesn't exist
-      return this.createPlan(projectId);
-    } catch (error) {
-      console.error(`Error getting plan for project ${projectId}:`, error);
-      return null;
-    }
-  },
-
-  // Create a plan for a project
-  createPlan(projectId) {
-    try {
-      const plans = loadProjectPlans();
-
-      // Check if plan already exists
-      const existingPlan = plans.find(p => p.projectId === projectId);
-      if (existingPlan) {
-        return existingPlan;
-      }
-
-      // Create a new plan
-      const newPlan = {
-        projectId,
-        block1: { completed: false, data: {}, stepStatus: {} },
-        block2: { completed: false, data: {}, stepStatus: {} },
-        block3: { completed: false, data: {}, stepStatus: {} },
-        checklistOutput: null
-      };
-
-      plans.push(newPlan);
-      saveProjectPlans(plans);
-
-      return newPlan;
-    } catch (error) {
-      console.error(`Error creating plan for project ${projectId}:`, error);
-      return null;
-    }
-  },
-
-  // Update a specific block in a plan
-  updatePlanBlock(projectId, blockKey, blockData) {
-    try {
-      const plans = loadProjectPlans();
-      const index = plans.findIndex(p => p.projectId === projectId);
-
-      if (index !== -1) {
-        const plan = plans[index];
-
-        // Update only the specified block
-        if (blockKey === 'block1' || blockKey === 'block2' || blockKey === 'block3' || blockKey === 'checklistOutput') {
-          plans[index] = {
-            ...plan,
-            [blockKey]: blockKey === 'checklistOutput' 
-              ? blockData // For checklistOutput, just set the full value
-              : {
-                  ...plan[blockKey],
-                  ...blockData,
-                  // If stepStatus is provided, merge it with existing status
-                  stepStatus: blockData.stepStatus 
-                    ? { ...plan[blockKey].stepStatus, ...blockData.stepStatus }
-                    : plan[blockKey].stepStatus
-                }
-          };
-
-          saveProjectPlans(plans);
-          return plans[index];
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Error updating plan block for project ${projectId}:`, error);
-      ```text
-return null;
-    }
-  },
-
-  // Get a specific block from a plan
-  getPlanBlock(projectId, blockKey) {
-    try {
-      const plan = this.getPlan(projectId);
-
-      if (plan && (blockKey === 'block1' || blockKey === 'block2' || blockKey === 'block3' || blockKey === 'checklistOutput')) {
-        return plan[blockKey];
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Error getting plan block for project ${projectId}:`, error);
-      return null;
-    }
-  },
-
-  // Delete a plan
-  deletePlan(projectId) {
-    try {
-      const plans = loadProjectPlans();
-      const filteredPlans = plans.filter(p => p.projectId !== projectId);
-
-      if (filteredPlans.length !== plans.length) {
-        saveProjectPlans(filteredPlans);
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error(`Error deleting plan for project ${projectId}:`, error);
-      return false;
-    }
-  },
-
-  // Get all plans
-  getPlans() {
-    try {
-      return loadProjectPlans();
-    } catch (error) {
-      console.error('Error getting all plans:', error);
-      return [];
-    }
   }
 };
 
-/**
- * Load projects from the data file
- */
-function loadProjects(): Project[] {
-  try {
-    if (!fs.existsSync(PROJECTS_FILE)) {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-
-      fs.writeFileSync(PROJECTS_FILE, JSON.stringify([]));
-      return [];
-    }
-
-    const data = fs.readFileSync(PROJECTS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error loading projects:', error);
-    return [];
-  }
-}
-
-/**
- * Save projects to the data file
- */
-function saveProjects(projects: Project[]): boolean {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-
-    fs.writeFileSync(PROJECTS_FILE, JSON.stringify(projects, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error saving projects:', error);
-    return false;
-  }
-}
-
-/**
- * Load project policies from the data file
- */
-function loadProjectPolicies(): ProjectPolicy[] {
-  try {
-    if (!fs.existsSync(POLICIES_FILE)) {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-
-      fs.writeFileSync(POLICIES_FILE, JSON.stringify([]));
-      return [];
-    }
-
-    const data = fs.readFileSync(POLICIES_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error loading project policies:', error);
-    return [];
-  }
-}
-
-/**
- * Save project policies to the data file
- */
-function saveProjectPolicies(policies: ProjectPolicy[]): boolean {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-
-    fs.writeFileSync(POLICIES_FILE, JSON.stringify(policies, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error saving project policies:', error);
-    return false;
-  }
-}
-
-/**
- * Load project plans from the data file
- */
-function loadProjectPlans(): ProjectPlan[] {
-  try {
-    if (!fs.existsSync(PLANS_FILE)) {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-
-      fs.writeFileSync(PLANS_FILE, JSON.stringify([]));
-      return [];
-    }
-
-    const data = fs.readFileSync(PLANS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error loading project plans:', error);
-    return [];
-  }
-}
-
-/**
- * Save project plans to the data file
- */
-function saveProjectPlans(plans: ProjectPlan[]): boolean {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-
-    fs.writeFileSync(PLANS_FILE, JSON.stringify(plans, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error saving project plans:', error);
-    return false;
-  }
-}
-
-export default projectsDb;
+export { projectsDb };
