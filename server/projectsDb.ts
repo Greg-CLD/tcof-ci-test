@@ -9,6 +9,7 @@ import { v4 as uuidv4, v5 as uuidv5, validate as validateUuid } from 'uuid';
 import { db } from './db';
 import { eq, and, asc, sql } from 'drizzle-orm';
 import { projectTasks as projectTasksTable } from '@shared/schema';
+import { DEBUG_TASKS } from '@shared/constants.debug';
 
 /**
  * Validates sourceId to ensure it's either a valid UUID or null
@@ -26,7 +27,7 @@ function validateSourceId(sourceId: string | null | undefined): string | null {
     return sourceId;
   }
   
-  // Log warning about invalid sourceId
+  // Log warning about invalid sourceId - always show warnings, even in production
   console.warn(`Invalid UUID format for sourceId: "${sourceId}". Converting to null to prevent database errors.`);
   
   // Return null for invalid UUIDs to avoid database constraint errors
@@ -160,7 +161,7 @@ function convertDbTaskToProjectTask(dbTask: any, clientTaskId?: string): Project
     // This is likely a task created from a factor with a compound ID
     // Use the sourceId as the client-facing ID for consistency
     effectiveId = dbTask.sourceId;
-    console.log(`Using sourceId ${dbTask.sourceId} as client-facing ID for task ${dbTask.id}`);
+    if (DEBUG_TASKS) console.log(`Using sourceId ${dbTask.sourceId} as client-facing ID for task ${dbTask.id}`);
   }
   
   // Determine the origin value - use original or default to 'custom'
