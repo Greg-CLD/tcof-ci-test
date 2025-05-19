@@ -421,7 +421,7 @@ export const projectsDb = {
             return convertDbTaskToProjectTask(existingTasks[0]);
           }
         } catch (lookupErr) {
-          console.warn(`Error checking for existing tasks with sourceId ${sourceId}:`, lookupErr);
+          if (DEBUG_TASKS) console.warn(`Error checking for existing tasks with sourceId ${sourceId}:`, lookupErr);
           // Continue with task creation regardless
         }
       }
@@ -457,7 +457,7 @@ export const projectsDb = {
       const validatedSourceId = validateSourceId(task.sourceId);
       const finalSourceId = validatedSourceId || uuidv4(); // Use a new UUID if source id is invalid or null
       
-      console.log(`Source ID validation: original=${task.sourceId}, validated=${validatedSourceId}, final=${finalSourceId}`);
+      if (DEBUG_TASKS) console.log(`Source ID validation: original=${task.sourceId}, validated=${validatedSourceId}, final=${finalSourceId}`);
       
       const insertValues = {
         id: task.id,
@@ -619,24 +619,24 @@ export const projectsDb = {
           .where(eq(projectTasksTable.id, validTaskId))
           .returning();
         
-        console.log('Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
-        console.log('Rows affected:', updatedTask ? '1' : '0');
+        if (DEBUG_TASKS) console.log('Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
+        if (DEBUG_TASKS) console.log('Rows affected:', updatedTask ? '1' : '0');
         
         if (updatedTask) {
-          console.log(`Task ${validTaskId} updated successfully:`, JSON.stringify(updatedTask, null, 2));
+          if (DEBUG_TASKS) console.log(`Task ${validTaskId} updated successfully:`, JSON.stringify(updatedTask, null, 2));
           
           // Verify the task exists and was updated with a direct query
           const verifyResult = await db.select()
             .from(projectTasksTable)
             .where(eq(projectTasksTable.id, validTaskId));
           
-          console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
-          console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
+          if (DEBUG_TASKS) console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
+          if (DEBUG_TASKS) console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
           
           // Pass the original taskId to maintain client-side consistency
           const converted = convertDbTaskToProjectTask(updatedTask, taskId);
           
-          console.log('Converted task:', JSON.stringify(converted, null, 2));
+          if (DEBUG_TASKS) console.log('Converted task:', JSON.stringify(converted, null, 2));
           return converted;
         }
       } catch (updateError) {
@@ -658,7 +658,7 @@ export const projectsDb = {
   // Delete a task
   async deleteTask(taskId: string): Promise<boolean> {
     try {
-      console.log(`Attempting to delete task ${taskId}`);
+      if (DEBUG_TASKS) console.log(`Attempting to delete task ${taskId}`);
       
       // First verify the task exists before trying to delete it
       try {
@@ -667,11 +667,11 @@ export const projectsDb = {
           .where(eq(projectTasksTable.id, taskId));
         
         if (existingTasks.length === 0) {
-          console.warn(`Task ${taskId} not found in database before deletion attempt`);
+          if (DEBUG_TASKS) console.warn(`Task ${taskId} not found in database before deletion attempt`);
           throw new Error(`Task with ID ${taskId} not found`);
         }
         
-        console.log(`Found task to delete:`, existingTasks[0]);
+        if (DEBUG_TASKS) console.log(`Found task to delete:`, existingTasks[0]);
       } catch (verifyErr) {
         console.error(`Error verifying task ${taskId} existence:`, verifyErr);
         // Continue with deletion attempt
