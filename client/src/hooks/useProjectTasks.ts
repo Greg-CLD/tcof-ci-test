@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { isValidUUID, isNumericId } from '@/lib/uuid-utils';
+import { DEBUG_TASKS } from '@shared/constants.debug';
 
 import { ProjectTask as DBProjectTask } from '@shared/schema';
 // Local interface for client-side project tasks
@@ -95,7 +96,7 @@ export function useProjectTasks(projectId?: string) {
       
       try {
         // Use native fetch for more control over error handling
-        console.log(`Fetching tasks for project ${normalizedProjectId}`);
+        if (DEBUG_TASKS) console.log(`Fetching tasks for project ${normalizedProjectId}`);
         const res = await apiRequest('GET', `/api/projects/${normalizedProjectId}/tasks`);
         
         if (!res.ok) {
@@ -112,7 +113,7 @@ export function useProjectTasks(projectId?: string) {
         }
         
         const data = await res.json();
-        console.log(`Fetched ${data.length} tasks for project ${normalizedProjectId}`);
+        if (DEBUG_TASKS) console.log(`Fetched ${data.length} tasks for project ${normalizedProjectId}`);
         return data;
       } catch (err) {
         console.error('Error in task query:', err);
@@ -130,7 +131,7 @@ export function useProjectTasks(projectId?: string) {
   
   // Log initial data when it changes and verify query key
   useEffect(() => {
-    if (tasks) {
+    if (tasks && DEBUG_TASKS) {
       console.log('Initial fetch:', tasks);
       console.log('Current query key:', tasksQueryKey);
     }
@@ -139,7 +140,7 @@ export function useProjectTasks(projectId?: string) {
   // Mutation to create a new task
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: CreateTaskParams) => {
-      console.log(`Creating task for project ${projectId}:`, taskData.text);
+      if (DEBUG_TASKS) console.log(`Creating task for project ${projectId}:`, taskData.text);
       
       // Silently normalize invalid UUID sourceId to null
       if (taskData.sourceId && !isValidUUID(taskData.sourceId)) {
@@ -163,7 +164,7 @@ export function useProjectTasks(projectId?: string) {
         if (resJson.success === false) {
           throw new Error(resJson.message || 'Failed to create task');
         }
-        console.log('Task created successfully:', resJson.task?.id);
+        if (DEBUG_TASKS) console.log('Task created successfully:', resJson.task?.id);
         // Return the task object directly for consistent access
         return resJson.task || resJson;
       } catch (err) {
@@ -172,17 +173,17 @@ export function useProjectTasks(projectId?: string) {
       }
     },
     onSuccess: async (newTask, variables) => {
-      console.log('Task created, invalidating cache and refetching');
+      if (DEBUG_TASKS) console.log('Task created, invalidating cache and refetching');
       
       // First log the new task that was created
-      console.log('Created task:', newTask);
+      if (DEBUG_TASKS) console.log('Created task:', newTask);
       
       // Get the exact query key using our helper
       const key = getTasksKey(variables.projectId);
       
       // Update cache optimistically to show the new task immediately
       queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
-        console.log('Optimistically adding task to UI:', newTask);
+        if (DEBUG_TASKS) console.log('Optimistically adding task to UI:', newTask);
         return [...oldTasks, newTask];
       });
       

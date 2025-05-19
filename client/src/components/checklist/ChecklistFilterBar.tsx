@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
 import { ArrowDownNarrowWide, ArrowUpNarrowWide, FilterX, HelpCircle, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DEBUG_FILTERS } from '@shared/constants.debug';
 
 // Export types for filters
 export type StageFilter = 'all' | 'Identification' | 'Definition' | 'Delivery' | 'Closure';
