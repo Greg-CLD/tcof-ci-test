@@ -20,10 +20,11 @@ import {
   CardDescription,
   CardFooter
 } from '@/components/ui/card';
-import { Download, Upload, Trash2, Plus, Save, LogOut, RefreshCw, Eye, Share2, Network } from 'lucide-react';
+import { Download, Upload, Trash2, Plus, Save, LogOut, RefreshCw, Eye, Share2, Network, Bug } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isAdmin, login, logout, ADMIN_EMAIL } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
+import DebugFlagTester from '@/components/debug/DebugFlagTester';
 
 interface PresetHeuristic {
   id: string;
@@ -491,7 +492,46 @@ export default function AdminPresetEditor() {
             <Share2 className="h-4 w-4" />
             Export Graph JSON
           </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => {
+              // Enable debug flags for SuccessFactor task diagnostics
+              localStorage.setItem('debug_tasks', 'true');
+              localStorage.setItem('debug_task_completion', 'true');
+              localStorage.setItem('debug_task_persistence', 'true');
+              toast({
+                title: "Debug Mode Enabled",
+                description: "SuccessFactor task diagnostic logging activated",
+              });
+              // Force page reload to apply debug settings
+              window.location.reload();
+            }}
+            className="flex items-center gap-2"
+          >
+            <Bug className="h-4 w-4" />
+            Enable Task Diagnostics
+          </Button>
         </div>
+      </section>
+
+      {/* Developer Debug Controls - Only for development & diagnostic use */}
+      <section className="mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bug className="h-5 w-5" />
+              Developer Diagnostic Tools
+            </CardTitle>
+            <CardDescription>
+              For troubleshooting issues with task persistence and data validation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Developer-only: use to toggle/check granular debug flags at runtime for diagnostics */}
+            <DebugFlagTester />
+          </CardContent>
+        </Card>
       </section>
     </div>
   );
