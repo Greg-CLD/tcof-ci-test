@@ -503,16 +503,18 @@ export const projectsDb = {
             .from(projectTasksTable)
             .where(eq(projectTasksTable.id, savedTask.id));
           
-          console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
-          console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
+          if (DEBUG_TASKS) console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
+          if (DEBUG_TASKS) console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
           
           // Pass the original task ID (from client request) to maintain client-side consistency
           return convertDbTaskToProjectTask(savedTask, taskData.id);
         }
         
+        // Always log critical database errors, even when debug is disabled
         console.error('Task creation failed: Database returned null after insert');
         return null;
       } catch (insertError) {
+        // Always log critical database errors, even when debug is disabled
         console.error('Database insert exception:', insertError);
         console.error('Error details:', insertError instanceof Error ? insertError.message : 'Unknown error');
         console.error('Error stack:', insertError instanceof Error ? insertError.stack : '');
@@ -522,6 +524,7 @@ export const projectsDb = {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorDetails = error instanceof Error ? error.stack : '';
       
+      // Always log critical database errors, even when debug is disabled
       console.error('Error creating task:', {
         message: errorMessage,
         stack: errorDetails,
@@ -1036,7 +1039,7 @@ function saveProjectPlans(plans: ProjectPlan[]): boolean {
     fs.writeFileSync(PLANS_FILE, JSON.stringify(plans, null, 2));
     return true;
   } catch (error) {
-    console.error('Error saving project plans:', error);
+    if (DEBUG_FILES) console.error('Error saving project plans:', error);
     return false;
   }
 }
