@@ -740,6 +740,18 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 });
               }
               
+              // Debug log to track filtered tasks before rendering
+              console.log(
+                '[CHECKLIST_DEBUG] For stage:', normalizedStage,
+                '| source filter:', sourceFilter,
+                '| filteredTasks:', filteredTasks.map(t => ({
+                  text: t.text,
+                  source: t.source,
+                  origin: t.origin,
+                  id: t.id
+                }))
+              );
+
               return (
                 <TabsContent key={normalizedStage} value={normalizedStage} className="space-y-6">
                   {/* Add task creation form at the top of every stage tab */}
