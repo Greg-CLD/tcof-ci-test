@@ -1,0 +1,41 @@
+Assistant Checklist Testing Prompt
+
+Background:
+The Agent has completed a cycle focused on normalising task data integrity: origin/source field consistency, type updates, mapping logic, and a unit test. We are progressing through a production hardening checklist.
+
+Your Task:
+Please review the codebase and recent test outputs. For each of the following checklist sections, indicate:
+
+• Which tasks are **fully complete** and show evidence (file, line, test result, or commit).
+• Which tasks are **partially done** (describe what’s missing or needs improvement).
+• Which tasks are **not started**.
+
+Sections to Review:
+A. Remove Excess Debug Logging  
+ • Are [CUSTOM_TASK_DEBUG], [UNIFIED_TASK_DEBUG], [FILTER_DEBUG] and similar logs now behind a DEBUG flag, or still present?  
+ • Is there a single debug point in task mapping, gated by a DEBUG env var?
+
+B. Automated Testing  
+ • Does a unit test exist and pass for custom task filtering?  
+ • Is there an E2E smoke test that: creates a custom task via UI, confirms it appears after page reload, and then deletes it?  
+ • Is there a regression test for every filter (optional)?
+
+C. Code/Type Cleanup  
+ • Does the UnifiedTask type include both origin and source, with doc comments?  
+ • Is the mapping function clearly commented (explaining source/origin handling)?
+
+D. Database/Backend Consistency  
+ • Are all tasks in the DB stored with the correct fields?  
+ • Are there any “orphaned” or legacy tasks missing required fields?
+
+E. UI/UX Polish  
+ • Is there a way to bulk delete or archive debug/test tasks?  
+ • Does the UI handle the “empty state” for custom tasks gracefully?  
+ • Are tasks sorted as intended?
+
+F. Documentation  
+ • Is there a README or code comment explaining task flow and the custom tasks bug/fix?
+
+For each bullet, briefly state: “Complete”, “Partial (what’s left)”, or “Not started”. Reference code locations, test results, or artefacts as evidence.
+
+Finish by recommending which section to address next for maximum production readiness.
