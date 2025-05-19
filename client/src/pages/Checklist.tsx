@@ -288,6 +288,24 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             status: task.status || (task.completed ? 'Done' : 'To Do'),
             createdAt: task.createdAt || new Date().toISOString() // Use server timestamp or current time
           };
+          
+          // DEBUG: Log individual task transformation for custom tasks
+          if (task.origin === 'custom') {
+            console.log('[UNIFIED_TASK_DEBUG] Raw → Transformed:', {
+              raw: {
+                id: task.id,
+                text: task.text.substring(0, 20) + '...',
+                origin: task.origin,
+                source: task.source
+              },
+              transformed: {
+                id: unifiedTask.id,
+                text: unifiedTask.text.substring(0, 20) + '...',
+                origin: unifiedTask.origin, 
+                source: unifiedTask.source
+              }
+            });
+          }
 
           // Add source name based on origin
           if (task.origin === 'factor' && task.sourceId) {
@@ -699,6 +717,17 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 if (sourceFilter !== 'all') {
                   // For custom filter, include tasks with source='custom' OR origin='custom'
                   if (sourceFilter === 'custom') {
+                    // DEBUG: Track custom task filtering logic
+                    const isCustomTask = task.source === 'custom' || task.origin === 'custom';
+                    
+                    console.log('[FILTER_DEBUG] Task checked for custom filter:', {
+                      text: task.text.substring(0, 20) + '...',
+                      source: task.source,
+                      origin: task.origin,
+                      isCustomTask: isCustomTask,
+                      wouldPass: isCustomTask
+                    });
+                    
                     if (task.source !== 'custom' && task.origin !== 'custom') {
                       return false;
                     }
