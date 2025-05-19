@@ -16,3 +16,5 @@ export const DEBUG_FILES = isDev && (import.meta.env?.VITE_DEBUG_FILES ?? 'false
 export const DEBUG_TASK_API = DEBUG_TASKS;       // Logs for task API requests/responses
 export const DEBUG_TASK_MAPPING = DEBUG_TASKS;   // Logs for task data transformation/mapping
 export const DEBUG_TASK_COMPLETION = DEBUG_TASKS; // Logs for task completion state changes
+export const DEBUG_TASK_VALIDATION = DEBUG_TASKS; // Logs for task data validation
+export const DEBUG_TASK_PERSISTENCE = DEBUG_TASKS; // Logs for task storage/persistence ops

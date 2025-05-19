@@ -4,7 +4,11 @@
  */
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { DEBUG_TASK_COMPLETION } from '@shared/constants.debug';
+import { 
+  DEBUG_TASK_COMPLETION, 
+  DEBUG_TASK_VALIDATION, 
+  DEBUG_TASK_PERSISTENCE 
+} from '@shared/constants.debug';
 
 // Mock the API requests
 const mockApiRequest = vi.fn();
@@ -34,24 +38,61 @@ describe('Task Completion Persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     
+    // Log test setup if validation debugging is enabled
+    if (DEBUG_TASK_VALIDATION) {
+      console.log('[DEBUG_TASK_VALIDATION] Setting up test with mock task:', mockSuccessFactorTask);
+      console.log('[DEBUG_TASK_VALIDATION] Validating initial task structure:');
+      console.log('[DEBUG_TASK_VALIDATION]  - ID:', mockSuccessFactorTask.id);
+      console.log('[DEBUG_TASK_VALIDATION]  - Source ID:', mockSuccessFactorTask.sourceId);
+      console.log('[DEBUG_TASK_VALIDATION]  - Source Type:', mockSuccessFactorTask.sourceType);
+      console.log('[DEBUG_TASK_VALIDATION]  - Origin:', mockSuccessFactorTask.origin);
+      console.log('[DEBUG_TASK_VALIDATION]  - Completed:', mockSuccessFactorTask.completed);
+    }
+    
     // Mock successful API responses
     mockApiRequest.mockImplementation((method, url, data) => {
+      if (DEBUG_TASK_API) {
+        console.log(`[DEBUG_TASK_API] ${method} request to ${url}`, data || '');
+      }
+      
       if (method === 'GET' && url.includes('/api/projects/')) {
         // Return a list of tasks including our test task
+        if (DEBUG_TASK_PERSISTENCE) {
+          console.log('[DEBUG_TASK_PERSISTENCE] Simulating GET tasks response with mock data');
+        }
         return Promise.resolve({
           json: () => Promise.resolve([mockSuccessFactorTask]),
           status: 200
         });
       } else if (method === 'PATCH' && url.includes('/api/projects/')) {
-        // Return the updated task with completion status
+        // Create the updated task with completion status
+        const updatedTask = {
+          ...mockSuccessFactorTask,
+          ...data, // Apply the updates from the request
+          updatedAt: new Date().toISOString() // Update the timestamp
+        };
+        
+        if (DEBUG_TASK_PERSISTENCE) {
+          console.log('[DEBUG_TASK_PERSISTENCE] Persisting updated task:', updatedTask);
+        }
+        
+        // Validate the updated task if validation debugging is enabled
+        if (DEBUG_TASK_VALIDATION) {
+          console.log('[DEBUG_TASK_VALIDATION] Validating updated task structure:');
+          console.log('[DEBUG_TASK_VALIDATION]  - ID consistency:', updatedTask.id === mockSuccessFactorTask.id);
+          console.log('[DEBUG_TASK_VALIDATION]  - Source ID consistency:', updatedTask.sourceId === mockSuccessFactorTask.sourceId);
+          console.log('[DEBUG_TASK_VALIDATION]  - Source Type consistency:', updatedTask.sourceType === mockSuccessFactorTask.sourceType);
+          console.log('[DEBUG_TASK_VALIDATION]  - New completion status:', updatedTask.completed);
+        }
+        
         return Promise.resolve({
-          json: () => Promise.resolve({
-            ...mockSuccessFactorTask,
-            ...data, // Apply the updates from the request
-            updatedAt: new Date().toISOString() // Update the timestamp
-          }),
+          json: () => Promise.resolve(updatedTask),
           status: 200
         });
+      }
+      
+      if (DEBUG_TASK_API) {
+        console.log(`[DEBUG_TASK_API] Unhandled request: ${method} ${url}`);
       }
       
       // Default fallback response

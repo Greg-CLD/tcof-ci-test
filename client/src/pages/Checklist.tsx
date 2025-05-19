@@ -47,7 +47,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { ORIGIN_LABELS } from '@/constants/origin';
 import { useProjectContext } from '@/contexts/ProjectContext';
-import { DEBUG_TASKS, DEBUG_FILTERS } from '@shared/constants.debug';
+import { 
+  DEBUG_TASKS, 
+  DEBUG_FILTERS, 
+  DEBUG_TASK_COMPLETION, 
+  DEBUG_TASK_MAPPING, 
+  DEBUG_TASK_PERSISTENCE,
+  DEBUG_TASK_VALIDATION
+} from '@shared/constants.debug';
 
 interface ChecklistProps {
   projectId?: string;
@@ -497,6 +504,19 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
     if (!currentProjectId) return;
 
     if (DEBUG_TASKS) console.log(`[CHECKLIST] Updating task ${taskId}:`, updates);
+    
+    // Add better debugging for SuccessFactor task updates
+    const taskBeingUpdated = tasks.find(task => task.id === taskId);
+    if (DEBUG_TASK_COMPLETION) {
+      console.log(`[DEBUG_TASK_COMPLETION] Processing task update for task ID: ${taskId}`);
+      console.log(`[DEBUG_TASK_COMPLETION] Task origin: ${taskBeingUpdated?.origin || 'unknown'}`);
+      console.log(`[DEBUG_TASK_COMPLETION] Current completion state: ${taskBeingUpdated?.completed}`);
+      console.log(`[DEBUG_TASK_COMPLETION] New completion state: ${updates.completed}`);
+      if (taskBeingUpdated?.origin === 'success-factor') {
+        console.log(`[DEBUG_TASK_COMPLETION] *** SuccessFactor task being updated ***`);
+        console.log(`[DEBUG_TASK_COMPLETION] Source ID: ${taskBeingUpdated.sourceId}`);
+      }
+    }
 
     try {
       // First update local state for immediate UI feedback
@@ -538,7 +558,21 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       };
 
       if (DEBUG_TASKS) console.log(`[CHECKLIST] Sending task update to API: ${JSON.stringify(updatedFields)}`);
-
+      
+      // Add debug logging specifically for task persistence operations
+      if (DEBUG_TASK_PERSISTENCE) {
+        console.log(`[DEBUG_TASK_PERSISTENCE] Sending task update to server`);
+        console.log(`[DEBUG_TASK_PERSISTENCE] Task ID: ${taskId}`);
+        console.log(`[DEBUG_TASK_PERSISTENCE] Project ID: ${currentProjectId}`);
+        console.log(`[DEBUG_TASK_PERSISTENCE] Completion state being sent: ${updates.completed}`);
+        
+        // Check if this is a SuccessFactor task for focused debugging
+        const isSuccessFactorTask = taskBeingUpdated?.origin === 'success-factor';
+        if (isSuccessFactorTask) {
+          console.log(`[DEBUG_TASK_PERSISTENCE] SuccessFactor task persistence operation`);
+          console.log(`[DEBUG_TASK_PERSISTENCE] SourceId: ${taskBeingUpdated?.sourceId}`);
+        }
+      }
 
       const response = await apiRequest(
         "PUT",
