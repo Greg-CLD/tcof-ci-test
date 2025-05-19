@@ -362,6 +362,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       
       setTasks(allTasks);
       setTasksByStage(byStage);
+      console.log('[CHECKLIST_DEBUG] tasksByStage[identification]:', byStage['identification'].map(t => t.text));
       setLoading(false);
     } catch (error) {
       console.error('[CHECKLIST] Error refreshing tasks:', error);
