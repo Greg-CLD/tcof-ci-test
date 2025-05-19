@@ -83,6 +83,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { apiRequest } from "./lib/queryClient";
 // Import testing helpers
 import "./lib/taskTestHelpers";
+// Import task state transition debugging utilities
+import * as debugTaskState from "./utils/debug-task-state";
 
 // Declare the window object extensions for TypeScript
 declare global {
@@ -315,10 +317,12 @@ if (import.meta.env.DEV) {
   console.log('%c- window.createTestTask({projectId: "your-project-id"}) - Create a test task', 'color: #00b894;');
   console.log('%c- window.inspectTasks("your-project-id") - Examine tasks for debugging', 'color: #00b894;');
   console.log('%c- window.runTaskPersistenceTest("your-project-id") - Run full lifecycle test', 'color: #00b894;');
+  console.log('%c- debugTaskState.runSession() - Run task state transition diagnostics with logging', 'color: #e74c3c; font-weight: bold;');
   console.log('%c- Complete testing workflow:', 'color: #00b894;');
   console.log('%c  1. Get project ID: window.listProjects()', 'color: #00b894;');
   console.log('%c  2. Run automated test: window.listProjects().then(p => window.runTaskPersistenceTest(p[0].id))', 'color: #00b894;');
   console.log('%c  3. Refresh browser and verify: window.listProjects().then(p => window.inspectTasks(p[0].id))', 'color: #00b894;');
+  console.log('%c  4. Run state transition debug: debugTaskState.runSession()', 'color: #e74c3c;');
 }
 
 createRoot(document.getElementById("root")!).render(
