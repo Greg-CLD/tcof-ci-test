@@ -371,7 +371,7 @@ export const projectsDb = {
   // Create a task for a project
   async createTask(taskData) {
     if (!taskData.projectId) {
-      console.error('Cannot create task: missing projectId');
+      if (DEBUG_TASKS) console.error('Cannot create task: missing projectId');
       return null;
     }
     
@@ -640,9 +640,9 @@ export const projectsDb = {
           return converted;
         }
       } catch (updateError) {
-        console.error('Database update exception:', updateError);
-        console.error('Error details:', updateError instanceof Error ? updateError.message : 'Unknown error');
-        console.error('Error stack:', updateError instanceof Error ? updateError.stack : '');
+        if (DEBUG_TASKS) console.error('Database update exception:', updateError);
+        if (DEBUG_TASKS) console.error('Error details:', updateError instanceof Error ? updateError.message : 'Unknown error');
+        if (DEBUG_TASKS) console.error('Error stack:', updateError instanceof Error ? updateError.stack : '');
         throw updateError;
       }
       
@@ -673,7 +673,7 @@ export const projectsDb = {
         
         if (DEBUG_TASKS) console.log(`Found task to delete:`, existingTasks[0]);
       } catch (verifyErr) {
-        console.error(`Error verifying task ${taskId} existence:`, verifyErr);
+        if (DEBUG_TASKS) console.error(`Error verifying task ${taskId} existence:`, verifyErr);
         // Continue with deletion attempt
       }
       
@@ -682,18 +682,18 @@ export const projectsDb = {
         .where(eq(projectTasksTable.id, taskId))
         .returning({ id: projectTasksTable.id });
       
-      console.log(`Deletion result for task ${taskId}:`, result);
+      if (DEBUG_TASKS) console.log(`Deletion result for task ${taskId}:`, result);
       
       if (result && result.length > 0) {
-        console.log(`Successfully deleted task ${taskId}`);
+        if (DEBUG_TASKS) console.log(`Successfully deleted task ${taskId}`);
         return true;
       }
       
       // If no rows were affected, the task doesn't exist
-      console.warn(`No rows affected when deleting task ${taskId}`);
+      if (DEBUG_TASKS) console.warn(`No rows affected when deleting task ${taskId}`);
       throw new Error(`Task with ID ${taskId} not found or couldn't be deleted`);
     } catch (error) {
-      console.error(`Error deleting task ${taskId}:`, error);
+      if (DEBUG_TASKS) console.error(`Error deleting task ${taskId}:`, error);
       throw error;
     }
   },
