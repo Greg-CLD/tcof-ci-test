@@ -1,0 +1,64 @@
+
+Objective (single focus):
+▲ Strengthen task data integrity by aligning type definitions and mapping logic so every task carries **both `origin` and `source` fields consistently**.  
+▼ Do **NOT** touch UI, auth, or debug-log removal in this cycle.
+
+File Group:
+• shared/types/index.ts        (type declarations)  
+• server/projectsDb.ts         (DB-→-task mapping)  
+(No other files.)
+
+Minimal Diff Summary:
+1. **shared/types/index.ts**
+   - Expand `UnifiedTask` interface:
+     ```ts
+     /** Source is the normalised copy of origin used by the UI layer */
+     export interface UnifiedTask {
+       id: string;
+       text: string;
+       stage: string;
+       origin: 'custom' | 'factor' | 'heuristic' | string;
+       /** Normalised duplicate of origin; always present */
+       source: 'custom' | 'factor' | 'heuristic' | string;
+       sourceId: string;      // links task back to factor/heuristic definition
+       completed: boolean;
+       // …any other existing fields
+     }
+     ```
+   - Add short JSDoc explaining `origin` vs `source`.
+
+2. **server/projectsDb.ts**
+   - In `convertDbTaskToProjectTask` (or equivalent):
+     ```ts
+     const task: UnifiedTask = {
+       id: dbTask.id,
+       text: dbTask.text,
+       stage: dbTask.stage,
+       origin: dbTask.origin ?? 'custom',
+       source: dbTask.origin ?? 'custom',   // <-- NEW: always set
+       sourceId: dbTask.sourceId ?? '',
+       completed: !!dbTask.completed,
+     };
+     ```
+   - Remove old comment showing “inconsistent field handling”.
+
+Unit-Test Outline (add file tests/unit/task-type-consistency.test.ts):
+```ts
+import { describe, it, expect } from 'vitest';
+import { convertDbTaskToProjectTask } from '../../server/projectsDb';
+
+describe('Task field consistency', () => {
+  it('maps DB task to UnifiedTask with both origin and source equal', () => {
+    const dbMock = {
+      id: 't1',
+      text: 'Mock task',
+      stage: 'identification',
+      origin: 'factor',
+      sourceId: 'abc',
+      completed: false,
+    };
+    const task = convertDbTaskToProjectTask(dbMock as any);
+    expect(task.origin).toBe('factor');
+    expect(task.source).toBe('factor');       // NEW invariant
+  });
+});

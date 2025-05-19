@@ -66,7 +66,10 @@ export interface ProjectTask {
   projectId: string;
   text: string;
   stage: string;
+  /** Original source classification of the task */
   origin: string;
+  /** Normalized duplicate of origin for consistent filtering */
+  source: string;
   sourceId: string;
   completed: boolean;
   notes: string;
@@ -160,12 +163,18 @@ function convertDbTaskToProjectTask(dbTask: any, clientTaskId?: string): Project
     console.log(`Using sourceId ${dbTask.sourceId} as client-facing ID for task ${dbTask.id}`);
   }
   
+  // Determine the origin value - use original or default to 'custom'
+  const origin = dbTask.origin || 'custom';
+  
+  // CRITICAL FIX: Always set source field equal to origin for consistent handling
+  // This ensures both fields are always present for proper filtering and display
   return {
     id: effectiveId,
     projectId: dbTask.projectId,
     text: dbTask.text || '',
     stage: dbTask.stage || '',
-    origin: dbTask.origin || 'custom',
+    origin: origin,
+    source: origin, // Always set source equal to origin for consistent filtering
     sourceId: dbTask.sourceId || '',
     completed: !!dbTask.completed,
     notes: dbTask.notes || '',

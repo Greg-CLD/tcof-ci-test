@@ -4,3 +4,4 @@
 export * from './resonance-ratings';
 export * from './personal-heuristics';
 export * from './plan-types';
+export * from './tasks';
