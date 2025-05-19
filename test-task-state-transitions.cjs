@@ -1,13 +1,13 @@
 /**
- * Simple smoke test for task state transition debug logging
+ * Simple smoke test for task state transition debug logging (CommonJS version)
  * This script enables task state transition debugging and checks the console output
  * for relevant debug messages to confirm the system is properly tracking state changes.
  * 
- * Usage: node test-task-state-transitions.js
+ * Usage: node test-task-state-transitions.cjs
  */
 
-import fetch from 'node-fetch';
-import { URLSearchParams } from 'url';
+const fetch = require('node-fetch');
+const { URLSearchParams } = require('url');
 
 // Common configuration
 const BASE_URL = 'http://localhost:3000';

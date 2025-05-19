@@ -764,7 +764,8 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         const { 
           DEBUG_TASK_API, 
           DEBUG_TASK_COMPLETION, 
-          DEBUG_TASK_PERSISTENCE 
+          DEBUG_TASK_PERSISTENCE,
+          DEBUG_TASK_STATE
         } = require('@shared/constants.debug');
         
         try {
@@ -794,6 +795,21 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
               // Log the entire task update object for comprehensive debugging
               if (DEBUG_TASK_PERSISTENCE) {
                 console.log(`[DEBUG_TASK_PERSISTENCE] Full task update object:`, taskUpdate);
+              }
+            }
+            
+            // Track state transitions with the new debug flag
+            if (DEBUG_TASK_STATE && taskUpdate.hasOwnProperty('completed')) {
+              console.log(`[DEBUG_TASK_STATE] Task state transition tracked:`);
+              console.log(`[DEBUG_TASK_STATE]  - Task ID: ${originalTask.id}`);
+              console.log(`[DEBUG_TASK_STATE]  - Title: ${originalTask.text?.substring(0, 40)}...`);
+              console.log(`[DEBUG_TASK_STATE]  - Origin: ${originalTask.origin}`);
+              console.log(`[DEBUG_TASK_STATE]  - From state: ${originalTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+              console.log(`[DEBUG_TASK_STATE]  - To state: ${taskUpdate.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+              
+              if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
+                console.log(`[DEBUG_TASK_STATE] *** SuccessFactor task detected - tracking for completion bug ***`);
+                console.log(`[DEBUG_TASK_STATE]  - Source ID: ${originalTask.sourceId}`);
               }
             }
           }
