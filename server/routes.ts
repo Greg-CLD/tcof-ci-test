@@ -558,12 +558,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       // Otherwise, handle as a single task
       try {
         // Import the debug flags directly from the constants file
-        const { 
-          DEBUG_TASK_API, 
-          DEBUG_TASK_COMPLETION, 
-          DEBUG_TASK_PERSISTENCE,
-          DEBUG_TASK_VALIDATION
-        } = { DEBUG_TASK_API, DEBUG_TASK_COMPLETION, DEBUG_TASK_PERSISTENCE, DEBUG_TASK_VALIDATION };
+        // Use imported debug flags instead of re-declaring
         
         console.log(`Attempting to save task for project ${projectId} with data:`, JSON.stringify(taskData));
         
@@ -773,13 +768,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         // Enhanced diagnostic logging for task updates with specific focus on SuccessFactor tasks
         let originalTask;
         
-        // Import the debug flags directly from the constants file
-        const { 
-          DEBUG_TASK_API, 
-          DEBUG_TASK_COMPLETION, 
-          DEBUG_TASK_PERSISTENCE,
-          DEBUG_TASK_STATE
-        } = require('@shared/constants.debug');
+        // Use imported debug flags from top of file
         
         try {
           // Get the original task to check if it's a SuccessFactor task
