@@ -194,11 +194,11 @@ export function useProjectTasks(projectId?: string) {
         
         // Force immediate refetch from backend to ensure UI shows persisted state
         const freshData = await refetch();
-        console.log(`Refetched ${freshData.data?.length || 0} tasks after create`);
+        if (DEBUG_TASKS) console.log(`Refetched ${freshData.data?.length || 0} tasks after create`);
         
         // Manually verify the created task exists in the refetched data
         const taskExists = freshData.data?.some(task => task.id === newTask.id);
-        console.log(`Task ${newTask.id} exists in refetched data: ${taskExists}`);
+        if (DEBUG_TASKS) console.log(`Task ${newTask.id} exists in refetched data: ${taskExists}`);
         
         if (!taskExists) {
           console.warn('Task was created but not found in refetched data. Forcing another refetch...');
@@ -329,16 +329,16 @@ export function useProjectTasks(projectId?: string) {
       }
     },
     onSuccess: async (result, deletedTaskId) => {
-      console.log('Task deleted, invalidating cache and refetching');
-      console.log('Delete result:', result);
-      console.log('Deleted task ID:', deletedTaskId);
+      if (DEBUG_TASKS) console.log('Task deleted, invalidating cache and refetching');
+      if (DEBUG_TASKS) console.log('Delete result:', result);
+      if (DEBUG_TASKS) console.log('Deleted task ID:', deletedTaskId);
       
       // Get the exact query key using our helper
       const key = getTasksKey(projectId);
       
       // Update cache optimistically to remove the deleted task immediately
       queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
-        console.log('Optimistically removing deleted task from UI:', deletedTaskId);
+        if (DEBUG_TASKS) console.log('Optimistically removing deleted task from UI:', deletedTaskId);
         return oldTasks.filter(task => task.id !== deletedTaskId);
       });
       
@@ -349,7 +349,7 @@ export function useProjectTasks(projectId?: string) {
         
         // Manually refetch to get fresh data
         const freshData = await refetch();
-        console.log('Refetched list after delete:', freshData.data);
+        if (DEBUG_TASKS) console.log('Refetched list after delete:', freshData.data);
         
         // Verify the task is actually gone from the fresh data
         const taskStillExists = freshData.data?.some(task => task.id === deletedTaskId);
@@ -357,7 +357,7 @@ export function useProjectTasks(projectId?: string) {
           console.warn(`Task ${deletedTaskId} was not actually deleted from the server! Forcing another refetch...`);
           setTimeout(() => refetch(), 1000);
         } else {
-          console.log(`Verified task ${deletedTaskId} is no longer in the task list`);
+          if (DEBUG_TASKS) console.log(`Verified task ${deletedTaskId} is no longer in the task list`);
         }
       } catch (err) {
         console.error('Error during cache invalidation/refetch after delete:', err);
@@ -404,7 +404,7 @@ export function useProjectTasks(projectId?: string) {
             const matchingTask = tasks.find(t => t.sourceId === sourceId);
             
             if (matchingTask) {
-              console.log(`Found matching task with UUID ${matchingTask.id} for source ID ${sourceId}`);
+              if (DEBUG_TASKS) console.log(`Found matching task with UUID ${matchingTask.id} for source ID ${sourceId}`);
               
               // Use the actual UUID for the API call
               return await updateTaskMutation.mutateAsync({ taskId: matchingTask.id, data });
@@ -437,7 +437,7 @@ export function useProjectTasks(projectId?: string) {
           const matchingTask = tasks.find(t => t.sourceId === taskId);
           
           if (matchingTask) {
-            console.log(`Found matching task with UUID ${matchingTask.id} for source ID ${taskId}`);
+            if (DEBUG_TASKS) console.log(`Found matching task with UUID ${matchingTask.id} for source ID ${taskId}`);
             
             // Use the actual UUID for the API call
             return await deleteTaskMutation.mutateAsync(matchingTask.id);
