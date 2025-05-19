@@ -643,6 +643,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         description: "Task has been removed successfully",
       });
     } catch (error) {
+      // Always log errors, even when debug is disabled
       console.error('[CHECKLIST] Error deleting task:', error);
 
       // Revert local state on error by refreshing from server
