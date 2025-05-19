@@ -300,9 +300,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             text: task.text,
             completed: !!task.completed,
             stage: task.stage.toLowerCase() as Stage,
-            // Fix: Properly identify custom tasks - ensure origin is consistently mapped to source
-            // If origin is undefined/null, treat it as a custom task
-            source: (task.origin || 'custom') as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
+            // FIXED: Properly handle custom tasks by checking origin first
+            // If origin is 'custom', the source should also be 'custom'
+            source: task.origin === 'custom' ? 'custom' : (task.origin || 'custom') as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
             origin: task.origin, // Pass through the origin property for custom task filtering
             sourceId: task.sourceId || undefined,
             notes: task.notes || '',
