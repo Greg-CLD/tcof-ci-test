@@ -47,14 +47,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { ORIGIN_LABELS } from '@/constants/origin';
 import { useProjectContext } from '@/contexts/ProjectContext';
-import { 
+// Import all debug constants from the shared file
+import * as DebugConstants from '@shared/constants.debug';
+
+// Use destructuring for more readable code
+const { 
   DEBUG_TASKS, 
-  DEBUG_FILTERS, 
+  DEBUG_FILTERS,
+  DEBUG_TASK_API,
   DEBUG_TASK_COMPLETION, 
   DEBUG_TASK_MAPPING, 
   DEBUG_TASK_PERSISTENCE,
   DEBUG_TASK_VALIDATION
-} from '@shared/constants.debug';
+} = DebugConstants;
 
 interface ChecklistProps {
   projectId?: string;
