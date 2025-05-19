@@ -1,20 +1,88 @@
 
 /**
- * Debug configuration constants
- * These flags control the visibility of debug logs throughout the application
+ * Debug configuration constants for TCOF Toolkit
+ * 
+ * This module provides consistent debug flags across client and server components
+ * with safe environment variable access patterns for both browser and Node.js contexts.
+ * 
+ * Usage:
+ * ```
+ * import { DEBUG_TASK_COMPLETION } from '@shared/constants.debug';
+ * 
+ * if (DEBUG_TASK_COMPLETION) {
+ *   console.log('[DEBUG_TASK_COMPLETION] Task completion status changed:', newValue);
+ * }
+ * ```
  */
 
-// Check if we're in development by looking for Vite's import.meta.env
-const isDev = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'development';
+/**
+ * Safely gets an environment variable from either client or server context
+ * Falls back gracefully between Vite's import.meta.env and Node's process.env
+ */
+function getEnvVar(name: string, defaultValue: string = 'false'): string {
+  // Try browser context first (Vite)
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[name] ?? defaultValue;
+  }
+  
+  // Fall back to Node.js context
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[name] ?? defaultValue;
+  }
+  
+  // Ultimate fallback
+  return defaultValue;
+}
 
+// Detect if we're in development mode
+const isDev = 
+  (typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'development') || 
+  (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development');
+
+// Primary debug flags
 export const DEBUG = isDev;
-export const DEBUG_TASKS = isDev && (import.meta.env?.VITE_DEBUG_TASKS ?? 'false') === 'true';
-export const DEBUG_FILTERS = isDev && (import.meta.env?.VITE_DEBUG_FILTERS ?? 'false') === 'true';
-export const DEBUG_FILES = isDev && (import.meta.env?.VITE_DEBUG_FILES ?? 'false') === 'true';
+export const DEBUG_TASKS = isDev && (getEnvVar('VITE_DEBUG_TASKS', 'false') === 'true' || getEnvVar('DEBUG_TASKS', 'false') === 'true');
+export const DEBUG_FILTERS = isDev && (getEnvVar('VITE_DEBUG_FILTERS', 'false') === 'true' || getEnvVar('DEBUG_FILTERS', 'false') === 'true');
+export const DEBUG_FILES = isDev && (getEnvVar('VITE_DEBUG_FILES', 'false') === 'true' || getEnvVar('DEBUG_FILES', 'false') === 'true');
 
 // Granular task lifecycle debug flags
-export const DEBUG_TASK_API = DEBUG_TASKS;       // Logs for task API requests/responses
-export const DEBUG_TASK_MAPPING = DEBUG_TASKS;   // Logs for task data transformation/mapping
-export const DEBUG_TASK_COMPLETION = DEBUG_TASKS; // Logs for task completion state changes
-export const DEBUG_TASK_VALIDATION = DEBUG_TASKS; // Logs for task data validation
-export const DEBUG_TASK_PERSISTENCE = DEBUG_TASKS; // Logs for task storage/persistence ops
+// These can be individually controlled via environment variables or enabled as a group via DEBUG_TASKS
+export const DEBUG_TASK_API = isDev && (
+  DEBUG_TASKS || 
+  getEnvVar('VITE_DEBUG_TASK_API', 'false') === 'true' || 
+  getEnvVar('DEBUG_TASK_API', 'false') === 'true'
+);
+
+export const DEBUG_TASK_MAPPING = isDev && (
+  DEBUG_TASKS || 
+  getEnvVar('VITE_DEBUG_TASK_MAPPING', 'false') === 'true' || 
+  getEnvVar('DEBUG_TASK_MAPPING', 'false') === 'true'
+);
+
+export const DEBUG_TASK_COMPLETION = isDev && (
+  DEBUG_TASKS || 
+  getEnvVar('VITE_DEBUG_TASK_COMPLETION', 'false') === 'true' || 
+  getEnvVar('DEBUG_TASK_COMPLETION', 'false') === 'true'
+);
+
+export const DEBUG_TASK_VALIDATION = isDev && (
+  DEBUG_TASKS || 
+  getEnvVar('VITE_DEBUG_TASK_VALIDATION', 'false') === 'true' || 
+  getEnvVar('DEBUG_TASK_VALIDATION', 'false') === 'true'
+);
+
+export const DEBUG_TASK_PERSISTENCE = isDev && (
+  DEBUG_TASKS || 
+  getEnvVar('VITE_DEBUG_TASK_PERSISTENCE', 'false') === 'true' || 
+  getEnvVar('DEBUG_TASK_PERSISTENCE', 'false') === 'true'
+);
+
+// Never enable debug flags in production
+if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+  Object.keys(exports).forEach(key => {
+    if (key.startsWith('DEBUG')) {
+      // @ts-ignore - Dynamically setting exports in module
+      exports[key] = false;
+    }
+  });
+}

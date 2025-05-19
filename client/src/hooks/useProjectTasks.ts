@@ -224,15 +224,54 @@ export function useProjectTasks(projectId?: string) {
   // Mutation to update an existing task
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
+      // Enhanced diagnostic logging for task updates
       if (DEBUG_TASKS) console.log(`Updating task ${taskId} for project ${projectId}:`, data);
+      
+      // Special diagnostics for completion status changes (key issue we're debugging)
+      if (DEBUG_TASK_COMPLETION && data.hasOwnProperty('completed')) {
+        console.log(`[DEBUG_TASK_COMPLETION] Task ${taskId} completion update request`);
+        console.log(`[DEBUG_TASK_COMPLETION] New completion value: ${data.completed}`);
+        
+        // Check if this is a task from existing data to get more context
+        const existingTask = tasks?.find(t => t.id === taskId);
+        if (existingTask) {
+          console.log(`[DEBUG_TASK_COMPLETION] Existing task details:`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - ID: ${existingTask.id}`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Current completion: ${existingTask.completed}`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Origin: ${existingTask.origin}`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Source ID: ${existingTask.sourceId || 'null'}`);
+          
+          // Special focus on SuccessFactor tasks
+          if (existingTask.origin === 'factor') {
+            console.log(`[DEBUG_TASK_COMPLETION] *** SuccessFactor task detected ***`);
+          }
+        }
+      }
       
       // Silently normalize invalid UUID sourceId to null
       if (data.sourceId && !isValidUUID(data.sourceId)) {
+        if (DEBUG_TASK_MAPPING) {
+          console.log(`[DEBUG_TASK_MAPPING] Invalid sourceId detected: ${data.sourceId}`);
+          console.log(`[DEBUG_TASK_MAPPING] Normalizing to null`);
+        }
         data.sourceId = null;
+      }
+      
+      // Track request timing for persistence debugging
+      const requestStartTime = performance.now();
+      if (DEBUG_TASK_PERSISTENCE) {
+        console.log(`[DEBUG_TASK_PERSISTENCE] Starting update request for task ${taskId}`);
+        console.log(`[DEBUG_TASK_PERSISTENCE] Request payload:`, JSON.stringify(data));
       }
       
       try {
         const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, data);
+        
+        // Measure round-trip time for performance analysis
+        if (DEBUG_TASK_PERSISTENCE) {
+          const requestDuration = performance.now() - requestStartTime;
+          console.log(`[DEBUG_TASK_PERSISTENCE] Update request completed in ${requestDuration.toFixed(2)}ms`);
+        }
         
         if (!res.ok) {
           console.error(`Error updating task: ${res.status} ${res.statusText}`);
@@ -247,19 +286,59 @@ export function useProjectTasks(projectId?: string) {
         if (resJson.success === false) {
           throw new Error(resJson.message || 'Failed to update task');
         }
+        
+        // Standard debug logging
         if (DEBUG_TASKS) console.log('Task updated successfully:', resJson.task?.id);
+        
+        // Detailed diagnostic logging for SuccessFactor tasks and completion updates
+        if (DEBUG_TASK_COMPLETION) {
+          const updatedTask = resJson.task || resJson;
+          console.log(`[DEBUG_TASK_COMPLETION] Response task details:`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - ID: ${updatedTask.id}`);
+          console.log(`[DEBUG_TASK_COMPLETION]   - Completion: ${updatedTask.completed}`);
+          
+          // Compare with requested values
+          if (data.hasOwnProperty('completed') && updatedTask.completed !== data.completed) {
+            console.log(`[DEBUG_TASK_COMPLETION] *** CRITICAL ERROR: Completion mismatch ***`);
+            console.log(`[DEBUG_TASK_COMPLETION]   - Requested: ${data.completed}`);
+            console.log(`[DEBUG_TASK_COMPLETION]   - Returned: ${updatedTask.completed}`);
+          } else if (data.hasOwnProperty('completed')) {
+            console.log(`[DEBUG_TASK_COMPLETION] Completion value successfully updated to ${updatedTask.completed}`);
+          }
+        }
+        
         // Return the task object directly for consistent access
         return resJson.task || resJson;
       } catch (err) {
         console.error('Task update exception:', err);
+        
+        if (DEBUG_TASK_PERSISTENCE) {
+          console.log(`[DEBUG_TASK_PERSISTENCE] Update request failed with error:`);
+          console.log(err);
+        }
+        
         throw err;
       }
     },
     onSuccess: async (updatedTask, variables) => {
       if (DEBUG_TASKS) console.log('Task updated, invalidating cache and refetching');
       
+      // Track task update in cache
+      if (DEBUG_TASK_PERSISTENCE) {
+        console.log(`[DEBUG_TASK_PERSISTENCE] Update successful for task ${updatedTask.id}`);
+        console.log(`[DEBUG_TASK_PERSISTENCE] Current cache state before update:`, queryClient.getQueryData(getTasksKey(projectId)));
+      }
+      
       // First log the updated task
       if (DEBUG_TASKS) console.log('Updated task:', updatedTask);
+      
+      // Special logging for completion status
+      if (DEBUG_TASK_COMPLETION && 
+          variables.data.hasOwnProperty('completed') && 
+          updatedTask.origin === 'factor') {
+        console.log(`[DEBUG_TASK_COMPLETION] SuccessFactor task ${updatedTask.id} updated successfully`);
+        console.log(`[DEBUG_TASK_COMPLETION] New completion value: ${updatedTask.completed}`);
+      }
       
       // Get the exact query key using our helper
       const key = getTasksKey(projectId);
@@ -267,6 +346,22 @@ export function useProjectTasks(projectId?: string) {
       // Update cache optimistically to show the updated task immediately
       queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
         if (DEBUG_TASKS) console.log('Optimistically updating task in UI:', updatedTask);
+        
+        // Diagnostic logging for cache updates to help trace the bug
+        if (DEBUG_TASK_PERSISTENCE || DEBUG_TASK_COMPLETION) {
+          console.log(`[DEBUG_CACHE] Updating task ${updatedTask.id} in cache`);
+          
+          // Check if this task exists in the cache
+          const existingTask = oldTasks.find(t => t.id === updatedTask.id);
+          if (existingTask) {
+            console.log(`[DEBUG_CACHE] Found existing task in cache:`);
+            console.log(`[DEBUG_CACHE]   - Current completion: ${existingTask.completed}`);
+            console.log(`[DEBUG_CACHE]   - New completion: ${updatedTask.completed}`);
+          } else {
+            console.log(`[DEBUG_CACHE] Task ${updatedTask.id} not found in current cache!`);
+          }
+        }
+        
         return oldTasks.map(task => 
           task.id === updatedTask.id ? updatedTask : task
         );
@@ -275,22 +370,88 @@ export function useProjectTasks(projectId?: string) {
       // Robust cache invalidation and refetching
       try {
         // Invalidate the query cache with exact matching to ensure consistency
+        if (DEBUG_TASK_PERSISTENCE) {
+          console.log(`[DEBUG_TASK_PERSISTENCE] Invalidating cache for key:`, key);
+        }
         await queryClient.invalidateQueries({ queryKey: key, exact: true });
         
         // Force immediate refetch from backend to ensure UI shows persisted state
+        if (DEBUG_TASK_PERSISTENCE) {
+          console.log(`[DEBUG_TASK_PERSISTENCE] Executing refetch to verify persistence...`);
+        }
+        
+        const refetchStartTime = performance.now();
         const freshData = await refetch();
+        
+        if (DEBUG_TASK_PERSISTENCE) {
+          const refetchTime = performance.now() - refetchStartTime;
+          console.log(`[DEBUG_TASK_PERSISTENCE] Refetch completed in ${refetchTime.toFixed(2)}ms`);
+        }
+        
         if (DEBUG_TASKS) console.log(`Refetched ${freshData.data?.length || 0} tasks after update`);
         
         // Verify the update was reflected in the fetched data
         if (updatedTask && updatedTask.id) {
           const taskInData = freshData.data?.find(task => task.id === updatedTask.id);
+          
           if (DEBUG_TASKS) console.log('Updated task in refetched data:', taskInData);
+          
+          // Enhanced diagnostic for SuccessFactor task completion verification
+          if (DEBUG_TASK_COMPLETION && 
+              variables.data.hasOwnProperty('completed') && 
+              updatedTask.origin === 'factor') {
+            console.log(`[DEBUG_TASK_COMPLETION] Verifying SuccessFactor task persistence after refetch`);
+            
+            if (taskInData) {
+              console.log(`[DEBUG_TASK_COMPLETION] SuccessFactor task found in refetched data:`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - ID: ${taskInData.id}`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Completion in response: ${updatedTask.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Completion after refetch: ${taskInData.completed}`);
+              
+              if (updatedTask.completed !== taskInData.completed) {
+                console.log(`[DEBUG_TASK_COMPLETION] *** CRITICAL ERROR: Completion value LOST after refetch ***`);
+                console.log(`[DEBUG_TASK_COMPLETION] This indicates the database update succeeded but values were lost`);
+              } else {
+                console.log(`[DEBUG_TASK_COMPLETION] Completion state persisted correctly`);
+              }
+            } else {
+              console.log(`[DEBUG_TASK_COMPLETION] *** ERROR: SuccessFactor task not found after refetch ***`);
+            }
+          }
           
           if (!taskInData) {
             console.warn('Updated task not found in refetched data. Forcing another refetch...');
+            
+            if (DEBUG_TASK_PERSISTENCE) {
+              console.log(`[DEBUG_TASK_PERSISTENCE] Task ${updatedTask.id} missing from refetched data!`);
+              console.log(`[DEBUG_TASK_PERSISTENCE] Scheduling emergency refetch in 1 second...`);
+            }
+            
             setTimeout(() => refetch(), 1000);
           } else if (taskInData.updatedAt !== updatedTask.updatedAt) {
             console.warn('Task found but update timestamp mismatch. Forcing another refetch...');
+            
+            if (DEBUG_TASK_PERSISTENCE) {
+              console.log(`[DEBUG_TASK_PERSISTENCE] Task ${updatedTask.id} timestamp mismatch:`);
+              console.log(`[DEBUG_TASK_PERSISTENCE]   - Response timestamp: ${updatedTask.updatedAt}`);
+              console.log(`[DEBUG_TASK_PERSISTENCE]   - Refetched timestamp: ${taskInData.updatedAt}`);
+              console.log(`[DEBUG_TASK_PERSISTENCE] Scheduling verification refetch in 1 second...`);
+            }
+            
+            setTimeout(() => refetch(), 1000);
+          } else if (variables.data.hasOwnProperty('completed') && 
+                    taskInData.completed !== variables.data.completed) {
+            // Special check for the completion value that triggers additional diagnostic
+            console.warn(`Task completion value mismatch after refetch. Original update not persisted.`);
+            
+            if (DEBUG_TASK_COMPLETION) {
+              console.log(`[DEBUG_TASK_COMPLETION] *** CRITICAL: Completion value mismatch after refetch ***`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Requested completion: ${variables.data.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION]   - Actual completion after refetch: ${taskInData.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION] Scheduling emergency refetch in 1 second...`);
+            }
+            
+            // This is a critical error, so we force an additional refetch 
             setTimeout(() => refetch(), 1000);
           }
         }
