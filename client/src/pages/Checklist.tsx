@@ -47,6 +47,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { ORIGIN_LABELS } from '@/constants/origin';
 import { useProjectContext } from '@/contexts/ProjectContext';
+import { DEBUG_TASKS, DEBUG_FILTERS } from '@shared/constants.debug';
 
 interface ChecklistProps {
   projectId?: string;
@@ -192,7 +193,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         (stageTasks as string[]).forEach((taskText: string) => {
           // Ensure stage name is always lowercase for consistency
           const normalizedStage = stageName.toLowerCase();
-          console.log(`[CHECKLIST_DEBUG] Normalizing stage name from "${stageName}" to "${normalizedStage}"`);
+          if (DEBUG_TASKS) console.log(`[CHECKLIST_DEBUG] Normalizing stage name from "${stageName}" to "${normalizedStage}"`);
 
           tasks.push({
             id: `${factor.id}-${uuidv4().substring(0, 8)}`,
@@ -248,13 +249,13 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       }
 
       // Debug log to see raw server response and parsed data
-      console.log('[CHECKLIST_DEBUG] Raw server tasks response status:', response.status);
-      console.log('[CHECKLIST_DEBUG] Raw server tasks data type:', Array.isArray(data) ? 'array' : typeof data);
-      console.log('[CHECKLIST_DEBUG] Raw server tasks data count:', Array.isArray(data) ? data.length : 'N/A');
+      if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] Raw server tasks response status:', response.status);
+      if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] Raw server tasks data type:', Array.isArray(data) ? 'array' : typeof data);
+      if (DEBUG_TASKS) console.log('[CHECKLIST_DEBUG] Raw server tasks data count:', Array.isArray(data) ? data.length : 'N/A');
       
       // DETAILED DEBUG: Log all tasks with origin="custom" from the raw API response
       const customTasks = Array.isArray(data) ? data.filter((t: any) => t.origin === 'custom') : [];
-      console.log('[CUSTOM_TASK_RAW_DATA] Custom tasks from API:', 
+      if (DEBUG_TASKS) console.log('[CUSTOM_TASK_RAW_DATA] Custom tasks from API:', 
         customTasks.map((t: any) => ({
           id: t.id, 
           text: t.text,
