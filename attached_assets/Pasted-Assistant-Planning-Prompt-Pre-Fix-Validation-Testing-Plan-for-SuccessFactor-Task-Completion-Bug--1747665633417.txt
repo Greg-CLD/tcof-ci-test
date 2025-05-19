@@ -1,0 +1,24 @@
+Assistant Planning Prompt – Pre-Fix Validation & Testing Plan for SuccessFactor Task Completion Bug
+
+Background:
+We have a known bug: tasks associated with canonical SuccessFactors do not retain their completed status upon refresh, while other task types do. Before prompting Agent for a fix, we want to ensure that testing, logging, and traceability are set up to quickly diagnose and verify this bug, learning from the previous lessons-learned report.
+
+Your Task:
+1. Review the codebase and current debug/logging setup to answer:
+   • Do we already have sufficient staged debug logs (e.g. SUCCESS_FACTOR_TASK_RAW, UNIFIED_TASK_DEBUG, FILTER_DEBUG) in the pipeline to trace a SuccessFactor task’s completed status from API → mapping → filter → UI?
+   • If not, propose and specify exactly where/what logs should be added for the following layers:
+      - API response payload (after GET)
+      - Task mapping/transformation (post-API, pre-UI)
+      - UnifiedTask creation and filter logic (pre-UI render)
+   • Confirm all such logs are gated behind the proper DEBUG flag.
+
+2. Review the current unit and smoke/E2E test suite:
+   • Is there a unit test that fails if a SuccessFactor task's completed status does not persist after marking complete and refreshing?
+   • Is there an E2E test that covers marking a SuccessFactor task as complete, reloading, and verifying its persisted state in the UI?
+   • If either test is missing, provide an outline for both (unit + E2E), specifying exactly what would fail given the known bug.
+
+3. Propose a smoke-test checklist and logging/diagnostics plan to follow while working on this bug, using the playbook structure from the lessons-learned report.
+
+4. Summarise your findings and provide clear next steps: e.g. what logs/tests need to be added, and a checklist for reproducing and validating the fix once Agent is ready to address the bug.
+
+Only prepare and validate the test/log/diagnostics setup—do not propose or implement a code fix yet.
