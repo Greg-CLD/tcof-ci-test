@@ -1,0 +1,34 @@
+🔧 ISSUE  
+Custom tasks (`origin: "custom"`) are returned by the API and visible in our raw React-Query data, but they never render in the Checklist UI. They’re filtered out somewhere between:
+
+  • projectTasks  ← API result  
+  • allTasks      ← merged canonical + project tasks  
+  • tasksByStage  ← grouped by stage  
+  • filteredTasks ← stage/source/status/search filters  
+  • final render  ← <TaskCard />
+
+We confirmed:
+  ▸ API response includes each new custom task (e.g., “Debug-XYZ2”).  
+  ▸ React-Query cache shows it under the key `["projectTasks", projectId]`.  
+  ▸ Display labels vs. internal values are consistent (`origin|source === "custom"`).  
+  ▸ Filter dropdown uses “Custom Tasks” and maps to `"custom"` correctly.  
+So the bug is strictly in **client-side merge / grouping / filtering logic**.
+
+🔒 CONSTRAINTS  
+  • Do **not** rename or repurpose the existing origin values (`custom`, `heuristic`, `factor`, `policy`, `framework`).  
+  • Do **not** change any UI labels or dropdown options.  
+  • Touch only the logic that decides which tasks go into `allTasks`, `tasksByStage`, and `filteredTasks`.  
+  • Keep the A11y audit silencing we added (no re-introducing massive console spam).  
+  • Maintain the new debug logs, but reduce them to `console.debug` (single line each step).
+
+🛠️ TASKS  
+1. **Locate the drop point**: add temporary debug logs (if needed) right after each transformation to prove where `"custom"` items disappear.  
+2. **Fix the logic** so that:
+   • Newly created custom tasks appear immediately in their stage tab when source filter is “All Sources” *or* “Custom Tasks”.  
+   • Existing custom tasks from the server render the same way.  
+3. **Unit test outline** (no execution): draft a minimal Vitest outline that would fail before the fix and pass after.  
+4. **Commit diff** only for affected files (likely `Checklist.tsx` and/or `useProjectTasks.ts`).  
+5. **Run `npm run dev` (or equivalent) plus the smoke-test script** to show the task now renders. Paste JSON + SSR logs.
+
+🔚 END PROMPT  
+Run smoke-test script and paste its JSON result.
