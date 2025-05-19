@@ -4,59 +4,194 @@
  * correctly reflect Vite environment variables
  */
 
-// Mock import.meta.env to simulate browser environment
-// Note: These tests are an outline and would need proper jest/vitest setup to run
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+// We need to mock the import.meta.env object before importing the constants
+vi.mock('@shared/constants.debug', async (importOriginal) => {
+  // Store the original implementation
+  const originalModule = await importOriginal();
+  
+  return {
+    ...originalModule,
+    // Allow us to override these in tests
+    DEBUG: vi.fn(),
+    DEBUG_TASKS: vi.fn(),
+    DEBUG_FILTERS: vi.fn(),
+    DEBUG_FILES: vi.fn(),
+  };
+});
+
+// Import after mocking
+import { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } from '@shared/constants.debug';
 
 describe('Debug Environment Constants', () => {
-  // Default values (development = false, all flags undefined)
+  // Setup and teardown to reset mocks
+  let originalImportMeta;
+  
+  beforeEach(() => {
+    // Save original import.meta to restore later
+    originalImportMeta = global.import.meta;
+    
+    // Reset all mocks
+    vi.resetAllMocks();
+  });
+  
+  afterEach(() => {
+    // Restore original import.meta
+    global.import.meta = originalImportMeta;
+  });
+  
+  // Production environment tests
   it('should default all debug flags to false in production', () => {
     // Mock production environment
-    // expect(DEBUG).toBe(false);
-    // expect(DEBUG_TASKS).toBe(false);
-    // expect(DEBUG_FILTERS).toBe(false);
-    // expect(DEBUG_FILES).toBe(false);
+    global.import.meta = {
+      env: {
+        MODE: 'production'
+      }
+    };
+    
+    // Re-import to get fresh constants based on current mock
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    expect(DEBUG).toBe(false);
+    expect(DEBUG_TASKS).toBe(false);
+    expect(DEBUG_FILTERS).toBe(false);
+    expect(DEBUG_FILES).toBe(false);
   });
 
-  // Development mode only
+  // Development mode tests
   it('should set DEBUG true in development mode, others false if not explicitly enabled', () => {
-    // Mock development environment with no explicit flags
-    // expect(DEBUG).toBe(true);
-    // expect(DEBUG_TASKS).toBe(false);
-    // expect(DEBUG_FILTERS).toBe(false);
-    // expect(DEBUG_FILES).toBe(false);
+    // Mock development environment with no explicit debug flags
+    global.import.meta = {
+      env: {
+        MODE: 'development'
+      }
+    };
+    
+    // Re-import to get fresh constants
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    expect(DEBUG).toBe(true);
+    expect(DEBUG_TASKS).toBe(false);
+    expect(DEBUG_FILTERS).toBe(false);
+    expect(DEBUG_FILES).toBe(false);
   });
 
-  // Individual flags
+  // Individual flags tests
   it('should enable DEBUG_TASKS when in development and VITE_DEBUG_TASKS=true', () => {
     // Mock development with VITE_DEBUG_TASKS=true
-    // expect(DEBUG).toBe(true);
-    // expect(DEBUG_TASKS).toBe(true);
-    // expect(DEBUG_FILTERS).toBe(false);
-    // expect(DEBUG_FILES).toBe(false);
+    global.import.meta = {
+      env: {
+        MODE: 'development',
+        VITE_DEBUG_TASKS: 'true'
+      }
+    };
+    
+    // Re-import to get fresh constants
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    expect(DEBUG).toBe(true);
+    expect(DEBUG_TASKS).toBe(true);
+    expect(DEBUG_FILTERS).toBe(false);
+    expect(DEBUG_FILES).toBe(false);
   });
   
   it('should enable DEBUG_FILTERS when in development and VITE_DEBUG_FILTERS=true', () => {
     // Mock development with VITE_DEBUG_FILTERS=true
-    // expect(DEBUG).toBe(true);
-    // expect(DEBUG_TASKS).toBe(false);
-    // expect(DEBUG_FILTERS).toBe(true);
-    // expect(DEBUG_FILES).toBe(false);
+    global.import.meta = {
+      env: {
+        MODE: 'development',
+        VITE_DEBUG_FILTERS: 'true'
+      }
+    };
+    
+    // Re-import to get fresh constants
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    expect(DEBUG).toBe(true);
+    expect(DEBUG_TASKS).toBe(false);
+    expect(DEBUG_FILTERS).toBe(true);
+    expect(DEBUG_FILES).toBe(false);
   });
 
   it('should enable DEBUG_FILES when in development and VITE_DEBUG_FILES=true', () => {
     // Mock development with VITE_DEBUG_FILES=true
-    // expect(DEBUG).toBe(true);
-    // expect(DEBUG_TASKS).toBe(false);
-    // expect(DEBUG_FILTERS).toBe(false);
-    // expect(DEBUG_FILES).toBe(true);
+    global.import.meta = {
+      env: {
+        MODE: 'development',
+        VITE_DEBUG_FILES: 'true'
+      }
+    };
+    
+    // Re-import to get fresh constants
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    expect(DEBUG).toBe(true);
+    expect(DEBUG_TASKS).toBe(false);
+    expect(DEBUG_FILTERS).toBe(false);
+    expect(DEBUG_FILES).toBe(true);
   });
 
-  // Multiple flags
+  // Multiple flags tests
   it('should enable multiple debug flags when corresponding env vars are true', () => {
     // Mock development with multiple flags set to true
-    // expect(DEBUG).toBe(true);
-    // expect(DEBUG_TASKS).toBe(true);
-    // expect(DEBUG_FILTERS).toBe(true);
-    // expect(DEBUG_FILES).toBe(true);
+    global.import.meta = {
+      env: {
+        MODE: 'development',
+        VITE_DEBUG_TASKS: 'true',
+        VITE_DEBUG_FILTERS: 'true',
+        VITE_DEBUG_FILES: 'true'
+      }
+    };
+    
+    // Re-import to get fresh constants
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    expect(DEBUG).toBe(true);
+    expect(DEBUG_TASKS).toBe(true);
+    expect(DEBUG_FILTERS).toBe(true);
+    expect(DEBUG_FILES).toBe(true);
+  });
+  
+  // Edge cases
+  it('should handle undefined env vars as false', () => {
+    // Mock development with undefined debug flags
+    global.import.meta = {
+      env: {
+        MODE: 'development',
+        // Explicitly undefined vars
+        VITE_DEBUG_TASKS: undefined,
+        VITE_DEBUG_FILTERS: undefined,
+        VITE_DEBUG_FILES: undefined
+      }
+    };
+    
+    // Re-import to get fresh constants
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    expect(DEBUG).toBe(true);
+    expect(DEBUG_TASKS).toBe(false);
+    expect(DEBUG_FILTERS).toBe(false);
+    expect(DEBUG_FILES).toBe(false);
+  });
+  
+  it('should handle empty string env vars as false', () => {
+    // Mock development with empty string debug flags
+    global.import.meta = {
+      env: {
+        MODE: 'development',
+        VITE_DEBUG_TASKS: '',
+        VITE_DEBUG_FILTERS: '',
+        VITE_DEBUG_FILES: ''
+      }
+    };
+    
+    // Re-import to get fresh constants
+    const { DEBUG, DEBUG_TASKS, DEBUG_FILTERS, DEBUG_FILES } = require('@shared/constants.debug');
+    
+    expect(DEBUG).toBe(true);
+    expect(DEBUG_TASKS).toBe(false);
+    expect(DEBUG_FILTERS).toBe(false);
+    expect(DEBUG_FILES).toBe(false);
   });
 });
