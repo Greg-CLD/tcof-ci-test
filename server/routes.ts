@@ -544,7 +544,24 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
 
       // Otherwise, handle as a single task
       try {
+        // Import the debug flags directly from the constants file
+        const { 
+          DEBUG_TASK_API, 
+          DEBUG_TASK_COMPLETION, 
+          DEBUG_TASK_PERSISTENCE,
+          DEBUG_TASK_VALIDATION
+        } = require('@shared/constants.debug');
+        
         console.log(`Attempting to save task for project ${projectId} with data:`, JSON.stringify(taskData));
+        
+        // Special diagnostic logging for SuccessFactor tasks
+        if ((taskData.origin === 'factor' || taskData.origin === 'success-factor') && 
+            (DEBUG_TASK_COMPLETION || DEBUG_TASK_PERSISTENCE)) {
+          console.log(`[DEBUG_TASK_COMPLETION] *** Creating SuccessFactor task ***`);
+          console.log(`[DEBUG_TASK_COMPLETION]  - Initial completion state: ${!!taskData.completed}`);
+          console.log(`[DEBUG_TASK_COMPLETION]  - Source ID: ${taskData.sourceId || 'none'}`);
+          console.log(`[DEBUG_TASK_COMPLETION]  - Text: ${taskData.text?.substring(0, 30)}...`);
+        }
         
         // Make sure we have a valid UUID format project ID
         if (!projectId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -553,6 +570,15 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             message: 'Invalid project ID format',
             details: 'Project ID must be a valid UUID'
           });
+        }
+        
+        // Add pre-creation validation logging
+        if (DEBUG_TASK_VALIDATION) {
+          console.log(`[DEBUG_TASK_VALIDATION] Task data validation before creation:`);
+          console.log(`[DEBUG_TASK_VALIDATION]  - Project ID: ${projectId}`);
+          console.log(`[DEBUG_TASK_VALIDATION]  - Task origin: ${taskData.origin || 'custom'}`);
+          console.log(`[DEBUG_TASK_VALIDATION]  - Stage: ${taskData.stage || 'unknown'}`);
+          console.log(`[DEBUG_TASK_VALIDATION]  - Initial completion: ${!!taskData.completed}`);
         }
         
         // Create the task
@@ -564,9 +590,30 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         console.log('Task creation completed. Result:', result ? 'success' : 'null', 
                    'ID:', result?.id, 'Type:', typeof result);
         
+        // Add post-creation persistence validation
+        if (DEBUG_TASK_PERSISTENCE) {
+          console.log(`[DEBUG_TASK_PERSISTENCE] Task creation result validation:`);
+          console.log(`[DEBUG_TASK_PERSISTENCE]  - Task ID: ${result?.id || 'null'}`);
+          
+          if (result) {
+            console.log(`[DEBUG_TASK_PERSISTENCE]  - Persisted completion state: ${!!result.completed}`);
+            console.log(`[DEBUG_TASK_PERSISTENCE]  - Initial requested state: ${!!taskData.completed}`);
+            
+            // Detect completion state mismatch
+            if (taskData.hasOwnProperty('completed') && result.completed !== taskData.completed) {
+              console.error(`[DEBUG_TASK_PERSISTENCE] *** CRITICAL: Completion state mismatch after creation! ***`);
+              console.error(`[DEBUG_TASK_PERSISTENCE]  - Expected: ${!!taskData.completed}`);
+              console.error(`[DEBUG_TASK_PERSISTENCE]  - Actual: ${!!result.completed}`);
+            }
+          }
+        }
+        
         // Only return success if we actually got a result back
         if (!result) {
           console.error(`Task creation failed for project ${projectId} - returned null`);
+          if (DEBUG_TASK_PERSISTENCE) {
+            console.error(`[DEBUG_TASK_PERSISTENCE] Task creation failed - database returned null`);
+          }
           return res.status(500).json({
             message: 'Failed to create task - database operation returned null',
             details: 'The task was not persisted to the database'
@@ -575,6 +622,28 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         
         // Verify the task was saved
         console.log(`Task created successfully with ID: ${result.id}`);
+        
+        // Special verification for SuccessFactor tasks
+        if ((taskData.origin === 'factor' || taskData.origin === 'success-factor') && DEBUG_TASK_COMPLETION) {
+          console.log(`[DEBUG_TASK_COMPLETION] SuccessFactor task creation verification:`);
+          console.log(`[DEBUG_TASK_COMPLETION]  - Task ID: ${result.id}`);
+          console.log(`[DEBUG_TASK_COMPLETION]  - Completion state in result: ${!!result.completed}`);
+          
+          // Double-check by fetching the task directly from the database
+          try {
+            const verifiedTask = await projectsDb.getTaskById(result.id);
+            if (verifiedTask) {
+              console.log(`[DEBUG_TASK_COMPLETION] Verification lookup successful:`);
+              console.log(`[DEBUG_TASK_COMPLETION]  - Verified completion state: ${!!verifiedTask.completed}`);
+              
+              if (verifiedTask.completed !== result.completed) {
+                console.error(`[DEBUG_TASK_COMPLETION] *** CRITICAL: Verification mismatch! ***`);
+              }
+            }
+          } catch (verifyError) {
+            console.error(`[DEBUG_TASK_COMPLETION] Error during verification lookup:`, verifyError);
+          }
+        }
         
         // Return the created task with all its properties in a structured format
         return res.status(201).json({
