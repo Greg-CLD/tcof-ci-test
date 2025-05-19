@@ -78,7 +78,6 @@ interface TaskUpdates {
   dueDate?: string;
   owner?: string;
   status?: 'To Do' | 'Working On It' | 'Done';
-  origin?: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
 }
 
 // Task-related functionality is now handled in the main component
@@ -150,7 +149,8 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
     }), {} as Record<Stage, UnifiedTask[]>)
   );
 
-  // Filters (removed stageFilter as it's redundant with the tabs)
+  // Filters
+  const [stageFilter, setStageFilter] = useState<StageFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [sortOption, setSortOption] = useState<SortOption>('stage');
@@ -216,11 +216,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   }, [canonicalTasks, isAuthenticated, currentProjectId]);
 
   // Helper function to refresh task state
-  // Preserves the active tab selection when refreshing tasks
   const refreshTasksState = async () => {
-    // Remember the current active tab so we can restore it after refresh
-    const currentActiveTab = activeTab;
-    
     if (!currentProjectId || !canonicalTasks || canonicalTasks.length === 0) {
       console.log('[CHECKLIST] Cannot refresh tasks: missing project ID or canonical tasks');
       return;
@@ -231,9 +227,6 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       console.log('[CHECKLIST] Cannot refresh tasks: not authenticated');
       return;
     }
-    
-    // Log that we're preserving the active tab
-    console.log('[CHECKLIST] Refreshing tasks while preserving active tab:', currentActiveTab);
 
     try {
       console.log('[CHECKLIST] Refreshing tasks for project', currentProjectId);
@@ -461,11 +454,6 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       setTasks(allTasks);
       setTasksByStage(byStage);
       console.log('[CHECKLIST_DEBUG] tasksByStage[identification]:', byStage['identification'].map(t => t.text));
-      
-      // Maintain the active tab after processing tasks
-      // This ensures we don't reset to the first tab after adding a new task
-      console.log('[CHECKLIST_TABS] Maintaining active tab as:', activeTab);
-      
       setLoading(false);
     } catch (error) {
       console.error('[CHECKLIST] Error refreshing tasks:', error);
@@ -545,10 +533,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         // Convert priority from TaskPriority type to string if present
         priority: updates.priority ? String(updates.priority) : undefined,
         // Ensure we convert status to string
-        status: updates.status ? String(updates.status) : undefined,
-        // CRITICAL FIX: Ensure origin field is preserved or updated from source value
-        // This fixes Success Factor task completion persistence by mapping source → origin
-        origin: updates.origin || source as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'
+        status: updates.status ? String(updates.status) : undefined
       };
 
       console.log(`[CHECKLIST] Sending task update to API: ${JSON.stringify(updatedFields)}`);
@@ -700,6 +685,8 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="flex-1">
           <ChecklistFilterBar
+            stageFilter={stageFilter}
+            setStageFilter={setStageFilter}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
             sourceFilter={sourceFilter}
@@ -732,7 +719,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         </div>
       ) : (
         <>
-          <Tabs value={activeTab} defaultValue={STAGE_CONFIGS[0].value.toLowerCase()} className="mb-8">
+          <Tabs defaultValue={STAGE_CONFIGS[0].value.toLowerCase()} className="mb-8">
             <TabsList className="grid grid-cols-4 mb-4">
               {STAGE_CONFIGS.map(stageConfig => {
                 // Always work with lowercase values for state, proper labels for display

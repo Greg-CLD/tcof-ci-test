@@ -26,6 +26,8 @@ export type SortDirection = 'asc' | 'desc';
 
 // Props interface for the component
 interface ChecklistFilterBarProps {
+  stageFilter: StageFilter;
+  setStageFilter: React.Dispatch<React.SetStateAction<StageFilter>>;
   statusFilter: StatusFilter;
   setStatusFilter: React.Dispatch<React.SetStateAction<StatusFilter>>;
   sourceFilter: SourceFilter;
@@ -39,6 +41,8 @@ interface ChecklistFilterBarProps {
 }
 
 export default function ChecklistFilterBar({
+  stageFilter,
+  setStageFilter,
   statusFilter,
   setStatusFilter,
   sourceFilter,
@@ -53,12 +57,14 @@ export default function ChecklistFilterBar({
   
   // Check if any filters are active
   const hasActiveFilters = 
+    stageFilter !== 'all' || 
     statusFilter !== 'all' || 
     sourceFilter !== 'all' || 
     searchQuery !== '';
   
   // Reset all filters to default values
   const handleResetFilters = () => {
+    setStageFilter('all');
     setStatusFilter('all');
     setSourceFilter('all');
     setSortOption('stage');
@@ -107,7 +113,41 @@ export default function ChecklistFilterBar({
             </div>
           </div>
           
-          {/* Stage filter removed as it's redundant with the tabs */}
+          {/* Filter by Stage */}
+          <div>
+            <div className="flex items-center mb-1">
+              <label htmlFor="stage-filter" className="text-sm font-medium mr-1">Stage</label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" className="p-0 h-5 w-5">
+                      <HelpCircle className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="w-[200px] text-xs">
+                      Filter tasks by their project stage
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Select
+              value={stageFilter} 
+              onValueChange={(value) => setStageFilter(value as StageFilter)}
+            >
+              <SelectTrigger id="stage-filter" className="w-[160px] h-9">
+                <SelectValue placeholder="All Stages" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stages</SelectItem>
+                <SelectItem value="Identification">Identification</SelectItem>
+                <SelectItem value="Definition">Definition</SelectItem>
+                <SelectItem value="Delivery">Delivery</SelectItem>
+                <SelectItem value="Closure">Closure</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           
           {/* Filter by Status */}
           <div>
