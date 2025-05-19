@@ -375,7 +375,7 @@ export const projectsDb = {
       return null;
     }
     
-    console.log('Validating task data:', {
+    if (DEBUG_TASKS) console.log('Validating task data:', {
       projectId: taskData.projectId,
       text: taskData.text,
       stage: taskData.stage,
@@ -384,7 +384,7 @@ export const projectsDb = {
 
     try {
       const normalizedProjectId = validateProjectUUID(taskData.projectId);
-      console.log(`Creating task for normalized project ID: ${normalizedProjectId}`);
+      if (DEBUG_TASKS) console.log(`Creating task for normalized project ID: ${normalizedProjectId}`);
       
       // Check if we have a compound ID from a factor task
       let taskId = taskData.id || uuidv4();
@@ -392,20 +392,20 @@ export const projectsDb = {
       
       // Check if the sourceId is a valid UUID, and set to null if not
       if (sourceId && !validateUuid(sourceId)) {
-        console.warn(`Invalid UUID format for sourceId: "${sourceId}". Will be set to null.`);
+        if (DEBUG_TASKS) console.warn(`Invalid UUID format for sourceId: "${sourceId}". Will be set to null.`);
         sourceId = null;
       }
       
       // If task ID is a compound ID (likely from a factor), store as sourceId
       if (taskData.id && taskData.id.includes('-') && taskData.id.split('-').length > 5) {
-        console.log(`Detected compound ID for task: ${taskData.id}`);
+        if (DEBUG_TASKS) console.log(`Detected compound ID for task: ${taskData.id}`);
         
         // In this case, use the compound ID as sourceId for tracking, but generate a proper UUID
         sourceId = taskData.id;
         taskId = uuidv4();
         
-        console.log(`Using compound ID as sourceId: ${sourceId}`);
-        console.log(`Generated new valid UUID for task: ${taskId}`);
+        if (DEBUG_TASKS) console.log(`Using compound ID as sourceId: ${sourceId}`);
+        if (DEBUG_TASKS) console.log(`Generated new valid UUID for task: ${taskId}`);
         
         // Check if task already exists with this sourceId
         try {
@@ -415,7 +415,7 @@ export const projectsDb = {
             .limit(1);
             
           if (existingTasks.length > 0) {
-            console.log(`Task with sourceId ${sourceId} already exists, using its data for update`);
+            if (DEBUG_TASKS) console.log(`Task with sourceId ${sourceId} already exists, using its data for update`);
             
             // Return the existing task (client can use update endpoint if needed)
             return convertDbTaskToProjectTask(existingTasks[0]);
@@ -444,10 +444,10 @@ export const projectsDb = {
         updatedAt: new Date().toISOString()
       };
       
-      console.log('Task object prepared for insert:', JSON.stringify(task, null, 2));
+      if (DEBUG_TASKS) console.log('Task object prepared for insert:', JSON.stringify(task, null, 2));
       
       // Save the task to the database using Drizzle insert
-      console.log('Starting database insert operation');
+      if (DEBUG_TASKS) console.log('Starting database insert operation');
       
       // Properly sanitize values for database insertion:
       // 1. Convert empty strings to null for any nullable fields
