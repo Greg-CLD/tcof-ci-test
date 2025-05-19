@@ -243,6 +243,17 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       // Debug log to see raw server response and parsed data
       console.log('[CHECKLIST_DEBUG] Raw server tasks response:', response);
       console.log('[CHECKLIST_DEBUG] Raw server tasks data:', data);
+      
+      // DETAILED DEBUG: Log all tasks with origin="custom" from the raw API response
+      const customTasks = data.filter((t: any) => t.origin === 'custom');
+      console.log('[CUSTOM_TASK_RAW_DATA] Custom tasks from API:', 
+        customTasks.map((t: any) => ({
+          id: t.id, 
+          text: t.text,
+          origin: t.origin,
+          stage: t.stage
+        }))
+      );
 
       console.log('[CHECKLIST] Server returned tasks:', response);
 
