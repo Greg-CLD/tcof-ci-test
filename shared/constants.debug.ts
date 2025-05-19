@@ -1,9 +1,13 @@
+
 /**
  * Debug configuration constants
  * These flags control the visibility of debug logs throughout the application
  */
 
-export const DEBUG = process.env.NODE_ENV === 'development';
-export const DEBUG_TASKS = DEBUG && process.env.DEBUG_TASKS === 'true';
-export const DEBUG_FILTERS = DEBUG && process.env.DEBUG_FILTERS === 'true';
-export const DEBUG_FILES = DEBUG && process.env.DEBUG_FILES === 'true';
+// Check if we're in development by looking for Vite's import.meta.env
+const isDev = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'development';
+
+export const DEBUG = isDev;
+export const DEBUG_TASKS = isDev && import.meta.env?.VITE_DEBUG_TASKS === 'true';
+export const DEBUG_FILTERS = isDev && import.meta.env?.VITE_DEBUG_FILTERS === 'true';
+export const DEBUG_FILES = isDev && import.meta.env?.VITE_DEBUG_FILES === 'true';
