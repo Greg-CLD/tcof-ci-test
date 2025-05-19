@@ -78,6 +78,7 @@ interface TaskUpdates {
   dueDate?: string;
   owner?: string;
   status?: 'To Do' | 'Working On It' | 'Done';
+  origin?: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
 }
 
 // Task-related functionality is now handled in the main component
@@ -547,7 +548,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         status: updates.status ? String(updates.status) : undefined,
         // CRITICAL FIX: Ensure origin field is preserved or updated from source value
         // This fixes Success Factor task completion persistence by mapping source → origin
-        origin: updates.origin || source
+        origin: updates.origin || source as 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework'
       };
 
       console.log(`[CHECKLIST] Sending task update to API: ${JSON.stringify(updatedFields)}`);
