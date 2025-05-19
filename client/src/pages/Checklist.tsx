@@ -90,7 +90,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   const queryClient = useQueryClient();
   const params = useParams<{ projectId: string }>();
   const [_, navigate] = useLocation();
-  
+
   // Create a wrapper function to match the old API
   const setSelectedProjectId = (id: string) => {
     setCurrentProjectId(id);
@@ -103,22 +103,22 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   const urlProjectId = params.projectId;
   const selectedProject = getSelectedProject();
   const storedProjectId = localStorage.getItem('currentProjectId') || localStorage.getItem('selectedProjectId');
-  
+
   // Set the final project ID using priority order
   const currentProjectId = urlProjectId || propProjectId || selectedProject?.id || storedProjectId;
-  
+
   // Store the project ID in localStorage for consistency across refreshes
   useEffect(() => {
     if (currentProjectId) {
       console.log('Checklist: Setting project ID to localStorage and state:', currentProjectId);
-      
+
       // Always keep storage consistent - use both keys for backward compatibility
       localStorage.setItem('currentProjectId', currentProjectId);
       localStorage.setItem('selectedProjectId', currentProjectId);
-      
+
       // Also update the selected project in our hook using Context
       setCurrentProjectId(currentProjectId);
-      
+
       // If we're on the non-specific /checklist route but have a project ID, 
       // update URL to include project ID for better persistence on refresh
       if (!urlProjectId && window.location.pathname === '/checklist') {
@@ -139,7 +139,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<Stage>(STAGES[0]); // Start with 'identification'
   const [tasks, setTasks] = useState<UnifiedTask[]>([]);
-  
+
   // Initialize tasks by stage using the STAGES constant
   const [tasksByStage, setTasksByStage] = useState<Record<Stage, UnifiedTask[]>>(
     STAGES.reduce((acc, stage) => ({
@@ -172,27 +172,27 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       return data;
     }
   });
-  
+
   // Transform success factors into a flat list of tasks for the checklist
   const canonicalTasks = React.useMemo(() => {
     if (!successFactors) return [];
-    
+
     const tasks: any[] = [];
-    
+
     // Process each factor and its tasks by stage
     successFactors.forEach((factor: any) => {
       if (!factor.tasks) return;
-      
+
       // Process tasks for each stage
       Object.entries(factor.tasks).forEach(([stageName, stageTasks]) => {
         if (!Array.isArray(stageTasks)) return;
-        
+
         // Add each task to our flat list with metadata
         (stageTasks as string[]).forEach((taskText: string) => {
           // Ensure stage name is always lowercase for consistency
           const normalizedStage = stageName.toLowerCase();
           console.log(`[CHECKLIST_DEBUG] Normalizing stage name from "${stageName}" to "${normalizedStage}"`);
-          
+
           tasks.push({
             id: `${factor.id}-${uuidv4().substring(0, 8)}`,
             title: taskText,
@@ -203,10 +203,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         });
       });
     });
-    
+
     return tasks;
   }, [successFactors]);
-  
+
   // Refresh tasks state when canonical tasks change or auth state changes
   useEffect(() => {
     if (canonicalTasks && canonicalTasks.length > 0 && isAuthenticated) {
@@ -220,44 +220,44 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       console.log('[CHECKLIST] Cannot refresh tasks: missing project ID or canonical tasks');
       return;
     }
-    
+
     // Don't attempt to load tasks if not authenticated
     if (!isAuthenticated) {
       console.log('[CHECKLIST] Cannot refresh tasks: not authenticated');
       return;
     }
-    
+
     try {
       console.log('[CHECKLIST] Refreshing tasks for project', currentProjectId);
       setLoading(true);
-      
+
       // Get existing task statuses from the server
       const response = await apiRequest(
         "GET", 
         `/api/projects/${currentProjectId}/tasks`
       );
-      
+
       const data = await response.json();
-      
+
       // Debug log to see raw server response and parsed data
       console.log('[CHECKLIST_DEBUG] Raw server tasks response:', response);
       console.log('[CHECKLIST_DEBUG] Raw server tasks data:', data);
-      
+
       console.log('[CHECKLIST] Server returned tasks:', response);
-      
+
       // Store both custom tasks and task status map
       const projectTasks: UnifiedTask[] = [];
       const taskStatusMap: Record<string, boolean> = {};
-      
+
       if (Array.isArray(response)) {
         console.log(`[CHECKLIST] Processing ${response.length} tasks from server`);
-        
+
         response.forEach((task: any) => {
           // Track completion status by source ID for referencing canonical tasks
           if (task.sourceId) {
             taskStatusMap[task.sourceId] = !!task.completed;
           }
-          
+
           // Create unified task object for custom tasks and factor tasks
           const unifiedTask: UnifiedTask = {
             id: task.id,
@@ -275,7 +275,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             status: task.status || (task.completed ? 'Done' : 'To Do'),
             createdAt: task.createdAt || new Date().toISOString() // Use server timestamp or current time
           };
-          
+
           // Add source name based on origin
           if (task.origin === 'factor' && task.sourceId) {
             const factor = factors?.find(f => f.id === task.sourceId.split('-')[0]);
@@ -283,17 +283,19 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
               unifiedTask.sourceName = factor.title.split(' ')[0];
             }
           }
-          
+
           // Add to project tasks array (will be merged with canonical tasks later)
           projectTasks.push(unifiedTask);
         });
       }
-      
+
+      console.log('[CHECKLIST_DEBUG] projectTasks (custom only):', projectTasks.filter(t => t.source === 'custom').map(t => ({id: t.id, text: t.text})));
+
       // Start with canonical tasks
       const canonicalTasksList: UnifiedTask[] = canonicalTasks.map((task: any) => {
         // Check if this task exists in our status map or the plan
         let completed = false;
-        
+
         // First check direct task status
         if (taskStatusMap[task.id]) {
           completed = true;
@@ -305,12 +307,12 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           const existingTask = planData.blocks.block2.tasks.find(
             (t: any) => t.id === task.id
           );
-          
+
           if (existingTask) {
             completed = !!existingTask.completed;
           }
         }
-        
+
         return {
           id: task.id,
           text: task.title,
@@ -321,7 +323,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           sourceId: task.id
         };
       });
-      
+
       // Merge canonical tasks with custom tasks from project_tasks table
       // Filter out canonical tasks that already exist in project tasks to avoid duplicates
       const existingTaskIds = new Set(
@@ -330,25 +332,27 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           .map(task => task.sourceId)
       );
       const filteredCanonicalTasks = canonicalTasksList.filter(task => !existingTaskIds.has(task.id));
-      
+
       // Combine both task types
       const allTasks: UnifiedTask[] = [...filteredCanonicalTasks, ...projectTasks];
-      
+
+      console.log('[CHECKLIST_DEBUG] allTasks (custom only):', allTasks.filter(t => t.source === 'custom').map(t => ({id: t.id, text: t.text})));
+
       // Debug log to see all tasks before stage grouping
       console.log('[CHECKLIST_DEBUG] All merged tasks (pre-stage-grouping):', allTasks);
-      
+
       // Organize tasks by stage using the STAGES constant
       const byStage: Record<Stage, UnifiedTask[]> = STAGES.reduce((acc, stage) => ({
         ...acc,
         [stage]: []
       }), {} as Record<Stage, UnifiedTask[]>);
-      
+
       allTasks.forEach(task => {
         // Always normalize stage to lowercase for consistent filtering
         // Also handle undefined or null stage values with a default
         const normalizedStage = (task.stage || 'identification').toLowerCase() as Stage;
         console.log(`[CHECKLIST_DEBUG] Task distribution: "${task.text}" (original stage: "${task.stage}", normalized: "${normalizedStage}")`);
-        
+
         if (STAGES.includes(normalizedStage as Stage)) {
           byStage[normalizedStage].push({...task, stage: normalizedStage});
         } else {
@@ -359,7 +363,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       });
       console.log(`[CHECKLIST] Final task count: ${allTasks.length} total tasks`);
       console.log(`[CHECKLIST] Tasks by stage: identification(${byStage.identification.length}), definition(${byStage.definition.length}), delivery(${byStage.delivery.length}), closure(${byStage.closure.length})`);
-      
+
       setTasks(allTasks);
       setTasksByStage(byStage);
       console.log('[CHECKLIST_DEBUG] tasksByStage[identification]:', byStage['identification'].map(t => t.text));
@@ -394,35 +398,35 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
     setLoading(true);
     console.log('[CHECKLIST] Building task list for project', currentProjectId);
-    
+
     refreshTasksState()
       .finally(() => setLoading(false));
-      
+
   }, [currentProjectId, canonicalTasks, isAuthenticated]);
 
   // Handle task updates - now always plan-free
   const handleTaskUpdate = async (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
     if (!currentProjectId) return;
-    
+
     console.log(`[CHECKLIST] Updating task ${taskId}:`, updates);
-    
+
     try {
       // First update local state for immediate UI feedback
       const updatedTasks = tasks.map(task => 
         task.id === taskId ? { ...task, ...updates } : task
       );
       setTasks(updatedTasks);
-      
+
       // Update tasksByStage for UI using the STAGES constant
       const byStage: Record<Stage, UnifiedTask[]> = STAGES.reduce((acc, stage) => ({
         ...acc,
         [stage]: []
       }), {} as Record<Stage, UnifiedTask[]>);
-      
+
       updatedTasks.forEach(task => {
         // Normalize stage to lowercase and handle undefined/null values
         const normalizedStage = (task.stage || 'identification').toLowerCase() as Stage;
-        
+
         if (STAGES.includes(normalizedStage as Stage)) {
           byStage[normalizedStage].push({...task, stage: normalizedStage});
         } else {
@@ -430,9 +434,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           byStage.identification.push({...task, stage: 'identification'});
         }
       });
-      
+
       setTasksByStage(byStage);
-      
+
       // Use the proper REST API endpoint for updates
       // Ensure we send the correct data to match the backend expectations
       const updatedFields = {
@@ -444,33 +448,33 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         // Ensure we convert status to string
         status: updates.status ? String(updates.status) : undefined
       };
-      
+
       console.log(`[CHECKLIST] Sending task update to API: ${JSON.stringify(updatedFields)}`);
-      
-      
+
+
       const response = await apiRequest(
         "PUT",
         `/api/projects/${currentProjectId}/tasks/${taskId}`,
         updatedFields
       );
-      
+
       // Parse the response to handle different response formats
       try {
         const responseData = await response.json();
         console.log('[CHECKLIST] Task update sent successfully', responseData);
-        
+
         // Get the actual task data from response (supports both formats)
         const savedTask = responseData.task || responseData;
-        
+
         // If the server returned a different ID, update our local state
         if (savedTask && savedTask.id && savedTask.id !== taskId) {
           console.log(`[CHECKLIST] Server assigned different ID: ${savedTask.id} (client had: ${taskId})`);
-          
+
           // Update tasks array with server ID
           setTasks(prev => prev.map(task => 
             task.id === taskId ? { ...task, id: savedTask.id } : task
           ));
-          
+
           // Update tasksByStage with server ID
           setTasksByStage(prev => {
             const updatedTasks = { ...prev };
@@ -486,13 +490,13 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         // Response might not be JSON, or might be empty
         console.log('[CHECKLIST] Task update successful, but no JSON response');
       }
-      
+
     } catch (error) {
       console.error('[CHECKLIST] Error updating task:', error);
-      
+
       // Revert local state on error by refreshing from server
       refreshTasksState();
-      
+
       toast({
         title: "Error updating task",
         description: "Failed to update task. Please try again.",
@@ -500,9 +504,9 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       });
     }
   };
-  
+
   // Task creation is now handled by the CreateTaskForm component
-  
+
   // Handle deleting a task
   const handleDeleteTask = async (taskId: string) => {
     if (!currentProjectId) {
@@ -513,47 +517,47 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       });
       return;
     }
-    
+
     try {
       // Optimistically update UI
       setTasks(prev => prev.filter(task => task.id !== taskId));
-      
+
       // Update tasks by stage - filter tasks from all stages
       setTasksByStage(prev => {
         const updatedTasks = { ...prev };
-        
+
         // Find and remove the task from whichever stage it's in
         Object.keys(updatedTasks).forEach(stageKey => {
           updatedTasks[stageKey as Stage] = updatedTasks[stageKey as Stage].filter(task => task.id !== taskId);
         });
-        
+
         return updatedTasks;
       });
-      
+
       // Delete from server - use the correct endpoint
       const response = await apiRequest(
         "DELETE",
         `/api/projects/${currentProjectId}/tasks/${taskId}`
       );
-      
+
       // Check if the deletion was successful
       if (!response.ok) {
         console.error('[CHECKLIST] Server returned error when deleting task:', response.status);
         throw new Error(`Server returned ${response.status} when deleting task`);
       }
-      
+
       console.log('[CHECKLIST] Task deleted successfully');
-      
+
       toast({
         title: "Task deleted",
         description: "Task has been removed successfully",
       });
     } catch (error) {
       console.error('[CHECKLIST] Error deleting task:', error);
-      
+
       // Revert local state on error by refreshing from server
       refreshTasksState();
-      
+
       toast({
         title: "Error deleting task",
         description: "Failed to delete task. Please try again.",
@@ -574,7 +578,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       framework: 'Good Practice Tasks',
       custom: 'General Tasks'
     };
-    
+
     return originGroupLabels[source] || 'Tasks';
   };
 
@@ -586,11 +590,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         title="Task Checklist" 
         description="Track your project's progress through recommended tasks."
       />
-      
+
       <div className="mb-8">
         <SummaryBar tasks={tasks as any} plan={plan as any} />
       </div>
-      
+
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="flex-1">
           <ChecklistFilterBar
@@ -608,20 +612,20 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             setSearchQuery={setSearchQuery}
           />
         </div>
-        
+
         <div className="flex gap-2 justify-end">
           <Button variant="outline">
             <FileText className="mr-2 h-4 w-4" />
             Export PDF
           </Button>
-          
+
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
         </div>
       </div>
-      
+
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="h-12 w-12 animate-spin text-tcof-teal" />
@@ -634,10 +638,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 // Always work with lowercase values for state, proper labels for display
                 const normalizedValue = stageConfig.value.toLowerCase() as Stage;
                 const stageTaskCount = tasksByStage[normalizedValue]?.length || 0;
-                
+
                 // Add debug logging to track stage distribution
                 console.log(`[CHECKLIST_DEBUG] Tab for stage "${normalizedValue}" has ${stageTaskCount} tasks`);
-                
+
                 return (
                   <TabsTrigger 
                     key={normalizedValue}
@@ -655,28 +659,28 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 );
               })}
             </TabsList>
-            
+
             {Object.entries(tasksByStage).map(([stage, stageTasks]) => {
               // Always ensure stage is lowercase for consistent filtering
               const normalizedStage = stage.toLowerCase() as Stage;
               // Find the corresponding stage config to get the proper label
               const stageConfig = STAGE_CONFIGS.find(cfg => cfg.value.toLowerCase() === normalizedStage);
-              
+
               // Debug log raw tasks before any filtering
               console.log('[CHECKLIST_DEBUG] Raw tasks for stage', normalizedStage, stageTasks);
-              
+
               console.log(`[CHECKLIST_DEBUG] Processing stage "${stage}" (display as: "${stageConfig?.label}") with ${stageTasks.length} tasks`);
-              
+
               // Apply filters to tasks
               let filteredTasks = stageTasks.filter(task => {
                 // Make sure task stage is normalized to lowercase
                 const taskStage = (task.stage || 'identification').toLowerCase() as Stage;
-                
+
                 // Debug task stage check - stage should match regardless of case
                 if (taskStage !== normalizedStage) {
                   console.log(`[CHECKLIST_DEBUG] Task stage mismatch: task has "${taskStage}", tab expects "${normalizedStage}"`);
                 }
-                
+
                 // Filter by source
                 // Fix: Ensure custom tasks appear when 'custom' is selected AND when 'all' is selected
                 if (sourceFilter !== 'all') {
@@ -690,7 +694,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                     return false;
                   }
                 }
-                
+
                 // Filter by status
                 if (statusFilter === 'completed' && !task.completed) {
                   return false;
@@ -698,15 +702,15 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 if (statusFilter === 'incomplete' && task.completed) {
                   return false;
                 }
-                
+
                 // Filter by search query
                 if (searchQuery && !task.text.toLowerCase().includes(searchQuery.toLowerCase())) {
                   return false;
                 }
-                
+
                 return true;
               });
-              
+
               // Apply sorting based on selected option
               if (sortOption === 'date') {
                 filteredTasks.sort((a, b) => {
@@ -744,7 +748,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                     : sourceB.localeCompare(sourceA);
                 });
               }
-              
+
               // Default to newest tasks first when no other sorting is specified
               if (sortOption !== 'date' && !sortOption) {
                 filteredTasks.sort((a, b) => {
@@ -753,7 +757,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                   return dateB - dateA; // Newest first
                 });
               }
-              
+
               // Debug log to track filtered tasks before rendering
               console.log(
                 '[CHECKLIST_DEBUG] For stage:', normalizedStage,
@@ -780,7 +784,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                       />
                     </div>
                   )}
-                  
+
                   {filteredTasks.length === 0 ? (
                     <div className="text-center py-8 border border-dashed rounded-md">
                       <p className="text-gray-500">No tasks found for this stage</p>
@@ -841,10 +845,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           </Tabs>
         </>
       )}
-      
+
       {/* Task Smoke Test Panel */}
       {/* Task testing functionality removed */}
-      
+
       {/* Debug component for testing UUID validation fix */}
       {currentProjectId && (
         <div className="mt-8 border-t pt-6">
