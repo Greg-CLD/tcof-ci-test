@@ -62,9 +62,22 @@ export default function ChecklistFilterBar({
     statusFilter !== 'all' || 
     sourceFilter !== 'all' || 
     searchQuery !== '';
+    
+  // Debug log of active filters when DEBUG_FILTERS is enabled
+  if (DEBUG_FILTERS) {
+    console.log('[FILTER_DEBUG] Active filters:', {
+      stage: stageFilter,
+      status: statusFilter,
+      source: sourceFilter,
+      search: searchQuery,
+      sortBy: sortOption,
+      sortDirection
+    });
+  }
   
   // Reset all filters to default values
   const handleResetFilters = () => {
+    if (DEBUG_FILTERS) console.log('[FILTER_DEBUG] Resetting all filters to default values');
     setStageFilter('all');
     setStatusFilter('all');
     setSourceFilter('all');
@@ -75,7 +88,9 @@ export default function ChecklistFilterBar({
   
   // Toggle sort direction
   const handleToggleSortDirection = () => {
-    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    if (DEBUG_FILTERS) console.log(`[FILTER_DEBUG] Toggling sort direction from ${sortDirection} to ${newDirection}`);
+    setSortDirection(newDirection);
   };
   
   return (
@@ -107,7 +122,10 @@ export default function ChecklistFilterBar({
                 type="text"
                 placeholder="Search tasks..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  if (DEBUG_FILTERS) console.log(`[FILTER_DEBUG] Search query changed: "${searchQuery}" -> "${e.target.value}"`);
+                  setSearchQuery(e.target.value);
+                }}
                 className="pl-8 h-9 w-full sm:w-[240px]"
               />
               <Search className="absolute left-2 top-2 h-4 w-4 text-gray-400" />
@@ -135,7 +153,10 @@ export default function ChecklistFilterBar({
             </div>
             <Select
               value={stageFilter} 
-              onValueChange={(value) => setStageFilter(value as StageFilter)}
+              onValueChange={(value) => {
+                if (DEBUG_FILTERS) console.log(`[FILTER_DEBUG] Stage filter changed: ${stageFilter} -> ${value}`);
+                setStageFilter(value as StageFilter);
+              }}
             >
               <SelectTrigger id="stage-filter" className="w-[160px] h-9">
                 <SelectValue placeholder="All Stages" />
@@ -171,7 +192,10 @@ export default function ChecklistFilterBar({
             </div>
             <Select
               value={statusFilter} 
-              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+              onValueChange={(value) => {
+                if (DEBUG_FILTERS) console.log(`[FILTER_DEBUG] Status filter changed: ${statusFilter} -> ${value}`);
+                setStatusFilter(value as StatusFilter);
+              }}
             >
               <SelectTrigger id="status-filter" className="w-[160px] h-9">
                 <SelectValue placeholder="All Statuses" />
@@ -205,7 +229,10 @@ export default function ChecklistFilterBar({
             </div>
             <Select
               value={sourceFilter} 
-              onValueChange={(value) => setSourceFilter(value as SourceFilter)}
+              onValueChange={(value) => {
+                if (DEBUG_FILTERS) console.log(`[FILTER_DEBUG] Source filter changed: ${sourceFilter} -> ${value}`);
+                setSourceFilter(value as SourceFilter);
+              }}
             >
               <SelectTrigger id="source-filter" className="w-[160px] h-9">
                 <SelectValue placeholder="All Sources" />
@@ -245,7 +272,10 @@ export default function ChecklistFilterBar({
             <div className="flex items-center gap-2">
               <Select
                 value={sortOption} 
-                onValueChange={(value) => setSortOption(value as SortOption)}
+                onValueChange={(value) => {
+                  if (DEBUG_FILTERS) console.log(`[FILTER_DEBUG] Sort option changed: ${sortOption} -> ${value}`);
+                  setSortOption(value as SortOption);
+                }}
               >
                 <SelectTrigger id="sort-by" className="w-[160px] h-9">
                   <SelectValue placeholder="Sort by..." />
