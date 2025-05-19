@@ -300,7 +300,7 @@ export const projectsDb = {
   // Get all tasks for a project
   async getTasksForProject(projectId) {
     try {
-      console.log(`Getting tasks for project ${projectId}`);
+      if (DEBUG_TASKS) console.log(`Getting tasks for project ${projectId}`);
       
       // Generate SQL for logging
       const querySQL = db.select()
@@ -309,8 +309,8 @@ export const projectsDb = {
         .orderBy(asc(projectTasksTable.createdAt))
         .toSQL();
       
-      console.log('SQL query to be executed:', querySQL.sql);
-      console.log('SQL parameters:', JSON.stringify(querySQL.params, null, 2));
+      if (DEBUG_TASKS) console.log('SQL query to be executed:', querySQL.sql);
+      if (DEBUG_TASKS) console.log('SQL parameters:', JSON.stringify(querySQL.params, null, 2));
       
       // Execute the query
       const tasks = await db.select()
@@ -318,20 +318,20 @@ export const projectsDb = {
         .where(eq(projectTasksTable.projectId, projectId))
         .orderBy(asc(projectTasksTable.createdAt));
       
-      console.log(`Retrieved ${tasks.length} tasks for project ${projectId}`);
+      if (DEBUG_TASKS) console.log(`Retrieved ${tasks.length} tasks for project ${projectId}`);
       
       if (tasks.length > 0) {
-        console.log('First task sample:', JSON.stringify(tasks[0], null, 2));
+        if (DEBUG_TASKS) console.log('First task sample:', JSON.stringify(tasks[0], null, 2));
       } else {
-        console.log('No tasks found for this project.');
+        if (DEBUG_TASKS) console.log('No tasks found for this project.');
         
         // Additional diagnostic query for this project
-        console.log('Running diagnostics for project tasks...');
+        if (DEBUG_TASKS) console.log('Running diagnostics for project tasks...');
         
         // Check if any tasks exist in the system at all
         const allTasksCount = await db.select({ count: sql`count(*)` })
           .from(projectTasksTable);
-        console.log(`Total tasks in database: ${allTasksCount[0]?.count || 0}`);
+        if (DEBUG_TASKS) console.log(`Total tasks in database: ${allTasksCount[0]?.count || 0}`);
         
         // Check for tasks with similar projectId (partial match)
         try {
@@ -343,8 +343,8 @@ export const projectsDb = {
           `);
           
           if (similarProjectTasks.rows?.length > 0) {
-            console.log(`Found ${similarProjectTasks.rows.length} tasks with similar project ID prefixes:`);
-            console.log(JSON.stringify(similarProjectTasks.rows, null, 2));
+            if (DEBUG_TASKS) console.log(`Found ${similarProjectTasks.rows.length} tasks with similar project ID prefixes:`);
+            if (DEBUG_TASKS) console.log(JSON.stringify(similarProjectTasks.rows, null, 2));
           }
         } catch (diagError) {
           console.error('Diagnostic query error:', diagError);
