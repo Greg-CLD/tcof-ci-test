@@ -10,6 +10,19 @@ import * as factorsDb from './factorsDb';
 import { db } from "./db";
 import { sql } from 'drizzle-orm';
 import type { FactorTask } from '../scripts/factorUtils';
+// Import debug flags
+import { 
+  DEBUG, 
+  DEBUG_TASKS, 
+  DEBUG_FILTERS, 
+  DEBUG_FILES,
+  DEBUG_TASK_API,
+  DEBUG_TASK_MAPPING,
+  DEBUG_TASK_COMPLETION,
+  DEBUG_TASK_VALIDATION,
+  DEBUG_TASK_PERSISTENCE,
+  DEBUG_TASK_STATE
+} from '@shared/constants.debug';
 // Define the Stage type for canonical checklist tasks
 type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 import { projectsDb } from './projectsDb';
@@ -550,7 +563,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           DEBUG_TASK_COMPLETION, 
           DEBUG_TASK_PERSISTENCE,
           DEBUG_TASK_VALIDATION
-        } = require('@shared/constants.debug');
+        } = { DEBUG_TASK_API, DEBUG_TASK_COMPLETION, DEBUG_TASK_PERSISTENCE, DEBUG_TASK_VALIDATION };
         
         console.log(`Attempting to save task for project ${projectId} with data:`, JSON.stringify(taskData));
         

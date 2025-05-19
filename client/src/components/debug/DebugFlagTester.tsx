@@ -20,40 +20,64 @@ import {
 } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, CheckCircle, Bug } from "lucide-react";
 
 /**
  * Advanced Debug Flag Tester component
  * This component allows developers to view and toggle debug flags at runtime
- * Note: Toggling only affects the current browser session and will reset after page reload
+ * Note: Settings are now saved to localStorage and persist across page reloads
  */
 export default function DebugFlagTester() {
-  // Runtime debug flag states
-  const [generalDebug, setGeneralDebug] = useState(DEBUG);
-  const [taskDebug, setTaskDebug] = useState(DEBUG_TASKS);
-  const [filterDebug, setFilterDebug] = useState(DEBUG_FILTERS);
-  const [fileDebug, setFileDebug] = useState(DEBUG_FILES);
+  const { toast } = useToast();
   
-  // Granular task-specific debug states
-  const [taskApiDebug, setTaskApiDebug] = useState(DEBUG_TASK_API);
-  const [taskMappingDebug, setTaskMappingDebug] = useState(DEBUG_TASK_MAPPING);
-  const [taskCompletionDebug, setTaskCompletionDebug] = useState(DEBUG_TASK_COMPLETION);
-  const [taskValidationDebug, setTaskValidationDebug] = useState(DEBUG_TASK_VALIDATION);
-  const [taskPersistenceDebug, setTaskPersistenceDebug] = useState(DEBUG_TASK_PERSISTENCE);
-  const [taskStateDebug, setTaskStateDebug] = useState(DEBUG_TASK_STATE);
+  // Get initial states from localStorage first, then fall back to global constants
+  const getInitialState = (key, defaultValue) => {
+    const stored = localStorage.getItem(`debug_${key}`);
+    if (stored !== null) {
+      return stored === 'true';
+    }
+    return defaultValue;
+  };
+  
+  // Runtime debug flag states - initialize from localStorage
+  const [generalDebug, setGeneralDebug] = useState(() => getInitialState('general', DEBUG));
+  const [taskDebug, setTaskDebug] = useState(() => getInitialState('tasks', DEBUG_TASKS));
+  const [filterDebug, setFilterDebug] = useState(() => getInitialState('filters', DEBUG_FILTERS));
+  const [fileDebug, setFileDebug] = useState(() => getInitialState('files', DEBUG_FILES));
+  
+  // Granular task-specific debug states - initialize from localStorage
+  const [taskApiDebug, setTaskApiDebug] = useState(() => getInitialState('task_api', DEBUG_TASK_API));
+  const [taskMappingDebug, setTaskMappingDebug] = useState(() => getInitialState('task_mapping', DEBUG_TASK_MAPPING));
+  const [taskCompletionDebug, setTaskCompletionDebug] = useState(() => getInitialState('task_completion', DEBUG_TASK_COMPLETION));
+  const [taskValidationDebug, setTaskValidationDebug] = useState(() => getInitialState('task_validation', DEBUG_TASK_VALIDATION));
+  const [taskPersistenceDebug, setTaskPersistenceDebug] = useState(() => getInitialState('task_persistence', DEBUG_TASK_PERSISTENCE));
+  const [taskStateDebug, setTaskStateDebug] = useState(() => getInitialState('task_state', DEBUG_TASK_STATE));
+  
+  // Additional state for test logging confirmation
+  const [testLogConfirmation, setTestLogConfirmation] = useState(false);
+
+  // Get overall diagnostics status
+  const isDiagnosticsActive = generalDebug || taskDebug || filterDebug || fileDebug;
+  const isTaskDiagnosticsActive = taskDebug && (
+    taskApiDebug || taskMappingDebug || taskCompletionDebug || 
+    taskValidationDebug || taskPersistenceDebug || taskStateDebug
+  );
 
   useEffect(() => {
     // Log current debug flag status
     console.log('[DEBUG_TESTER] Debug Flag Status:', {
-      DEBUG,
-      DEBUG_TASKS,
-      DEBUG_FILTERS,
-      DEBUG_FILES,
-      DEBUG_TASK_API,
-      DEBUG_TASK_MAPPING,
-      DEBUG_TASK_COMPLETION,
-      DEBUG_TASK_VALIDATION,
-      DEBUG_TASK_PERSISTENCE,
-      DEBUG_TASK_STATE
+      DEBUG: generalDebug,
+      DEBUG_TASKS: taskDebug,
+      DEBUG_FILTERS: filterDebug,
+      DEBUG_FILES: fileDebug,
+      DEBUG_TASK_API: taskApiDebug,
+      DEBUG_TASK_MAPPING: taskMappingDebug,
+      DEBUG_TASK_COMPLETION: taskCompletionDebug,
+      DEBUG_TASK_VALIDATION: taskValidationDebug,
+      DEBUG_TASK_PERSISTENCE: taskPersistenceDebug,
+      DEBUG_TASK_STATE: taskStateDebug
     });
     
     // Runtime controls are simulated as real environment variables can't be changed at runtime
@@ -82,11 +106,29 @@ export default function DebugFlagTester() {
     taskStateDebug
   ]);
   
-  // Helper function to toggle debug flags in localStorage 
+  // Clear the test log confirmation after 3 seconds
+  useEffect(() => {
+    if (testLogConfirmation) {
+      const timer = setTimeout(() => {
+        setTestLogConfirmation(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [testLogConfirmation]);
+  
+  // Helper function to toggle debug flags in localStorage and show toast notification
   const toggleDebugFlag = (flag, value) => {
     try {
       localStorage.setItem(`debug_${flag}`, value ? 'true' : 'false');
       console.log(`[DEBUG_TESTER] Set ${flag} to ${value}`);
+      
+      // Show toast notification
+      toast({
+        title: value ? "Diagnostics Enabled" : "Diagnostics Disabled",
+        description: `${flag.charAt(0).toUpperCase() + flag.slice(1)} debugging is now ${value ? 'active' : 'inactive'}`,
+        variant: value ? "default" : "secondary",
+      });
       
       // Special case for general task debugging
       if (flag === 'tasks' && !value) {
@@ -96,15 +138,28 @@ export default function DebugFlagTester() {
         setTaskCompletionDebug(false);
         setTaskValidationDebug(false);
         setTaskPersistenceDebug(false);
+        setTaskStateDebug(false);
         
         localStorage.setItem('debug_task_api', 'false');
         localStorage.setItem('debug_task_mapping', 'false');
         localStorage.setItem('debug_task_completion', 'false');
         localStorage.setItem('debug_task_validation', 'false');
         localStorage.setItem('debug_task_persistence', 'false');
+        localStorage.setItem('debug_task_state', 'false');
+        
+        toast({
+          title: "Task Diagnostics Disabled",
+          description: "All task-specific diagnostic flags have been turned off",
+          variant: "secondary",
+        });
       }
     } catch (e) {
       console.error('Error setting debug flag:', e);
+      toast({
+        title: "Error",
+        description: "Failed to save diagnostic settings",
+        variant: "destructive",
+      });
     }
   };
   
@@ -115,20 +170,151 @@ export default function DebugFlagTester() {
     setTaskApiDebug(true);
     setTaskCompletionDebug(true);
     setTaskPersistenceDebug(true);
+    setTaskStateDebug(true);
     
     // Save to localStorage
     localStorage.setItem('debug_tasks', 'true');
     localStorage.setItem('debug_task_api', 'true');
     localStorage.setItem('debug_task_completion', 'true');
     localStorage.setItem('debug_task_persistence', 'true');
+    localStorage.setItem('debug_task_state', 'true');
     
     console.log('[DEBUG_TESTER] SuccessFactor Task Debugging Mode Enabled');
     console.log('[DEBUG_TESTER] Ready to track task completion persistence issues');
+    
+    // Show toast notification
+    toast({
+      title: "SuccessFactor Task Debugging Enabled",
+      description: "Logging activated for API, completion, persistence, and state transitions",
+      variant: "default",
+    });
+  };
+  
+  // Enable comprehensive task diagnostics
+  const enableTaskDiagnostics = () => {
+    // Enable all task-related debugging
+    setGeneralDebug(true);
+    setTaskDebug(true);
+    setTaskApiDebug(true);
+    setTaskMappingDebug(true);
+    setTaskCompletionDebug(true);
+    setTaskValidationDebug(true);
+    setTaskPersistenceDebug(true);
+    setTaskStateDebug(true);
+    
+    // Save to localStorage
+    localStorage.setItem('debug_general', 'true');
+    localStorage.setItem('debug_tasks', 'true');
+    localStorage.setItem('debug_task_api', 'true');
+    localStorage.setItem('debug_task_mapping', 'true');
+    localStorage.setItem('debug_task_completion', 'true');
+    localStorage.setItem('debug_task_validation', 'true');
+    localStorage.setItem('debug_task_persistence', 'true');
+    localStorage.setItem('debug_task_state', 'true');
+    
+    console.log('[DEBUG_TESTER] Full Task Diagnostics Mode Enabled');
+    
+    // Show toast notification
+    toast({
+      title: "Full Task Diagnostics Enabled",
+      description: "All diagnostic flags are now active",
+      variant: "default",
+    });
+  };
+  
+  // Test logging and show confirmation
+  const testLogging = () => {
+    console.log('[DEBUG_TESTER] Log test message');
+    
+    if (taskCompletionDebug) {
+      console.log('[DEBUG_TASK_COMPLETION] Test completion status monitoring');
+    }
+    
+    if (taskPersistenceDebug) {
+      console.log('[DEBUG_TASK_PERSISTENCE] Test persistence monitoring');
+    }
+    
+    if (taskStateDebug) {
+      console.log('[DEBUG_TASK_STATE] Test state transition monitoring');
+    }
+    
+    // Show confirmation in UI
+    setTestLogConfirmation(true);
+    
+    // Show toast notification
+    toast({
+      title: "Test Log Written",
+      description: "Diagnostic messages sent to browser console",
+      variant: "default",
+    });
   };
   
   return (
     <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
-      <h3 className="text-lg font-medium mb-2">Debug Controls</h3>
+      {/* Diagnostics Status Indicator */}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium">Debug Controls</h3>
+        <div className="flex items-center">
+          <Badge 
+            variant={isDiagnosticsActive ? "default" : "outline"}
+            className={`px-3 py-1 flex items-center gap-1 ${isDiagnosticsActive ? 'bg-green-600' : 'text-gray-500'}`}
+          >
+            {isDiagnosticsActive ? (
+              <>
+                <CheckCircle className="h-4 w-4" />
+                <span>Diagnostics ON</span>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-4 w-4" />
+                <span>Diagnostics OFF</span>
+              </>
+            )}
+          </Badge>
+        </div>
+      </div>
+      
+      {/* Task Diagnostics Status */}
+      {isDiagnosticsActive && (
+        <div className="flex mb-4 flex-wrap gap-2">
+          {taskDebug && (
+            <Badge variant="secondary" className="px-2 py-0.5">
+              Tasks
+            </Badge>
+          )}
+          {taskApiDebug && (
+            <Badge variant="secondary" className="px-2 py-0.5">
+              API
+            </Badge>
+          )}
+          {taskCompletionDebug && (
+            <Badge variant="secondary" className="px-2 py-0.5">
+              Completion
+            </Badge>
+          )}
+          {taskPersistenceDebug && (
+            <Badge variant="secondary" className="px-2 py-0.5">
+              Persistence
+            </Badge>
+          )}
+          {taskStateDebug && (
+            <Badge variant="secondary" className="px-2 py-0.5">
+              State
+            </Badge>
+          )}
+          {taskMappingDebug && (
+            <Badge variant="secondary" className="px-2 py-0.5">
+              Mapping
+            </Badge>
+          )}
+          {taskValidationDebug && (
+            <Badge variant="secondary" className="px-2 py-0.5">
+              Validation
+            </Badge>
+          )}
+        </div>
+      )}
+      
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
         Manage diagnostic logging for development and troubleshooting
       </p>
@@ -297,30 +483,35 @@ export default function DebugFlagTester() {
         <Button 
           variant="secondary" 
           size="sm"
+          className="flex items-center gap-1"
           onClick={enableSuccessFactorDebugging}
         >
+          <Bug className="h-4 w-4" />
           Track SuccessFactor Tasks
+        </Button>
+        
+        <Button 
+          variant="default" 
+          size="sm"
+          className="flex items-center gap-1"
+          onClick={enableTaskDiagnostics}
+        >
+          <CheckCircle className="h-4 w-4" />
+          Enable Task Diagnostics
         </Button>
         
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => {
-            console.log('[DEBUG_TESTER] Log test message');
-            if (taskCompletionDebug) {
-              console.log('[DEBUG_TASK_COMPLETION] Test completion status monitoring');
-            }
-            if (taskPersistenceDebug) {
-              console.log('[DEBUG_TASK_PERSISTENCE] Test persistence monitoring');
-            }
-          }}
+          className={testLogConfirmation ? "bg-green-100 text-green-800 border-green-300" : ""}
+          onClick={testLogging}
         >
-          Test Logging
+          {testLogConfirmation ? "✓ Log Written" : "Test Logging"}
         </Button>
       </div>
       
       <div className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-        Note: Debug settings are simulated at runtime and will reset on page reload
+        Note: Debug settings are now saved to localStorage and will persist across page reloads
       </div>
     </div>
   );
