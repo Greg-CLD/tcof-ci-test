@@ -479,13 +479,13 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
     // Check if user is authenticated before loading tasks
     if (!isAuthenticated) {
-      console.log('[CHECKLIST] Waiting for authentication before loading tasks...');
+      if (DEBUG_TASKS) console.log('[CHECKLIST] Waiting for authentication before loading tasks...');
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    console.log('[CHECKLIST] Building task list for project', currentProjectId);
+    if (DEBUG_TASKS) console.log('[CHECKLIST] Building task list for project', currentProjectId);
 
     refreshTasksState()
       .finally(() => setLoading(false));
@@ -496,7 +496,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
   const handleTaskUpdate = async (taskId: string, updates: TaskUpdates, stage: Stage, source: string) => {
     if (!currentProjectId) return;
 
-    console.log(`[CHECKLIST] Updating task ${taskId}:`, updates);
+    if (DEBUG_TASKS) console.log(`[CHECKLIST] Updating task ${taskId}:`, updates);
 
     try {
       // First update local state for immediate UI feedback
@@ -537,7 +537,7 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         status: updates.status ? String(updates.status) : undefined
       };
 
-      console.log(`[CHECKLIST] Sending task update to API: ${JSON.stringify(updatedFields)}`);
+      if (DEBUG_TASKS) console.log(`[CHECKLIST] Sending task update to API: ${JSON.stringify(updatedFields)}`);
 
 
       const response = await apiRequest(
@@ -549,14 +549,14 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       // Parse the response to handle different response formats
       try {
         const responseData = await response.json();
-        console.log('[CHECKLIST] Task update sent successfully', responseData);
+        if (DEBUG_TASKS) console.log('[CHECKLIST] Task update sent successfully', responseData);
 
         // Get the actual task data from response (supports both formats)
         const savedTask = responseData.task || responseData;
 
         // If the server returned a different ID, update our local state
         if (savedTask && savedTask.id && savedTask.id !== taskId) {
-          console.log(`[CHECKLIST] Server assigned different ID: ${savedTask.id} (client had: ${taskId})`);
+          if (DEBUG_TASKS) console.log(`[CHECKLIST] Server assigned different ID: ${savedTask.id} (client had: ${taskId})`);
 
           // Update tasks array with server ID
           setTasks(prev => prev.map(task => 
@@ -576,10 +576,11 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         }
       } catch (e) {
         // Response might not be JSON, or might be empty
-        console.log('[CHECKLIST] Task update successful, but no JSON response');
+        if (DEBUG_TASKS) console.log('[CHECKLIST] Task update successful, but no JSON response');
       }
 
     } catch (error) {
+      // Always log errors, even when debug is disabled
       console.error('[CHECKLIST] Error updating task:', error);
 
       // Revert local state on error by refreshing from server
@@ -630,11 +631,12 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
 
       // Check if the deletion was successful
       if (!response.ok) {
+        // Always log errors, even when debug is disabled
         console.error('[CHECKLIST] Server returned error when deleting task:', response.status);
         throw new Error(`Server returned ${response.status} when deleting task`);
       }
 
-      console.log('[CHECKLIST] Task deleted successfully');
+      if (DEBUG_TASKS) console.log('[CHECKLIST] Task deleted successfully');
 
       toast({
         title: "Task deleted",
