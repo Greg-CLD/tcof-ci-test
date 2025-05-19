@@ -294,16 +294,20 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
             taskStatusMap[task.sourceId] = !!task.completed;
           }
 
+          // CRITICAL FIX: For custom task visibility
+          // Check if this is a custom task before any transformation
+          const isCustomTask = task.origin === 'custom';
+          
           // Create unified task object for custom tasks and factor tasks
           const unifiedTask: UnifiedTask = {
             id: task.id,
             text: task.text,
             completed: !!task.completed,
             stage: task.stage.toLowerCase() as Stage,
-            // FIXED: Properly handle custom tasks by checking origin first
-            // If origin is 'custom', the source should also be 'custom'
-            source: task.origin === 'custom' ? 'custom' : (task.origin || 'custom') as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
-            origin: task.origin, // Pass through the origin property for custom task filtering
+            // FIXED: For custom tasks, both source and origin must be 'custom'
+            // This ensures they appear in custom task filters
+            source: isCustomTask ? 'custom' : (task.origin || 'custom') as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
+            origin: task.origin, // Preserve the original origin value
             sourceId: task.sourceId || undefined,
             notes: task.notes || '',
             priority: (task.priority as 'low' | 'medium' | 'high') || 'medium',
@@ -769,23 +773,20 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 if (sourceFilter !== 'all') {
                   // For custom filter, include tasks with source='custom' OR origin='custom'
                   if (sourceFilter === 'custom') {
-                    // DEBUG: Track custom task filtering logic in great detail
-                    const isCustomSource = task.source === 'custom';
-                    const isCustomOrigin = task.origin === 'custom';
-                    const isCustomTask = isCustomSource || isCustomOrigin;
+                    // Simplified logic to identify custom tasks
+                    // A task is considered custom if EITHER source OR origin is 'custom'
+                    const isCustomTask = task.source === 'custom' || task.origin === 'custom';
                     
+                    // Only add debug logging in development
                     console.log('[FILTER_DEBUG] Task checked for custom filter:', {
                       text: task.text.substring(0, 20) + '...',
                       source: task.source,
                       origin: task.origin,
-                      isCustomSource: isCustomSource, 
-                      isCustomOrigin: isCustomOrigin,
                       isCustomTask: isCustomTask,
-                      wouldPass: isCustomTask,
-                      filterApplied: sourceFilter
+                      wouldPass: isCustomTask
                     });
                     
-                    // The OR condition is critical here - either property being 'custom' should allow the task
+                    // Skip this task if it's not a custom task
                     if (!isCustomTask) {
                       return false;
                     }
