@@ -238,14 +238,22 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         `/api/projects/${currentProjectId}/tasks`
       );
 
-      const data = await response.json();
+      let data;
+      // Check if response is a valid JSON response
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('[CHECKLIST_ERROR] Failed to parse response as JSON:', e);
+        data = [];
+      }
 
       // Debug log to see raw server response and parsed data
-      console.log('[CHECKLIST_DEBUG] Raw server tasks response:', response);
-      console.log('[CHECKLIST_DEBUG] Raw server tasks data:', data);
+      console.log('[CHECKLIST_DEBUG] Raw server tasks response status:', response.status);
+      console.log('[CHECKLIST_DEBUG] Raw server tasks data type:', Array.isArray(data) ? 'array' : typeof data);
+      console.log('[CHECKLIST_DEBUG] Raw server tasks data count:', Array.isArray(data) ? data.length : 'N/A');
       
       // DETAILED DEBUG: Log all tasks with origin="custom" from the raw API response
-      const customTasks = data.filter((t: any) => t.origin === 'custom');
+      const customTasks = Array.isArray(data) ? data.filter((t: any) => t.origin === 'custom') : [];
       console.log('[CUSTOM_TASK_RAW_DATA] Custom tasks from API:', 
         customTasks.map((t: any) => ({
           id: t.id, 
@@ -254,6 +262,18 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
           stage: t.stage
         }))
       );
+      
+      // DEBUG: Log all raw tasks to make sure we're getting the right data
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('[RAW_TASKS_SAMPLE] First 2 tasks sample:', 
+          data.slice(0, 2).map((t: any) => ({
+            id: t.id,
+            text: t.text,
+            origin: t.origin,
+            stage: t.stage
+          }))
+        );
+      }
 
       console.log('[CHECKLIST] Server returned tasks:', response);
 
@@ -261,10 +281,14 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       const projectTasks: UnifiedTask[] = [];
       const taskStatusMap: Record<string, boolean> = {};
 
-      if (Array.isArray(response)) {
-        console.log(`[CHECKLIST] Processing ${response.length} tasks from server`);
+      if (Array.isArray(data)) {
+        console.log(`[CHECKLIST] Processing ${data.length} tasks from server`);
+        
+        // DEBUG: Check specifically how many custom tasks we have before mapping
+        const customTasksPreMap = data.filter((t: any) => t.origin === 'custom');
+        console.log(`[PRE_MAPPING] Found ${customTasksPreMap.length} custom tasks before mapping process`);
 
-        response.forEach((task: any) => {
+        data.forEach((task: any) => {
           // Track completion status by source ID for referencing canonical tasks
           if (task.sourceId) {
             taskStatusMap[task.sourceId] = !!task.completed;
@@ -364,10 +388,30 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       );
       const filteredCanonicalTasks = canonicalTasksList.filter(task => !existingTaskIds.has(task.id));
 
+      // DEBUG: How many custom tasks survived the transformation to UnifiedTask?
+      const customUnifiedTasks = projectTasks.filter(task => task.origin === 'custom' || task.source === 'custom');
+      console.log('[POST_MAPPING] Custom UnifiedTasks count:', customUnifiedTasks.length);
+      console.log('[POST_MAPPING] Custom UnifiedTasks:', customUnifiedTasks.map(t => ({
+        id: t.id,
+        text: t.text.substring(0, 20) + '...',
+        source: t.source,
+        origin: t.origin,
+        stage: t.stage
+      })));
+
       // Combine both task types
       const allTasks: UnifiedTask[] = [...filteredCanonicalTasks, ...projectTasks];
 
-      console.log('[CHECKLIST_DEBUG] allTasks (custom only):', allTasks.filter(t => t.source === 'custom').map(t => ({id: t.id, text: t.text})));
+      // DEBUG: How many custom tasks made it to the final merged list?
+      const customAllTasks = allTasks.filter(t => t.origin === 'custom' || t.source === 'custom');
+      console.log('[MERGED_TASKS] Custom tasks in final merged list:', customAllTasks.length);
+      console.log('[MERGED_TASKS] Custom tasks sample:', customAllTasks.slice(0, 3).map(t => ({
+        id: t.id,
+        text: t.text.substring(0, 20) + '...',
+        source: t.source,
+        origin: t.origin,
+        stage: t.stage
+      })));
 
       // Debug log to see all tasks before stage grouping
       console.log('[CHECKLIST_DEBUG] All merged tasks (pre-stage-grouping):', allTasks);
@@ -378,11 +422,19 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         [stage]: []
       }), {} as Record<Stage, UnifiedTask[]>);
 
+      // DEBUG: Count custom tasks before stage distribution
+      const customTasksPreStageDistribution = allTasks.filter(t => t.origin === 'custom' || t.source === 'custom');
+      console.log('[PRE_STAGE_DISTRIBUTION] Custom tasks count before stage distribution:', customTasksPreStageDistribution.length);
+
       allTasks.forEach(task => {
         // Always normalize stage to lowercase for consistent filtering
         // Also handle undefined or null stage values with a default
         const normalizedStage = (task.stage || 'identification').toLowerCase() as Stage;
-        console.log(`[CHECKLIST_DEBUG] Task distribution: "${task.text}" (original stage: "${task.stage}", normalized: "${normalizedStage}")`);
+        
+        // DEBUG: For custom tasks, log their distribution in detail
+        if (task.origin === 'custom' || task.source === 'custom') {
+          console.log(`[CUSTOM_TASK_DISTRIBUTION] Custom task "${task.text.substring(0, 20)}..." going to stage "${normalizedStage}" (original: "${task.stage}")`);
+        }
 
         if (STAGES.includes(normalizedStage as Stage)) {
           byStage[normalizedStage].push({...task, stage: normalizedStage});
@@ -717,18 +769,24 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
                 if (sourceFilter !== 'all') {
                   // For custom filter, include tasks with source='custom' OR origin='custom'
                   if (sourceFilter === 'custom') {
-                    // DEBUG: Track custom task filtering logic
-                    const isCustomTask = task.source === 'custom' || task.origin === 'custom';
+                    // DEBUG: Track custom task filtering logic in great detail
+                    const isCustomSource = task.source === 'custom';
+                    const isCustomOrigin = task.origin === 'custom';
+                    const isCustomTask = isCustomSource || isCustomOrigin;
                     
                     console.log('[FILTER_DEBUG] Task checked for custom filter:', {
                       text: task.text.substring(0, 20) + '...',
                       source: task.source,
                       origin: task.origin,
+                      isCustomSource: isCustomSource, 
+                      isCustomOrigin: isCustomOrigin,
                       isCustomTask: isCustomTask,
-                      wouldPass: isCustomTask
+                      wouldPass: isCustomTask,
+                      filterApplied: sourceFilter
                     });
                     
-                    if (task.source !== 'custom' && task.origin !== 'custom') {
+                    // The OR condition is critical here - either property being 'custom' should allow the task
+                    if (!isCustomTask) {
                       return false;
                     }
                   } else if (task.source !== sourceFilter) {
