@@ -3,7 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { isValidUUID, isNumericId } from '@/lib/uuid-utils';
-import { DEBUG_TASKS } from '@shared/constants.debug';
+import { 
+  DEBUG_TASKS, 
+  DEBUG_TASK_MAPPING, 
+  DEBUG_TASK_PERSISTENCE,
+  DEBUG_TASK_COMPLETION 
+} from '@shared/constants.debug';
 
 import { ProjectTask as DBProjectTask } from '@shared/schema';
 // Local interface for client-side project tasks

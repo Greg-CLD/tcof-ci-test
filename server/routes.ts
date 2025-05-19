@@ -617,10 +617,27 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         });
       }
       
+      const DEBUG_TASK_API = process.env.DEBUG_TASKS === 'true'; // Same flag detection as client-side
+      if (DEBUG_TASK_API) {
+        console.log(`[DEBUG_TASK_API] GET tasks for project ${projectId}`);
+      }
+      
       const tasks = await projectsDb.getTasksForProject(projectId);
       
-      // Log the number of tasks returned for debugging
-      console.log(`Retrieved ${tasks?.length || 0} tasks for project ${projectId}`);
+      // Enhanced debugging for task retrieval
+      if (DEBUG_TASK_API) {
+        console.log(`[DEBUG_TASK_API] Retrieved ${tasks?.length || 0} tasks for project ${projectId}`);
+        
+        // Special debug logging for SuccessFactor tasks
+        const successFactorTasks = (tasks || []).filter(task => task.origin === 'success-factor');
+        if (successFactorTasks.length > 0) {
+          console.log(`[DEBUG_TASK_API] Found ${successFactorTasks.length} SuccessFactor tasks`);
+          console.log('[DEBUG_TASK_API] SuccessFactor tasks completion status:');
+          successFactorTasks.slice(0, 5).forEach(task => {
+            console.log(`[DEBUG_TASK_API]   - Task ${task.id}: completed=${task.completed}, sourceId=${task.sourceId}`);
+          });
+        }
+      }
       
       // Return a consistently structured response
       return res.status(200).json(tasks || []);
@@ -639,6 +656,20 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     try {
       const { projectId, taskId } = req.params;
       const taskUpdate = req.body;
+      
+      // Add diagnostic logging for the task update operation
+      const DEBUG_TASK_API = process.env.DEBUG_TASKS === 'true';
+      
+      if (DEBUG_TASK_API) {
+        console.log(`[DEBUG_TASK_API] PUT request to update task ${taskId} for project ${projectId}`);
+        console.log(`[DEBUG_TASK_API] Task update payload:`, JSON.stringify(taskUpdate));
+        
+        // Special diagnostic for completion status updates
+        if (taskUpdate.hasOwnProperty('completed')) {
+          console.log(`[DEBUG_TASK_API] *** Completion status update detected ***`);
+          console.log(`[DEBUG_TASK_API] New completion value: ${taskUpdate.completed}`);
+        }
+      }
 
       // Ensure we have the required fields
       if (!taskUpdate) {
@@ -657,18 +688,49 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       }
 
       try {
+        // Get the original task to check if it's a SuccessFactor task
+        if (DEBUG_TASK_API) {
+          const originalTask = await projectsDb.getTaskById(taskId);
+          if (originalTask) {
+            console.log(`[DEBUG_TASK_API] Original task details:`);
+            console.log(`[DEBUG_TASK_API]  - ID: ${originalTask.id}`);
+            console.log(`[DEBUG_TASK_API]  - Origin: ${originalTask.origin}`);
+            console.log(`[DEBUG_TASK_API]  - Source ID: ${originalTask.sourceId}`);
+            console.log(`[DEBUG_TASK_API]  - Current completion: ${originalTask.completed}`);
+            
+            // Special focus on SuccessFactor tasks
+            if (originalTask.origin === 'success-factor') {
+              console.log(`[DEBUG_TASK_API] *** SuccessFactor task update operation ***`);
+            }
+          }
+        }
+        
         // Attempt to update the task
         const updatedTask = await projectsDb.updateTask(taskId, taskUpdate);
         
         if (!updatedTask) {
+          if (DEBUG_TASK_API) {
+            console.log(`[DEBUG_TASK_API] Task update failed - task ${taskId} not found`);
+          }
           return res.status(404).json({
             success: false,
             message: `Task with ID ${taskId} not found`
           });
         }
         
-        // Log the updated task before returning to verify data
-        console.log('Successfully updated task:', updatedTask);
+        // Enhanced debugging for task updates
+        if (DEBUG_TASK_API) {
+          console.log(`[DEBUG_TASK_API] Task update successful:`);
+          console.log(`[DEBUG_TASK_API]  - ID: ${updatedTask.id}`);
+          console.log(`[DEBUG_TASK_API]  - New completion status: ${updatedTask.completed}`);
+          
+          // Verify the update happened correctly
+          if (taskUpdate.hasOwnProperty('completed') && updatedTask.completed !== taskUpdate.completed) {
+            console.log(`[DEBUG_TASK_API] WARNING: Task completion mismatch!`);
+            console.log(`[DEBUG_TASK_API]  - Requested: ${taskUpdate.completed}`);
+            console.log(`[DEBUG_TASK_API]  - Actual: ${updatedTask.completed}`);
+          }
+        }
         
         // Return the successfully updated task
         return res.status(200).json({
