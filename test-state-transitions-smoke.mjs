@@ -390,40 +390,116 @@ async function promptForRetry() {
   }
 }
 
+// Function to print test result summary
+function printTestSummary(results) {
+  logHeader('TEST SUMMARY');
+  
+  console.log(`\n${'STEP'.padEnd(25)} | ${'RESULT'.padEnd(10)} | DETAILS`);
+  console.log('-'.repeat(80));
+  
+  Object.entries(results).forEach(([step, result]) => {
+    const icon = result.success ? '✅' : '❌';
+    const status = result.success ? 'PASS' : 'FAIL';
+    console.log(`${step.padEnd(25)} | ${status.padEnd(10)} | ${result.message}`);
+  });
+  
+  const passCount = Object.values(results).filter(r => r.success).length;
+  const totalCount = Object.keys(results).length;
+  const percentage = Math.round((passCount / totalCount) * 100);
+  
+  console.log('-'.repeat(80));
+  console.log(`\nTest completion: ${passCount}/${totalCount} (${percentage}%)`);
+  
+  if (passCount === totalCount) {
+    console.log('\n✅ SUCCESS: All tests passed! Task state transition functionality is working correctly.');
+    console.log('    Tasks are being properly persisted and state changes are reflected in the database.');
+  } else {
+    console.log('\n❌ FAILURE: Some tests failed. See details above for specific issues.');
+  }
+}
+
 // Main test function
 async function runTest() {
   console.log('Starting task state transition smoke test...');
-  console.log('Debug flags enabled for this test run:');
+  const testStart = new Date();
+  console.log(`Test started at: ${testStart.toISOString()}`);
+  console.log('\nDebug flags enabled for this test run:');
   console.log('- DEBUG_TASKS=true');
   console.log('- DEBUG_TASK_API=true');
   console.log('- DEBUG_TASK_COMPLETION=true');
   console.log('- DEBUG_TASK_PERSISTENCE=true'); 
   console.log('- DEBUG_TASK_STATE=true');
   
+  // Track test results for summary
+  const testResults = {
+    'Credential Loading': { success: false, message: 'Not attempted' },
+    'Authentication': { success: false, message: 'Not attempted' },
+    'Project Selection': { success: false, message: 'Not attempted' },
+    'Task Selection': { success: false, message: 'Not attempted' },
+    'Task State Toggle': { success: false, message: 'Not attempted' },
+    'State Persistence': { success: false, message: 'Not attempted' }
+  };
+  
+  // Step 1: Credential Loading
+  try {
+    CREDENTIALS = await getCredentials();
+    if (CREDENTIALS) {
+      testResults['Credential Loading'] = { 
+        success: true, 
+        message: `Successfully loaded credentials for user: ${CREDENTIALS.username}` 
+      };
+      console.log(`Using test credentials for user: ${CREDENTIALS.username}`);
+    } else {
+      testResults['Credential Loading'] = { 
+        success: false, 
+        message: 'Failed to obtain valid credentials' 
+      };
+      console.error('\x1b[31mError: Could not obtain valid credentials\x1b[0m');
+      printTestSummary(testResults);
+      return;
+    }
+  } catch (error) {
+    testResults['Credential Loading'] = { 
+      success: false, 
+      message: `Error loading credentials: ${error.message}` 
+    };
+    console.error('\x1b[31mError loading credentials:', error.message, '\x1b[0m');
+    printTestSummary(testResults);
+    return;
+  }
+  
+  // Step 2: Authentication with retry logic
   let loginSuccess = false;
   let retryCount = 0;
   const MAX_RETRIES = 3;
   
   while (!loginSuccess && retryCount < MAX_RETRIES) {
-    // Get credentials securely
-    CREDENTIALS = await getCredentials();
-    
-    if (!CREDENTIALS) {
-      console.error('\x1b[31mError: Could not obtain valid credentials\x1b[0m');
-      break;
-    }
-    
-    console.log(`Using test credentials for user: ${CREDENTIALS.username}`);
-    
-    // Attempt to login
     loginSuccess = await login();
     
-    if (!loginSuccess) {
+    if (loginSuccess) {
+      testResults['Authentication'] = { 
+        success: true, 
+        message: 'Successfully authenticated' 
+      };
+    } else {
       retryCount++;
       if (retryCount < MAX_RETRIES) {
         const shouldRetry = await promptForRetry();
-        if (!shouldRetry) break;
+        if (!shouldRetry) {
+          testResults['Authentication'] = { 
+            success: false, 
+            message: `Failed to authenticate after ${retryCount} attempts; user aborted` 
+          };
+          break;
+        }
+        
+        // Need to get new credentials for retry
+        CREDENTIALS = await getCredentials();
       } else {
+        testResults['Authentication'] = { 
+          success: false, 
+          message: `Failed to authenticate after ${MAX_RETRIES} attempts` 
+        };
         console.error(`\x1b[31mMax retry attempts (${MAX_RETRIES}) reached. Exiting.\x1b[0m`);
       }
     }
@@ -431,14 +507,45 @@ async function runTest() {
   
   // If login succeeded, proceed with the test
   if (loginSuccess) {
-    if (await getProjects()) {
-      if (await getTasks()) {
-        await toggleTaskCompletion();
+    // Step 3: Project Selection
+    const projectSuccess = await getProjects();
+    testResults['Project Selection'] = { 
+      success: projectSuccess,
+      message: projectSuccess ? `Selected project: ${projectId}` : 'Failed to select a project'
+    };
+    
+    if (projectSuccess) {
+      // Step 4: Task Selection
+      const taskSuccess = await getTasks();
+      testResults['Task Selection'] = { 
+        success: taskSuccess,
+        message: taskSuccess ? `Selected task: ${taskId}` : 'Failed to select or create a task'
+      };
+      
+      if (taskSuccess) {
+        // Step 5 & 6: Task State Toggle and Persistence Verification
+        const toggleResult = await toggleTaskCompletion();
+        testResults['Task State Toggle'] = { 
+          success: toggleResult,
+          message: toggleResult ? 'Successfully toggled task state' : 'Failed to toggle task state'
+        };
+        
+        testResults['State Persistence'] = { 
+          success: toggleResult, // Persistence verification is part of toggleTaskCompletion
+          message: toggleResult ? 'Task state change persisted correctly' : 'Failed to verify task state persistence'
+        };
       }
     }
   }
   
-  console.log('\nTest complete.');
+  // Calculate test duration
+  const testEnd = new Date();
+  const duration = (testEnd - testStart) / 1000; // Duration in seconds
+  
+  // Print test summary
+  printTestSummary(testResults);
+  console.log(`\nTest duration: ${duration.toFixed(2)} seconds`);
+  console.log(`\nTest completed at: ${testEnd.toISOString()}`);
 }
 
 // Run the test and handle any errors
