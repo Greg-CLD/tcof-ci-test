@@ -13,7 +13,24 @@ import { test, expect } from '@playwright/test';
  * 4. Verifies the state transition debugging is logged
  */
 
-test('tracks task state transitions with DEBUG_TASK_STATE enabled', async ({ page }) => {
+test('tracks task state transitions with DEBUG_TASK_STATE enabled', async ({ page, request }) => {
+  // Enable request logging
+  let requestLogs = [];
+  
+  // Intercept network requests
+  await page.route('**/*', async route => {
+    const request = route.request();
+    if (request.url().includes('/api/projects') || request.url().includes('/tasks')) {
+      requestLogs.push({
+        url: request.url(),
+        method: request.method(),
+        headers: request.headers(),
+        postData: request.postData()
+      });
+    }
+    await route.continue();
+  });
+
   // Set up debug flags in localStorage
   await page.addInitScript(() => {
     localStorage.setItem('debug_tasks', 'true');
@@ -21,8 +38,9 @@ test('tracks task state transitions with DEBUG_TASK_STATE enabled', async ({ pag
     localStorage.setItem('debug_task_completion', 'true'); 
     localStorage.setItem('debug_task_persistence', 'true');
     
-    // Create a storage for logs to inspect
+    // Create storage for logs
     window._debugLogs = [];
+    window._networkLogs = [];
     
     // Capture console logs
     const originalConsoleLog = console.log;
@@ -31,6 +49,16 @@ test('tracks task state transitions with DEBUG_TASK_STATE enabled', async ({ pag
       originalConsoleLog(...args);
     };
   });
+
+  // Add verification steps after task update
+  const verifyTaskState = async (taskId) => {
+    const getResponse = await request.get(`/api/projects/${projectId}/tasks`);
+    console.log('GET /tasks Response:', await getResponse.json());
+    
+    const task = (await getResponse.json()).find(t => t.id === taskId);
+    expect(task).toBeTruthy();
+    return task;
+  };
 
   // Login first (adjust as needed based on your auth implementation)
   await page.goto('/auth');

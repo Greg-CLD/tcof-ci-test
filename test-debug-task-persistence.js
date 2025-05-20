@@ -1,3 +1,26 @@
+
+// Task persistence debug helper
+const debugTaskPersistence = async (taskId) => {
+  console.log('=== Task Persistence Debug ===');
+  console.log(`Testing task: ${taskId}`);
+  
+  // Get initial state
+  const initial = await fetch(`/api/projects/${projectId}/tasks/${taskId}`);
+  console.log('Initial state:', await initial.json());
+  
+  // Toggle completion
+  const update = await fetch(`/api/projects/${projectId}/tasks/${taskId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ completed: true })
+  });
+  console.log('Update response:', await update.json());
+  
+  // Verify after refresh
+  const final = await fetch(`/api/projects/${projectId}/tasks/${taskId}`);
+  console.log('Final state:', await final.json());
+};
+
 /**
  * Diagnostic test script for task persistence with debug flags
  * This script tests the creation and completion of SuccessFactor tasks
