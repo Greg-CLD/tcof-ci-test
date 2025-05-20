@@ -299,6 +299,13 @@ const updateTaskMutation = useMutation({
       }
       
       try {
+        // TRACE: Log the raw task ID and extracted UUID before network request
+        console.debug(`[TRACE_NET] Update task request:
+  - Raw taskId: ${taskId}
+  - Extracted UUID: ${validTaskId}
+  - Endpoint: /api/projects/${projectId}/tasks/${validTaskId}
+  - Payload: ${JSON.stringify(data)}`);
+        
         // Use the extracted UUID for the API request instead of the potentially compound taskId
         const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${validTaskId}`, data);
         
@@ -357,6 +364,13 @@ const updateTaskMutation = useMutation({
       }
     },
     onSuccess: async (updatedTask, variables) => {
+      // TRACE: Log the response data and status on successful task update
+      console.debug(`[TRACE_RQ] Task update succeeded:
+  - Task ID: ${updatedTask.id}
+  - Original requested ID: ${variables.taskId}
+  - Response status: 200
+  - Updated completion: ${updatedTask.completed}`);
+      
       if (DEBUG_TASKS) console.log('Task updated, invalidating cache and refetching');
       
       // Track task update in cache
