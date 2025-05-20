@@ -1,0 +1,47 @@
+Objective: Fix task ID lookup in server/projectsDb.ts to ensure the server finds tasks by clean UUID as well as compound ID.
+
+Problem:
+When the client sends a PUT to /api/projects/:projectId/tasks/:cleanId, the server returns 404 “Task not found”, even though the cleaned ID matches the start of the original (compound) task ID. The likely cause is that the database is storing task IDs as compound IDs (e.g., "abc-123-def-456-789-extra"), but the server lookup only checks for an exact match with the clean UUID (e.g., "abc-123-def-456-789"). As a result, the task is not found and cannot be updated.
+
+Expected Outcome:
+- Server correctly finds a task by either its full (compound) ID or the cleaned UUID prefix (first five segments, split by hyphens).
+- PUT and GET endpoints both support lookup by clean UUID.
+- Task updates succeed (HTTP 200), and the completion state persists after refresh.
+- [NET] and server debug logs clearly show which ID was used and whether a match was found.
+
+Tech Details:
+File to change: server/projectsDb.ts only (or the main file handling task lookups and updates).
+Minimal diff:
+- Update the task lookup logic in update/delete operations to match a task if either:
+  • task.id === incomingId
+  • OR task.id.split('-').slice(0,5).join('-') === incomingId
+- Add server console.log before/after match attempt, showing incomingId, all stored task IDs, and which match is chosen.
+- Do NOT change task creation logic or client code in this cycle.
+
+Unit Test Outline:
+describe('Task lookup by clean UUID', () =>
+
+  test('matches task with compound ID when given clean UUID')
+    // e.g., DB has "abc-123-def-456-789-extra", incomingId is "abc-123-def-456-789"
+    // should match and allow update
+
+  test('matches regular UUID task')
+    // DB has "abc-123-def-456-789", incomingId same
+    // should match
+
+  test('returns 404 if no match (neither exact nor prefix)')
+    // e.g., incomingId "xxx-yyy-zzz" not present
+
+)
+
+Safeguards:
+- Do not touch authentication, client code, or unrelated DB logic.
+- Only patch the server-side lookup for task updates/deletes.
+
+Instructions:
+- Apply the minimal diff as above in server/projectsDb.ts.
+- Add or update the outlined unit test.
+- Run smoke-test script and paste its JSON result.
+- If you restart the app, wait for SSR logs and include them.
+
+Run smoke-test script and paste its JSON result.

@@ -548,40 +548,66 @@ export const projectsDb = {
       // These are likely concatenations of a UUID with a suffix
       let validTaskId = taskId;
       
-      if (taskId.includes('-') && taskId.split('-').length > 5) {
-        console.log(`Detected compound ID: ${taskId}`);
-        
-        try {
-          // First check if this is a sourceId for an existing task
-          const existingTasksBySource = await db.select()
+      // Log the task IDs we're working with
+      console.log(`[TASK_LOOKUP] Looking up task with ID: ${taskId}`);
+      
+      try {
+        // CASE 1: First check if this is a sourceId for an existing task
+        const existingTasksBySource = await db.select()
+          .from(projectTasksTable)
+          .where(eq(projectTasksTable.sourceId, taskId));
+          
+        if (existingTasksBySource.length > 0) {
+          // Task exists with this source ID, use its actual UUID instead
+          validTaskId = existingTasksBySource[0].id as string;
+          console.log(`[TASK_LOOKUP] Found task with sourceId ${taskId}, using its ID ${validTaskId} for update`);
+        } else {
+          // CASE 2: Check if task exists with the exact ID
+          const existingTasksById = await db.select()
             .from(projectTasksTable)
-            .where(eq(projectTasksTable.sourceId, taskId));
+            .where(eq(projectTasksTable.id, taskId))
+            .limit(1);
             
-          if (existingTasksBySource.length > 0) {
-            // Task exists with this source ID, use its actual UUID instead
-            validTaskId = existingTasksBySource[0].id as string;
-            console.log(`Found task with sourceId ${taskId}, using its ID ${validTaskId} for update`);
+          if (existingTasksById.length > 0) {
+            console.log(`[TASK_LOOKUP] Found task with exact ID match: ${taskId}`);
+            // No need to change validTaskId, it's already correct
           } else {
-            // Check if task exists with the ID directly (unlikely but possible)
-            const existingTasksById = await db.select()
-              .from(projectTasksTable)
-              .where(eq(projectTasksTable.id, taskId))
-              .limit(1);
+            // CASE 3: Check if this is a clean UUID being used to update a task with a compound ID
+            // Get all tasks and check if any have an ID that starts with the incoming ID
+            const allTasks = await db.select()
+              .from(projectTasksTable);
               
-            if (existingTasksById.length === 0) {
-              // Task doesn't exist yet, we need to handle this as a special case
-              console.log(`Task with ID/sourceId ${taskId} not found, treating as a task to be created`);
+            console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID prefix match with: ${taskId}`);
+            
+            // Find a task whose ID starts with our clean UUID (the taskId is a prefix of a compound ID)
+            const matchingTask = allTasks.find(task => {
+              // Extract the clean UUID from the task's ID (first 5 segments)
+              const taskCleanId = (task.id as string).split('-').slice(0, 5).join('-');
+              
+              // Log the comparison for debugging
+              console.log(`[TASK_LOOKUP] Comparing clean UUID ${taskId} with task ${task.id} (clean: ${taskCleanId})`);
+              
+              // Return true if the clean IDs match
+              return taskCleanId === taskId;
+            });
+            
+            if (matchingTask) {
+              validTaskId = matchingTask.id as string;
+              console.log(`[TASK_LOOKUP] Found task with matching clean UUID prefix, using full ID: ${validTaskId}`);
+            } else {
+              // CASE 4: No match found by any method
+              console.log(`[TASK_LOOKUP] Task with ID/sourceId ${taskId} not found by any method`);
               throw new Error(`Task with ID ${taskId} does not exist. This appears to be a factor task reference. Try creating the task first using createTask API.`);
             }
           }
-        } catch (err) {
-          if (err instanceof Error && err.message.includes('Try creating')) {
-            // Pass through our custom error
-            throw err;
-          }
-          console.error(`Error looking up task by compound ID ${taskId}:`, err);
-          throw new Error(`Failed to process task ID ${taskId}: ${err instanceof Error ? err.message : String(err)}`);
         }
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('Try creating')) {
+          // Pass through our custom error
+          throw err;
+        }
+        console.error(`Error looking up task by ID ${taskId}:`, err);
+        throw new Error(`Failed to process task ID ${taskId}: ${err instanceof Error ? err.message : String(err)}`);
       }
       
       // Sanitize input data to ensure types match and handle empty strings properly
@@ -662,27 +688,64 @@ export const projectsDb = {
   async deleteTask(taskId: string): Promise<boolean> {
     try {
       if (DEBUG_TASKS) console.log(`Attempting to delete task ${taskId}`);
+      console.log(`[TASK_LOOKUP] Looking up task for deletion with ID: ${taskId}`);
+      
+      // Resolve the task ID to a valid database ID
+      let validTaskId = taskId;
+      let taskFound = false;
       
       // First verify the task exists before trying to delete it
       try {
+        // CASE 1: Check if task exists with the exact ID
         const existingTasks = await db.select()
           .from(projectTasksTable)
           .where(eq(projectTasksTable.id, taskId));
         
-        if (existingTasks.length === 0) {
-          if (DEBUG_TASKS) console.warn(`Task ${taskId} not found in database before deletion attempt`);
-          throw new Error(`Task with ID ${taskId} not found`);
+        if (existingTasks.length > 0) {
+          // Found a direct match
+          taskFound = true;
+          console.log(`[TASK_LOOKUP] Found task with exact ID match: ${taskId}`);
+          if (DEBUG_TASKS) console.log(`Found task to delete:`, existingTasks[0]);
+        } else {
+          console.log(`[TASK_LOOKUP] No exact match found for task ID: ${taskId}`);
+          
+          // CASE 2: Check if this is a clean UUID being used to delete a task with a compound ID
+          // Get all tasks and check if any have an ID that starts with the incoming ID
+          const allTasks = await db.select()
+            .from(projectTasksTable);
+          
+          console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID prefix match with: ${taskId}`);
+          
+          // Find a task whose ID starts with our clean UUID (the taskId is a prefix of a compound ID)
+          const matchingTask = allTasks.find(task => {
+            // Extract the clean UUID from the task's ID (first 5 segments)
+            const taskCleanId = (task.id as string).split('-').slice(0, 5).join('-');
+            
+            // Log the comparison for debugging
+            console.log(`[TASK_LOOKUP] Comparing clean UUID ${taskId} with task ${task.id} (clean: ${taskCleanId})`);
+            
+            // Return true if the clean IDs match
+            return taskCleanId === taskId;
+          });
+          
+          if (matchingTask) {
+            validTaskId = matchingTask.id as string;
+            taskFound = true;
+            console.log(`[TASK_LOOKUP] Found task with matching clean UUID prefix, using full ID: ${validTaskId}`);
+            if (DEBUG_TASKS) console.log(`Found task to delete:`, matchingTask);
+          } else {
+            console.log(`[TASK_LOOKUP] Task with ID ${taskId} not found by any method`);
+            throw new Error(`Task with ID ${taskId} not found`);
+          }
         }
-        
-        if (DEBUG_TASKS) console.log(`Found task to delete:`, existingTasks[0]);
       } catch (verifyErr) {
         if (DEBUG_TASKS) console.error(`Error verifying task ${taskId} existence:`, verifyErr);
-        // Continue with deletion attempt
+        throw verifyErr; // Don't proceed with deletion if task not found
       }
       
       // Perform the deletion with returning to verify success
       const result = await db.delete(projectTasksTable)
-        .where(eq(projectTasksTable.id, taskId))
+        .where(eq(projectTasksTable.id, validTaskId))
         .returning({ id: projectTasksTable.id });
       
       if (DEBUG_TASKS) console.log(`Deletion result for task ${taskId}:`, result);
