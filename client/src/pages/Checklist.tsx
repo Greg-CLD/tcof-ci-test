@@ -649,9 +649,17 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         }
       }
 
+      // Extract clean UUID for API request to ensure proper endpoint construction
+      const rawId = taskId;
+      const cleanId = rawId.split('-').slice(0, 5).join('-');
+      const endpoint = `/api/projects/${currentProjectId}/tasks/${cleanId}`;
+      
+      // Always log in development mode for debugging consistency
+      console.log('[NET]', { rawId, cleanId, endpoint, completed: updates.completed });
+      
       const response = await apiRequest(
         "PUT",
-        `/api/projects/${currentProjectId}/tasks/${taskId}`,
+        endpoint,
         updatedFields
       );
 
