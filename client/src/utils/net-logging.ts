@@ -19,7 +19,7 @@ export function logTaskNetworkRequest(
   rawId: string,
   cleanId: string,
   endpoint: string,
-  projectId: string
+  projectId: string | null | undefined
 ) {
   console.log('[NET]', { 
     operation, 

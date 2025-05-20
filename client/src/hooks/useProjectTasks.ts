@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { isValidUUID, isNumericId } from '@/lib/uuid-utils';
+import { extractUuid, safeProjectId } from '@/hooks/extractUuid';
 import { logTaskNetworkRequest, logTaskNetworkResponse } from '@/utils/net-logging';
 import { 
   DEBUG_TASKS, 
@@ -257,13 +258,13 @@ const updateTaskMutation = useMutation({
   mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
     // Extract the valid UUID part if this is a compound ID
     const rawId = taskId;
-    const cleanId = rawId.split('-').slice(0,5).join('-');
+    const cleanId = extractUuid(rawId);
     
     // Define the endpoint with clean UUID immediately
     const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
     
     // Log network request details with our utility function
-    logTaskNetworkRequest('updateTask', rawId, cleanId, endpoint, projectId);
+    logTaskNetworkRequest('updateTask', rawId, cleanId, endpoint, safeProjectId(projectId));
     
     // Log if we had to extract a UUID from a compound ID
     if (cleanId !== taskId && DEBUG_TASK_MAPPING) {
