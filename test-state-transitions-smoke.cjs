@@ -9,7 +9,8 @@
  * 5. Verifies the state change was persisted
  */
 
-const fetch = require('node-fetch');
+// Convert to dynamic import for ES module compatibility
+const { default: fetch } = await import('node-fetch');
 
 // Global configuration
 const BASE_URL = 'http://localhost:5000';
