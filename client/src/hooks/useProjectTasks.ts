@@ -258,8 +258,11 @@ const updateTaskMutation = useMutation({
     const rawId = taskId;
     const cleanId = rawId.split('-').slice(0,5).join('-');
     
+    // Define the endpoint with clean UUID immediately
+    const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
+    
     // Always log both raw and clean IDs to ensure proper tracking
-    console.log('[NET]', { rawId, cleanId, endpoint: `/api/projects/${projectId}/tasks/${cleanId}` });
+    console.log('[NET]', { rawId, cleanId, endpoint });
     
     // Log if we had to extract a UUID from a compound ID
     if (cleanId !== taskId && DEBUG_TASK_MAPPING) {
@@ -308,18 +311,6 @@ const updateTaskMutation = useMutation({
       }
       
       try {
-        // Always use the clean endpoint with the extracted UUID
-        const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
-        
-        // Enhanced logging for task operations
-        console.log('[NET]', { 
-          operation: 'updateTask', 
-          rawId, 
-          cleanId, 
-          endpoint,
-          projectId
-        });
-        
         // Use the extracted UUID for the API request instead of the potentially compound taskId
         const res = await apiRequest('PUT', endpoint, data);
         
@@ -545,17 +536,15 @@ const updateTaskMutation = useMutation({
       const rawId = taskId;
       const cleanId = rawId.split('-').slice(0,5).join('-');
       
+      // Define the endpoint with clean UUID immediately
+      const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
+      
       // Always log both raw and clean IDs to ensure proper tracking
-      console.log('[NET]', { 
-        operation: 'deleteTask', 
-        rawId, 
-        cleanId, 
-        endpoint: `/api/projects/${projectId}/tasks/${cleanId}` 
-      });
+      console.log('[NET]', { rawId, cleanId, endpoint });
       
       try {
         if (DEBUG_TASKS) console.log(`Deleting task ${taskId} (using ${cleanId}) for project ${projectId}`);
-        const res = await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${cleanId}`);
+        const res = await apiRequest('DELETE', endpoint);
         
         if (!res.ok) {
           console.error(`Error deleting task: ${res.status} ${res.statusText}`);
