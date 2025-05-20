@@ -646,7 +646,15 @@ const updateTaskMutation = useMutation({
       throw new Error(`Invalid task ID format: ${taskId}. Task IDs must be valid UUIDs.`);
     }
     
-    return await updateTaskMutation.mutateAsync({ taskId, data });
+    // Extract the clean UUID from potentially compound ID before making API request
+    const cleanId = extractUuid(taskId);
+    
+    // TRACE: Log the original vs. clean ID for debugging
+    console.debug(`[TRACE_NET] Task update clean ID extraction:
+  - Original task ID: ${taskId}
+  - Cleaned UUID for API: ${cleanId}`);
+    
+    return await updateTaskMutation.mutateAsync({ taskId: cleanId, data });
   };
   
   const deleteTask = async (taskId: string) => {
