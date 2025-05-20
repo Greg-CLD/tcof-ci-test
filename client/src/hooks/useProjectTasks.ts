@@ -217,6 +217,10 @@ export function useProjectTasks(projectId?: string) {
     },
     onError: (error) => {
       console.error('Error creating task:', error);
+      // TRACE: Log the error during task creation
+      console.debug(`[TRACE_RQ] Task creation failed:
+  - Error: ${error.message}
+  - Status: Error`);
       // Don't throw from the callback
     }
   });
@@ -511,8 +515,15 @@ const updateTaskMutation = useMutation({
         setTimeout(() => refetch(), 2000);
       }
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       console.error('Error updating task:', error);
+      
+      // TRACE: Log the error details when task update fails
+      console.debug(`[TRACE_RQ] Task update failed:
+  - Task ID: ${variables.taskId}
+  - Error: ${error.message}
+  - Status: Error`);
+      
       // Don't throw from the callback
     }
   });
