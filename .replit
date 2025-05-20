@@ -84,3 +84,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run test:smoke"
+
+[[workflows.workflow]]
+name = "Debug Session"
+author = 42110622
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "DEBUG=true DEBUG_TASKS=true npm run dev"
