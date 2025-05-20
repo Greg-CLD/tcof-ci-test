@@ -18,6 +18,7 @@ import {
   BarChart as BarChartIcon,
   CheckSquare,
   Compass,
+  Bug,
   ClipboardList,
   ChevronDown,
   Home,
@@ -277,6 +278,14 @@ export default function SiteHeader() {
                           className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin/factors' ? 'bg-tcof-light' : ''} text-tcof-teal`}
                         >
                           <Filter className="h-5 w-5 mr-2" /> Admin - Factors
+                        </Link>
+                        
+                        <Link 
+                          href="/make-a-plan/admin/diagnostics"
+                          onClick={handleNavigation}
+                          className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin/diagnostics' ? 'bg-tcof-light' : ''} text-tcof-teal`}
+                        >
+                          <Bug className="h-5 w-5 mr-2" /> Task Diagnostics
                         </Link>
                         <Link 
                           href="/make-a-plan/admin"

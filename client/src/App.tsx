@@ -371,6 +371,7 @@ function Router() {
       <Route path="/make-a-plan/admin/factors/simple" component={SimpleFactorEditor} />
       <Route path="/make-a-plan/admin/factors" component={SuccessFactorEditor} />
       <Route path="/make-a-plan/admin/graph-explorer" component={GraphExplorer} />
+      <Route path="/make-a-plan/admin/diagnostics" component={AdminDiagnostics} />
       <Route path="/make-a-plan/admin" component={AdminPresetEditor} />
       <Route path="/make-a-plan/full/intro">
         <ProtectedRouteGuard>
