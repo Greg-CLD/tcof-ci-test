@@ -1,0 +1,111 @@
+To run the task state transitions smoke test in a user-friendly way on Replit, follow these steps:
+
+Step 1: Create the Smoke Test File
+We'll create a .js version of the test based on the existing structure.
+
+In Replit, create a new file named test-state-transitions-smoke.js.
+Copy and paste the following code into test-state-transitions-smoke.js:
+// test-state-transitions-smoke.js
+const fetch = require('node-fetch');
+const BASE_URL = 'http://0.0.0.0:5000'; // Ensure the server is accessible
+const TEST_CREDENTIALS = {
+  username: 'greg@confluity.co.uk',
+  password: 'password'
+};
+process.env.DEBUG_TASKS = 'true';
+process.env.DEBUG_TASK_STATE = 'true';
+process.env.DEBUG_TASK_COMPLETION = 'true';
+process.env.DEBUG_TASK_PERSISTENCE = 'true';
+let cookies = '';
+let projectId = '';
+let taskId = '';
+async function login() {
+  const response = await fetch(`${BASE_URL}/api/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(TEST_CREDENTIALS)
+  });
+  if (response.ok) {
+    cookies = response.headers.get('set-cookie');
+    console.log('Login successful');
+    return true;
+  }
+  console.error('Login failed');
+  return false;
+}
+async function getProjects() {
+  const response = await fetch(`${BASE_URL}/api/projects`, { headers: { Cookie: cookies } });
+  if (response.ok) {
+    const projects = await response.json();
+    projectId = projects[0].id; // Fetch first project ID for testing
+    console.log('Projects retrieved:', projects);
+    return true;
+  }
+  console.error('Failed to fetch projects');
+  return false;
+}
+async function getTasks() {
+  const response = await fetch(`${BASE_URL}/api/projects/${projectId}/tasks`, { headers: { Cookie: cookies } });
+  if (response.ok) {
+    const tasks = await response.json();
+    taskId = tasks[0].id; // Fetch first task ID for testing
+    console.log('Tasks retrieved:', tasks);
+    return true;
+  }
+  console.error('Failed to fetch tasks');
+  return false;
+}
+async function toggleTaskCompletion() {
+  const response = await fetch(`${BASE_URL}/api/projects/${projectId}/tasks/${taskId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Cookie: cookies },
+    body: JSON.stringify({ completed: true })
+  });
+  if (response.ok) {
+    console.log('Task completion toggled');
+    return true;
+  }
+  console.error('Failed to toggle task completion');
+  return false;
+}
+// Main function to run the smoke test
+async function runTest() {
+  console.log('Starting task state transition smoke test...');
+  await login();
+  await getProjects();
+  await getTasks();
+  await toggleTaskCompletion();
+  console.log('Test complete.');
+}
+runTest().catch(err => {
+  console.error('Test failed with error:', err);
+});
+Step 2: Running the Test
+Open the Replit shell.
+Run the following command to execute the smoke test:
+node test-state-transitions-smoke.js
+Step 3: Using Admin Diagnostics and DevTools
+If running the script directly isn't comfortable, follow these steps to manually capture the logs:
+
+Open DevTools:
+
+Right-click anywhere on the page and select "Inspect".
+Go to the "Console" tab.
+Enable Debug Logging:
+
+Manually call the debug function by entering in the console:
+debugTaskState.runSession();
+Monitor Network Requests:
+
+Switch to the "Network" tab.
+Trigger the task completion flow through the UI as needed.
+Click on the failed network requests to view their details (payload and response).
+Copy Logs and Request Details:
+
+Copy any relevant console logs and network request details after executing the above.
+Next Steps
+After you run the test or capture the logs, share:
+
+The output from the test run or the logs from DevTools.
+Any network request details captured that include payloads and responses.
+From there, I can assist you further in verifying the diagnostic system and diagnosing the SuccessFactor task persistence issue.
