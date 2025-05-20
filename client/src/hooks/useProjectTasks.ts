@@ -258,6 +258,9 @@ const updateTaskMutation = useMutation({
     const rawId = taskId;
     const cleanId = rawId.split('-').slice(0,5).join('-');
     
+    // Always log both raw and clean IDs to ensure proper tracking
+    console.debug('[NET]', { rawId, cleanId, endpoint: `/tasks/${cleanId}` });
+    
     // Log if we had to extract a UUID from a compound ID
     if (cleanId !== taskId && DEBUG_TASK_MAPPING) {
       console.log(`[DEBUG_TASK_MAPPING] Extracted base UUID ${cleanId} from compound ID ${taskId}`);
@@ -305,11 +308,7 @@ const updateTaskMutation = useMutation({
       }
       
       try {
-        // TRACE: Log the raw task ID and extracted UUID before network request
-        if (DEBUG_TASK_API) {
-          console.debug(`[TRACE_NET] rawId: ${rawId} | cleanId: ${cleanId}`);
-        }
-        
+        // Always use the clean endpoint with the extracted UUID
         const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
         
         // Use the extracted UUID for the API request instead of the potentially compound taskId
