@@ -84,3 +84,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "DEBUG=true DEBUG_TASKS=true DEBUG_TASK_STATE=true DEBUG_TASK_COMPLETION=true DEBUG_TASK_PERSISTENCE=true node test-state-transitions-smoke.mjs"
+
+[[workflows.workflow]]
+name = "Full Task Debug"
+author = 42110622
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "DEBUG=true DEBUG_TASKS=true DEBUG_TASK_STATE=true DEBUG_TASK_COMPLETION=true DEBUG_TASK_PERSISTENCE=true DEBUG_TASK_API=true node test-state-transitions-smoke.mjs"
