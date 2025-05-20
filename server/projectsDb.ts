@@ -552,7 +552,22 @@ export const projectsDb = {
       console.log(`[TASK_LOOKUP] Looking up task with ID: ${taskId}`);
       
       try {
-        // CASE 1: First check if this is a sourceId for an existing task
+        // First check if this is a factor ID, not a task ID
+        if (taskId && taskId.length === 36 && taskId.includes('-')) {
+          // Check if there are any tasks that have this ID as sourceId (likely a success factor ID)
+          const tasksBySourceId = await db.select()
+            .from(projectTasksTable)
+            .where(eq(projectTasksTable.sourceId, taskId));
+            
+          if (tasksBySourceId.length > 0) {
+            // This is likely a success factor ID being mistakenly passed as a task ID
+            // We should not try to update this as a task
+            console.log(`[TASK_LOOKUP] The ID ${taskId} appears to be a success factor ID, not a task ID`);
+            throw new Error(`Cannot update ID ${taskId} directly: this appears to be a success factor ID, not a task ID. Try updating a specific task instead.`);
+          }
+        }
+        
+        // CASE 1: Check if this is a sourceId for an existing task
         const existingTasksBySource = await db.select()
           .from(projectTasksTable)
           .where(eq(projectTasksTable.sourceId, taskId));
@@ -706,6 +721,20 @@ export const projectsDb = {
       
       // First verify the task exists before trying to delete it
       try {
+        // First check if this is a factor ID, not a task ID
+        if (taskId && taskId.length === 36 && taskId.includes('-')) {
+          // Check if there are any tasks that have this ID as sourceId (likely a success factor ID)
+          const tasksBySourceId = await db.select()
+            .from(projectTasksTable)
+            .where(eq(projectTasksTable.sourceId, taskId));
+            
+          if (tasksBySourceId.length > 0) {
+            // This is likely a success factor ID being mistakenly passed as a task ID
+            console.log(`[TASK_LOOKUP] The ID ${taskId} appears to be a success factor ID, not a task ID`);
+            throw new Error(`Cannot delete ID ${taskId} directly: this appears to be a success factor ID, not a task ID. Try deleting a specific task instead.`);
+          }
+        }
+        
         // CASE 1: Check if task exists with the exact ID
         const existingTasks = await db.select()
           .from(projectTasksTable)
@@ -739,6 +768,7 @@ export const projectsDb = {
           });
           
           if (matchingTask) {
+            // Here's the key change: use the matched task's ACTUAL ID for database operations
             validTaskId = matchingTask.id as string;
             taskFound = true;
             console.log(`[TASK_LOOKUP] Found task with matching clean UUID prefix, using full ID: ${validTaskId}`);
