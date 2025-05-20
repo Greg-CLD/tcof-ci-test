@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { isValidUUID, isNumericId } from '@/lib/uuid-utils';
 import { extractUuid, safeProjectId } from '@/hooks/extractUuid';
-import { logTaskNetworkRequest, logTaskNetworkResponse } from '@/utils/net-logging';
+import { logTaskNetworkRequest, logTaskNetworkResponse, isSuccessFactorTask } from '@/utils/net-logging';
 import { 
   DEBUG_TASKS, 
   DEBUG_TASK_MAPPING, 
@@ -313,6 +313,17 @@ const updateTaskMutation = useMutation({
       }
       
       try {
+        // Special tracing for SuccessFactor tasks (always log in development mode)
+        if (import.meta.env.MODE === 'development' && isSuccessFactorTask(taskId)) {
+          console.log('[SF_TASK_DEBUG]', {
+            message: 'Updating SuccessFactor task',
+            rawId: taskId,
+            cleanId,
+            endpoint,
+            isCompleted: data.completed
+          });
+        }
+        
         // Use the extracted UUID for the API request instead of the potentially compound taskId
         const res = await apiRequest('PUT', endpoint, data);
         
