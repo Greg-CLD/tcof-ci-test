@@ -807,10 +807,18 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         return updatedTasks;
       });
 
-      // Delete from server - use the correct endpoint
+      // Extract clean UUID for API request to ensure proper endpoint construction
+      const rawId = taskId;
+      const cleanId = rawId.split('-').slice(0, 5).join('-');
+      const endpoint = `/api/projects/${currentProjectId}/tasks/${cleanId}`;
+      
+      // Always log in development mode for debugging consistency
+      console.log('[NET]', { rawId, cleanId, endpoint, operation: 'DELETE' });
+      
+      // Delete from server - use the correct endpoint with cleaned UUID
       const response = await apiRequest(
         "DELETE",
-        `/api/projects/${currentProjectId}/tasks/${taskId}`
+        endpoint
       );
 
       // Check if the deletion was successful
