@@ -25,7 +25,19 @@ import {
 } from '@shared/constants.debug';
 // Define the Stage type for canonical checklist tasks
 type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
+// Import projectsDb with augmented type definition to fix TypeScript errors
 import { projectsDb } from './projectsDb';
+
+// Add type augmentation for projectsDb to include the missing methods
+declare module './projectsDb' {
+  export interface ProjectsDb {
+    getTasks(options: { projectId: string, ids?: string[] }): Promise<any[]>;
+    getTasksByProject(projectId: string): Promise<any[]>;
+    getTasksForProject(projectId: string): Promise<any[]>;
+    updateTask(taskId: string, update: any): Promise<any>;
+    deleteTask(taskId: string): Promise<boolean>;
+  }
+}
 import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation, RelationType } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
 import { setupAuth, isAuthenticated } from './auth'; 
@@ -639,12 +651,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           
           // Double-check by fetching the task directly from the database
           try {
-            // Using getTasks with a filter instead of the non-existent getTaskById
-            const verifiedTasks = await projectsDb.getTasks({ 
-              projectId: result.projectId, 
-              ids: [result.id] 
-            });
-            const verifiedTask = verifiedTasks?.[0];
+            // Using getTasksForProject and filtering manually
+            const allTasks = await projectsDb.getTasksForProject(result.projectId);
+            const verifiedTask = allTasks.find(task => task.id === result.id);
             
             if (verifiedTask) {
               console.log(`[DEBUG_TASK_COMPLETION] Verification lookup successful:`);
@@ -779,7 +788,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         
         try {
           // Get the original task to check if it's a SuccessFactor task
-          originalTask = await projectsDb.getTaskById(taskId);
+          // Using getTasksForProject instead of the non-existent getTaskById
+          const allTasks = await projectsDb.getTasksForProject(projectId);
+          originalTask = allTasks.find(task => task.id === taskId);
           
           if (originalTask) {
             // Standard task update logging
@@ -901,7 +912,11 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         // Double-check after update by fetching the task again directly from the database
         if (DEBUG_TASK_PERSISTENCE && taskUpdate.hasOwnProperty('completed')) {
           try {
-            const verifiedTask = await projectsDb.getTaskById(taskId);
+            // Using getTasksForProject instead of the non-existent getTaskById
+            // and then filtering the results manually
+            const allTasks = await projectsDb.getTasksForProject(projectId);
+            const taskResults = allTasks.filter(task => task.id === taskId);
+            const verifiedTask = taskResults?.[0];
             
             if (verifiedTask) {
               console.log(`[DEBUG_TASK_PERSISTENCE] Verification check after update:`);
@@ -961,7 +976,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         });
       }
       
-      const userId = req.user.id || req.user;
+      // Safely extract user ID with proper type handling
+      const userId = typeof req.user === 'object' && req.user !== null ? 
+        (req.user as {id: string|number}).id : 
+        req.user;
       
       console.log(`DELETE request for task ${taskId} in project ${projectId} by user ${userId}`);
       
