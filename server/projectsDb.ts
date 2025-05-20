@@ -592,6 +592,7 @@ export const projectsDb = {
             });
             
             if (matchingTask) {
+              // Here's the key change: use the matched task's ACTUAL ID, not the incoming ID
               validTaskId = matchingTask.id as string;
               console.log(`[TASK_LOOKUP] Found task with matching clean UUID prefix, using full ID: ${validTaskId}`);
             } else {
@@ -637,17 +638,17 @@ export const projectsDb = {
       // Generate the SQL for logging purposes (before executing)
       const updateSQL = db.update(projectTasksTable)
         .set(updateData)
-        .where(eq(projectTasksTable.id, matchingTask.id))
+        .where(eq(projectTasksTable.id, validTaskId))
         .toSQL();
       
       console.log('SQL to be executed:', updateSQL.sql);
       console.log('SQL parameters:', JSON.stringify(updateSQL.params, null, 2));
       
       try {
-        // Update the task using Drizzle with the actual matched DB ID, not the incoming taskId
+        // Update the task using Drizzle with the actual matched DB ID (validTaskId), not the incoming taskId
         const [updatedTask] = await db.update(projectTasksTable)
           .set(updateData)
-          .where(eq(projectTasksTable.id, matchingTask.id))
+          .where(eq(projectTasksTable.id, validTaskId))
           .returning();
         
         if (DEBUG_TASKS) console.log('Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
