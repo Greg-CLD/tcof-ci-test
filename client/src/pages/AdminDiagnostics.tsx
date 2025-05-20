@@ -75,9 +75,11 @@ export default function AdminDiagnostics() {
                 Enter a compound task ID to verify extraction works correctly.
               </p>
               
-              <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
-                <UuidExtractionTest />
-              </Suspense>
+              <div className="border p-6 rounded-lg shadow-sm">
+                <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>}>
+                  <UuidExtractionTest />
+                </Suspense>
+              </div>
               
               <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
                 <h3 className="font-medium text-amber-800 mb-2">Use this in the browser console</h3>
@@ -99,9 +101,33 @@ window.testUuidExtraction('2f565bf9-70c7-5c41-93e7-c6c4cde32312-e253fe5a');`}
                 Enable or disable debugging features. These flags control console logging for task operations.
               </p>
               
-              <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
-                <DebugFlagTester />
-              </Suspense>
+              <div className="border p-6 rounded-lg shadow-sm">
+                <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>}>
+                  <DebugFlagTester />
+                </Suspense>
+              </div>
+              
+              <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-md">
+                <h3 className="font-medium text-slate-800 mb-2">Diagnostic Logging Keys</h3>
+                <ul className="space-y-2 text-sm text-slate-700">
+                  <li className="flex items-start gap-2">
+                    <span className="font-mono bg-slate-100 px-2 py-0.5 rounded">[TRACE_NET]</span>
+                    <span>Network requests before API calls</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-mono bg-slate-100 px-2 py-0.5 rounded">[TRACE_RQ]</span>
+                    <span>React Query mutation responses</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-mono bg-slate-100 px-2 py-0.5 rounded">[TRACE_MAP]</span>
+                    <span>Task mapping operations</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-mono bg-slate-100 px-2 py-0.5 rounded">[TRACE_UI]</span>
+                    <span>UI rendering for task cards</span>
+                  </li>
+                </ul>
+              </div>
             </Card>
           </TabsContent>
         </Tabs>

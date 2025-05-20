@@ -285,7 +285,7 @@ export default function SiteHeader() {
                           onClick={handleNavigation}
                           className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin/diagnostics' ? 'bg-tcof-light' : ''} text-tcof-teal`}
                         >
-                          <Bug className="h-5 w-5 mr-2" /> Task Diagnostics
+                          <BarChartIcon className="h-5 w-5 mr-2" /> Task Diagnostics
                         </Link>
                         <Link 
                           href="/make-a-plan/admin"
