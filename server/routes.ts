@@ -439,7 +439,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
                           projectsCheck.rows[0].exists;
 
       // Get project_tasks columns if the table exists
-      let projectTasksColumns = [];
+      let projectTasksColumns: any[] = [];
       if (projectTasksExists) {
         const columnsResult = await db.execute(sql`
           SELECT column_name, data_type, is_nullable
@@ -452,7 +452,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       }
 
       // Get projects columns if the table exists
-      let projectsColumns = [];
+      let projectsColumns: any[] = [];
       if (projectsExists) {
         const columnsResult = await db.execute(sql`
           SELECT column_name, data_type, is_nullable
@@ -639,7 +639,13 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           
           // Double-check by fetching the task directly from the database
           try {
-            const verifiedTask = await projectsDb.getTaskById(result.id);
+            // Using getTasks with a filter instead of the non-existent getTaskById
+            const verifiedTasks = await projectsDb.getTasks({ 
+              projectId: result.projectId, 
+              ids: [result.id] 
+            });
+            const verifiedTask = verifiedTasks?.[0];
+            
             if (verifiedTask) {
               console.log(`[DEBUG_TASK_COMPLETION] Verification lookup successful:`);
               console.log(`[DEBUG_TASK_COMPLETION]  - Verified completion state: ${!!verifiedTask.completed}`);
@@ -648,8 +654,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
                 console.error(`[DEBUG_TASK_COMPLETION] *** CRITICAL: Verification mismatch! ***`);
               }
             }
-          } catch (verifyError) {
-            console.error(`[DEBUG_TASK_COMPLETION] Error during verification lookup:`, verifyError);
+          } catch (verifyError: unknown) {
+            console.error(`[DEBUG_TASK_COMPLETION] Error during verification lookup:`, 
+              verifyError instanceof Error ? verifyError.message : String(verifyError));
           }
         }
         
@@ -835,14 +842,14 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         let updatedTask;
         try {
           updatedTask = await projectsDb.updateTask(taskId, taskUpdate);
-        } catch (dbError) {
+        } catch (dbError: unknown) {
           // Log database errors immediately
           console.error('[ERROR] Database error during task update:', dbError);
           
           if (DEBUG_TASK_PERSISTENCE) {
             console.error(`[DEBUG_TASK_PERSISTENCE] Task update database operation failed:`);
             console.error(`[DEBUG_TASK_PERSISTENCE]  - Task ID: ${taskId}`);
-            console.error(`[DEBUG_TASK_PERSISTENCE]  - Error: ${dbError.message}`);
+            console.error(`[DEBUG_TASK_PERSISTENCE]  - Error: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
           }
           
           throw dbError; // Re-throw to be caught by outer try/catch
