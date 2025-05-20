@@ -1,64 +1,126 @@
-/**
- * Simple task persistence test directly with fetch
- */
+// Quick test script for the task UUID cleaning fix
+// This sends a direct API request to test if clean UUIDs work for task updates
 
-import fetch from 'node-fetch';
+import fs from 'fs';
 
-// Test a basic task creation and retrieval
-async function testTaskPersistence() {
-  console.log('Running quick task persistence test...');
-  
+// Extract the clean UUID part from a task ID
+function cleanTaskId(taskId) {
+  if (!taskId) return '';
+  return taskId.split('-').slice(0, 5).join('-');
+}
+
+// Find an existing task ID from a recent response (if available)
+function findExistingTaskId() {
   try {
-    // 1. Create a test task
-    const taskResponse = await fetch('https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev/api/projects/bc55c1a2-0cdf-4108-aa9e-44b44baea3b8/tasks', {
+    // Check if we have a tasks response saved from a previous request
+    if (fs.existsSync('tasks-fetched.json')) {
+      const tasks = JSON.parse(fs.readFileSync('tasks-fetched.json', 'utf8'));
+      if (Array.isArray(tasks) && tasks.length > 0) {
+        // Find a task with a UUID
+        const task = tasks.find(t => t.id && t.id.includes('-'));
+        if (task) {
+          console.log(`Found existing task: ${task.id} (completed: ${task.completed})`);
+          return {
+            id: task.id,
+            completed: task.completed
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.log('Error reading tasks file:', err.message);
+  }
+  
+  return null;
+}
+
+// Main test function
+async function testTaskUpdate() {
+  console.log('===== TESTING UUID HANDLING IN TASK UPDATES =====');
+  
+  // Configuration
+  const projectId = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
+  const baseUrl = 'http://localhost:5000';
+  
+  // Try to find an existing task ID
+  const existingTask = findExistingTaskId();
+  let taskId, originalState;
+  
+  if (existingTask) {
+    taskId = existingTask.id;
+    originalState = existingTask.completed;
+  } else {
+    console.log('No existing tasks found, using test task ID');
+    taskId = '2f565bf9-70c7-5c41-93e7-c6c4cde32312-success-factor';
+    originalState = false;
+  }
+  
+  // Extract just the clean UUID part
+  const cleanId = cleanTaskId(taskId);
+  
+  console.log(`
+Task Update Test:
+- Project ID: ${projectId}
+- Original Task ID: ${taskId}
+- Clean UUID: ${cleanId}
+- Current completion state: ${originalState}
+- Will toggle to: ${!originalState}
+`);
+
+  try {
+    // Send request to get a CSRF token and session cookie
+    console.log('Getting session cookie...');
+    const loginResponse = await fetch(`${baseUrl}/api/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        text: `Test task ${new Date().toISOString()}`,
-        stage: 'identification',
-        origin: 'custom',
-        sourceId: null,
-        priority: 'high',
-        notes: 'Created by persistence test'
+        username: 'greg@confluity.co.uk', 
+        password: 'confluity'
       })
     });
     
-    if (!taskResponse.ok) {
-      throw new Error(`Failed to create task: ${taskResponse.status} ${taskResponse.statusText}`);
+    if (!loginResponse.ok) {
+      throw new Error(`Login failed: ${loginResponse.status} ${loginResponse.statusText}`);
     }
     
-    const createdTask = await taskResponse.json();
-    console.log('Successfully created task:', createdTask);
+    const cookies = loginResponse.headers.get('set-cookie');
+    console.log('Got cookies:', cookies ? 'Yes' : 'No');
     
-    // 2. Get all tasks to verify immediate persistence
-    const tasksResponse = await fetch(`https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev/api/projects/bc55c1a2-0cdf-4108-aa9e-44b44baea3b8/tasks`);
+    // Send the task update request using the CLEAN UUID in the URL
+    console.log(`Sending PUT request to: ${baseUrl}/api/projects/${projectId}/tasks/${cleanId}`);
     
-    if (!tasksResponse.ok) {
-      throw new Error(`Failed to get tasks: ${tasksResponse.status} ${tasksResponse.statusText}`);
-    }
+    const updateResponse = await fetch(`${baseUrl}/api/projects/${projectId}/tasks/${cleanId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookies
+      },
+      body: JSON.stringify({
+        completed: !originalState
+      })
+    });
     
-    const tasks = await tasksResponse.json();
-    console.log(`Retrieved ${tasks.length} tasks`);
+    console.log(`Response status: ${updateResponse.status} ${updateResponse.statusText}`);
     
-    // 3. Verify our task is in the results
-    const foundTask = tasks.find(task => task.id === createdTask.id);
+    const responseText = await updateResponse.text();
+    console.log('Response body:', responseText);
     
-    if (foundTask) {
-      console.log('✅ SUCCESS: Task was persisted correctly');
+    if (updateResponse.ok) {
+      console.log('✅ SUCCESS: Task update with clean UUID worked!');
     } else {
-      console.log('❌ FAILURE: Task was not found in results');
+      console.log('❌ FAILED: Task update with clean UUID failed.');
     }
     
-    // Return the tasks as JSON for verification
-    return tasks;
+    // Verify the server logs for our fix
+    console.log('\nCheck the server logs to verify our UUID matching implementation is working:');
+    console.log('Look for logs with "[TASK_LOOKUP]" prefix');
+    
   } catch (error) {
-    console.error('Error during task test:', error);
-    return null;
+    console.log('❌ ERROR during test:', error.message);
   }
+  
+  console.log('\n===== TEST COMPLETE =====');
 }
 
 // Run the test
-const result = await testTaskPersistence();
-console.log(JSON.stringify(result, null, 2));
+testTaskUpdate();
