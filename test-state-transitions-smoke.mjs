@@ -18,16 +18,18 @@
 
 // Use ES module syntax
 import fetch from 'node-fetch';
-import config from './tests/utils/testConfig.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Global configuration - Use 0.0.0.0 for direct testing
 const BASE_URL = 'http://0.0.0.0:5000';
 console.log(`Using API URL: ${BASE_URL}`);
 
-// Credentials loaded from environment variables or config file
+// Hard-coded credentials for the smoke test
 const CREDENTIALS = {
-  username: config.TEST_USERNAME, 
-  password: config.TEST_PASSWORD
+  username: 'greg@confluity.co.uk',
+  password: 'password'
 };
 
 // Validate required credentials
