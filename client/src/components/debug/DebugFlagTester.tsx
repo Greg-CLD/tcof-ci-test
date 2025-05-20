@@ -38,7 +38,7 @@ export default function DebugFlagTester() {
   const { toast } = useToast();
   
   // Get initial states from localStorage first, then fall back to global constants
-  const getInitialState = (key, defaultValue) => {
+  const getInitialState = (key: string, defaultValue: boolean): boolean => {
     const stored = localStorage.getItem(`debug_${key}`);
     if (stored !== null) {
       return stored === 'true';
@@ -119,7 +119,7 @@ export default function DebugFlagTester() {
   }, [testLogConfirmation]);
   
   // Master toggle for all diagnostics
-  const toggleAllDiagnostics = (enabled) => {
+  const toggleAllDiagnostics = (enabled: boolean) => {
     // Set all flags to the specified value
     setGeneralDebug(enabled);
     setTaskDebug(enabled);
@@ -168,14 +168,14 @@ export default function DebugFlagTester() {
       description: enabled 
         ? "Diagnostic logging is now active - results visible in browser console" 
         : "All diagnostic logging has been turned off",
-      variant: enabled ? "default" : "secondary",
+      variant: enabled ? "default" : "info",
     });
     
     console.log(`[DEBUG_TESTER] ${enabled ? 'Enabled' : 'Disabled'} all diagnostic flags`);
   };
   
   // Helper function to toggle individual debug flags
-  const toggleDebugFlag = (flag, value) => {
+  const toggleDebugFlag = (flag: string, value: boolean) => {
     try {
       localStorage.setItem(`debug_${flag}`, value ? 'true' : 'false');
       console.log(`[DEBUG_TESTER] Set ${flag} to ${value}`);
@@ -184,7 +184,7 @@ export default function DebugFlagTester() {
       toast({
         title: value ? "Diagnostics Enabled" : "Diagnostics Disabled",
         description: `${flag.charAt(0).toUpperCase() + flag.slice(1)} debugging is now ${value ? 'active' : 'inactive'}`,
-        variant: value ? "default" : "secondary",
+        variant: value ? "default" : "info",
       });
       
       // Special case for general task debugging

@@ -115,13 +115,13 @@ async function getTasks() {
   const { status, data } = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
   console.log(`Tasks API status: ${status}`);
   
-  if (status === 200 && data && data.length > 0) {
+  if (status === 200 && data && data.tasks && data.tasks.length > 0) {
     // Select a task (preferably a SuccessFactor task)
-    const successFactorTask = data.find(task => 
+    const successFactorTask = data.tasks.find(task => 
       task.origin === 'success-factor' || task.origin === 'factor'
     );
     
-    const selectedTask = successFactorTask || data[0];
+    const selectedTask = successFactorTask || data.tasks[0];
     taskId = selectedTask.id;
     
     console.log(`Selected task ID: ${taskId}`);
