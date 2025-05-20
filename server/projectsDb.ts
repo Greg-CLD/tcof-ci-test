@@ -587,8 +587,8 @@ export const projectsDb = {
               // Log the comparison for debugging
               console.log(`[TASK_LOOKUP] Comparing clean UUID ${taskId} with task ${task.id} (clean: ${taskCleanId})`);
               
-              // Return true if the clean IDs match
-              return taskCleanId === taskId;
+              // Return true if the clean IDs match OR if the task ID starts with the clean UUID
+              return taskCleanId === taskId || (task.id as string).startsWith(taskId);
             });
             
             if (matchingTask) {
@@ -597,7 +597,9 @@ export const projectsDb = {
             } else {
               // CASE 4: No match found by any method
               console.log(`[TASK_LOOKUP] Task with ID/sourceId ${taskId} not found by any method`);
-              throw new Error(`Task with ID ${taskId} does not exist. This appears to be a factor task reference. Try creating the task first using createTask API.`);
+              // Log all available task IDs for debugging
+              console.log('[TASK_LOOKUP] Available task IDs:', allTasks.map(t => t.id).join(', '));
+              throw new Error(`Task with ID ${taskId} does not exist. Searched by exact match and UUID prefix match. Task may need to be created first.`);
             }
           }
         }
@@ -724,8 +726,8 @@ export const projectsDb = {
             // Log the comparison for debugging
             console.log(`[TASK_LOOKUP] Comparing clean UUID ${taskId} with task ${task.id} (clean: ${taskCleanId})`);
             
-            // Return true if the clean IDs match
-            return taskCleanId === taskId;
+            // Return true if the clean IDs match OR if the task ID starts with the clean UUID
+            return taskCleanId === taskId || (task.id as string).startsWith(taskId);
           });
           
           if (matchingTask) {
@@ -735,7 +737,9 @@ export const projectsDb = {
             if (DEBUG_TASKS) console.log(`Found task to delete:`, matchingTask);
           } else {
             console.log(`[TASK_LOOKUP] Task with ID ${taskId} not found by any method`);
-            throw new Error(`Task with ID ${taskId} not found`);
+            // Log all available task IDs for debugging
+            console.log('[TASK_LOOKUP] Available task IDs:', allTasks.map(t => t.id).join(', '));
+            throw new Error(`Task with ID ${taskId} not found. Searched by exact match and UUID prefix match.`);
           }
         }
       } catch (verifyErr) {
