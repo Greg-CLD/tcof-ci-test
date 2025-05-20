@@ -47,6 +47,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { ORIGIN_LABELS } from '@/constants/origin';
 import { useProjectContext } from '@/contexts/ProjectContext';
+import { cleanTaskId, createTaskEndpoint } from '@/utils/cleanTaskId';
 // Import all debug constants from the shared file
 import * as DebugConstants from '@shared/constants.debug';
 
@@ -649,13 +650,16 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         }
       }
 
-      // Extract clean UUID for API request to ensure proper endpoint construction
-      const rawId = taskId;
-      const cleanId = rawId.split('-').slice(0, 5).join('-');
-      const endpoint = `/api/projects/${currentProjectId}/tasks/${cleanId}`;
+      // Use our utility function to create a properly formatted endpoint
+      const endpoint = createTaskEndpoint(currentProjectId, taskId);
       
       // Always log in development mode for debugging consistency
-      console.log('[NET]', { rawId, cleanId, endpoint, completed: updates.completed });
+      console.log('[NET]', { 
+        rawId: taskId, 
+        cleanId: cleanTaskId(taskId), 
+        endpoint, 
+        completed: updates.completed 
+      });
       
       const response = await apiRequest(
         "PUT",
@@ -807,13 +811,16 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
         return updatedTasks;
       });
 
-      // Extract clean UUID for API request to ensure proper endpoint construction
-      const rawId = taskId;
-      const cleanId = rawId.split('-').slice(0, 5).join('-');
-      const endpoint = `/api/projects/${currentProjectId}/tasks/${cleanId}`;
+      // Use our utility function to create a properly formatted endpoint
+      const endpoint = createTaskEndpoint(currentProjectId, taskId);
       
       // Always log in development mode for debugging consistency
-      console.log('[NET]', { rawId, cleanId, endpoint, operation: 'DELETE' });
+      console.log('[NET]', { 
+        rawId: taskId, 
+        cleanId: cleanTaskId(taskId), 
+        endpoint, 
+        operation: 'DELETE' 
+      });
       
       // Delete from server - use the correct endpoint with cleaned UUID
       const response = await apiRequest(

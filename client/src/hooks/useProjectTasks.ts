@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { isValidUUID, isNumericId } from '@/lib/uuid-utils';
-import { extractUuid, safeProjectId } from '@/hooks/extractUuid';
+import { safeProjectId } from '@/hooks/extractUuid';
 import { logTaskNetworkRequest, logTaskNetworkResponse, isSuccessFactorTask } from '@/utils/net-logging';
+import { cleanTaskId, createTaskEndpoint } from '@/utils/cleanTaskId';
 import { 
   DEBUG_TASKS, 
   DEBUG_TASK_MAPPING, 
@@ -237,20 +238,8 @@ export function useProjectTasks(projectId?: string) {
  * @returns The extracted UUID part only
  */
 function extractUuid(id: string): string {
-  // Check if this appears to be a compound ID (contains more than 4 hyphens)
-  const hyphenCount = (id.match(/-/g) || []).length;
-  
-  if (hyphenCount > 4) {
-    // Standard UUID has 4 hyphens, extract just the UUID part (first 5 segments)
-    const uuidParts = id.split('-');
-    if (uuidParts.length >= 5) {
-      const uuidOnly = uuidParts.slice(0, 5).join('-');
-      return uuidOnly;
-    }
-  }
-  
-  // If not a compound ID or extraction failed, return the original
-  return id;
+  // Use our shared utility function for consistent UUID cleaning
+  return cleanTaskId(id);
 }
 
 // Mutation to update an existing task
@@ -258,10 +247,19 @@ const updateTaskMutation = useMutation({
   mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
     // Extract the valid UUID part if this is a compound ID
     const rawId = taskId;
-    const cleanId = extractUuid(rawId);
+    const cleanId = cleanTaskId(rawId);
     
-    // Define the endpoint with clean UUID immediately
-    const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
+    // Define the endpoint with clean UUID using our utility function
+    const endpoint = createTaskEndpoint(projectId || '', taskId);
+    
+    // Always log in development mode for debugging consistency
+    console.log('[NET]', { 
+      rawId, 
+      cleanId, 
+      endpoint, 
+      completed: data.completed,
+      operation: 'PUT'
+    });
     
     // Log network request details with our utility function
     logTaskNetworkRequest('updateTask', rawId, cleanId, endpoint, safeProjectId(projectId));
@@ -553,12 +551,20 @@ const updateTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
       // Extract the valid UUID part if this is a compound ID
       const rawId = taskId;
-      const cleanId = rawId.split('-').slice(0,5).join('-');
+      const cleanId = cleanTaskId(rawId);
       
-      // Define the endpoint with clean UUID immediately
-      const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
+      // Define the endpoint with clean UUID using our utility function
+      const endpoint = createTaskEndpoint(projectId || '', taskId);
       
-      // Log network request details with our utility function
+      // Always log in development mode for debugging consistency
+      console.log('[NET]', { 
+        rawId, 
+        cleanId, 
+        endpoint, 
+        operation: 'DELETE' 
+      });
+      
+      // Also log network request details with our utility function
       logTaskNetworkRequest('deleteTask', rawId, cleanId, endpoint, safeProjectId(projectId));
       
       try {
