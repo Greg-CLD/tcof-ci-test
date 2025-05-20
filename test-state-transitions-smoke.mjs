@@ -4,42 +4,73 @@
  * 
  * This script:
  * 1. Enables debug flags via environment variables
- * 2. Loads test credentials from environment variables or config file
+ * 2. Securely loads test credentials from environment variables or user input
  * 3. Logs in to the application
  * 4. Finds an existing project and task
  * 5. Toggles the task completion state
  * 6. Verifies the state change was persisted
  * 
- * To run this script:
- * 1. Create a config/test.env file with TEST_USERNAME and TEST_PASSWORD (see config/test.env.example)
- *    - or set these as environment variables
- * 2. Run with: node test-state-transitions-smoke.mjs
+ * To run this test, set TEST_USER and TEST_PASS environment variables, 
+ * or enter credentials when prompted.
+ * 
+ * Run with: node test-state-transitions-smoke.mjs
  */
 
 // Use ES module syntax
 import fetch from 'node-fetch';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import readline from 'readline';
+import { promisify } from 'util';
 
-// Global configuration - Use 0.0.0.0 for direct testing
+// Global configuration
 const BASE_URL = 'http://0.0.0.0:5000';
 console.log(`Using API URL: ${BASE_URL}`);
 
-// Hard-coded credentials for the smoke test
-const CREDENTIALS = {
-  username: 'greg@confluity.co.uk',
-  password: 'password'
-};
-
-// Validate required credentials
-if (!CREDENTIALS.username || !CREDENTIALS.password) {
-  console.error('\x1b[31mError: Missing required test credentials\x1b[0m');
-  console.error('Please set TEST_USERNAME and TEST_PASSWORD in config/test.env or as environment variables');
-  process.exit(1);
+// Async function to get credentials
+async function getCredentials() {
+  // Test case 1: Try to load credentials from environment variables
+  if (process.env.TEST_USER && process.env.TEST_PASS) {
+    console.log('Using credentials from environment variables');
+    return {
+      username: process.env.TEST_USER,
+      password: process.env.TEST_PASS
+    };
+  }
+  
+  // Test case 2: If env vars missing, prompt interactively
+  console.log('Environment variables TEST_USER and TEST_PASS not found.');
+  console.log('Please enter credentials interactively:');
+  
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  
+  // Promisify the question method for async/await
+  const question = promisify(rl.question).bind(rl);
+  
+  try {
+    const username = await question('Username (email): ');
+    // Note: In a real implementation, we would use a secure way to input passwords
+    const password = await question('Password: ');
+    
+    rl.close();
+    
+    // Test case 3: Fail cleanly if no credentials provided
+    if (!username || !password) {
+      console.error('\x1b[31mError: Username and password are required\x1b[0m');
+      process.exit(1);
+    }
+    
+    return { username, password };
+  } catch (error) {
+    rl.close();
+    console.error('\x1b[31mError getting credentials:', error.message, '\x1b[0m');
+    process.exit(1);
+  }
 }
 
-console.log(`Using test credentials for user: ${CREDENTIALS.username}`);
+// This will hold our credentials after they are loaded
+let CREDENTIALS = null;
 
 // Global state
 let cookie = '';
@@ -271,6 +302,25 @@ async function toggleTaskCompletion() {
   return false;
 }
 
+// Function to prompt for retry after failed login
+async function promptForRetry() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  
+  const question = promisify(rl.question).bind(rl);
+  
+  try {
+    const retry = await question('\nLogin failed. Would you like to try different credentials? (y/n): ');
+    rl.close();
+    return retry.toLowerCase() === 'y' || retry.toLowerCase() === 'yes';
+  } catch (error) {
+    rl.close();
+    return false;
+  }
+}
+
 // Main test function
 async function runTest() {
   console.log('Starting task state transition smoke test...');
@@ -281,8 +331,37 @@ async function runTest() {
   console.log('- DEBUG_TASK_PERSISTENCE=true'); 
   console.log('- DEBUG_TASK_STATE=true');
   
-  // Execute test steps in sequence
-  if (await login()) {
+  let loginSuccess = false;
+  let retryCount = 0;
+  const MAX_RETRIES = 3;
+  
+  while (!loginSuccess && retryCount < MAX_RETRIES) {
+    // Get credentials securely
+    CREDENTIALS = await getCredentials();
+    
+    if (!CREDENTIALS) {
+      console.error('\x1b[31mError: Could not obtain valid credentials\x1b[0m');
+      break;
+    }
+    
+    console.log(`Using test credentials for user: ${CREDENTIALS.username}`);
+    
+    // Attempt to login
+    loginSuccess = await login();
+    
+    if (!loginSuccess) {
+      retryCount++;
+      if (retryCount < MAX_RETRIES) {
+        const shouldRetry = await promptForRetry();
+        if (!shouldRetry) break;
+      } else {
+        console.error(`\x1b[31mMax retry attempts (${MAX_RETRIES}) reached. Exiting.\x1b[0m`);
+      }
+    }
+  }
+  
+  // If login succeeded, proceed with the test
+  if (loginSuccess) {
     if (await getProjects()) {
       if (await getTasks()) {
         await toggleTaskCompletion();
