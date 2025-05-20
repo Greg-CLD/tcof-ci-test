@@ -1,3 +1,4 @@
+
 /**
  * Simple smoke test script to verify task state transition debugging
  * 
@@ -12,14 +13,14 @@
 // Use ES module syntax
 import fetch from 'node-fetch';
 
-// Global configuration - Use localhost for direct testing
-const BASE_URL = 'http://localhost:3000';
+// Global configuration - Use 0.0.0.0 for direct testing
+const BASE_URL = 'http://0.0.0.0:5000';
 console.log(`Using API URL: ${BASE_URL}`);
 
 // Credentials used for smoke test
 const CREDENTIALS = {
   username: 'greg@confluity.co.uk', 
-  password: 'confluity' // updated to match the test user's actual password
+  password: 'confluity'
 };
 
 // Global state
@@ -27,7 +28,7 @@ let cookie = '';
 let projectId = null;
 let taskId = null;
 
-// Enable debug flags as environment variables
+// Enable all relevant debug flags 
 process.env.DEBUG_TASKS = 'true';
 process.env.DEBUG_TASK_API = 'true';
 process.env.DEBUG_TASK_COMPLETION = 'true';
@@ -41,7 +42,7 @@ function logHeader(text) {
   console.log('='.repeat(80));
 }
 
-// Helper function for API requests
+// Helper function for API requests with detailed logging
 async function apiRequest(method, endpoint, body = null) {
   const options = {
     method,
@@ -53,17 +54,24 @@ async function apiRequest(method, endpoint, body = null) {
   
   if (body) {
     options.body = JSON.stringify(body);
+    console.log(`Request Body:`, JSON.stringify(body, null, 2));
   }
+  
+  console.log(`${method} ${endpoint}`);
   
   try {
     const response = await fetch(`${BASE_URL}${endpoint}`, options);
     
-    // Store cookie from login response
     if (response.headers.has('set-cookie')) {
       cookie = response.headers.get('set-cookie');
     }
     
     const data = response.status !== 204 ? await response.json() : null;
+    
+    console.log(`Response Status: ${response.status}`);
+    if (data) {
+      console.log(`Response Data:`, JSON.stringify(data, null, 2));
+    }
     
     return { status: response.status, data };
   } catch (error) {
@@ -106,7 +114,7 @@ async function getProjects() {
   return false;
 }
 
-// Step 3: Get Tasks
+// Step 3: Get Tasks with detailed logging
 async function getTasks() {
   logHeader('FETCHING TASKS');
   
@@ -119,7 +127,7 @@ async function getTasks() {
   console.log(`Tasks API status: ${status}`);
   
   if (status === 200 && data && data.tasks && data.tasks.length > 0) {
-    // Select a task (preferably a SuccessFactor task)
+    // Specifically look for a SuccessFactor task
     const successFactorTask = data.tasks.find(task => 
       task.origin === 'success-factor' || task.origin === 'factor'
     );
@@ -131,6 +139,7 @@ async function getTasks() {
     console.log(`Task text: ${selectedTask.text?.substring(0, 50)}...`);
     console.log(`Task origin: ${selectedTask.origin}`);
     console.log(`Current completion state: ${selectedTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+    console.log(`Full task data:`, JSON.stringify(selectedTask, null, 2));
     
     if (selectedTask.origin === 'success-factor' || selectedTask.origin === 'factor') {
       console.log('*** Found a SuccessFactor task - perfect for debugging! ***');
@@ -139,14 +148,14 @@ async function getTasks() {
     return true;
   }
   
-  console.log('No tasks found for this project. Let\'s create one.');
+  console.log('No tasks found for this project. Creating test task...');
   
-  // Create a test task if none exist
   const newTask = {
     text: 'Test task for state transition debugging',
     stage: 'identification',
     completed: false,
-    notes: 'Created by smoke test'
+    notes: 'Created by smoke test',
+    origin: 'success-factor'
   };
   
   const { status: createStatus, data: createData } = await apiRequest(
@@ -158,6 +167,7 @@ async function getTasks() {
   if (createStatus === 201 && createData && createData.id) {
     taskId = createData.id;
     console.log(`Created new test task with ID: ${taskId}`);
+    console.log('Full created task data:', JSON.stringify(createData, null, 2));
     return true;
   }
   
@@ -165,7 +175,7 @@ async function getTasks() {
   return false;
 }
 
-// Step 4: Toggle Task Completion State
+// Step 4: Toggle Task Completion State with enhanced validation
 async function toggleTaskCompletion() {
   logHeader('TOGGLING TASK COMPLETION STATE');
   
@@ -174,6 +184,7 @@ async function toggleTaskCompletion() {
     return false;
   }
   
+  // Get current state first
   const { status, data } = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
   if (status !== 200 || !data || !data.tasks) {
     console.error('Failed to get current task state');
@@ -187,6 +198,7 @@ async function toggleTaskCompletion() {
   }
   
   console.log(`Current task completion state: ${task.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+  console.log('Current task data:', JSON.stringify(task, null, 2));
   
   // Toggle the completion state
   const newCompletionState = !task.completed;
@@ -196,6 +208,7 @@ async function toggleTaskCompletion() {
     completed: newCompletionState
   };
   
+  // Attempt the update
   const { status: updateStatus, data: updateData } = await apiRequest(
     'PUT',
     `/api/projects/${projectId}/tasks/${taskId}`,
@@ -203,11 +216,12 @@ async function toggleTaskCompletion() {
   );
   
   console.log(`Update API status: ${updateStatus}`);
+  console.log('Update response:', JSON.stringify(updateData, null, 2));
   
   if (updateStatus === 200) {
-    console.log('Task update successful.');
+    console.log('Task update successful');
     
-    // Verify the state was actually updated on the server
+    // Verify the state was actually updated
     const { status: verifyStatus, data: verifyData } = await apiRequest(
       'GET', 
       `/api/projects/${projectId}/tasks`
@@ -219,6 +233,7 @@ async function toggleTaskCompletion() {
       if (verifiedTask) {
         console.log(`Verified task completion state after update: ${verifiedTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
         console.log(`State transition successful? ${verifiedTask.completed === newCompletionState ? 'YES' : 'NO'}`);
+        console.log('Full verified task data:', JSON.stringify(verifiedTask, null, 2));
         
         if (verifiedTask.completed !== newCompletionState) {
           console.error('❌ STATE TRANSITION FAILED - completion state was not persisted!');
