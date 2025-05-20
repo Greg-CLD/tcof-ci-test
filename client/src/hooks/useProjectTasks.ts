@@ -7,7 +7,8 @@ import {
   DEBUG_TASKS, 
   DEBUG_TASK_MAPPING, 
   DEBUG_TASK_PERSISTENCE,
-  DEBUG_TASK_COMPLETION 
+  DEBUG_TASK_COMPLETION,
+  DEBUG_TASK_API
 } from '@shared/constants.debug';
 
 import { ProjectTask as DBProjectTask } from '@shared/schema';
@@ -254,20 +255,21 @@ function extractUuid(id: string): string {
 const updateTaskMutation = useMutation({
   mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
     // Extract the valid UUID part if this is a compound ID
-    const validTaskId = extractUuid(taskId);
+    const rawId = taskId;
+    const cleanId = rawId.split('-').slice(0,5).join('-');
     
     // Log if we had to extract a UUID from a compound ID
-    if (validTaskId !== taskId && DEBUG_TASK_MAPPING) {
-      console.log(`[DEBUG_TASK_MAPPING] Extracted base UUID ${validTaskId} from compound ID ${taskId}`);
+    if (cleanId !== taskId && DEBUG_TASK_MAPPING) {
+      console.log(`[DEBUG_TASK_MAPPING] Extracted base UUID ${cleanId} from compound ID ${taskId}`);
     }
     
     // Enhanced diagnostic logging for task updates
-    if (DEBUG_TASKS) console.log(`Updating task ${taskId} (using ${validTaskId}) for project ${projectId}:`, data);
+    if (DEBUG_TASKS) console.log(`Updating task ${taskId} (using ${cleanId}) for project ${projectId}:`, data);
     
     // Special diagnostics for completion status changes (key issue we're debugging)
     if (DEBUG_TASK_COMPLETION && data.hasOwnProperty('completed')) {
       console.log(`[DEBUG_TASK_COMPLETION] Task ${taskId} completion update request`);
-      console.log(`[DEBUG_TASK_COMPLETION] Using extracted ID: ${validTaskId}`);
+      console.log(`[DEBUG_TASK_COMPLETION] Using extracted ID: ${cleanId}`);
       console.log(`[DEBUG_TASK_COMPLETION] New completion value: ${data.completed}`);
       
       // Check if this is a task from existing data to get more context
@@ -304,20 +306,20 @@ const updateTaskMutation = useMutation({
       
       try {
         // TRACE: Log the raw task ID and extracted UUID before network request
-        console.debug(`[TRACE_NET] Update task request:
-  - Raw taskId: ${taskId}
-  - Extracted UUID: ${validTaskId}
-  - Endpoint: /api/projects/${projectId}/tasks/${validTaskId}
-  - Payload: ${JSON.stringify(data)}`);
+        if (DEBUG_TASK_API) {
+          console.debug(`[TRACE_NET] rawId: ${rawId} | cleanId: ${cleanId}`);
+        }
+        
+        const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
         
         // Use the extracted UUID for the API request instead of the potentially compound taskId
-        const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${validTaskId}`, data);
+        const res = await apiRequest('PUT', endpoint, data);
         
         // Measure round-trip time for performance analysis
         if (DEBUG_TASK_PERSISTENCE) {
           const requestDuration = performance.now() - requestStartTime;
           console.log(`[DEBUG_TASK_PERSISTENCE] Update request completed in ${requestDuration.toFixed(2)}ms`);
-          console.log(`[DEBUG_TASK_PERSISTENCE] Used task ID for API request: ${validTaskId}`);
+          console.log(`[DEBUG_TASK_PERSISTENCE] Used task ID for API request: ${cleanId}`);
         }
         
         if (!res.ok) {
