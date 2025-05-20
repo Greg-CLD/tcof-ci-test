@@ -140,6 +140,16 @@ export default function DebugFlagTester() {
       }
     };
     
+    // Define the missing enableSuccessFactorDebugging function
+    (window as any).enableSuccessFactorDebugging = function() {
+      localStorage.setItem('debug_tasks', 'true');
+      localStorage.setItem('debug_task_completion', 'true');
+      localStorage.setItem('debug_task_persistence', 'true');
+      localStorage.setItem('debug_task_api', 'true');
+      toast({ title: 'SuccessFactor Debugging Enabled' });
+      window.location.reload();
+    };
+    
     disableTaskDebugFn = () => {
       if ((window as any).disableAllDebugging) {
         (window as any).disableAllDebugging();
