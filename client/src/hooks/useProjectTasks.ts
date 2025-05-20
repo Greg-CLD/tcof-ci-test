@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { isValidUUID, isNumericId } from '@/lib/uuid-utils';
+import { logTaskNetworkRequest, logTaskNetworkResponse } from '@/utils/net-logging';
 import { 
   DEBUG_TASKS, 
   DEBUG_TASK_MAPPING, 
@@ -261,8 +262,8 @@ const updateTaskMutation = useMutation({
     // Define the endpoint with clean UUID immediately
     const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
     
-    // Always log both raw and clean IDs to ensure proper tracking
-    console.log('[NET]', { rawId, cleanId, endpoint });
+    // Log network request details with our utility function
+    logTaskNetworkRequest('updateTask', rawId, cleanId, endpoint, projectId);
     
     // Log if we had to extract a UUID from a compound ID
     if (cleanId !== taskId && DEBUG_TASK_MAPPING) {
@@ -539,8 +540,8 @@ const updateTaskMutation = useMutation({
       // Define the endpoint with clean UUID immediately
       const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
       
-      // Always log both raw and clean IDs to ensure proper tracking
-      console.log('[NET]', { rawId, cleanId, endpoint });
+      // Log network request details with our utility function
+      logTaskNetworkRequest('deleteTask', rawId, cleanId, endpoint, projectId);
       
       try {
         if (DEBUG_TASKS) console.log(`Deleting task ${taskId} (using ${cleanId}) for project ${projectId}`);

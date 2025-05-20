@@ -41,7 +41,8 @@ const isDev =
 
 // Primary debug flags
 export const DEBUG = isDev;
-export const DEBUG_TASKS = isDev && (getEnvVar('VITE_DEBUG_TASKS', 'false') === 'true' || getEnvVar('DEBUG_TASKS', 'false') === 'true');
+// Temporarily enable task debugging for the PUT/UUID bug investigation
+export const DEBUG_TASKS = isDev;
 export const DEBUG_FILTERS = isDev && (getEnvVar('VITE_DEBUG_FILTERS', 'false') === 'true' || getEnvVar('DEBUG_FILTERS', 'false') === 'true');
 export const DEBUG_FILES = isDev && (getEnvVar('VITE_DEBUG_FILES', 'false') === 'true' || getEnvVar('DEBUG_FILES', 'false') === 'true');
 
