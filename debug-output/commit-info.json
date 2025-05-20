@@ -1,0 +1,9 @@
+{
+  "hash": "5a7b9c3d2e1f",
+  "message": "Fix UUID matching in task lookup logic",
+  "date": "2025-05-20T19:45:33.861Z",
+  "files": [
+    "server/projectsDb.ts",
+    "client/src/utils/cleanTaskId.ts"
+  ]
+}

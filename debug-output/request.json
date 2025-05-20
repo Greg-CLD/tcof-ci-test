@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "url": "http://0.0.0.0:5000/api/projects",
+  "headers": {
+    "Content-Type": "application/json",
+    "Cookie": "tcof.sid=s%3ALg8O4g9jO7SajBy80LClyeY6QSSqSsUR.UwbuJXj%2FGOYpshxl90EZms7xH3MCmlIOw%2BoCAi9a7Es; Path=/; Expires=Thu, 19 Jun 2025 19:43:48 GMT; HttpOnly; SameSite=Lax"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "url": "/api/projects/bc55c1a2-0cdf-4108-aa9e-44b44baea3b8/tasks/456db3d9-0f93-4dae-8ccf-04f0530d6064",
+  "method": "PUT",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "completed": true
+  }
+}

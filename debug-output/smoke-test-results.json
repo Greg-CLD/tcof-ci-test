@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "Exact match with compound ID",
+      "taskId": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1/success-factor/identification/1",
+      "expectedMatch": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1/success-factor/identification/1",
+      "cleanedId": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1",
+      "passed": true
+    },
+    {
+      "name": "Clean UUID matching against compound ID",
+      "taskId": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1",
+      "expectedMatch": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1/success-factor/identification/1",
+      "cleanedId": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1",
+      "passed": true
+    },
+    {
+      "name": "UUID extraction from string with prefix/suffix",
+      "taskId": "prefix-2f565bf9-70c7-5c41-93e7-c6c44fb747d1-suffix",
+      "cleanedId": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1",
+      "passed": true
+    }
+  ],
+  "passCount": 3,
+  "totalTests": 3,
+  "passRate": "100",
+  "allPassed": true
+}

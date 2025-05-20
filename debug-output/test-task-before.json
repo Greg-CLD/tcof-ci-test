@@ -1,0 +1,23 @@
+{
+  "id": "456db3d9-0f93-4dae-8ccf-04f0530d6064",
+  "project_id": "bc55c1a2-0cdf-4108-aa9e-44b44baea3b8",
+  "title": null,
+  "description": null,
+  "factor_id": null,
+  "stage": "identification",
+  "status": "To Do",
+  "due_date": null,
+  "assigned_to": null,
+  "created_at": "2025-05-15T15:22:09.354Z",
+  "updated_at": "2025-05-15T15:22:09.354Z",
+  "sort_order": 0,
+  "completed": false,
+  "task_notes": null,
+  "task_type": "custom",
+  "text": "Test ",
+  "origin": "custom",
+  "source_id": "ff1f4bfe-4eb9-4d36-9b0a-abe22d7e9cf6",
+  "notes": null,
+  "priority": "medium",
+  "owner": null
+}
