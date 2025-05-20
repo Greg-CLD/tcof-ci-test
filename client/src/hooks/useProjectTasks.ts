@@ -259,7 +259,7 @@ const updateTaskMutation = useMutation({
     const cleanId = rawId.split('-').slice(0,5).join('-');
     
     // Always log both raw and clean IDs to ensure proper tracking
-    console.debug('[NET]', { rawId, cleanId, endpoint: `/tasks/${cleanId}` });
+    console.log('[NET]', { rawId, cleanId, endpoint: `/api/projects/${projectId}/tasks/${cleanId}` });
     
     // Log if we had to extract a UUID from a compound ID
     if (cleanId !== taskId && DEBUG_TASK_MAPPING) {
@@ -312,7 +312,7 @@ const updateTaskMutation = useMutation({
         const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
         
         // Enhanced logging for task operations
-        console.debug('[NET]', { 
+        console.log('[NET]', { 
           operation: 'updateTask', 
           rawId, 
           cleanId, 
@@ -546,7 +546,7 @@ const updateTaskMutation = useMutation({
       const cleanId = rawId.split('-').slice(0,5).join('-');
       
       // Always log both raw and clean IDs to ensure proper tracking
-      console.debug('[NET]', { 
+      console.log('[NET]', { 
         operation: 'deleteTask', 
         rawId, 
         cleanId, 
