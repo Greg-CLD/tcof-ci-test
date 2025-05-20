@@ -91,6 +91,13 @@ export default function TaskCard({
   onDelete,
   dragHandleProps
 }: TaskCardProps) {
+  // TRACE: Log task ID and completion state on render
+  console.debug(`[TRACE_UI] TaskCard rendered:
+  - Task ID: ${id}
+  - Completed: ${completed}
+  - Source: ${source}
+  - Stage: ${stage}`);
+  
   const [isExpanded, setIsExpanded] = useState(false);
   const [editedTaskTitle, setEditedTaskTitle] = useState(text);
   const [editedNotes, setEditedNotes] = useState(notes);
@@ -123,6 +130,14 @@ export default function TaskCard({
   const handleToggleCompleted = () => {
     const newStatus = !completed ? 'Done' : 'To Do';
     setEditedStatus(newStatus);
+    
+    // TRACE: Log task ID and new completion state before update
+    console.debug(`[TRACE_UI] Toggle completion for task:
+    - Task ID: ${id}
+    - New completed state: ${!completed}
+    - Source: ${source}
+    - New status: ${newStatus}`);
+    
     onUpdate(id, { 
       completed: !completed,
       status: newStatus

@@ -359,6 +359,12 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       const taskStatusMap: Record<string, boolean> = {};
 
       if (Array.isArray(data)) {
+        // TRACE: Log all task IDs in the API response
+        console.debug(`[TRACE_MAP] Received ${data.length} tasks from server`);
+        if (data.length > 0) {
+          console.debug(`[TRACE_MAP] Task IDs: ${JSON.stringify(data.map((t: any) => t.id))}`);
+        }
+        
         if (DEBUG_TASKS) console.log(`[CHECKLIST] Processing ${data.length} tasks from server`);
         
         // DEBUG: Check specifically how many custom tasks we have before mapping
