@@ -221,32 +221,66 @@ export function useProjectTasks(projectId?: string) {
     }
   });
   
-  // Mutation to update an existing task
-  const updateTaskMutation = useMutation({
-    mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
-      // Enhanced diagnostic logging for task updates
-      if (DEBUG_TASKS) console.log(`Updating task ${taskId} for project ${projectId}:`, data);
+  /**
+ * Extract the UUID part from a potentially compound task ID
+ * SuccessFactor tasks use a compound ID format: uuid-suffix
+ * This function extracts just the UUID part for API calls
+ * 
+ * @param id The task ID which might be a compound ID
+ * @returns The extracted UUID part only
+ */
+function extractUuid(id: string): string {
+  // Check if this appears to be a compound ID (contains more than 4 hyphens)
+  const hyphenCount = (id.match(/-/g) || []).length;
+  
+  if (hyphenCount > 4) {
+    // Standard UUID has 4 hyphens, extract just the UUID part (first 5 segments)
+    const uuidParts = id.split('-');
+    if (uuidParts.length >= 5) {
+      const uuidOnly = uuidParts.slice(0, 5).join('-');
+      return uuidOnly;
+    }
+  }
+  
+  // If not a compound ID or extraction failed, return the original
+  return id;
+}
+
+// Mutation to update an existing task
+const updateTaskMutation = useMutation({
+  mutationFn: async ({ taskId, data }: { taskId: string, data: UpdateTaskParams }) => {
+    // Extract the valid UUID part if this is a compound ID
+    const validTaskId = extractUuid(taskId);
+    
+    // Log if we had to extract a UUID from a compound ID
+    if (validTaskId !== taskId && DEBUG_TASK_MAPPING) {
+      console.log(`[DEBUG_TASK_MAPPING] Extracted base UUID ${validTaskId} from compound ID ${taskId}`);
+    }
+    
+    // Enhanced diagnostic logging for task updates
+    if (DEBUG_TASKS) console.log(`Updating task ${taskId} (using ${validTaskId}) for project ${projectId}:`, data);
+    
+    // Special diagnostics for completion status changes (key issue we're debugging)
+    if (DEBUG_TASK_COMPLETION && data.hasOwnProperty('completed')) {
+      console.log(`[DEBUG_TASK_COMPLETION] Task ${taskId} completion update request`);
+      console.log(`[DEBUG_TASK_COMPLETION] Using extracted ID: ${validTaskId}`);
+      console.log(`[DEBUG_TASK_COMPLETION] New completion value: ${data.completed}`);
       
-      // Special diagnostics for completion status changes (key issue we're debugging)
-      if (DEBUG_TASK_COMPLETION && data.hasOwnProperty('completed')) {
-        console.log(`[DEBUG_TASK_COMPLETION] Task ${taskId} completion update request`);
-        console.log(`[DEBUG_TASK_COMPLETION] New completion value: ${data.completed}`);
+      // Check if this is a task from existing data to get more context
+      const existingTask = tasks?.find(t => t.id === taskId);
+      if (existingTask) {
+        console.log(`[DEBUG_TASK_COMPLETION] Existing task details:`);
+        console.log(`[DEBUG_TASK_COMPLETION]   - ID: ${existingTask.id}`);
+        console.log(`[DEBUG_TASK_COMPLETION]   - Current completion: ${existingTask.completed}`);
+        console.log(`[DEBUG_TASK_COMPLETION]   - Origin: ${existingTask.origin}`);
+        console.log(`[DEBUG_TASK_COMPLETION]   - Source ID: ${existingTask.sourceId || 'null'}`);
         
-        // Check if this is a task from existing data to get more context
-        const existingTask = tasks?.find(t => t.id === taskId);
-        if (existingTask) {
-          console.log(`[DEBUG_TASK_COMPLETION] Existing task details:`);
-          console.log(`[DEBUG_TASK_COMPLETION]   - ID: ${existingTask.id}`);
-          console.log(`[DEBUG_TASK_COMPLETION]   - Current completion: ${existingTask.completed}`);
-          console.log(`[DEBUG_TASK_COMPLETION]   - Origin: ${existingTask.origin}`);
-          console.log(`[DEBUG_TASK_COMPLETION]   - Source ID: ${existingTask.sourceId || 'null'}`);
-          
-          // Special focus on SuccessFactor tasks
-          if (existingTask.origin === 'factor') {
-            console.log(`[DEBUG_TASK_COMPLETION] *** SuccessFactor task detected ***`);
-          }
+        // Special focus on SuccessFactor tasks
+        if (existingTask.origin === 'factor') {
+          console.log(`[DEBUG_TASK_COMPLETION] *** SuccessFactor task detected ***`);
         }
       }
+    }
       
       // Silently normalize invalid UUID sourceId to null
       if (data.sourceId && !isValidUUID(data.sourceId)) {
@@ -265,12 +299,14 @@ export function useProjectTasks(projectId?: string) {
       }
       
       try {
-        const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, data);
+        // Use the extracted UUID for the API request instead of the potentially compound taskId
+        const res = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${validTaskId}`, data);
         
         // Measure round-trip time for performance analysis
         if (DEBUG_TASK_PERSISTENCE) {
           const requestDuration = performance.now() - requestStartTime;
           console.log(`[DEBUG_TASK_PERSISTENCE] Update request completed in ${requestDuration.toFixed(2)}ms`);
+          console.log(`[DEBUG_TASK_PERSISTENCE] Used task ID for API request: ${validTaskId}`);
         }
         
         if (!res.ok) {
