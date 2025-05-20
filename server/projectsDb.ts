@@ -602,8 +602,8 @@ export const projectsDb = {
               // Log the comparison for debugging
               console.log(`[TASK_LOOKUP] Comparing clean UUID ${taskId} with task ${task.id} (clean: ${taskCleanId})`);
               
-              // Return true if the clean IDs match OR if the task ID starts with the clean UUID
-              return taskCleanId === taskId || (task.id as string).startsWith(taskId);
+              // Return true if the task ID matches exactly OR if the task ID starts with the input ID
+              return task.id === taskId || task.id.startsWith(taskId);
             });
             
             if (matchingTask) {
@@ -763,8 +763,8 @@ export const projectsDb = {
             // Log the comparison for debugging
             console.log(`[TASK_LOOKUP] Comparing clean UUID ${taskId} with task ${task.id} (clean: ${taskCleanId})`);
             
-            // Return true if the clean IDs match OR if the task ID starts with the clean UUID
-            return taskCleanId === taskId || (task.id as string).startsWith(taskId);
+            // Return true if the task ID matches exactly OR if the task ID starts with the input ID
+            return task.id === taskId || task.id.startsWith(taskId);
           });
           
           if (matchingTask) {
