@@ -118,6 +118,44 @@ export default function DebugFlagTester() {
     }
   }, [testLogConfirmation]);
   
+  // Define debug utility functions (will be populated from window when available)
+  let enableTaskDebugFn: () => void;
+  let disableTaskDebugFn: () => void;
+  
+  // Initialize the functions if we're in a browser environment
+  if (typeof window !== 'undefined') {
+    // These functions will be available after the enableDebugLogging module is loaded
+    enableTaskDebugFn = () => {
+      if ((window as any).enableAllTaskDebugging) {
+        (window as any).enableAllTaskDebugging();
+      } else {
+        // Fallback if the function isn't available
+        console.log('[DEBUG] Manually enabling debug flags via localStorage');
+        localStorage.setItem('debug_general', 'true');
+        localStorage.setItem('debug_tasks', 'true');
+        localStorage.setItem('debug_task_api', 'true');
+        localStorage.setItem('debug_task_completion', 'true');
+        localStorage.setItem('debug_task_persistence', 'true');
+        localStorage.setItem('debug_task_state', 'true');
+      }
+    };
+    
+    disableTaskDebugFn = () => {
+      if ((window as any).disableAllDebugging) {
+        (window as any).disableAllDebugging();
+      } else {
+        // Fallback
+        console.log('[INFO] Manually disabling debug flags via localStorage');
+        localStorage.setItem('debug_general', 'false');
+        localStorage.setItem('debug_tasks', 'false');
+        localStorage.setItem('debug_task_api', 'false');
+        localStorage.setItem('debug_task_completion', 'false');
+        localStorage.setItem('debug_task_persistence', 'false');
+        localStorage.setItem('debug_task_state', 'false');
+      }
+    };
+  }
+
   // Master toggle for all diagnostics
   const toggleAllDiagnostics = (enabled: boolean) => {
     // Set all flags to the specified value
@@ -130,6 +168,19 @@ export default function DebugFlagTester() {
       setTaskCompletionDebug(true);
       setTaskPersistenceDebug(true);
       setTaskStateDebug(true);
+      
+      // Use the utility function to ensure flags are properly set
+      if (typeof enableAllTaskDebugging === 'function') {
+        enableAllTaskDebugging();
+      } else {
+        // Fallback if the function isn't available yet
+        localStorage.setItem('debug_general', 'true');
+        localStorage.setItem('debug_tasks', 'true');
+        localStorage.setItem('debug_task_api', 'true');
+        localStorage.setItem('debug_task_completion', 'true');
+        localStorage.setItem('debug_task_persistence', 'true');
+        localStorage.setItem('debug_task_state', 'true');
+      }
     } else {
       // Turn off all task-specific flags when disabling
       setTaskApiDebug(false);
@@ -138,28 +189,23 @@ export default function DebugFlagTester() {
       setTaskValidationDebug(false);
       setTaskPersistenceDebug(false);
       setTaskStateDebug(false);
-    }
-    
-    // Save all settings to localStorage
-    localStorage.setItem('debug_general', enabled ? 'true' : 'false');
-    localStorage.setItem('debug_tasks', enabled ? 'true' : 'false');
-    localStorage.setItem('debug_filters', enabled ? 'true' : 'false');
-    localStorage.setItem('debug_files', enabled ? 'true' : 'false');
-    
-    if (enabled) {
-      // Set task-specific flags in localStorage
-      localStorage.setItem('debug_task_api', 'true');
-      localStorage.setItem('debug_task_completion', 'true');
-      localStorage.setItem('debug_task_persistence', 'true');
-      localStorage.setItem('debug_task_state', 'true');
-    } else {
-      // Clear task-specific flags in localStorage
-      localStorage.setItem('debug_task_api', 'false');
-      localStorage.setItem('debug_task_mapping', 'false');
-      localStorage.setItem('debug_task_completion', 'false');
-      localStorage.setItem('debug_task_validation', 'false');
-      localStorage.setItem('debug_task_persistence', 'false');
-      localStorage.setItem('debug_task_state', 'false');
+      
+      // Use the utility function to ensure flags are properly cleared
+      if (typeof disableAllDebugging === 'function') {
+        disableAllDebugging();
+      } else {
+        // Fallback if the function isn't available yet
+        localStorage.setItem('debug_general', 'false');
+        localStorage.setItem('debug_tasks', 'false');
+        localStorage.setItem('debug_filters', 'false');
+        localStorage.setItem('debug_files', 'false');
+        localStorage.setItem('debug_task_api', 'false');
+        localStorage.setItem('debug_task_mapping', 'false');
+        localStorage.setItem('debug_task_completion', 'false');
+        localStorage.setItem('debug_task_validation', 'false');
+        localStorage.setItem('debug_task_persistence', 'false');
+        localStorage.setItem('debug_task_state', 'false');
+      }
     }
     
     // Show notifications
@@ -172,6 +218,14 @@ export default function DebugFlagTester() {
     });
     
     console.log(`[DEBUG_TESTER] ${enabled ? 'Enabled' : 'Disabled'} all diagnostic flags`);
+    
+    // Force a browser refresh to ensure debug flags take effect
+    if (enabled) {
+      console.log('[DEBUG_TESTER] Refreshing page to enable debug flags...');
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    }
   };
   
   // Helper function to toggle individual debug flags
@@ -215,7 +269,7 @@ export default function DebugFlagTester() {
   };
   
   // Enable special SuccessFactor task debugging preset
-  const enableSuccessFactorDebugging = () => {
+  const enableFactorTaskDebugging = () => {
     // Enable all task-related debugging focused on the SuccessFactor task completion bug
     setTaskDebug(true);
     setTaskApiDebug(true);
@@ -230,6 +284,11 @@ export default function DebugFlagTester() {
     localStorage.setItem('debug_task_persistence', 'true');
     localStorage.setItem('debug_task_state', 'true');
     
+    // Use the global function if available
+    if (typeof window !== 'undefined' && (window as any).enableSuccessFactorDebugging) {
+      (window as any).enableSuccessFactorDebugging();
+    }
+    
     console.log('[DEBUG_TESTER] SuccessFactor Task Debugging Mode Enabled');
     
     // Show toast notification
@@ -238,6 +297,12 @@ export default function DebugFlagTester() {
       description: "Logging activated for critical task operations",
       variant: "default",
     });
+    
+    // Force a browser refresh to ensure debug flags take effect
+    console.log('[DEBUG_TESTER] Refreshing page to enable debug flags...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
   
   // Test logging and show confirmation
