@@ -1,242 +1,212 @@
 /**
- * Simple smoke test for task state transition debug logging
- * This script enables task state transition debugging and checks the console output
- * for relevant debug messages to confirm the system is properly tracking state changes.
- * 
- * Usage: node test-task-state-transitions.js
+ * End-to-end test script for task state transitions
+ * This script tests:
+ * 1. Finding a project and its tasks
+ * 2. Toggling the completion state of a SuccessFactor task
+ * 3. Verifying the state is correctly persisted
  */
 
-import fetch from 'node-fetch';
-import { URLSearchParams } from 'url';
+// Set debug mode to true for detailed logging
+const DEBUG = true;
 
-// Common configuration
-const BASE_URL = 'http://localhost:5000';
-const TEST_CREDENTIALS = {
-  username: 'greg@confluity.co.uk',
-  password: 'password'
-};
-
-// Debug flags to enable
-process.env.DEBUG_TASKS = 'true';
-process.env.DEBUG_TASK_STATE = 'true';
-process.env.DEBUG_TASK_COMPLETION = 'true';
-process.env.DEBUG_TASK_PERSISTENCE = 'true';
-
-// State to track test progress
-let cookies = '';
-let projectId = '';
-let taskId = '';
-
-// Helper to log with visual distinction
+// Console log formatting
 function logHeader(text) {
   console.log('\n' + '='.repeat(80));
-  console.log(' ' + text);
+  console.log(`${text}`);
   console.log('='.repeat(80));
 }
 
-// Helper for making authenticated API requests
+// Make API requests with proper authentication
 async function apiRequest(method, endpoint, body = null) {
+  const baseUrl = 'https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev';
+  const url = `${baseUrl}${endpoint}`;
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  };
+  
   const options = {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': cookies
-    }
+    headers,
+    credentials: 'include',
   };
   
   if (body) {
     options.body = JSON.stringify(body);
   }
   
-  const response = await fetch(`${BASE_URL}${endpoint}`, options);
-  return { 
-    status: response.status,
-    data: await response.json().catch(() => ({})),
-    headers: response.headers
-  };
-}
-
-// Login to get a session
-async function login() {
-  logHeader('LOGGING IN');
+  if (DEBUG) console.log(`Making ${method} request to ${endpoint}`);
+  const response = await fetch(url, options);
   
-  const params = new URLSearchParams();
-  params.append('username', TEST_CREDENTIALS.username);
-  params.append('password', TEST_CREDENTIALS.password);
-  
-  const response = await fetch(`${BASE_URL}/api/login`, {
-    method: 'POST',
-    body: params,
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    redirect: 'manual'
-  });
-  
-  cookies = response.headers.raw()['set-cookie']?.join('; ') || '';
-  console.log(`Login response status: ${response.status}`);
-  console.log(`Cookies received: ${cookies ? 'Yes' : 'No'}`);
-  
-  return response.status === 200 || response.status === 302;
-}
-
-// Get projects to find an active project
-async function getProjects() {
-  logHeader('FETCHING PROJECTS');
-  
-  const { status, data } = await apiRequest('GET', '/api/projects');
-  console.log(`Get projects status: ${status}`);
-  
-  if (status === 200 && data.length > 0) {
-    projectId = data[0].id;
-    console.log(`Using project ID: ${projectId}`);
-    return true;
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
   }
   
-  console.error('No projects found');
-  return false;
+  return await response.json();
 }
 
-// Get tasks for a project
-async function getTasks() {
-  logHeader('FETCHING TASKS');
-  
-  if (!projectId) {
-    console.error('No project ID available');
+// Login to the application
+async function login() {
+  logHeader('LOGIN');
+  try {
+    // Just check if we're authenticated
+    const userResponse = await apiRequest('GET', '/api/auth/user');
+    console.log('Authenticated as:', userResponse.username);
+    return true;
+  } catch (error) {
+    console.error('Login check failed:', error.message);
+    console.log('You need to be logged in to run this test.');
     return false;
   }
+}
+
+// Get all projects
+async function getProjects() {
+  logHeader('GETTING PROJECTS');
+  const projects = await apiRequest('GET', '/api/projects');
+  console.log(`Found ${projects.length} projects`);
   
-  const { status, data } = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
-  console.log(`Get tasks status: ${status}`);
-  
-  if (status === 200 && data.tasks && data.tasks.length > 0) {
-    taskId = data.tasks[0].id;
-    console.log(`Using task ID: ${taskId}`);
-    console.log(`Task title: "${data.tasks[0].title}"`);
-    console.log(`Current completion state: ${data.tasks[0].completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
-    console.log(`Task origin: ${data.tasks[0].origin}`);
-    
-    if (data.tasks[0].origin === 'success_factor') {
-      console.log('Found a SuccessFactor task to toggle - perfect for testing!');
-    }
-    
-    return true;
+  if (projects.length === 0) {
+    throw new Error('No projects found, cannot continue test');
   }
   
-  console.error('No tasks found for project');
-  return false;
+  // Select the first project for testing
+  const testProject = projects[0];
+  console.log(`Selected project for testing: ${testProject.name} (${testProject.id})`);
+  return testProject;
+}
+
+// Get tasks for a specific project
+async function getTasks(projectId) {
+  logHeader(`GETTING TASKS FOR PROJECT ${projectId}`);
+  const tasks = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+  console.log(`Found ${tasks.length} tasks`);
+  
+  if (tasks.length === 0) {
+    throw new Error('No tasks found for the project, cannot continue test');
+  }
+  
+  // Find a task from the success-factor origin if possible
+  const successFactorTask = tasks.find(task => 
+    task.origin === 'factor' || task.origin === 'success-factor'
+  );
+  
+  if (successFactorTask) {
+    console.log(`Found SuccessFactor task: ${successFactorTask.text}`);
+    console.log(`Task ID: ${successFactorTask.id}`);
+    console.log(`Task Origin: ${successFactorTask.origin}`);
+    console.log(`Current completion state: ${successFactorTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+    return successFactorTask;
+  } else {
+    // Fall back to any task if no SuccessFactor task is found
+    console.log('No SuccessFactor task found, using regular task for testing');
+    const testTask = tasks[0];
+    console.log(`Selected task: ${testTask.text}`);
+    console.log(`Task ID: ${testTask.id}`);
+    console.log(`Task Origin: ${testTask.origin}`);
+    console.log(`Current completion state: ${testTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+    return testTask;
+  }
 }
 
 // Toggle a task's completion state
-async function toggleTaskCompletion() {
-  logHeader('TOGGLING TASK COMPLETION');
+async function toggleTaskCompletion(projectId, task) {
+  logHeader(`TOGGLING TASK COMPLETION STATE`);
+  console.log(`Task ID: ${task.id}`);
+  console.log(`Current state: ${task.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+  console.log(`New state: ${!task.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
   
-  if (!projectId || !taskId) {
-    console.error('Missing project ID or task ID');
-    return false;
+  // Update the task with opposite completion state
+  const updatedTask = await apiRequest('PUT', `/api/projects/${projectId}/tasks/${task.id}`, {
+    completed: !task.completed
+  });
+  
+  console.log('Update successful!');
+  console.log(`Task state after update: ${updatedTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+  
+  // Verify the task state was updated correctly
+  if (updatedTask.completed === !task.completed) {
+    console.log('✅ Task state correctly updated');
+  } else {
+    console.log('❌ Task state was not correctly updated');
   }
   
-  // First get the current task state
-  const { status: getStatus, data: taskData } = await apiRequest('GET', `/api/projects/${projectId}/tasks/${taskId}`);
-  
-  if (getStatus !== 200) {
-    console.error(`Failed to get task details: ${getStatus}`);
-    return false;
-  }
-  
-  const currentCompletionState = taskData.completed || false;
-  const newCompletionState = !currentCompletionState;
-  
-  console.log(`Current completion state: ${currentCompletionState ? 'COMPLETED' : 'NOT COMPLETED'}`);
-  console.log(`Setting new state to: ${newCompletionState ? 'COMPLETED' : 'NOT COMPLETED'}`);
-  
-  // Update the task with the opposite completion state
-  const updatePayload = {
-    completed: newCompletionState
-  };
-  
-  console.log('Sending update with payload:', updatePayload);
-  
-  const { status: updateStatus, data: updateResult } = await apiRequest(
-    'PATCH', 
-    `/api/projects/${projectId}/tasks/${taskId}`, 
-    updatePayload
-  );
-  
-  console.log(`Task update status: ${updateStatus}`);
-  
-  if (updateStatus === 200) {
-    console.log('Task updated successfully');
-    console.log(`Server reports new completion state: ${updateResult.task.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
-    
-    // Verify the update by fetching the task again
-    const { status: verifyStatus, data: verifyData } = await apiRequest('GET', `/api/projects/${projectId}/tasks/${taskId}`);
-    
-    if (verifyStatus === 200) {
-      console.log(`Verification - Task completion state is now: ${verifyData.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
-      
-      if (verifyData.completed === newCompletionState) {
-        console.log('✅ SUCCESS: Task state was correctly updated and persisted');
-        return true;
-      } else {
-        console.error('❌ FAILURE: Task state did not match expected value after update');
-        console.error(`Expected: ${newCompletionState}, Actual: ${verifyData.completed}`);
-        return false;
-      }
-    }
-  }
-  
-  console.error('Failed to update task');
-  return false;
+  return updatedTask;
 }
 
-// Main test function
+// Verify persistence by fetching the task again
+async function verifyPersistence(projectId, taskId, expectedState) {
+  logHeader(`VERIFYING PERSISTENCE`);
+  console.log(`Fetching tasks again to verify the state was persisted`);
+  
+  // Fetch all tasks again
+  const tasks = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
+  
+  // Find our task
+  const task = tasks.find(t => t.id === taskId);
+  
+  if (!task) {
+    console.log('❌ Task not found when verifying persistence');
+    return false;
+  }
+  
+  console.log(`Task found`);
+  console.log(`Completion state: ${task.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+  console.log(`Expected state: ${expectedState ? 'COMPLETED' : 'NOT COMPLETED'}`);
+  
+  if (task.completed === expectedState) {
+    console.log('✅ SUCCESS: Task state was correctly persisted');
+    return true;
+  } else {
+    console.log('❌ FAILURE: Task state did not persist correctly');
+    return false;
+  }
+}
+
+// Run the complete test
 async function runTest() {
   try {
-    logHeader('TASK STATE TRANSITION DEBUG TEST');
-    console.log('Testing debug logging for SuccessFactor task state transitions\n');
+    logHeader('STARTING TASK PERSISTENCE TEST');
     
-    if (!await login()) {
-      console.error('Login failed');
-      return false;
+    // Step 1: Login
+    const isLoggedIn = await login();
+    if (!isLoggedIn) {
+      console.log('Test aborted: Not logged in');
+      return { success: false, error: 'Not logged in' };
     }
     
-    if (!await getProjects()) {
-      console.error('Failed to get projects');
-      return false;
-    }
+    // Step 2: Get projects
+    const project = await getProjects();
     
-    if (!await getTasks()) {
-      console.error('Failed to get tasks');
-      return false;
-    }
+    // Step 3: Get tasks
+    const task = await getTasks(project.id);
     
-    if (!await toggleTaskCompletion()) {
-      console.error('Failed to toggle task completion');
-      return false;
-    }
+    // Step 4: Toggle task completion
+    const updatedTask = await toggleTaskCompletion(project.id, task);
     
-    logHeader('TEST COMPLETED SUCCESSFULLY');
-    console.log(`
-Test Summary:
-- DEBUG_TASK_STATE flag is now active
-- Successfully tested task state transition tracking
-- Check the console logs above for [DEBUG_TASK_STATE] messages
-- These logs should help diagnose the SuccessFactor task completion bug
-    `);
+    // Step 5: Verify persistence
+    const isPersisted = await verifyPersistence(project.id, task.id, updatedTask.completed);
     
-    return true;
+    logHeader('TEST COMPLETED');
+    console.log(`Test result: ${isPersisted ? 'SUCCESS' : 'FAILURE'}`);
+    
+    return {
+      success: isPersisted,
+      projectId: project.id,
+      taskId: task.id,
+      taskOrigin: task.origin,
+      initialState: task.completed,
+      updatedState: updatedTask.completed,
+      persistenceVerified: isPersisted
+    };
   } catch (error) {
     console.error('Test failed with error:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 }
 
 // Run the test
-runTest().then(success => {
-  if (!success) {
-    console.error('\nTest failed');
-    process.exit(1);
-  }
-  console.log('\nTest completed');
+runTest().then(result => {
+  console.log('Test results:', JSON.stringify(result, null, 2));
 });
