@@ -667,6 +667,13 @@ export const projectsDb = {
           // Pass the original taskId to maintain client-side consistency
           const converted = convertDbTaskToProjectTask(updatedTask, taskId);
           
+          // Add requested [TASK_LOOKUP] debug output with request/matched ID details
+          console.log('[TASK_LOOKUP]', {
+            rawId: taskId,
+            matchedId: updatedTask.id,
+            matchedVia: (updatedTask.id === taskId) ? 'exact' : 'prefix'
+          });
+          
           if (DEBUG_TASKS) console.log('Converted task:', JSON.stringify(converted, null, 2));
           return converted;
         }
@@ -755,6 +762,13 @@ export const projectsDb = {
       if (DEBUG_TASKS) console.log(`Deletion result for task ${taskId}:`, result);
       
       if (result && result.length > 0) {
+        // Add requested [TASK_LOOKUP] debug output with request/matched ID details
+        console.log('[TASK_LOOKUP]', {
+          rawId: taskId,
+          matchedId: validTaskId,
+          matchedVia: (validTaskId === taskId) ? 'exact' : 'prefix'
+        });
+        
         if (DEBUG_TASKS) console.log(`Successfully deleted task ${taskId}`);
         return true;
       }
