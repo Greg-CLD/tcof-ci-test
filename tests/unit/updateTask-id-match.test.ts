@@ -10,7 +10,7 @@
 
 import { projectsDb } from '../../server/projectsDb';
 import { db } from '../../server/db';
-import { projectTasksTable } from '../../shared/schema';
+import { projectTasks } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
 
 // Mock the database operations
@@ -81,7 +81,7 @@ describe('Task ID Matching Tests', () => {
         const whereSpy = setSpy().where as jest.Mock;
         
         // Expect the full matched DB ID to be used in the update operation, not the clean prefix
-        expect(whereSpy).toHaveBeenCalledWith(eq(projectTasksTable.id, mockTask.id));
+        expect(whereSpy).toHaveBeenCalledWith(eq(projectTasks.id, mockTask.id));
         
         // Verify debug logging shows matched ID info
         expect(console.log).toHaveBeenCalledWith(

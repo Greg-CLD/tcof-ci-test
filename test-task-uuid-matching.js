@@ -9,8 +9,8 @@
  * Run with: node test-task-uuid-matching.js
  */
 
-const fetch = require('node-fetch');
-const fs = require('fs');
+import fetch from 'node-fetch';
+import fs from 'fs';
 
 // Helper to read cookies from the cookies.txt file
 function getCookies() {
