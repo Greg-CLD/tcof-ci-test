@@ -547,6 +547,7 @@ export const projectsDb = {
       // Check for factor-task compound IDs (like "f219d47b-39b5-5be1-86f2-e0ec3afc8e3b-c1332bc7")
       // These are likely concatenations of a UUID with a suffix
       let validTaskId = taskId;
+      let lookupMethod = 'none';
       
       // Log the task IDs we're working with
       console.log(`[TASK_LOOKUP] Looking up task with ID: ${taskId}`);
@@ -563,6 +564,7 @@ export const projectsDb = {
             // This is likely a success factor ID being mistakenly passed as a task ID
             // We should not try to update this as a task
             console.log(`[TASK_LOOKUP] The ID ${taskId} appears to be a success factor ID, not a task ID`);
+            console.log(`[TASK_UPDATE_ERROR] Failed to process task update for sourceId ${taskId}. This ID is registered as a sourceId, not a task ID.`);
             throw new Error(`Cannot update ID ${taskId} directly: this appears to be a success factor ID, not a task ID. Try updating a specific task instead.`);
           }
         }
@@ -575,6 +577,7 @@ export const projectsDb = {
         if (existingTasksBySource.length > 0) {
           // Task exists with this source ID, use its actual UUID instead
           validTaskId = existingTasksBySource[0].id as string;
+          lookupMethod = 'sourceId';
           console.log(`[TASK_LOOKUP] Found task with sourceId ${taskId}, using its ID ${validTaskId} for update`);
         } else {
           // CASE 2: Check if task exists with the exact ID
@@ -585,126 +588,167 @@ export const projectsDb = {
             
           if (existingTasksById.length > 0) {
             console.log(`[TASK_LOOKUP] Found task with exact ID match: ${taskId}`);
+            lookupMethod = 'exact';
             // No need to change validTaskId, it's already correct
           } else {
             // CASE 3: Check if this is a clean UUID being used to update a task with a compound ID
             // Get all tasks and check if any have an ID that starts with the incoming ID
-            const allTasks = await db.select()
-              .from(projectTasksTable);
+            try {
+              const allTasks = await db.select()
+                .from(projectTasksTable);
+                
+              console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID prefix match with: ${taskId}`);
               
-            console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID prefix match with: ${taskId}`);
-            
-            // Find a task whose ID starts with our clean UUID (the taskId is a prefix of a compound ID)
-            const matchingTask = allTasks.find(task => {
-              // Extract the clean UUID from the task's ID (first 5 segments)
-              const taskCleanId = (task.id as string).split('-').slice(0, 5).join('-');
+              // Find a task whose ID starts with our clean UUID (the taskId is a prefix of a compound ID)
+              const matchingTask = allTasks.find(task => {
+                // Log the comparison for debugging
+                console.log(`[TASK_LOOKUP] Comparing ${taskId} with ${task.id}`);
+                
+                // Return true if the task ID matches exactly OR if the task ID starts with the input ID
+                return task.id === taskId || task.id.startsWith(taskId);
+              });
               
-              // Log the comparison for debugging
-              console.log(`[TASK_LOOKUP] Comparing clean UUID ${taskId} with task ${task.id} (clean: ${taskCleanId})`);
-              
-              // Return true if the task ID matches exactly OR if the task ID starts with the input ID
-              return task.id === taskId || task.id.startsWith(taskId);
-            });
-            
-            if (matchingTask) {
-              // Here's the key change: use the matched task's ACTUAL ID, not the incoming ID
-              validTaskId = matchingTask.id as string;
-              console.log(`[TASK_LOOKUP] Found task with matching clean UUID prefix, using full ID: ${validTaskId}`);
-            } else {
-              // CASE 4: No match found by any method
-              console.log(`[TASK_LOOKUP] Task with ID/sourceId ${taskId} not found by any method`);
-              // Log all available task IDs for debugging
-              console.log('[TASK_LOOKUP] Available task IDs:', allTasks.map(t => t.id).join(', '));
-              throw new Error(`Task with ID ${taskId} does not exist. Searched by exact match and UUID prefix match. Task may need to be created first.`);
+              if (matchingTask) {
+                // Here's the key change: use the matched task's ACTUAL ID, not the incoming ID
+                validTaskId = matchingTask.id as string;
+                lookupMethod = 'prefix';
+                console.log(`[TASK_LOOKUP] Found task with matching clean UUID prefix, using full ID: ${validTaskId}`);
+              } else {
+                // CASE 4: No match found by any method
+                console.log(`[TASK_LOOKUP] Task with ID/sourceId ${taskId} not found by any method`);
+                // Log all available task IDs for debugging
+                console.log('[TASK_LOOKUP] Available task IDs:', allTasks.map(t => t.id).join(', '));
+                console.log(`[TASK_UPDATE_ERROR] Task not found for ID ${taskId}. Searched by exact match, sourceId, and UUID prefix match.`);
+                throw new Error(`Task with ID ${taskId} does not exist. Searched by exact match and UUID prefix match. Task may need to be created first.`);
+              }
+            } catch (lookupError) {
+              console.error(`[TASK_UPDATE_ERROR] Error during prefix matching lookup for task ID ${taskId}:`, lookupError);
+              console.error(`[TASK_UPDATE_ERROR] Stack trace:`, lookupError instanceof Error ? lookupError.stack : 'No stack trace available');
+              throw new Error(`Failed to perform task lookup by prefix matching: ${lookupError instanceof Error ? lookupError.message : String(lookupError)}`);
             }
           }
         }
       } catch (err) {
         if (err instanceof Error && err.message.includes('Try creating')) {
           // Pass through our custom error
+          console.error(`[TASK_UPDATE_ERROR] Task lookup failed with custom error for ID ${taskId}:`, err.message);
           throw err;
         }
-        console.error(`Error looking up task by ID ${taskId}:`, err);
+        console.error(`[TASK_UPDATE_ERROR] Error looking up task by ID ${taskId}:`, err);
+        console.error(`[TASK_UPDATE_ERROR] Stack trace:`, err instanceof Error ? err.stack : 'No stack trace available');
         throw new Error(`Failed to process task ID ${taskId}: ${err instanceof Error ? err.message : String(err)}`);
       }
       
-      // Sanitize input data to ensure types match and handle empty strings properly
-      const updateData: Record<string, string | boolean | null | Date> = {};
-      
-      // Only update fields that are provided, with proper empty string handling
-      if (data.text !== undefined) updateData.text = String(data.text);
-      if (data.stage !== undefined) updateData.stage = String(data.stage);
-      if (data.origin !== undefined) updateData.origin = String(data.origin);
-      if (data.sourceId !== undefined) updateData.sourceId = String(data.sourceId);
-      if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
-      
-      // For nullable fields, convert empty strings to null
-      if (data.notes !== undefined) updateData.notes = data.notes === '' ? null : String(data.notes);
-      if (data.priority !== undefined) updateData.priority = data.priority === '' ? null : String(data.priority);
-      if (data.dueDate !== undefined) updateData.dueDate = data.dueDate === '' ? null : String(data.dueDate);
-      if (data.owner !== undefined) updateData.owner = data.owner === '' ? null : String(data.owner);
-      if (data.status !== undefined) updateData.status = String(data.status);
-      
-      // Always update the updatedAt timestamp
-      updateData.updatedAt = new Date();
-      
-      console.log(`Prepared update data for task ${validTaskId}:`, JSON.stringify(updateData, null, 2));
-      
-      // Generate the SQL for logging purposes (before executing)
-      const updateSQL = db.update(projectTasksTable)
-        .set(updateData)
-        .where(eq(projectTasksTable.id, validTaskId))
-        .toSQL();
-      
-      console.log('SQL to be executed:', updateSQL.sql);
-      console.log('SQL parameters:', JSON.stringify(updateSQL.params, null, 2));
-      
       try {
-        // Update the task using Drizzle with the actual matched DB ID (validTaskId), not the incoming taskId
-        const [updatedTask] = await db.update(projectTasksTable)
-          .set(updateData)
-          .where(eq(projectTasksTable.id, validTaskId))
-          .returning();
+        // Sanitize input data to ensure types match and handle empty strings properly
+        const updateData: Record<string, string | boolean | null | Date> = {};
         
-        if (DEBUG_TASKS) console.log('Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
-        if (DEBUG_TASKS) console.log('Rows affected:', updatedTask ? '1' : '0');
+        // Only update fields that are provided, with proper empty string handling
+        if (data.text !== undefined) updateData.text = String(data.text);
+        if (data.stage !== undefined) updateData.stage = String(data.stage);
+        if (data.origin !== undefined) updateData.origin = String(data.origin);
+        if (data.sourceId !== undefined) updateData.sourceId = String(data.sourceId);
+        if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
         
-        if (updatedTask) {
-          if (DEBUG_TASKS) console.log(`Task ${validTaskId} updated successfully:`, JSON.stringify(updatedTask, null, 2));
+        // For nullable fields, convert empty strings to null
+        if (data.notes !== undefined) updateData.notes = data.notes === '' ? null : String(data.notes);
+        if (data.priority !== undefined) updateData.priority = data.priority === '' ? null : String(data.priority);
+        if (data.dueDate !== undefined) updateData.dueDate = data.dueDate === '' ? null : String(data.dueDate);
+        if (data.owner !== undefined) updateData.owner = data.owner === '' ? null : String(data.owner);
+        if (data.status !== undefined) updateData.status = String(data.status);
+        
+        // Always update the updatedAt timestamp
+        updateData.updatedAt = new Date();
+        
+        console.log(`Prepared update data for task ${validTaskId}:`, JSON.stringify(updateData, null, 2));
+        
+        try {
+          // Generate the SQL for logging purposes (before executing)
+          const updateSQL = db.update(projectTasksTable)
+            .set(updateData)
+            .where(eq(projectTasksTable.id, validTaskId))
+            .toSQL();
           
-          // Verify the task exists and was updated with a direct query
-          const verifyResult = await db.select()
-            .from(projectTasksTable)
-            .where(eq(projectTasksTable.id, validTaskId));
-          
-          if (DEBUG_TASKS) console.log('Verification query result:', JSON.stringify(verifyResult, null, 2));
-          if (DEBUG_TASKS) console.log('Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
-          
-          // Pass the original taskId to maintain client-side consistency
-          const converted = convertDbTaskToProjectTask(updatedTask, taskId);
-          
-          // Add requested [TASK_LOOKUP] debug output with request/matched ID details
-          console.log('[TASK_LOOKUP]', {
-            rawId: taskId,
-            matchedId: updatedTask.id,
-            matchedVia: (updatedTask.id === taskId) ? 'exact' : 'prefix'
-          });
-          
-          if (DEBUG_TASKS) console.log('Converted task:', JSON.stringify(converted, null, 2));
-          return converted;
+          console.log('SQL to be executed:', updateSQL.sql);
+          console.log('SQL parameters:', JSON.stringify(updateSQL.params, null, 2));
+        } catch (sqlGenerationError) {
+          // Log but continue - this is just for diagnostic purposes
+          console.error(`[TASK_UPDATE_ERROR] Error generating SQL for task ${validTaskId}:`, sqlGenerationError);
         }
-      } catch (updateError) {
-        if (DEBUG_TASKS) console.error('Database update exception:', updateError);
-        if (DEBUG_TASKS) console.error('Error details:', updateError instanceof Error ? updateError.message : 'Unknown error');
-        if (DEBUG_TASKS) console.error('Error stack:', updateError instanceof Error ? updateError.stack : '');
-        throw updateError;
+        
+        try {
+          // Update the task using Drizzle with the actual matched DB ID (validTaskId), not the incoming taskId
+          const [updatedTask] = await db.update(projectTasksTable)
+            .set(updateData)
+            .where(eq(projectTasksTable.id, validTaskId))
+            .returning();
+          
+          console.log('[TASK_UPDATE] Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
+          console.log('[TASK_UPDATE] Rows affected:', updatedTask ? '1' : '0');
+          
+          if (updatedTask) {
+            console.log(`[TASK_UPDATE] Task ${validTaskId} updated successfully:`, JSON.stringify(updatedTask, null, 2));
+            
+            try {
+              // Verify the task exists and was updated with a direct query
+              const verifyResult = await db.select()
+                .from(projectTasksTable)
+                .where(eq(projectTasksTable.id, validTaskId));
+              
+              console.log('[TASK_UPDATE] Verification query result:', JSON.stringify(verifyResult, null, 2));
+              console.log('[TASK_UPDATE] Task verified in database:', verifyResult.length > 0 ? 'Yes' : 'No');
+            } catch (verifyError) {
+              // Log but continue - verification failure shouldn't stop the operation
+              console.error(`[TASK_UPDATE_ERROR] Error verifying task update for ${validTaskId}:`, verifyError);
+              console.error(`[TASK_UPDATE_ERROR] Stack trace:`, verifyError instanceof Error ? verifyError.stack : 'No stack trace available');
+            }
+            
+            // Pass the original taskId to maintain client-side consistency
+            try {
+              const converted = convertDbTaskToProjectTask(updatedTask, taskId);
+              
+              // Add requested [TASK_LOOKUP] debug output with request/matched ID details
+              console.log('[TASK_LOOKUP]', {
+                rawId: taskId,
+                matchedId: updatedTask.id,
+                matchedVia: lookupMethod
+              });
+              
+              console.log('[TASK_UPDATE] Converted task:', JSON.stringify(converted, null, 2));
+              return converted;
+            } catch (conversionError) {
+              console.error(`[TASK_UPDATE_ERROR] Error converting task ${validTaskId} after update:`, conversionError);
+              console.error(`[TASK_UPDATE_ERROR] Stack trace:`, conversionError instanceof Error ? conversionError.stack : 'No stack trace available');
+              console.error(`[TASK_UPDATE_ERROR] Raw task data:`, JSON.stringify(updatedTask, null, 2));
+              throw new Error(`Task was updated but could not be converted to the client format: ${conversionError instanceof Error ? conversionError.message : String(conversionError)}`);
+            }
+          } else {
+            console.error(`[TASK_UPDATE_ERROR] Database update returned null for task ${validTaskId}. No rows affected.`);
+            throw new Error(`Task with ID ${validTaskId} not found or couldn't be updated. Database operation affected 0 rows.`);
+          }
+        } catch (updateDbError) {
+          console.error(`[TASK_UPDATE_ERROR] Database error updating task ${validTaskId}:`, updateDbError);
+          console.error(`[TASK_UPDATE_ERROR] Stack trace:`, updateDbError instanceof Error ? updateDbError.stack : 'No stack trace available');
+          console.error(`[TASK_UPDATE_ERROR] Task was found via ${lookupMethod} matching but update operation failed.`);
+          throw new Error(`Database error updating task ${validTaskId}: ${updateDbError instanceof Error ? updateDbError.message : String(updateDbError)}`);
+        }
+      } catch (dataError) {
+        console.error(`[TASK_UPDATE_ERROR] Error processing update data for task ${validTaskId}:`, dataError);
+        console.error(`[TASK_UPDATE_ERROR] Stack trace:`, dataError instanceof Error ? dataError.stack : 'No stack trace available');
+        console.error(`[TASK_UPDATE_ERROR] Task found via ${lookupMethod} matching but data preparation failed.`);
+        throw new Error(`Failed to prepare update data for task ${validTaskId}: ${dataError instanceof Error ? dataError.message : String(dataError)}`);
       }
-      
-      // If no task was found/updated, throw an error instead of returning null
-      throw new Error(`Task with ID ${validTaskId} not found or couldn't be updated`);
     } catch (error) {
-      console.error(`Error updating task ${taskId}:`, error);
-      // Re-throw the error so it can be properly handled by the API route
+      // Capture and log the complete error context
+      console.error(`[TASK_UPDATE_ERROR] Failed to update task ${taskId}:`, error);
+      console.error(`[TASK_UPDATE_ERROR] Error type:`, error?.constructor?.name || typeof error);
+      console.error(`[TASK_UPDATE_ERROR] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available'); 
+      console.error(`[TASK_UPDATE_ERROR] Input data:`, JSON.stringify(data, null, 2));
+      
+      // Re-throw with enhanced information for API error handling
+      if (error instanceof Error) {
+        error.message = `Task update failed: ${error.message}`;
+      }
       throw error;
     }
   },
