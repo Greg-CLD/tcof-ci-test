@@ -300,3 +300,85 @@ runTest()
     console.error('Failed to run test:', error);
     process.exit(1);
   });
+const fetch = require('node-fetch');
+
+const BASE_URL = 'http://0.0.0.0:5000';
+const TEST_CREDENTIALS = {
+  username: 'greg@confluity.co.uk',
+  password: 'password'
+};
+
+process.env.DEBUG_TASKS = 'true';
+process.env.DEBUG_TASK_STATE = 'true';
+process.env.DEBUG_TASK_COMPLETION = 'true';
+process.env.DEBUG_TASK_PERSISTENCE = 'true';
+
+let cookies = '';
+let projectId = '';
+let taskId = '';
+
+async function login() {
+  const response = await fetch(`${BASE_URL}/api/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(TEST_CREDENTIALS)
+  });
+  if (response.ok) {
+    cookies = response.headers.get('set-cookie');
+    console.log('Login successful');
+    return true;
+  }
+  console.error('Login failed');
+  return false;
+}
+
+async function getProjects() {
+  const response = await fetch(`${BASE_URL}/api/projects`, { headers: { Cookie: cookies } });
+  if (response.ok) {
+    const projects = await response.json();
+    projectId = projects[0].id;
+    console.log('Projects retrieved:', projects);
+    return true;
+  }
+  console.error('Failed to fetch projects');
+  return false;
+}
+
+async function getTasks() {
+  const response = await fetch(`${BASE_URL}/api/projects/${projectId}/tasks`, { headers: { Cookie: cookies } });
+  if (response.ok) {
+    const tasks = await response.json();
+    taskId = tasks[0].id;
+    console.log('Tasks retrieved:', tasks);
+    return true;
+  }
+  console.error('Failed to fetch tasks');
+  return false;
+}
+
+async function toggleTaskCompletion() {
+  const response = await fetch(`${BASE_URL}/api/projects/${projectId}/tasks/${taskId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Cookie: cookies },
+    body: JSON.stringify({ completed: true })
+  });
+  if (response.ok) {
+    console.log('Task completion toggled');
+    return true;
+  }
+  console.error('Failed to toggle task completion');
+  return false;
+}
+
+async function runTest() {
+  console.log('Starting task state transition smoke test...');
+  await login();
+  await getProjects();
+  await getTasks();
+  await toggleTaskCompletion();
+  console.log('Test complete.');
+}
+
+runTest().catch(err => {
+  console.error('Test failed with error:', err);
+});
