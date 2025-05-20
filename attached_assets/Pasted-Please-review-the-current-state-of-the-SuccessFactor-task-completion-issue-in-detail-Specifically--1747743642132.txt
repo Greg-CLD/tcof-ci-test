@@ -1,0 +1,38 @@
+Please review the current state of the SuccessFactor task completion issue in detail. Specifically:
+
+**1. Validate Current Status**
+- The Agent claims the server-side UUID extraction fix is live.  
+- You see a PUT request for /api/projects/:projectId/tasks/:taskId where :taskId is now the UUID portion (not compound).
+- However, the API response is still:
+  {
+    "success": false,
+    "message": "Task not found",
+    "error": "Task with ID ... not found or couldn't be updated"
+  }
+
+**2. Test & Log Review**
+- Check whether Agent has provided all required logs/outputs, including:
+  - Latest smoke test script output
+  - Network tab output for the failing PUT (done)
+  - Server console logs during the PUT
+  - SSR/server logs
+  - Latest GET /tasks JSON for the project
+- If anything is missing, *list each artifact specifically and prompt for its retrieval*.
+
+**3. Validate Assumptions**
+- Confirm that the server is using the extracted UUID for DB updates, and that the debug log for `[DEBUG_TASK_API] extracted UUID` matches the request.
+- Double-check if the GET /tasks JSON response *actually* contains a task with that UUID.  
+- Are there any mismatches in how IDs are generated, stored, or queried (for example, are we storing the full compound ID in the DB, but querying with only the base UUID)?
+
+**4. Next Diagnostic Step**
+- If the logs show that the server is extracting the UUID and still not finding the task, recommend a next debug step:
+  - Should we log the list of IDs from GET /tasks before the update?
+  - Should we log the raw and stored IDs during the update/lookup?
+- If Agent failed to update server routes or missed a step, please clearly call this out.
+
+**User testing:**  
+No manual UI or DevTools checks required until/unless specifically requested in your reply.
+
+---
+
+Please review, cross-reference, and output the specific *missing evidence* or *contradictory behavior* you observe. Then recommend the next concrete investigation/fix step for Agent.

@@ -769,6 +769,22 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           console.log(`[DEBUG_TASK_API] *** Completion status update detected ***`);
           console.log(`[DEBUG_TASK_API] New completion value: ${taskUpdate.completed}`);
         }
+        
+        // Get all tasks for this project to diagnose ID matching issues
+        try {
+          const allTasks = await projectsDb.getTasksForProject(projectId);
+          console.log(`[DEBUG_TASK_API] Task IDs in database for project ${projectId}:`);
+          console.log(`[DEBUG_TASK_API] Total tasks found: ${allTasks.length}`);
+          const taskIds = allTasks.map(t => t.id);
+          console.log(`[DEBUG_TASK_API] Task IDs: ${JSON.stringify(taskIds)}`);
+          console.log(`[DEBUG_TASK_API] Comparison:`);
+          console.log(`[DEBUG_TASK_API]  - Raw request ID: ${rawTaskId}`);
+          console.log(`[DEBUG_TASK_API]  - Extracted UUID: ${taskId}`);
+          console.log(`[DEBUG_TASK_API]  - ID match with raw: ${taskIds.includes(rawTaskId)}`);
+          console.log(`[DEBUG_TASK_API]  - ID match with extracted: ${taskIds.includes(taskId)}`);
+        } catch (error) {
+          console.error(`[DEBUG_TASK_API] Error fetching project tasks for diagnosis:`, error);
+        }
       }
 
       // Ensure we have the required fields
@@ -797,7 +813,20 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           // Get the original task to check if it's a SuccessFactor task
           // Using getTasksForProject instead of the non-existent getTaskById
           const allTasks = await projectsDb.getTasksForProject(projectId);
-          originalTask = allTasks.find(task => task.id === taskId);
+          
+          // Try to find task using extracted UUID first, then fallback to raw ID if not found
+          // This handles both simple UUID and compound ID formats
+          originalTask = allTasks.find(task => task.id === taskId) || 
+                        allTasks.find(task => task.id === rawTaskId);
+          
+          if (DEBUG_TASK_API) {
+            console.log(`[DEBUG_TASK_API] Task lookup strategy results:`);
+            console.log(`[DEBUG_TASK_API]  - First attempt using extracted UUID: ${taskId}`);
+            console.log(`[DEBUG_TASK_API]  - Result: ${allTasks.find(task => task.id === taskId) ? 'FOUND' : 'NOT FOUND'}`);
+            console.log(`[DEBUG_TASK_API]  - Second attempt using raw ID: ${rawTaskId}`);
+            console.log(`[DEBUG_TASK_API]  - Result: ${allTasks.find(task => task.id === rawTaskId) ? 'FOUND' : 'NOT FOUND'}`);
+            console.log(`[DEBUG_TASK_API]  - Final task found: ${originalTask ? 'YES' : 'NO'}`);
+          }
           
           if (originalTask) {
             // Standard task update logging
@@ -859,14 +888,28 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         // Attempt to update the task with error tracking
         let updatedTask;
         try {
-          updatedTask = await projectsDb.updateTask(taskId, taskUpdate);
+          // If we found the task in our previous lookup, use its actual stored ID
+          // Otherwise, try both the extracted UUID and raw ID formats
+          const idForUpdate = originalTask ? originalTask.id : taskId;
+          
+          if (DEBUG_TASK_API) {
+            console.log(`[DEBUG_TASK_API] Updating task using ID: ${idForUpdate}`);
+            if (originalTask) {
+              console.log(`[DEBUG_TASK_API]  - Using ID from found task object`);
+            } else {
+              console.log(`[DEBUG_TASK_API]  - Using extracted UUID as fallback`);
+            }
+          }
+          
+          updatedTask = await projectsDb.updateTask(idForUpdate, taskUpdate);
         } catch (dbError: unknown) {
           // Log database errors immediately
           console.error('[ERROR] Database error during task update:', dbError);
           
           if (DEBUG_TASK_PERSISTENCE) {
             console.error(`[DEBUG_TASK_PERSISTENCE] Task update database operation failed:`);
-            console.error(`[DEBUG_TASK_PERSISTENCE]  - Task ID: ${taskId}`);
+            console.error(`[DEBUG_TASK_PERSISTENCE]  - Raw Task ID: ${rawTaskId}`);
+            console.error(`[DEBUG_TASK_PERSISTENCE]  - Extracted UUID: ${taskId}`);
             console.error(`[DEBUG_TASK_PERSISTENCE]  - Error: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
           }
           
