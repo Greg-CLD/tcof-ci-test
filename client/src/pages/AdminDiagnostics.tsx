@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
 
 const UuidExtractionTest = React.lazy(() => import('@/components/debug/uuid-extraction-test'));
-const DebugFlagTester = React.lazy(() => import('@/components/debug/DebugFlagTester'));
+// Removed debug tester to fix task persistence issues
 
 /**
  * Admin diagnostics panel for task persistence debugging
@@ -103,7 +103,7 @@ window.testUuidExtraction('2f565bf9-70c7-5c41-93e7-c6c4cde32312-e253fe5a');`}
               
               <div className="border p-6 rounded-lg shadow-sm">
                 <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>}>
-                  <DebugFlagTester />
+                  {/* Debug panel removed to fix task persistence */}
                 </Suspense>
               </div>
               

@@ -24,7 +24,7 @@ import { Download, Upload, Trash2, Plus, Save, LogOut, RefreshCw, Eye, Share2, N
 import { useToast } from '@/hooks/use-toast';
 import { isAdmin, login, logout, ADMIN_EMAIL } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
-import DebugFlagTester from '@/components/debug/DebugFlagTester';
+// Import removed to fix task persistence issues
 
 interface PresetHeuristic {
   id: string;
@@ -531,7 +531,7 @@ export default function AdminPresetEditor() {
           </CardHeader>
           <CardContent>
             {/* Developer-only: use to toggle/check granular debug flags at runtime for diagnostics */}
-            <DebugFlagTester />
+            {/* DebugFlagTester removed to fix task persistence issues */}
           </CardContent>
         </Card>
       </section>
