@@ -325,6 +325,9 @@ const updateTaskMutation = useMutation({
         
         if (!res.ok) {
           console.error(`Error updating task: ${res.status} ${res.statusText}`);
+          // Log network response for failed updates
+          logTaskNetworkResponse('updateTask', res.status, cleanId, false);
+          
           // Handle authentication errors specially
           if (res.status === 401) {
             throw new Error('Authentication required to update task');
@@ -333,6 +336,9 @@ const updateTaskMutation = useMutation({
         }
         
         const resJson = await res.json();
+        
+        // Log successful network response
+        logTaskNetworkResponse('updateTask', res.status, cleanId, true);
         if (resJson.success === false) {
           throw new Error(resJson.message || 'Failed to update task');
         }
@@ -542,7 +548,7 @@ const updateTaskMutation = useMutation({
       const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
       
       // Log network request details with our utility function
-      logTaskNetworkRequest('deleteTask', rawId, cleanId, endpoint, projectId);
+      logTaskNetworkRequest('deleteTask', rawId, cleanId, endpoint, safeProjectId(projectId));
       
       try {
         if (DEBUG_TASKS) console.log(`Deleting task ${taskId} (using ${cleanId}) for project ${projectId}`);
@@ -550,6 +556,9 @@ const updateTaskMutation = useMutation({
         
         if (!res.ok) {
           console.error(`Error deleting task: ${res.status} ${res.statusText}`);
+          // Log failed network response
+          logTaskNetworkResponse('deleteTask', res.status, cleanId, false);
+          
           // Handle authentication errors specially
           if (res.status === 401) {
             throw new Error('Authentication required to delete task');
@@ -558,6 +567,10 @@ const updateTaskMutation = useMutation({
         }
         
         const resJson = await res.json();
+        
+        // Log successful network response
+        logTaskNetworkResponse('deleteTask', res.status, cleanId, true);
+        
         if (resJson.success === false) {
           throw new Error(resJson.message || 'Failed to delete task');
         }

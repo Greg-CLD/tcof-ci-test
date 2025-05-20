@@ -36,6 +36,22 @@ export function logTaskNetworkRequest(
 }
 
 /**
+ * Detect if a task is likely a SuccessFactor task based on its ID format
+ * @param taskId The task ID to check
+ * @returns True if the task appears to be a SuccessFactor task
+ */
+export function isSuccessFactorTask(taskId: string): boolean {
+  // SuccessFactor tasks often have compound IDs with more than 5 segments
+  const segments = taskId.split('-');
+  if (segments.length > 5) {
+    return true;
+  }
+  
+  // Some SuccessFactor tasks have special format with 'factor' or 'sf' in the ID
+  return taskId.includes('factor') || taskId.includes('sf');
+}
+
+/**
  * Log network response details for task operations
  * @param operation The operation that was performed
  * @param status HTTP status code
@@ -54,6 +70,11 @@ export function logTaskNetworkResponse(
     taskId,
     success
   });
+  
+  // Enhanced logging for SuccessFactor tasks to help diagnose completion issues
+  if (isSuccessFactorTask(taskId)) {
+    console.log('[TRACE_NET]', `SuccessFactor task ${operation}: ${taskId} - ${success ? 'SUCCESS' : 'FAILED'} (${status})`);
+  }
   
   if (!success) {
     console.log('[TRACE_NET]', `Task operation failed: ${operation} on ${taskId}, status: ${status}`);
