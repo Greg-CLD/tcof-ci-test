@@ -311,6 +311,15 @@ const updateTaskMutation = useMutation({
         // Always use the clean endpoint with the extracted UUID
         const endpoint = `/api/projects/${projectId}/tasks/${cleanId}`;
         
+        // Enhanced logging for task operations
+        console.debug('[NET]', { 
+          operation: 'updateTask', 
+          rawId, 
+          cleanId, 
+          endpoint,
+          projectId
+        });
+        
         // Use the extracted UUID for the API request instead of the potentially compound taskId
         const res = await apiRequest('PUT', endpoint, data);
         
@@ -532,9 +541,21 @@ const updateTaskMutation = useMutation({
   // Mutation to delete a task
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
+      // Extract the valid UUID part if this is a compound ID
+      const rawId = taskId;
+      const cleanId = rawId.split('-').slice(0,5).join('-');
+      
+      // Always log both raw and clean IDs to ensure proper tracking
+      console.debug('[NET]', { 
+        operation: 'deleteTask', 
+        rawId, 
+        cleanId, 
+        endpoint: `/api/projects/${projectId}/tasks/${cleanId}` 
+      });
+      
       try {
-        if (DEBUG_TASKS) console.log(`Deleting task ${taskId} for project ${projectId}`);
-        const res = await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${taskId}`);
+        if (DEBUG_TASKS) console.log(`Deleting task ${taskId} (using ${cleanId}) for project ${projectId}`);
+        const res = await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${cleanId}`);
         
         if (!res.ok) {
           console.error(`Error deleting task: ${res.status} ${res.statusText}`);
