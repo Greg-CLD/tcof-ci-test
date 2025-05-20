@@ -1,0 +1,43 @@
+Objective: Verify and document the server’s new task lookup logic for clean UUID matching, and confirm correct operation with full logs.
+
+Problem:
+The server’s updateTask and deleteTask functions now match on both exact taskId and "startsWith" for clean UUIDs. However, we have not received the critical output/logs needed to fully confirm and debug this behavior with real PUT requests and a full round-trip (network, SSR, and DB).
+
+Expected outcome:
+• [TASK_LOOKUP] logs appear in the server console, showing how the matching logic works for an update.
+• PUT request network logs are present in the browser (request URL, body, and response).
+• The GET /tasks response JSON after a task update shows the updated completion state for the affected task.
+• A commit confirmation is present for the last server-side change.
+• The smoke-test script is run and its JSON output is pasted.
+• If the app restarts, SSR logs are pasted.
+
+Tech details:
+- **NO CODE CHANGES NEEDED THIS CYCLE**
+- This cycle is for log/output gathering only.
+- Do not edit UI, DB, or auth; only paste requested logs.
+- Do not re-run any test scripts unless explicitly specified.
+
+Safeguards:
+- Do not modify updateTask, deleteTask, or cleanTaskId logic.
+- Do not introduce new logic or revert recent fixes.
+- Only collect and paste the required logs.
+
+Checklist of required outputs:
+1. **PUT Request (Network Tab):**
+   - Full URL, request payload, and response code/body for toggling a SuccessFactor task.
+2. **[TASK_LOOKUP] logs from server console:**
+   - Paste server log output showing lookup logic during the PUT request.
+3. **Full GET /tasks JSON response:**
+   - Run GET /api/projects/:projectId/tasks after updating, paste full JSON for that project.
+4. **Commit confirmation:**
+   - Paste the commit message or ID for the most recent server-side change.
+5. **Smoke-test script output:**
+   - Run: DEBUG=true DEBUG_TASKS=true DEBUG_TASK_STATE=true DEBUG_TASK_COMPLETION=true DEBUG_TASK_PERSISTENCE=true DEBUG_TASK_API=true node test-state-transitions-smoke.mjs
+   - Paste full JSON result.
+6. **SSR logs if restarted:**
+   - Paste server-side rendering logs on restart.
+
+End of cycle:
+Once all outputs above are pasted, STOP. Do not make further changes or apply new fixes until outputs are reviewed.
+
+Run smoke-test script and paste its JSON result. If you restart the app, wait for SSR logs and include them.
