@@ -20,7 +20,7 @@ localPort = 24678
 externalPort = 3000
 
 [workflows]
-runButton = "Start Dev Server"
+runButton = "Debug Session"
 
 [[workflows.workflow]]
 name = "Project"
@@ -65,7 +65,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "DEBUG=true DEBUG_TASKS=true npm run dev"
+args = "DEBUG=true DEBUG_TASKS=true DEBUG_TASK_API=true npm run dev"
 
 [[workflows.workflow]]
 name = "Run Smoke Test"
