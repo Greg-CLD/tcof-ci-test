@@ -637,17 +637,17 @@ export const projectsDb = {
       // Generate the SQL for logging purposes (before executing)
       const updateSQL = db.update(projectTasksTable)
         .set(updateData)
-        .where(eq(projectTasksTable.id, validTaskId))
+        .where(eq(projectTasksTable.id, matchingTask.id))
         .toSQL();
       
       console.log('SQL to be executed:', updateSQL.sql);
       console.log('SQL parameters:', JSON.stringify(updateSQL.params, null, 2));
       
       try {
-        // Update the task using Drizzle
+        // Update the task using Drizzle with the actual matched DB ID, not the incoming taskId
         const [updatedTask] = await db.update(projectTasksTable)
           .set(updateData)
-          .where(eq(projectTasksTable.id, validTaskId))
+          .where(eq(projectTasksTable.id, matchingTask.id))
           .returning();
         
         if (DEBUG_TASKS) console.log('Database operation result:', updatedTask ? 'Success' : 'Failed (null)');
