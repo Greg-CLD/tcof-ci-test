@@ -1,118 +1,164 @@
 /**
- * UUID Lookup Verification Script
+ * Direct verification of the UUID matching logic
  * 
- * This script:
- * 1. Directly connects to the database to find tasks with compound IDs
- * 2. Extracts the clean UUIDs from them
- * 3. Demonstrates our algorithm for matching tasks by clean UUID
- * 
- * Run with: node verify-uuid-matching.js
+ * This test script simulates both the server and client side logic
+ * to verify our UUID handling improvements without requiring authentication.
  */
 
-import pg from 'pg';
-const { Pool } = pg;
-
-// Utility to clean a task ID (extract just the UUID part)
-function cleanTaskId(taskId) {
-  if (!taskId) return '';
-  return taskId.split('-').slice(0, 5).join('-');
-}
-
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
-
-// Main function
-async function verifyUuidMatching() {
-  console.log('===== UUID MATCHING VERIFICATION =====');
+// This is a reproduction of the server-side findTaskById function with our improved UUID matching
+function findTaskById(tasks, taskId) {
+  console.log(`[TASK_LOOKUP] Looking for task with ID: ${taskId}`);
   
-  try {
-    // Get all tasks
-    const allTasksRes = await pool.query('SELECT id, text, source_id, completed FROM project_tasks LIMIT 30');
-    const allTasks = allTasksRes.rows;
-    
-    console.log(`Found ${allTasks.length} tasks in the database`);
-    
-    // Find tasks with compound IDs (more than 5 segments)
-    const compoundIdTasks = allTasks.filter(task => 
-      task.id && task.id.includes('-') && task.id.split('-').length > 5
-    );
-    
-    console.log(`Found ${compoundIdTasks.length} tasks with compound IDs`);
-    
-    // If we have compound ID tasks, demonstrate the matching algorithm
-    if (compoundIdTasks.length > 0) {
-      // Take the first compound ID task as an example
-      const exampleTask = compoundIdTasks[0];
-      const compoundId = exampleTask.id;
-      const cleanId = cleanTaskId(compoundId);
-      
-      console.log(`\nExample Task:
-- Compound ID: ${compoundId}
-- Clean UUID: ${cleanId}
-- Text: ${exampleTask.text}`);
-      
-      // Simulate the server's lookup algorithm
-      console.log('\nSimulating server-side lookup algorithm:');
-      console.log('1. First check if any task has this exact clean UUID as its ID');
-      
-      const exactMatches = allTasks.filter(task => task.id === cleanId);
-      if (exactMatches.length > 0) {
-        console.log(`   ✓ Found ${exactMatches.length} exact matches`);
-      } else {
-        console.log('   ✗ No exact matches found');
-      }
-      
-      console.log('\n2. Then check if any task has a compound ID where the clean part matches');
-      
-      // Find tasks whose clean ID matches our test clean ID
-      const matchesByPrefix = allTasks.filter(task => {
-        const taskCleanId = cleanTaskId(task.id);
-        return taskCleanId === cleanId;
-      });
-      
-      if (matchesByPrefix.length > 0) {
-        console.log(`   ✓ Found ${matchesByPrefix.length} matches by UUID prefix`);
-        matchesByPrefix.forEach((match, idx) => {
-          console.log(`   Match #${idx + 1}:`);
-          console.log(`   - Full ID: ${match.id}`);
-          console.log(`   - Clean ID: ${cleanTaskId(match.id)}`);
-          console.log(`   - Text: ${match.text}`);
-        });
-      } else {
-        console.log('   ✗ No matches by UUID prefix found');
-      }
-      
-      console.log('\nVerification Result:');
-      if (matchesByPrefix.length > 0) {
-        console.log('✅ SUCCESS: The UUID matching algorithm works as expected');
-        console.log(`When the client sends a clean UUID ${cleanId}, the server will find the task with ID ${compoundId}`);
-      } else {
-        console.log('❌ FAILED: UUID matching test failed');
-      }
-    } else {
-      console.log('\nNo compound ID tasks found in the database.');
-      console.log('Our algorithm will still work for simple UUIDs.');
-      
-      // Take a regular task as an example
-      if (allTasks.length > 0) {
-        const exampleTask = allTasks[0];
-        console.log(`\nExample Regular Task:
-- ID: ${exampleTask.id}
-- Clean UUID (same as ID): ${cleanTaskId(exampleTask.id)}
-- Text: ${exampleTask.text}`);
-      }
-    }
-  } catch (error) {
-    console.error('Error during verification:', error);
-  } finally {
-    // Close database connection
-    pool.end();
+  // First try exact match (fastest)
+  const exactMatch = tasks.find(task => task.id === taskId);
+  if (exactMatch) {
+    console.log(`[TASK_LOOKUP] Found task with exact ID match: ${taskId}`);
+    return {
+      success: true,
+      task: exactMatch,
+      method: 'exact-match'
+    };
   }
   
-  console.log('\n===== VERIFICATION COMPLETE =====');
+  // If no exact match, try matching with clean UUID as prefix
+  console.log(`[TASK_LOOKUP] No exact match, trying UUID prefix matching...`);
+  
+  for (const task of tasks) {
+    // Extract the clean UUID from the task's ID (first 5 segments)
+    const taskCleanId = task.id.split('-').slice(0, 5).join('-');
+    
+    // Log the comparison for debugging
+    console.log(`[TASK_LOOKUP] Comparing task ID: "${task.id}"`);
+    console.log(`[TASK_LOOKUP] Clean UUID: "${taskCleanId}"`);
+    console.log(`[TASK_LOOKUP] Looking for: "${taskId}"`);
+    
+    // KEY IMPROVEMENT: Check if taskId matches clean UUID OR if task.id starts with taskId
+    if (taskCleanId === taskId || task.id.startsWith(taskId)) {
+      console.log(`[TASK_LOOKUP] Found task with matching clean UUID or as prefix: ${task.id}`);
+      return {
+        success: true,
+        task,
+        method: 'prefix-match'
+      };
+    }
+  }
+  
+  // If we get here, no match was found
+  console.log(`[TASK_LOOKUP] Task not found. ID: ${taskId}`);
+  console.log(`[TASK_LOOKUP] Available task IDs:`, tasks.map(t => t.id));
+  return {
+    success: false,
+    error: `Task with ID ${taskId} not found.`
+  };
 }
 
-// Run the verification
-verifyUuidMatching();
+// Mock project tasks for testing
+const mockTasks = [
+  {
+    id: 'abc12345-6789-0123-4567-89abcdef0123-success-factor',
+    text: 'Task with compound ID from success factor',
+    completed: false,
+    origin: 'factor'
+  },
+  {
+    id: 'def67890-1234-5678-90ab-cdef01234567',
+    text: 'Task with regular UUID',
+    completed: false,
+    origin: 'custom'
+  },
+  {
+    id: 'ghi12345-6789-0123-4567-89abcdef0123-custom-456',
+    text: 'Custom task with compound ID',
+    completed: false,
+    origin: 'custom'
+  }
+];
+
+// Function to update a task's completion state (simulates the update logic)
+function updateTask(tasks, taskId, updates) {
+  const result = findTaskById(tasks, taskId);
+  
+  if (!result.success) {
+    return result;
+  }
+  
+  // Update the task
+  const taskIndex = tasks.findIndex(t => t.id === result.task.id);
+  tasks[taskIndex] = { ...tasks[taskIndex], ...updates };
+  
+  console.log(`[TASK_UPDATE] Successfully updated task via ${result.method}:`, {
+    taskId,
+    updatedTask: tasks[taskIndex]
+  });
+  
+  return {
+    success: true,
+    task: tasks[taskIndex],
+    method: result.method
+  };
+}
+
+// Run verification tests
+console.log('===== VERIFYING UUID MATCHING IMPLEMENTATION =====');
+
+// Test 1: Update with exact compound ID
+console.log('\nTEST 1: Update task using exact compound ID');
+const test1 = updateTask(
+  mockTasks,
+  'abc12345-6789-0123-4567-89abcdef0123-success-factor',
+  { completed: true }
+);
+console.log(`Result: ${test1.success ? 'SUCCESS' : 'FAILURE'}`);
+console.log(`Updated task completed: ${test1.success ? test1.task.completed : 'N/A'}`);
+console.log(`Method used: ${test1.method}`);
+
+// Test 2: Update using clean UUID for a task with compound ID
+console.log('\nTEST 2: Update task using clean UUID against compound ID');
+const test2 = updateTask(
+  mockTasks,
+  'abc12345-6789-0123-4567-89abcdef0123',
+  { completed: false }
+);
+console.log(`Result: ${test2.success ? 'SUCCESS' : 'FAILURE'}`);
+console.log(`Updated task completed: ${test2.success ? test2.task.completed : 'N/A'}`);
+console.log(`Method used: ${test2.method}`);
+
+// Test 3: Update using exact regular UUID
+console.log('\nTEST 3: Update task using exact regular UUID');
+const test3 = updateTask(
+  mockTasks,
+  'def67890-1234-5678-90ab-cdef01234567',
+  { completed: true }
+);
+console.log(`Result: ${test3.success ? 'SUCCESS' : 'FAILURE'}`);
+console.log(`Updated task completed: ${test3.success ? test3.task.completed : 'N/A'}`);
+console.log(`Method used: ${test3.method}`);
+
+// Test 4: Update with partial UUID (first segments only)
+console.log('\nTEST 4: Update with partial UUID (should work via prefix matching)');
+const test4 = updateTask(
+  mockTasks,
+  'ghi12345',
+  { completed: true }
+);
+console.log(`Result: ${test4.success ? 'SUCCESS' : 'FAILURE'}`);
+console.log(`Updated task completed: ${test4.success ? test4.task.completed : 'N/A'}`);
+console.log(`Method used: ${test4.method}`);
+
+// Test 5: Update with non-existent task ID
+console.log('\nTEST 5: Update with non-existent task ID (should fail)');
+const test5 = updateTask(
+  mockTasks,
+  'nonexistent-task-id',
+  { completed: true }
+);
+console.log(`Result: ${test5.success ? 'SUCCESS' : 'FAILURE'}`);
+console.log(`Error: ${test5.error || 'N/A'}`);
+
+console.log('\n===== VERIFICATION COMPLETE =====');
+
+// Print final task states to confirm persistence
+console.log('\nFinal task states:');
+mockTasks.forEach((task, index) => {
+  console.log(`Task ${index + 1}: ${task.id.substring(0, 15)}... - completed: ${task.completed}`);
+});
