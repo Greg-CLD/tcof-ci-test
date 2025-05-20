@@ -1,0 +1,70 @@
+API Request to /api/projects/bc55c1a2-0cdf-4108-aa9e-44b44baea3b8/tasks/2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a: 
+{headers: {…}, method: 'PUT', body: {…}}
+Checklist.tsx:1037 [CHECKLIST_DEBUG] For stage: identification | source filter: all | filteredTasks: 
+(125) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, …]
+Checklist.tsx:1050 [CUSTOM_TASK_DEBUG] Stage: identification | Total custom tasks: 84 | Tasks: 
+(84) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1065 [FILTER_CHECK] Stage: identification | Custom tasks that would pass our filter: 84
+Checklist.tsx:1037 [CHECKLIST_DEBUG] For stage: definition | source filter: all | filteredTasks: 
+(23) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1050 [CUSTOM_TASK_DEBUG] Stage: definition | Total custom tasks: 7 | Tasks: 
+(7) [{…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1065 [FILTER_CHECK] Stage: definition | Custom tasks that would pass our filter: 7
+Checklist.tsx:1037 [CHECKLIST_DEBUG] For stage: delivery | source filter: all | filteredTasks: 
+(15) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1050 [CUSTOM_TASK_DEBUG] Stage: delivery | Total custom tasks: 4 | Tasks: 
+(4) [{…}, {…}, {…}, {…}]
+Checklist.tsx:1065 [FILTER_CHECK] Stage: delivery | Custom tasks that would pass our filter: 4
+Checklist.tsx:1037 [CHECKLIST_DEBUG] For stage: closure | source filter: all | filteredTasks: 
+(5) [{…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1050 [CUSTOM_TASK_DEBUG] Stage: closure | Total custom tasks: 3 | Tasks: 
+(3) [{…}, {…}, {…}]
+Checklist.tsx:1065 [FILTER_CHECK] Stage: closure | Custom tasks that would pass our filter: 3
+Checklist.tsx:1037 [CHECKLIST_DEBUG] For stage: identification | source filter: all | filteredTasks: 
+(125) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, …]
+Checklist.tsx:1050 [CUSTOM_TASK_DEBUG] Stage: identification | Total custom tasks: 84 | Tasks: 
+(84) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1065 [FILTER_CHECK] Stage: identification | Custom tasks that would pass our filter: 84
+Checklist.tsx:1037 [CHECKLIST_DEBUG] For stage: definition | source filter: all | filteredTasks: 
+(23) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1050 [CUSTOM_TASK_DEBUG] Stage: definition | Total custom tasks: 7 | Tasks: 
+(7) [{…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1065 [FILTER_CHECK] Stage: definition | Custom tasks that would pass our filter: 7
+Checklist.tsx:1037 [CHECKLIST_DEBUG] For stage: delivery | source filter: all | filteredTasks: 
+(15) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1050 [CUSTOM_TASK_DEBUG] Stage: delivery | Total custom tasks: 4 | Tasks: 
+(4) [{…}, {…}, {…}, {…}]
+Checklist.tsx:1065 [FILTER_CHECK] Stage: delivery | Custom tasks that would pass our filter: 4
+Checklist.tsx:1037 [CHECKLIST_DEBUG] For stage: closure | source filter: all | filteredTasks: 
+(5) [{…}, {…}, {…}, {…}, {…}]
+Checklist.tsx:1050 [CUSTOM_TASK_DEBUG] Stage: closure | Total custom tasks: 3 | Tasks: 
+(3) [{…}, {…}, {…}]
+Checklist.tsx:1065 [FILTER_CHECK] Stage: closure | Custom tasks that would pass our filter: 3
+queryClient.ts:13 API Response: 
+{status: 500, headers: {…}, url: 'https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jb…sks/2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a'}
+headers
+: 
+{content-length: '228', content-type: 'application/json; charset=utf-8', date: 'Tue, 20 May 2025 12:07:08 GMT', etag: 'W/"e4-dfwCZwxfkP9CYKN4uSfWbeyaF4o"', replit-cluster: 'worf', …}
+status
+: 
+500
+url
+: 
+"https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev/api/projects/bc55c1a2-0cdf-4108-aa9e-44b44baea3b8/tasks/2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a"
+[[Prototype]]
+: 
+Object
+queryClient.ts:23 API Response Body: 
+{success: false, message: 'Failed to update project task', error: 'Failed to process task ID 2f565bf9-70c7-5c41-93e7-…: "2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a"'}
+error
+: 
+"Failed to process task ID 2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a: invalid input syntax for type uuid: \"2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a\""
+message
+: 
+"Failed to update project task"
+success
+: 
+false
+[[Prototype]]
+: 
+Object
