@@ -43,7 +43,7 @@ waitForPort = 5000
 [[workflows.workflow]]
 name = "Start Dev Server"
 author = 42110622
-mode = "parallel"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
