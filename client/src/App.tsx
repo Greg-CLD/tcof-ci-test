@@ -10,6 +10,9 @@ import { FeedbackContainer } from '@/components/ui/feedback/feedback-container';
 import { AppInitializer } from '@/components/AppInitializer';
 import A11yAuditProvider from '@/components/A11yAuditProvider';
 
+// Import debugging utilities to make them available globally
+import './components/debug/enableDebugLogging';
+
 // Import all your components and routes...
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
