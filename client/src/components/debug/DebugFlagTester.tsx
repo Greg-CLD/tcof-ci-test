@@ -22,20 +22,17 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
 import { 
   AlertCircle, 
   CheckCircle, 
-  Info, 
-  HelpCircle, 
   Bug, 
   Terminal 
 } from "lucide-react";
 
 /**
- * Advanced Debug Flag Tester component
- * This component allows developers to view and toggle debug flags at runtime
- * Note: Settings are saved to localStorage and persist across page reloads
+ * Debug Flag Tester component
+ * This component allows toggling of debug flags at runtime
+ * Settings are saved to localStorage and persist across page reloads
  */
 export default function DebugFlagTester() {
   const { toast } = useToast();
@@ -65,14 +62,9 @@ export default function DebugFlagTester() {
   
   // Additional state for UI controls
   const [testLogConfirmation, setTestLogConfirmation] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
 
   // Compute overall diagnostics status
   const isDiagnosticsActive = generalDebug || taskDebug || filterDebug || fileDebug;
-  const isTaskDiagnosticsActive = taskDebug && (
-    taskApiDebug || taskMappingDebug || taskCompletionDebug || 
-    taskValidationDebug || taskPersistenceDebug || taskStateDebug
-  );
 
   // Log diagnostics status when flags change
   useEffect(() => {
@@ -278,23 +270,12 @@ export default function DebugFlagTester() {
   return (
     <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
       {/* Main Diagnostics Control Panel */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {/* Header with main toggle */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-medium">Diagnostics</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="p-1 h-7 w-7" 
-              onClick={() => setShowHelp(!showHelp)}
-            >
-              <HelpCircle className="h-5 w-5 text-gray-500" />
-              <span className="sr-only">Toggle help</span>
-            </Button>
-          </div>
+          <h3 className="text-lg font-medium">Diagnostics</h3>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Switch
               id="master-diagnostics-toggle"
               checked={isDiagnosticsActive}
@@ -320,43 +301,18 @@ export default function DebugFlagTester() {
           </div>
         </div>
         
-        {/* Help section */}
-        {showHelp && (
-          <Card className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 mb-2">
-            <CardContent className="pt-4 px-4 pb-2 text-sm">
-              <h4 className="font-medium mb-1 flex items-center gap-1 text-blue-700 dark:text-blue-300">
-                <Info className="h-4 w-4" />
-                About Diagnostics
-              </h4>
-              <p className="mb-2 text-blue-600 dark:text-blue-400">
-                Diagnostics provide detailed logging information to help troubleshoot issues in the application.
-              </p>
-              
-              <h5 className="font-medium mt-2 text-blue-700 dark:text-blue-300">When to use:</h5>
-              <ul className="list-disc list-inside mb-2 text-blue-600 dark:text-blue-400">
-                <li>When experiencing task persistence issues</li>
-                <li>To debug SuccessFactor task completion problems</li>
-                <li>When investigating API or state management bugs</li>
-              </ul>
-              
-              <h5 className="font-medium mt-2 text-blue-700 dark:text-blue-300">How it works:</h5>
-              <p className="mb-2 text-blue-600 dark:text-blue-400">
-                1. Toggle diagnostics ON to enable logging<br />
-                2. Perform the actions that need troubleshooting<br />
-                3. Check the browser console (F12) for detailed logs<br />
-                4. Toggle diagnostics OFF when finished to improve performance
-              </p>
-              
-              <div className="text-xs text-blue-500 dark:text-blue-400 mt-2">
-                Note: Diagnostic logs only appear in the browser console. Settings persist across page reloads.
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Simple Numbered Help Text */}
+        <div className="text-sm text-gray-600 dark:text-gray-400 border-l-2 border-gray-300 dark:border-gray-600 pl-3 py-1">
+          <ol className="list-decimal list-inside space-y-1">
+            <li>Toggle ON to start logging</li>
+            <li>Reproduce the issue</li>
+            <li>Check browser console (F12). Toggle OFF when done</li>
+          </ol>
+        </div>
         
-        {/* Active flags */}
+        {/* Active flags - only show when diagnostics are active */}
         {isDiagnosticsActive && (
-          <div className="flex flex-wrap gap-2 mb-1">
+          <div className="flex flex-wrap gap-2 mb-1 mt-1">
             {taskDebug && (
               <Badge variant="secondary" className="px-2 py-0.5">
                 Tasks
@@ -382,52 +338,40 @@ export default function DebugFlagTester() {
                 State
               </Badge>
             )}
-            {filterDebug && (
-              <Badge variant="secondary" className="px-2 py-0.5">
-                Filters
-              </Badge>
-            )}
-            {fileDebug && (
-              <Badge variant="secondary" className="px-2 py-0.5">
-                Files
-              </Badge>
-            )}
-          </div>
-        )}
-        
-        {/* Quick Action Buttons */}
-        {isDiagnosticsActive && (
-          <div className="flex gap-2 mb-1 mt-1 flex-wrap">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className={testLogConfirmation ? "bg-green-100 text-green-800 border-green-300" : ""}
-              onClick={testLogging}
-            >
-              <Terminal className="h-3.5 w-3.5 mr-1" />
-              {testLogConfirmation ? "✓ Log Written" : "Test Logging"}
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={enableSuccessFactorDebugging}
-            >
-              <Bug className="h-3.5 w-3.5 mr-1" />
-              Debug SuccessFactor Tasks
-            </Button>
           </div>
         )}
         
         {/* Advanced Controls - only visible when diagnostics are active */}
         {isDiagnosticsActive && (
-          <Accordion type="single" collapsible className="mb-2">
+          <Accordion type="single" collapsible className="mb-0 mt-1">
             <AccordionItem value="advanced-controls">
-              <AccordionTrigger className="text-sm font-medium py-1">
+              <AccordionTrigger className="text-sm font-medium py-1 hover:no-underline">
                 Advanced Controls
               </AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-2 pt-2">
+                {/* Special Action Buttons */}
+                <div className="flex gap-2 mb-3 mt-2 flex-wrap">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className={testLogConfirmation ? "bg-green-100 text-green-800 border-green-300" : ""}
+                    onClick={testLogging}
+                  >
+                    <Terminal className="h-3.5 w-3.5 mr-1" />
+                    {testLogConfirmation ? "✓ Log Written" : "Test Logging"}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={enableSuccessFactorDebugging}
+                  >
+                    <Bug className="h-3.5 w-3.5 mr-1" />
+                    Debug SuccessFactor Tasks
+                  </Button>
+                </div>
+                
+                <div className="space-y-2 pt-1">
                   {/* Primary Debug Flags */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center justify-between py-1">
@@ -482,9 +426,9 @@ export default function DebugFlagTester() {
                   {/* Task-specific Debug Flags - Only shown when task debugging is enabled */}
                   {taskDebug && (
                     <>
-                      <div className="bg-gray-200/50 dark:bg-gray-700/50 p-2 rounded-md mt-3">
-                        <h4 className="text-sm font-medium mb-2">Granular Task Debugging</h4>
-                        <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-200/50 dark:bg-gray-700/50 p-2 rounded-md mt-2">
+                        <h4 className="text-sm font-medium mb-2">Task-Specific Diagnostics</h4>
+                        <div className="grid grid-cols-2 gap-3">
                           <div className="flex items-center justify-between py-1">
                             <Label htmlFor="task-api-debug" className="text-xs sm:text-sm">
                               API:
@@ -581,7 +525,7 @@ export default function DebugFlagTester() {
       
       {/* Footer note */}
       <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-        Settings are saved automatically and persist across page reloads
+        Settings are saved and will persist across page reloads
       </div>
     </div>
   );
