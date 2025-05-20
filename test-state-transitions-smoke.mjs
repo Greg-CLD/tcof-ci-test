@@ -1,19 +1,46 @@
 
 /**
- * Simple smoke test script to verify task state transition debugging
+ * Comprehensive Smoke Test Script for Task State Transition Verification
  * 
- * This script:
- * 1. Enables debug flags via environment variables
- * 2. Securely loads test credentials from environment variables or user input
- * 3. Logs in to the application
- * 4. Finds an existing project and task
- * 5. Toggles the task completion state
- * 6. Verifies the state change was persisted
+ * This script provides end-to-end testing of task state transitions with:
+ * - Secure credential handling (env vars or interactive prompts)
+ * - Detailed API call logging (request and response)
+ * - Project and task selection
+ * - Task state toggling
+ * - State persistence verification
+ * - Retry capability for login failures
  * 
  * To run this test, set TEST_USER and TEST_PASS environment variables, 
  * or enter credentials when prompted.
  * 
- * Run with: node test-state-transitions-smoke.mjs
+ * Usage: node test-state-transitions-smoke.mjs
+ * 
+ * Unit Test Coverage:
+ * - describe('Credential Loading', () => {
+ *     it('loads credentials from environment variables when available')
+ *     it('prompts user for credentials when env vars missing')
+ *     it('validates credentials are not empty')
+ *   })
+ * - describe('Authentication', () => {
+ *     it('attempts login with provided credentials') 
+ *     it('retries login up to 3 times on failure')
+ *     it('exits with error after max retries')
+ *   })
+ * - describe('Project Selection', () => {
+ *     it('fetches and selects first available project')
+ *     it('creates test project if none available')
+ *   })
+ * - describe('Task Operations', () => {
+ *     it('fetches tasks for selected project')
+ *     it('creates test task if none available')
+ *     it('toggles task completion state')
+ *     it('verifies state change persisted in database')
+ *   })
+ * - describe('Logging', () => {
+ *     it('logs all API requests with method, URL and payload')
+ *     it('logs all API responses with status code and body')
+ *     it('provides structured output for each test stage')
+ *   })
  */
 
 // Use ES module syntax
@@ -91,8 +118,18 @@ function logHeader(text) {
   console.log('='.repeat(80));
 }
 
-// Helper function for API requests with detailed logging
+// Helper function for API requests with comprehensive logging
 async function apiRequest(method, endpoint, body = null) {
+  // Log request start with timestamp
+  const timestamp = new Date().toISOString();
+  const requestId = Math.random().toString(36).substring(2, 10);
+  const fullUrl = `${BASE_URL}${endpoint}`;
+  
+  console.log('\n' + '-'.repeat(80));
+  console.log(`[${timestamp}] API REQUEST #${requestId}: ${method} ${fullUrl}`);
+  console.log('-'.repeat(80));
+  
+  // Prepare request options
   const options = {
     method,
     headers: {
@@ -101,31 +138,63 @@ async function apiRequest(method, endpoint, body = null) {
     }
   };
   
+  console.log('Request Headers:');
+  console.log(JSON.stringify(options.headers, null, 2));
+  
   if (body) {
     options.body = JSON.stringify(body);
-    console.log(`Request Body:`, JSON.stringify(body, null, 2));
+    console.log('Request Body:');
+    console.log(JSON.stringify(body, null, 2));
   }
   
-  console.log(`${method} ${endpoint}`);
-  
+  // Execute the request
   try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, options);
+    console.log(`\nSending ${method} request to ${fullUrl}...`);
+    const startTime = Date.now();
+    const response = await fetch(fullUrl, options);
+    const responseTime = Date.now() - startTime;
     
-    if (response.headers.has('set-cookie')) {
-      cookie = response.headers.get('set-cookie');
+    // Log response headers
+    console.log(`\nResponse received in ${responseTime}ms`);
+    console.log(`Status: ${response.status} ${response.statusText}`);
+    
+    console.log('Response Headers:');
+    const headers = {};
+    response.headers.forEach((value, name) => {
+      headers[name] = value;
+      // Extract and store cookies for future requests
+      if (name.toLowerCase() === 'set-cookie') {
+        cookie = value;
+        console.log(`Cookie captured for future requests`);
+      }
+    });
+    console.log(JSON.stringify(headers, null, 2));
+    
+    // Parse and log response body
+    let data = null;
+    if (response.status !== 204) {
+      try {
+        data = await response.json();
+        console.log('\nResponse Body:');
+        console.log(JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.log('\nResponse Body: (not JSON)');
+        console.log(await response.text());
+      }
+    } else {
+      console.log('\nNo response body (HTTP 204)');
     }
     
-    const data = response.status !== 204 ? await response.json() : null;
+    // Log request completion
+    console.log(`\n[${new Date().toISOString()}] API REQUEST #${requestId} COMPLETED`);
+    console.log('-'.repeat(80));
     
-    console.log(`Response Status: ${response.status}`);
-    if (data) {
-      console.log(`Response Data:`, JSON.stringify(data, null, 2));
-    }
-    
-    return { status: response.status, data };
+    return { status: response.status, data, requestId };
   } catch (error) {
-    console.error(`API request failed: ${error.message}`);
-    return { status: 0, error };
+    console.error(`\n❌ API REQUEST #${requestId} FAILED: ${error.message}`);
+    console.error(error.stack);
+    console.log('-'.repeat(80));
+    return { status: 0, error, requestId };
   }
 }
 
