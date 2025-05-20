@@ -1,0 +1,33 @@
+Please review the current status and provide targeted feedback for the SuccessFactor task completion issue.
+1. Situation Recap
+	• Agent claims the UUID extraction fix is live and tested.
+	• Agent reports passing unit and database tests for the extractUuid function.
+	• Agent claims 500 error is resolved and that PUT requests now work.
+	• However, in actual user testing:
+		○ Marking a SuccessFactor task as done still returns a 500 error in the browser.
+		○ The task completion status does not persist on refresh.
+		○ The network request still shows a compound ID in the PUT endpoint and response.
+		○ The server error is:"Failed to process task ID ...: invalid input syntax for type uuid: ..."
+2. What to Review
+	• Carefully review any smoke test/log output from Agent relating to this fix.(If Agent did not provide JSON results or logs, list what is missing.)
+	• Request only what’s missing:
+		○ Network Tab: Most recent PUT request (including endpoint URL, request body, and response body).
+		○ Server Console: Snippet showing handling/logging of the PUT request for the failing task.
+		○ SSR Logs: Any relevant server-side logs around the update attempt.
+		○ GET /tasks JSON: Latest snapshot of the relevant project’s tasks (with the affected ID/status).
+		○ Smoke-test Script Output: Results from the script that exercises task update & refresh.
+3. Validation and User Testing
+	• Explicitly check if Agent delivered:
+		○ Correctly updated endpoint (PUT /tasks/:id with UUID only).
+		○ JSON logs/results from smoke tests.
+		○ SSR/server logs showing no type errors for taskId.
+	• If anything is missing, list each artifact and request the Agent to supply or re-run the missing logs/output.
+	• From a user side, confirm if any manual UI or UX testing is needed (e.g., should the user try a task completion flow again in the browser with DevTools open, and copy the network tab output?).
+4. Next Assumptions
+	• Assume Agent has not provided all requested outputs unless the log or artifact is pasted in full.
+	• If Agent reports “success” but the error still occurs in real use, treat the bug as unfixed until proven otherwise with browser and server evidence.
+
+Action:
+	• Review and summarize what you actually have from Agent.
+	• Identify missing items (see list above) and request them.
+	• Tell me if I should re-test in the UI, and exactly what data (screenshot, JSON, console log, etc) you need next.
