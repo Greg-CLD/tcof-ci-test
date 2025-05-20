@@ -20,7 +20,7 @@ console.log(`Using API URL: ${BASE_URL}`);
 // Credentials used for smoke test
 const CREDENTIALS = {
   username: 'greg@confluity.co.uk', 
-  password: 'password'  // Using default test password
+  password: 'confluity'  // Updated with correct password
 };
 
 // Global state
