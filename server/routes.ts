@@ -747,14 +747,21 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   // Update a specific task for a project
   app.put('/api/projects/:projectId/tasks/:taskId', isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const { projectId, taskId } = req.params;
+      const { projectId, taskId: rawTaskId } = req.params;
       const taskUpdate = req.body;
+      
+      // Extract the UUID part from compound task IDs (for SuccessFactor tasks)
+      // A compound ID looks like: 2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a
+      // We need to extract just: 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+      const taskId = rawTaskId.split('-').slice(0, 5).join('-');
       
       // Add diagnostic logging for the task update operation
       const DEBUG_TASK_API = process.env.DEBUG_TASKS === 'true';
       
       if (DEBUG_TASK_API) {
-        console.log(`[DEBUG_TASK_API] PUT request to update task ${taskId} for project ${projectId}`);
+        console.log(`[DEBUG_TASK_API] PUT request to update task ${rawTaskId} for project ${projectId}`);
+        console.log(`[DEBUG_TASK_API] rawTaskId:`, rawTaskId);
+        console.log(`[DEBUG_TASK_API] extracted UUID:`, taskId);
         console.log(`[DEBUG_TASK_API] Task update payload:`, JSON.stringify(taskUpdate));
         
         // Special diagnostic for completion status updates
