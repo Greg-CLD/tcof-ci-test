@@ -41,33 +41,6 @@ args = "npm run dev"
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "Start"
-author = 42110622
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-
-[[workflows.workflow]]
-name = "Start Server"
-author = 42110622
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-
-[[workflows.workflow]]
-name = "Test Feedback"
-author = 42110622
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run test -- /tests/pages/Home.test.tsx"
-
-[[workflows.workflow]]
 name = "Start Dev Server"
 author = 42110622
 mode = "parallel"

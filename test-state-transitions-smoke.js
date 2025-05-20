@@ -9,8 +9,6 @@
  * 5. Verifies the state change was persisted
  */
 
-const fetch = require('node-fetch');
-
 // Global configuration
 const BASE_URL = 'http://localhost:5000';
 const CREDENTIALS = {
