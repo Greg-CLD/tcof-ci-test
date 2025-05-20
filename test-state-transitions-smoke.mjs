@@ -4,24 +4,40 @@
  * 
  * This script:
  * 1. Enables debug flags via environment variables
- * 2. Logs in to the application
- * 3. Finds an existing project and task
- * 4. Toggles the task completion state
- * 5. Verifies the state change was persisted
+ * 2. Loads test credentials from environment variables or config file
+ * 3. Logs in to the application
+ * 4. Finds an existing project and task
+ * 5. Toggles the task completion state
+ * 6. Verifies the state change was persisted
+ * 
+ * To run this script:
+ * 1. Create a config/test.env file with TEST_USERNAME and TEST_PASSWORD (see config/test.env.example)
+ *    - or set these as environment variables
+ * 2. Run with: node test-state-transitions-smoke.mjs
  */
 
 // Use ES module syntax
 import fetch from 'node-fetch';
+import config from './tests/utils/testConfig.js';
 
 // Global configuration - Use 0.0.0.0 for direct testing
 const BASE_URL = 'http://0.0.0.0:5000';
 console.log(`Using API URL: ${BASE_URL}`);
 
-// Credentials used for smoke test
+// Credentials loaded from environment variables or config file
 const CREDENTIALS = {
-  username: 'greg@confluity.co.uk', 
-  password: 'confluity'  // Updated with correct password
+  username: config.TEST_USERNAME, 
+  password: config.TEST_PASSWORD
 };
+
+// Validate required credentials
+if (!CREDENTIALS.username || !CREDENTIALS.password) {
+  console.error('\x1b[31mError: Missing required test credentials\x1b[0m');
+  console.error('Please set TEST_USERNAME and TEST_PASSWORD in config/test.env or as environment variables');
+  process.exit(1);
+}
+
+console.log(`Using test credentials for user: ${CREDENTIALS.username}`);
 
 // Global state
 let cookie = '';
