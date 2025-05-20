@@ -26,6 +26,7 @@ import MakeAPlanLanding from "@/pages/MakeAPlanLanding";
 import MakeAPlanFullIntro from "@/pages/MakeAPlanFullIntro";
 import MakeAPlanFull from "@/pages/MakeAPlanFull";
 import AdminPresetEditor from "@/pages/AdminPresetEditor";
+import AdminDiagnostics from "@/pages/AdminDiagnostics";
 // Using the enhanced SuccessFactorEditor with tabbed interface
 import SuccessFactorEditor from "@/components/admin/SuccessFactorEditor";
 import SimpleFactorEditor from "@/components/admin/SimpleFactorEditor";
