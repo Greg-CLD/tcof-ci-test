@@ -300,11 +300,11 @@ export function setupAuth(app: Express) {
               passportUserId: sessObj.passport?.user
             });
           } catch (parseErr) {
-            console.error('Error parsing session data:', parseErr);
-            return res.status(200).json({
+            console.error('[AUTH_ERROR] Error parsing session data:', parseErr);
+            return res.status(401).json({
               success: false,
-              message: 'Session data could not be parsed',
-              needsLogin: true
+              error: 'AUTH_EXPIRED',
+              message: 'Session refresh failed'
             });
           }
           
@@ -337,11 +337,11 @@ export function setupAuth(app: Express) {
                       });
                     });
                   } catch (saveErr) {
-                    console.error('Failed to save session:', saveErr);
-                    return res.status(200).json({
+                    console.error('[AUTH_ERROR] Failed to save session:', saveErr);
+                    return res.status(401).json({
                       success: false,
-                      message: 'Failed to save session data',
-                      needsLogin: true
+                      error: 'AUTH_EXPIRED',
+                      message: 'Session refresh failed'
                     });
                   }
                 }
@@ -429,13 +429,13 @@ export function setupAuth(app: Express) {
       return;
     }
     
-    // If not authenticated and no login details, return a status code but don't fail
-    // This allows the client to know it needs to show a login screen
-    console.log('Session not authenticated and no credentials provided');
-    res.status(200).json({ 
+    // If not authenticated and no login details, return 401 error
+    // This is an authentication failure that should be properly reflected in the status code
+    console.error('[AUTH_ERROR] Session refresh failed: not authenticated');
+    res.status(401).json({ 
       success: false, 
-      message: 'Session refresh successful, but not authenticated',
-      needsLogin: true
+      error: 'AUTH_EXPIRED', 
+      message: 'Session refresh failed'
     });
   });
 
