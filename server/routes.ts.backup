@@ -744,17 +744,8 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     }
   });
 
-  // Special route to handle missing taskId case with trailing slash
-  app.put("/api/projects/:projectId/tasks/", (req, res) => {
-    return res.status(400).json({
-      success: false,
-      error: 'INVALID_PARAMETERS',
-      message: 'Task ID is required'
-    });
-  });
-
   // Update a specific task for a project
-  app.put("/api/projects/:projectId/tasks/:taskId", async (req, res, next) => {
+  app.put("/api/projects/:projectId/tasks/:taskId?", async (req, res) => {
     // Add flag to detect potential fallthrough
     let responseHandled = false;
     
@@ -813,15 +804,15 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       // Extract the UUID part from compound task IDs (for SuccessFactor tasks)
       // A compound ID looks like: 2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a
       // We need to extract just: 2f565bf9-70c7-5c41-93e7-c6c4cde32312
-      const taskIdClean = taskId.split('-').slice(0, 5).join('-');
+      const taskId = rawTaskId.split('-').slice(0, 5).join('-');
       
       // Add diagnostic logging for the task update operation
       const DEBUG_TASK_API = process.env.DEBUG_TASKS === 'true';
       
       if (DEBUG_TASK_API) {
-        console.log(`[DEBUG_TASK_API] PUT request to update task ${taskId} for project ${projectId}`);
-        console.log(`[DEBUG_TASK_API] taskId:`, taskId);
-        console.log(`[DEBUG_TASK_API] extracted UUID:`, taskIdClean);
+        console.log(`[DEBUG_TASK_API] PUT request to update task ${rawTaskId} for project ${projectId}`);
+        console.log(`[DEBUG_TASK_API] rawTaskId:`, rawTaskId);
+        console.log(`[DEBUG_TASK_API] extracted UUID:`, taskId);
         console.log(`[DEBUG_TASK_API] Task update payload:`, JSON.stringify(taskUpdate));
         
         // Special diagnostic for completion status updates
@@ -838,9 +829,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           const taskIds = allTasks.map(t => t.id);
           console.log(`[DEBUG_TASK_API] Task IDs: ${JSON.stringify(taskIds)}`);
           console.log(`[DEBUG_TASK_API] Comparison:`);
-          console.log(`[DEBUG_TASK_API]  - Raw request ID: ${taskId}`);
+          console.log(`[DEBUG_TASK_API]  - Raw request ID: ${rawTaskId}`);
           console.log(`[DEBUG_TASK_API]  - Extracted UUID: ${taskId}`);
-          console.log(`[DEBUG_TASK_API]  - ID match with raw: ${taskIds.includes(taskId)}`);
+          console.log(`[DEBUG_TASK_API]  - ID match with raw: ${taskIds.includes(rawTaskId)}`);
           console.log(`[DEBUG_TASK_API]  - ID match with extracted: ${taskIds.includes(taskId)}`);
         } catch (error) {
           console.error(`[DEBUG_TASK_API] Error fetching project tasks for diagnosis:`, error);
@@ -877,14 +868,14 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           // Try to find task using extracted UUID first, then fallback to raw ID if not found
           // This handles both simple UUID and compound ID formats
           originalTask = allTasks.find(task => task.id === taskId) || 
-                        allTasks.find(task => task.id === taskId);
+                        allTasks.find(task => task.id === rawTaskId);
           
           if (DEBUG_TASK_API) {
             console.log(`[DEBUG_TASK_API] Task lookup strategy results:`);
             console.log(`[DEBUG_TASK_API]  - First attempt using extracted UUID: ${taskId}`);
             console.log(`[DEBUG_TASK_API]  - Result: ${allTasks.find(task => task.id === taskId) ? 'FOUND' : 'NOT FOUND'}`);
-            console.log(`[DEBUG_TASK_API]  - Second attempt using raw ID: ${taskId}`);
-            console.log(`[DEBUG_TASK_API]  - Result: ${allTasks.find(task => task.id === taskId) ? 'FOUND' : 'NOT FOUND'}`);
+            console.log(`[DEBUG_TASK_API]  - Second attempt using raw ID: ${rawTaskId}`);
+            console.log(`[DEBUG_TASK_API]  - Result: ${allTasks.find(task => task.id === rawTaskId) ? 'FOUND' : 'NOT FOUND'}`);
             console.log(`[DEBUG_TASK_API]  - Final task found: ${originalTask ? 'YES' : 'NO'}`);
           }
           
@@ -991,11 +982,11 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
                   message: 'Failed to create success-factor task'
                 });
               }
-            } catch (error) {
-              console.error(`[DEBUG_TASK_API] Error creating success-factor task:`, error);
+            } catch (createError) {
+              console.error(`[DEBUG_TASK_API] Error creating success-factor task:`, createError);
               return res.status(500).json({
                 success: false,
-                message: `Error creating success-factor task: ${error.message}`
+                message: `Error creating success-factor task: ${createError.message}`
               });
             }
           }
@@ -1042,7 +1033,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           
           if (DEBUG_TASK_PERSISTENCE) {
             console.error(`[DEBUG_TASK_PERSISTENCE] Task update database operation failed:`);
-            console.error(`[DEBUG_TASK_PERSISTENCE]  - Raw Task ID: ${taskId}`);
+            console.error(`[DEBUG_TASK_PERSISTENCE]  - Raw Task ID: ${rawTaskId}`);
             console.error(`[DEBUG_TASK_PERSISTENCE]  - Extracted UUID: ${taskId}`);
             console.error(`[DEBUG_TASK_PERSISTENCE]  - Error: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
           }

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Task Endpoint JSON Response</title>
+  <script>
+    async function testTrailingSlashEndpoint() {
+      const projectId = 'test-project-id';
+      const resultDiv = document.getElementById('result');
+      
+      resultDiv.innerHTML = '<p>Testing PUT to /api/projects/' + projectId + '/tasks/ (missing taskId)...</p>';
+      
+      try {
+        const response = await fetch(`/api/projects/${projectId}/tasks/`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ completed: true })
+        });
+        
+        const contentType = response.headers.get('content-type') || '';
+        
+        resultDiv.innerHTML += `<p>Status code: ${response.status}</p>`;
+        resultDiv.innerHTML += `<p>Content-Type: ${contentType}</p>`;
+        
+        // Try to parse as JSON
+        let isJson = false;
+        let responseText = '';
+        
+        try {
+          responseText = await response.text();
+          const json = JSON.parse(responseText);
+          isJson = true;
+          resultDiv.innerHTML += `<p>Response parsed as JSON: ${JSON.stringify(json, null, 2)}</p>`;
+        } catch(e) {
+          resultDiv.innerHTML += `<p>Response is not valid JSON</p>`;
+          resultDiv.innerHTML += `<p>Response text (first 100 chars): ${responseText.substring(0, 100)}...</p>`;
+        }
+        
+        // Display final result
+        if (response.status === 400 && isJson) {
+          resultDiv.innerHTML += '<p class="success">✅ SUCCESS: Endpoint returns proper JSON 400 response for missing taskId</p>';
+        } else if (response.status === 200 && !isJson) {
+          resultDiv.innerHTML += '<p class="error">❌ FAILED: Endpoint returns HTML 200 response (SPA fallthrough) for missing taskId</p>';
+        } else {
+          resultDiv.innerHTML += `<p class="warning">⚠️ UNEXPECTED: Endpoint returns ${response.status} ${isJson ? 'JSON' : 'non-JSON'} response</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML += `<p class="error">❌ ERROR: ${error.message}</p>`;
+      }
+    }
+  </script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    h1 { color: #333; }
+    button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+    #result { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+    .warning { color: orange; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Task Endpoint JSON Response Test</h1>
+  <p>This page tests whether the PUT endpoint for tasks properly returns JSON responses when the taskId is missing.</p>
+  
+  <button onclick="testTrailingSlashEndpoint()">Test Missing TaskId Endpoint</button>
+  
+  <div id="result">
+    <p>Click the button to run the test...</p>
+  </div>
+</body>
+</html>

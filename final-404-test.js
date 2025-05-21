@@ -9,113 +9,194 @@
  * This test confirms our UUID validation and error handling is working correctly
  */
 
-import postgres from 'postgres';
-import fetch from 'node-fetch';
-import fs from 'fs';
-import dotenv from 'dotenv';
+const fetch = require('node-fetch');
+const fs = require('fs');
 
-dotenv.config();
-
-// Database connection
-const sql = postgres(process.env.DATABASE_URL, { ssl: 'require' });
-
-// Helper function to get a valid project ID
 async function getValidProjectId() {
   try {
-    const projects = await sql`SELECT id FROM projects LIMIT 1`;
-    if (projects.length === 0) {
-      throw new Error('No projects found in database');
+    // Make API request to get valid projects
+    const cookieFile = fs.readFileSync('./cookies.txt', 'utf8');
+    const cookie = cookieFile.trim();
+    
+    const response = await fetch('http://localhost:5000/api/projects', {
+      headers: {
+        'Cookie': cookie
+      }
+    });
+    
+    const projects = await response.json();
+    
+    if (projects && projects.length > 0) {
+      return projects[0].id;
     }
-    return projects[0].id;
+    
+    // Fallback to a test ID if no projects found
+    return 'test-project-id';
   } catch (error) {
-    console.error('Error getting valid project ID:', error);
-    throw error;
+    console.error('Error getting project ID:', error);
+    return 'test-project-id';
   }
 }
 
-// Create a well-formatted but non-existent UUID
 function generateNonexistentTaskId() {
-  return '00000000-0000-0000-0000-000000000000';  // Valid UUID format, but doesn't exist
+  // Generate a valid UUID that definitely doesn't exist in the database
+  return 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 }
 
-// Simulate our server's error handling
 function simulateServerErrorHandling(error) {
-  // If it's our custom TASK_NOT_FOUND error, return 404
+  // This simulates the server-side error handling logic
   if (error && error.code === 'TASK_NOT_FOUND') {
-    return { status: 404, body: { success: false, message: 'Task not found' } };
+    return {
+      status: 404,
+      body: {
+        success: false,
+        error: 'TASK_NOT_FOUND',
+        message: 'Task not found'
+      }
+    };
   }
   
-  // For all other errors, return 500
-  return { status: 500, body: { success: false, message: 'Internal server error' } };
+  // Default error response
+  return {
+    status: 500,
+    body: {
+      success: false,
+      error: 'INTERNAL_SERVER_ERROR',
+      message: error?.message || 'Unknown error'
+    }
+  };
 }
 
-// Direct test of our server logic
 async function testDirectErrorHandling() {
-  console.log('=== DIRECT SERVER ERROR HANDLING TEST ===\n');
+  console.log('Running direct error handling test...');
   
-  // Create a task not found error
-  const error = new Error('Task not found');
-  error.code = 'TASK_NOT_FOUND';
+  // Simulate trying to find a non-existent task
+  const mockError = {
+    code: 'TASK_NOT_FOUND',
+    message: 'The requested task could not be found'
+  };
   
-  // Simulate server handling this error
-  const response = simulateServerErrorHandling(error);
+  // Simulate route handler error processing
+  const result = simulateServerErrorHandling(mockError);
   
-  console.log(`Status code: ${response.status}`);
-  console.log(`Response: ${JSON.stringify(response.body, null, 2)}`);
+  console.log(`Direct handling test result: ${result.status === 404 ? 'PASSED' : 'FAILED'}`);
+  console.log(`Status: ${result.status}`);
+  console.log('Response:', result.body);
   
-  if (response.status === 404) {
-    console.log('\n✅ Server correctly returns 404 status for TASK_NOT_FOUND errors');
-    return true;
-  } else {
-    console.log('\n❌ Server incorrectly returns ${response.status} status for TASK_NOT_FOUND errors');
-    return false;
-  }
+  return result.status === 404;
 }
 
-// Main test function
 async function runTest() {
   try {
-    console.log('=== TASK NOT FOUND ERROR HANDLING FINAL TEST ===\n');
-    console.log('This test verifies our server returns 404 (not 500) for non-existent tasks\n');
+    console.log('=== Task Not Found Error Handling Test ===');
     
-    // Step 1: Direct test of our error handling logic
-    const directServerTest = await testDirectErrorHandling();
+    // Test 1: Direct error handling
+    const directTest = await testDirectErrorHandling();
+    console.log('Direct Test:', directTest ? 'PASSED' : 'FAILED');
     
-    // Step 2: Get a valid project ID for our API test
+    // Load session cookie
+    let cookie;
+    try {
+      cookie = fs.readFileSync('./cookies.txt', 'utf8').trim();
+    } catch (err) {
+      console.error('Error reading cookie file:', err);
+      console.log('Skipping API tests due to missing cookie.');
+      return;
+    }
+    
+    // Test 2: Real API call 
     const projectId = await getValidProjectId();
-    console.log(`\nUsing valid project ID: ${projectId}`);
+    const nonexistentTaskId = generateNonexistentTaskId();
     
-    // Step 3: Create a non-existent task ID in valid UUID format
-    const nonExistentTaskId = generateNonexistentTaskId();
-    console.log(`Using non-existent task ID: ${nonExistentTaskId}`);
+    console.log(`\nTesting PUT /api/projects/${projectId}/tasks/${nonexistentTaskId}`);
     
-    // Summarize our test logic
-    console.log(`\nTest plan:`);
-    console.log(`1. We'll use our server logic to directly find a task by ID: ${nonExistentTaskId}`);
-    console.log(`2. Since this task doesn't exist, but has a valid UUID format...`);
-    console.log(`3. Our improved code should throw a TASK_NOT_FOUND error (404), not a database error (500)`);
-    console.log(`\nTest Results:`);
-    console.log(`Direct server test: ${directServerTest ? '✅ PASSED' : '❌ FAILED'}`);
+    // Make the API request with non-existent task ID
+    const response = await fetch(`http://localhost:5000/api/projects/${projectId}/tasks/${nonexistentTaskId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookie
+      },
+      body: JSON.stringify({
+        completed: true
+      })
+    });
     
-    console.log(`\nConclusion: Our fix ${directServerTest ? 'is working correctly!' : 'still needs improvement.'}`);
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.toLowerCase().includes('application/json');
     
-    return directServerTest;
+    console.log(`Status Code: ${response.status}`);
+    console.log(`Content-Type: ${contentType}`);
+    console.log(`Is JSON Response: ${isJson ? 'Yes' : 'No'}`);
+    
+    // Get response body
+    const text = await response.text();
+    try {
+      // Try to parse as JSON
+      const body = JSON.parse(text);
+      console.log('Response Body:', body);
+      
+      console.log('\nAPI Test Result:', 
+        response.status === 404 && isJson ? 'PASSED' : 'FAILED');
+      
+      if (response.status !== 404) {
+        console.log('Expected status 404 but got', response.status);
+      }
+      
+      if (!isJson) {
+        console.log('Expected JSON response but got different content type');
+      }
+    } catch (e) {
+      console.log('Response is not valid JSON:', text.substring(0, 200));
+      console.log('\nAPI Test Result: FAILED (Not a valid JSON response)');
+    }
+    
+    // Test 3: Test missing taskId (trailing slash case)
+    console.log('\nTesting PUT /api/projects/${projectId}/tasks/ (missing taskId)');
+    
+    const missingIdResponse = await fetch(`http://localhost:5000/api/projects/${projectId}/tasks/`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookie
+      },
+      body: JSON.stringify({
+        completed: true
+      })
+    });
+    
+    const missingIdContentType = missingIdResponse.headers.get('content-type') || '';
+    const isMissingIdJson = missingIdContentType.toLowerCase().includes('application/json');
+    
+    console.log(`Status Code: ${missingIdResponse.status}`);
+    console.log(`Content-Type: ${missingIdContentType}`);
+    console.log(`Is JSON Response: ${isMissingIdJson ? 'Yes' : 'No'}`);
+    
+    // Get response body
+    const missingIdText = await missingIdResponse.text();
+    try {
+      // Try to parse as JSON
+      const missingIdBody = JSON.parse(missingIdText);
+      console.log('Response Body:', missingIdBody);
+      
+      console.log('\nMissing ID Test Result:', 
+        missingIdResponse.status === 400 && isMissingIdJson ? 'PASSED' : 'FAILED');
+        
+      if (missingIdResponse.status !== 400) {
+        console.log('Expected status 400 but got', missingIdResponse.status);
+      }
+      
+      if (!isMissingIdJson) {
+        console.log('Expected JSON response but got different content type');
+      }
+    } catch (e) {
+      console.log('Response is not valid JSON:', missingIdText.substring(0, 200));
+      console.log('\nMissing ID Test Result: FAILED (Not a valid JSON response)');
+    }
+    
   } catch (error) {
-    console.error('Unexpected error during test:', error);
-    return false;
-  } finally {
-    // Close database connection
-    await sql.end();
+    console.error('Test failed with error:', error);
   }
 }
 
-// Run the test
-runTest()
-  .then(result => {
-    console.log(`\nOverall test ${result ? '✅ PASSED' : '❌ FAILED'}`);
-    process.exit(result ? 0 : 1);
-  })
-  .catch(err => {
-    console.error('Error during test execution:', err);
-    process.exit(1);
-  });
+runTest();

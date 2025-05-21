@@ -1,0 +1,20 @@
+--- server/routes.ts
++++ server/routes.ts
+@@ -841,7 +841,7 @@
+-          console.log(`[DEBUG_TASK_API]  - Raw request ID: ${rawTaskId}`);
++          console.log(`[DEBUG_TASK_API]  - Raw request ID: ${taskId}`);
+@@ -843,7 +843,7 @@
+-          console.log(`[DEBUG_TASK_API]  - ID match with raw: ${taskIds.includes(rawTaskId)}`);
++          console.log(`[DEBUG_TASK_API]  - ID match with raw: ${taskIds.includes(taskId)}`);
+@@ -880,7 +880,7 @@
+-                       allTasks.find(task => task.id === rawTaskId);
++                       allTasks.find(task => task.id === taskId);
+@@ -886,7 +886,7 @@
+-            console.log(`[DEBUG_TASK_API]  - Second attempt using raw ID: ${rawTaskId}`);
++            console.log(`[DEBUG_TASK_API]  - Second attempt using raw ID: ${taskId}`);
+@@ -887,7 +887,7 @@
+-            console.log(`[DEBUG_TASK_API]  - Result: ${allTasks.find(task => task.id === rawTaskId) ? 'FOUND' : 'NOT FOUND'}`);
++            console.log(`[DEBUG_TASK_API]  - Result: ${allTasks.find(task => task.id === taskId) ? 'FOUND' : 'NOT FOUND'}`);
+@@ -1045,7 +1045,7 @@
+-            console.error(`[DEBUG_TASK_PERSISTENCE]  - Raw Task ID: ${rawTaskId}`);
++            console.error(`[DEBUG_TASK_PERSISTENCE]  - Raw Task ID: ${taskId}`);

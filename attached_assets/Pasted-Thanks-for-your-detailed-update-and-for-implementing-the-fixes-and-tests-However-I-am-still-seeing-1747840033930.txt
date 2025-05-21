@@ -1,0 +1,23 @@
+Thanks for your detailed update and for implementing the fixes and tests. However, I am still seeing a 200 response with content-type: text/html; charset=utf-8 on the PUT endpoint in live testing. This means that despite the changes and passing smoke/unit tests, there are still code paths where the response is not JSON (HTML is returned, likely the SPA fallback).
+Please respond to the following:
+
+1. No further React/DevTools UI or UX tests needed at this stage.
+2. Here’s what I still need from you (please number your responses):
+	1. The exact Browser Network row for a failing PUT (full URL, JSON body, status, response headers, response body).
+	2. The Server console output for that PUT (including [TASK_LOOKUP], [TASK_UPDATE_ERROR], and any fallthrough/final handler logs).
+	3. The Latest GET /api/projects/:projectId/tasks JSON output immediately after the PUT.
+	4. The full smoke-test JSON result (including pass/fail and test output, not just a summary).
+	5. The latest git commit hash and message related to this task update.
+	6. The SSR start logs (output from the app restart after the latest code change).
+3. If you propose any new code, please include a one-block copy-pasteable JS/TS code file with a summary at the top.
+
+Key Problem:
+Despite all recent fixes, a PUT with an invalid or missing task ID, or certain error scenarios, still returns HTML with status 200. This is not expected or acceptable. I need to see the precise path that causes this and the raw logs/output from both browser and server for the next failing request.
+If you need a failing request example, use a random or non-existent task ID.
+
+Please ensure:
+	• Every possible code path in the PUT handler returns a JSON response and a suitable HTTP status code.
+	• No error, invalid, or missing task/project scenario should ever return HTML or 200 with text/html.
+
+Next step:
+Please collect and paste the numbered artifacts above so I can help pinpoint the last gap. If your tests show “all green” but this is reproducible in the browser, please investigate any possible proxy, middleware, or catch-all route that may be affecting this path.

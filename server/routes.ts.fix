@@ -1,0 +1,26 @@
+// Temporary fix file - apply the minimal requested change to fix the PUT endpoint
+// This adds the optional parameter ? to the taskId route part AND adds the taskId === undefined check
+
+1. Change this line:
+app.put('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
+
+To this:
+app.put('/api/projects/:projectId/tasks/:taskId?', async (req, res) => {
+
+2. Right after this code:
+  if (!projectId) {
+    return res.status(400).json({
+      success: false,
+      error: 'INVALID_PARAMETERS',
+      message: 'Project ID is required'
+    });
+  }
+
+Add this code:
+  if (taskId === undefined) {
+    return res.status(400).json({
+      success: false,
+      error: 'INVALID_PARAMETERS',
+      message: 'Task ID is required'
+    });
+  }

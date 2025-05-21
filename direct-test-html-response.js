@@ -8,36 +8,27 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
 
-// Configuration 
-const PROJECT_ID = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
-const NON_EXISTENT_TASK_ID = '00000000-0000-0000-0000-000000000000-success-factor';
-
-// Helper to extract session cookie from browser
 function getCookieFromFile() {
   try {
-    return fs.readFileSync('current-session.txt', 'utf8').trim();
-  } catch (e) {
-    console.error('Failed to read session cookie:', e);
+    return fs.readFileSync('./cookies.txt', 'utf8').trim();
+  } catch (error) {
+    console.error('Error reading cookie file:', error);
     return '';
   }
 }
 
 async function testHtmlResponse() {
-  console.log('🧪 Testing HTML response for non-existent task...');
-  
-  // Prepare the request
   const cookie = getCookieFromFile();
-  const url = `http://localhost:5000/api/projects/${PROJECT_ID}/tasks/${NON_EXISTENT_TASK_ID}`;
+  if (!cookie) {
+    console.error('No cookie available. Please run extract-cookie.js first.');
+    return;
+  }
   
-  console.log(`📝 Request details:
-- URL: ${url}
-- Method: PUT
-- Body: {"completed":true}
-- Cookie: ${cookie ? cookie.substring(0, 20) + '...' : 'NONE'}`);
+  console.log('Testing PUT request to /api/projects/test-id/tasks/ (no taskId)...');
   
   try {
-    // First make the failing PUT request
-    const putResponse = await fetch(url, {
+    // Make request to the endpoint that previously returned HTML
+    const response = await fetch('http://localhost:5000/api/projects/test-id/tasks/', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -46,64 +37,29 @@ async function testHtmlResponse() {
       body: JSON.stringify({ completed: true })
     });
     
-    console.log(`\n📤 PUT Response:
-- Status: ${putResponse.status}
-- Content-Type: ${putResponse.headers.get('content-type')}
-`);
+    const contentType = response.headers.get('content-type') || '';
+    const text = await response.text();
     
-    // Get the raw text to check if it's HTML or JSON
-    const rawResponseText = await putResponse.text();
-    console.log('📄 Raw response body:');
-    console.log(rawResponseText);
+    console.log(`Status code: ${response.status}`);
+    console.log(`Content-Type: ${contentType}`);
+    console.log(`Response body (truncated): ${text.substring(0, 100)}...`);
     
-    // Try to parse as JSON to confirm if it's valid
-    try {
-      JSON.parse(rawResponseText);
-      console.log('\n✅ Response is valid JSON');
-    } catch (e) {
-      console.log('\n❌ Response is NOT valid JSON');
-      
-      // Check if it's HTML
-      if (rawResponseText.includes('<!DOCTYPE html>') || 
-          rawResponseText.includes('<html>') ||
-          rawResponseText.includes('<body>')) {
-        console.log('❌ Response appears to be HTML instead of JSON');
-      }
-    }
+    // Determine if the response is JSON or HTML
+    const isJson = contentType.toLowerCase().includes('application/json');
+    const isHtml = text.includes('<!DOCTYPE html>') || text.includes('<html>');
     
-    // Now fetch the tasks to see if our update persisted
-    console.log('\n🔍 Checking GET /api/projects/:projectId/tasks to verify task state...');
-    const getUrl = `http://localhost:5000/api/projects/${PROJECT_ID}/tasks`;
+    console.log('\nResponse analysis:');
+    console.log(`- JSON response: ${isJson ? 'YES' : 'NO'}`);
+    console.log(`- HTML response: ${isHtml ? 'YES' : 'NO'}`);
     
-    const getResponse = await fetch(getUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookie
-      }
-    });
-    
-    const tasks = await getResponse.json();
-    console.log(`\n📥 GET Response:
-- Status: ${getResponse.status}
-- Content-Type: ${getResponse.headers.get('content-type')}
-- Task count: ${tasks.length}
-`);
-    
-    // Check for our task
-    const updatedTask = tasks.find(t => t.id === NON_EXISTENT_TASK_ID);
-    if (updatedTask) {
-      console.log('✅ Task was found with updated state:', updatedTask);
+    if (isJson && !isHtml) {
+      console.log('\n✅ SUCCESS: Endpoint is returning JSON as expected!');
     } else {
-      console.log('❌ Task was NOT found in the project tasks');
-      console.log('📝 First few tasks in the response:');
-      console.log(JSON.stringify(tasks.slice(0, 2), null, 2));
+      console.log('\n❌ FAILURE: Endpoint is still returning HTML instead of JSON!');
     }
-    
   } catch (error) {
-    console.error('❌ Error during test:', error);
+    console.error('Error testing endpoint:', error);
   }
 }
 
-// Run the test
 testHtmlResponse();
