@@ -1,0 +1,89 @@
+' ### DESIGN Solution
+
+' 1. TLDR: Brief summary of the root cause and failing layer.
+' 2. Roadmap: Progress update and next milestone.
+' 3. Minimal code diff for this layer (one file group only; show in diff fencing).
+' 4. Outline a unit test for this change (js/ts fencing).
+' 5. Agent prompt to apply, commit, run, and show test and SSR logs (all in one).
+
+' -------------------------------------------------
+' 1. TLDR: Root Cause & Failing Layer
+' -------------------------------------------------
+' The server's updateTask logic is failing to find certain tasks for update
+' requests—especially when given clean or derived IDs—because none of the
+' lookup methods (sourceId, exact ID, or prefix) match what's stored in the DB.
+' This results in a "task not found" error and a 500 response, even though the
+' client expects a 404 or a successful update. The bug is in the server/database
+' lookup logic and error handling layer.
+
+' -------------------------------------------------
+' 2. Roadmap/Progress
+' -------------------------------------------------
+' • Server-side lookup logic and error logging refactored
+' • [TASK_LOOKUP] and [TASK_UPDATE_ERROR] logs present
+' • However, database task state may be out of sync with client/app
+' • Next: Add robust error handling so the API returns a 404 (not 500) when task is not found.
+'   (Milestone: "API returns 404 for missing tasks; error never bubbles as 500.")
+
+' -------------------------------------------------
+' 3. Minimal Diff for server/projectsDb.ts (Error Handling for Missing Task)
+' -------------------------------------------------
+diff
+--- a/server/projectsDb.ts
++++ b/server/projectsDb.ts
+@@ ... @@
+-    if (!validTaskId) {
+-      const noMatchError = new Error(`No task found with ID, sourceId, or ID prefix '${taskId}'`);
+-      console.error(`[TASK_UPDATE_ERROR] ${noMatchError.message}`);
+-      throw noMatchError;
+-    }
++    if (!validTaskId) {
++      const msg = `[TASK_UPDATE_ERROR] No task found with ID, sourceId, or ID prefix '${taskId}'`;
++      console.error(msg);
++      // Return a custom error that can be mapped to a 404 response in the API layer
++      const notFoundError = new Error(msg);
++      notFoundError.code = 'TASK_NOT_FOUND';
++      throw notFoundError;
++    }
+@@ ... @@
+-  } catch (error) {
+-    // Root level error handler - captures any errors not caught by inner handlers
+-    console.error(`[TASK_UPDATE_ERROR] Failed to update task ${taskId}:`, error);
+-    console.error(`[TASK_UPDATE_ERROR] Error type:`, error?.constructor?.name || typeof error);
+-    console.error(`[TASK_UPDATE_ERROR] Full context:`, {
+-      inputTaskId: taskId,
+-      matchedTaskId: validTaskId,
+-      lookupMethod,
+-      updateData: JSON.stringify(updates, null, 2)
+-    });
+-    throw error;
+-  }
++  } catch (error) {
++    // Root error handler: Map custom TASK_NOT_FOUND error to 404 HTTP error
++    console.error(`[TASK_UPDATE_ERROR] Failed to update task ${taskId}:`, error);
++    if (error && error.code === 'TASK_NOT_FOUND') {
++      throw Object.assign(error, { status: 404 });
++    }
++    throw error;
++  }
+
+' -------------------------------------------------
+' 4. Unit Test Outline for Not-Found Error Handling (JS/TS)
+' -------------------------------------------------
+js
+describe('updateTask error handling', () => {
+  it('should throw a 404 error when task does not exist', async () => {
+    const missingTaskId = 'nonexistent-uuid';
+    await expect(updateTask(missingTaskId, {completed: true}))
+      .rejects.toMatchObject({ code: 'TASK_NOT_FOUND', status: 404 });
+  });
+});
+
+' -------------------------------------------------
+' 5. Agent Prompt
+' -------------------------------------------------
+Please update the error handling in server/projectsDb.ts so that when a task is not found by sourceId, exact ID, or prefix match, the update function throws an error with code TASK_NOT_FOUND and ensures the API returns a 404 (not a 500).  
+Do not change UI or DB schema.  
+Update or add a unit test to check that missing tasks cause a 404 (see above outline).  
+Commit with message: "fix(server): return 404 if task not found during update".  
+Afterwards, run the smoke-test script and paste its JSON result, and if the app restarts, paste the SSR logs.

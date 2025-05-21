@@ -622,11 +622,14 @@ export const projectsDb = {
           }
         }
         
-        // STEP 4: If no matching task was found by any method, throw an error
+        // STEP 4: If no matching task was found by any method, throw an error with status code
         if (!validTaskId) {
-          const noMatchError = new Error(`Task with ID ${taskId} does not exist. Searched by sourceId, exact match, and UUID prefix match. Task may need to be created first.`);
-          console.error(`[TASK_UPDATE_ERROR] ${noMatchError.message}`);
-          throw noMatchError;
+          const msg = `Task with ID ${taskId} does not exist. Searched by sourceId, exact match, and UUID prefix match. Task may need to be created first.`;
+          console.error(`[TASK_UPDATE_ERROR] ${msg}`);
+          // Return a custom error that can be mapped to a 404 response in the API layer
+          const notFoundError = new Error(msg);
+          notFoundError.code = 'TASK_NOT_FOUND';
+          throw notFoundError;
         }
         
       } catch (err) {
@@ -740,6 +743,11 @@ export const projectsDb = {
       console.error(`[TASK_UPDATE_ERROR] Error type:`, error?.constructor?.name || typeof error);
       console.error(`[TASK_UPDATE_ERROR] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available'); 
       console.error(`[TASK_UPDATE_ERROR] Input data:`, JSON.stringify(data, null, 2));
+      
+      // Map custom TASK_NOT_FOUND error to 404 HTTP error
+      if (error && error.code === 'TASK_NOT_FOUND') {
+        throw Object.assign(error, { status: 404 });
+      }
       
       // Re-throw with enhanced information for API error handling
       if (error instanceof Error) {
