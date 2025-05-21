@@ -756,6 +756,23 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       const { projectId, taskId: rawTaskId } = req.params;
       const taskUpdate = req.body;
       
+      // Validate parameters early to ensure proper JSON responses
+      if (!projectId) {
+        return res.status(400).json({
+          success: false,
+          error: 'INVALID_PARAMETERS',
+          message: 'Project ID is required'
+        });
+      }
+      
+      if (!rawTaskId) {
+        return res.status(400).json({
+          success: false,
+          error: 'INVALID_PARAMETERS',
+          message: 'Task ID is required'
+        });
+      }
+      
       // Extract the UUID part from compound task IDs (for SuccessFactor tasks)
       // A compound ID looks like: 2f565bf9-70c7-5c41-93e7-c6c4cde32312-dfd5e65a
       // We need to extract just: 2f565bf9-70c7-5c41-93e7-c6c4cde32312
