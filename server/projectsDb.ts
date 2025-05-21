@@ -844,19 +844,42 @@ export const projectsDb = {
               console.error(`[TASK_UPDATE_ERROR] Stack trace:`, verifyError instanceof Error ? verifyError.stack : 'No stack trace available');
             }
             
-            // Pass the original taskId to maintain client-side consistency
+            // For canonical tasks, preserve the sourceId as the returned ID
+            // This ensures persistence of task completion for success factor tasks
             try {
-              const converted = convertDbTaskToProjectTask(updatedTask, taskId);
-              
-              // Add requested [TASK_LOOKUP] debug output with request/matched ID details
-              console.log('[TASK_LOOKUP]', {
-                rawId: taskId,
-                matchedId: updatedTask.id,
-                matchedVia: lookupMethod
-              });
-              
-              console.log('[TASK_UPDATE] Converted task:', JSON.stringify(converted, null, 2));
-              return converted;
+              // Check if this is a canonical task that needs sourceId preservation
+              if (updatedTask.sourceId && 
+                 (updatedTask.origin === 'success-factor' || updatedTask.origin === 'factor') && 
+                 !updatedTask.id.startsWith('custom-')) {
+                console.log(`[TASK_UPDATE] Preserving sourceId for canonical task: ${updatedTask.sourceId}`);
+                // Use sourceId as the returned ID for canonical tasks
+                const converted = convertDbTaskToProjectTask(updatedTask, updatedTask.sourceId);
+                
+                // Add requested [TASK_LOOKUP] debug output with request/matched ID details
+                console.log('[TASK_LOOKUP]', {
+                  rawId: taskId,
+                  matchedId: updatedTask.id,
+                  matchedVia: lookupMethod,
+                  canonical: true,
+                  preservedId: updatedTask.sourceId
+                });
+                
+                console.log('[TASK_UPDATE] Converted canonical task:', JSON.stringify(converted, null, 2));
+                return converted;
+              } else {
+                // For non-canonical tasks, use the standard behavior
+                const converted = convertDbTaskToProjectTask(updatedTask, taskId);
+                
+                // Add requested [TASK_LOOKUP] debug output with request/matched ID details
+                console.log('[TASK_LOOKUP]', {
+                  rawId: taskId,
+                  matchedId: updatedTask.id,
+                  matchedVia: lookupMethod
+                });
+                
+                console.log('[TASK_UPDATE] Converted task:', JSON.stringify(converted, null, 2));
+                return converted;
+              }
             } catch (conversionError) {
               console.error(`[TASK_UPDATE_ERROR] Error converting task ${validTaskId} after update:`, conversionError);
               console.error(`[TASK_UPDATE_ERROR] Stack trace:`, conversionError instanceof Error ? conversionError.stack : 'No stack trace available');
