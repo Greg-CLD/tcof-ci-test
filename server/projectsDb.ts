@@ -678,12 +678,22 @@ export const projectsDb = {
               taskId                      // match sourceId to primary id
             ];
             
-            const insertRes = await db.execute(sql, values);
-            // Get the ID from the newly inserted task
-            if (insertRes && insertRes.length > 0) {
-              validTaskId = insertRes[0].id;
-            } else {
-              // Fall back to the taskId we provided
+            // Execute SQL and handle response
+            try {
+              const result = await db.execute(sql, values);
+              
+              // For Neon database, the result comes back in a different format
+              // than the typical SQL result, so we need to handle it differently
+              if (result && Array.isArray(result.rows) && result.rows.length > 0) {
+                validTaskId = result.rows[0].id;
+              } else {
+                // Fall back to the provided taskId if we can't get it from the result
+                validTaskId = taskId;
+              }
+              console.log(`[TASK_LOOKUP] Successfully upserted task: ${validTaskId}`);
+            } catch (e) {
+              console.error('[TASK_LOOKUP] Error upserting task:', e);
+              // Still use the taskId we know
               validTaskId = taskId;
             }
             lookupMethod = 'upsert';
