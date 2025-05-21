@@ -901,22 +901,49 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             console.log(`[DEBUG_TASK_API] PUT request: Adding success-factor origin to task update`);
           }
           
-          // For success-factor tasks that don't exist, we need to add projectId and sourceId
-          // to ensure proper upsert (create if not found)
+          // For success-factor tasks that don't exist, explicitly create them instead of updating
           if ((taskUpdate.origin === 'success-factor' || taskUpdate.origin === 'factor') && !originalTask) {
-            taskUpdate.projectId = projectId;
+            console.log(`[DEBUG_TASK_API] Success-factor task not found, creating instead of updating`);
+            console.log(`[DEBUG_TASK_API] Task ID: ${taskId}, Project ID: ${projectId}`);
             
-            // For non-existent success-factor tasks, we need to set the ID and sourceId
-            // to ensure the task is created with the correct identifiers
-            taskUpdate.id = taskId;
-            taskUpdate.sourceId = taskId;
-            
-            // Set default values for required fields if not provided
-            if (!taskUpdate.stage) taskUpdate.stage = 'identification';
-            if (taskUpdate.completed === undefined) taskUpdate.completed = false;
-            
-            console.log(`[DEBUG_TASK_API] Adding projectId for success-factor task upsert: ${projectId}`);
-            console.log(`[DEBUG_TASK_API] Setting ID and sourceId for success-factor task upsert: ${taskId}`);
+            try {
+              // Create a new task with the provided data
+              const newTaskData = {
+                id: taskId,
+                projectId: projectId,
+                sourceId: taskId,
+                text: taskUpdate.text || '',
+                origin: taskUpdate.origin,
+                stage: taskUpdate.stage || 'identification',
+                completed: taskUpdate.completed !== undefined ? taskUpdate.completed : false
+              };
+              
+              console.log(`[DEBUG_TASK_API] Creating new success-factor task with data:`, JSON.stringify(newTaskData));
+              
+              const createdTask = await projectsDb.createTask(newTaskData);
+              
+              if (createdTask) {
+                console.log(`[DEBUG_TASK_API] Successfully created success-factor task: ${taskId}`);
+                // Return the created task instead of attempting an update
+                return res.status(201).json({
+                  success: true,
+                  task: createdTask,
+                  message: 'Success-factor task created successfully'
+                });
+              } else {
+                console.error(`[DEBUG_TASK_API] Failed to create success-factor task: ${taskId}`);
+                return res.status(500).json({
+                  success: false,
+                  message: 'Failed to create success-factor task'
+                });
+              }
+            } catch (createError) {
+              console.error(`[DEBUG_TASK_API] Error creating success-factor task:`, createError);
+              return res.status(500).json({
+                success: false,
+                message: `Error creating success-factor task: ${createError.message}`
+              });
+            }
           }
           
           // If we found the task in our previous lookup, use its actual stored ID
