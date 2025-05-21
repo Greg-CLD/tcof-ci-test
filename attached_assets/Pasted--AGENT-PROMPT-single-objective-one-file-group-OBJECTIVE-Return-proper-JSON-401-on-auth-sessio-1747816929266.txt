@@ -1,0 +1,61 @@
+' AGENT PROMPT – single objective, one file-group
+OBJECTIVE: **Return proper JSON 401 on auth/session refresh failure (auth middleware group).**
+
+STEPS:
+1. Open *server/middleware/authSession.ts* (or equivalent).
+2. Patch so that any exception in `refreshSession()` immediately:
+   • logs `[AUTH_ERROR] …`
+   • responds `res.status(401).json({ success:false, error:'AUTH_EXPIRED', message:'Session refresh failed' })`
+   • **does NOT** fall through to Vite or `next(err)`.
+3. Add minimal unit-test *tests/unit/authExpired.test.ts* (see outline below) to prove 401 JSON.
+4. Commit with message **“fix(auth): return JSON 401 on session refresh failure”**.
+5. Run the existing smoke-test script (npm test or node smoke-test*) and paste the JSON result.
+6. If the app restarts, paste the SSR logs that show the server boot.
+
+```diff
+diff --git a/server/middleware/authSession.ts b/server/middleware/authSession.ts
+@@
+-  try {
+-     const user = await refreshSession(req);
+-     req.user = user;
+-     next();
+-  } catch (err) {
+-     // ❌ currently falls through to Vite dev-server -> HTML
+-     next(err);
+-  }
++  try {
++     const user = await refreshSession(req);
++     req.user = user;
++     return next();
++  } catch (err) {
++     console.error('[AUTH_ERROR]', err);
++     return res
++        .status(401)
++        .json({ success: false, error: 'AUTH_EXPIRED', message: 'Session refresh failed' });
++  }
+
+
+
+// tests/unit/authExpired.test.ts
+import request from 'supertest';
+import app from '../../server/app';
+
+describe('auth middleware', () => {
+  it('returns 401 JSON when session refresh fails', async () => {
+    // mock refreshSession to throw
+    jest.spyOn(require('../../server/middleware/refresh'), 'refreshSession')
+        .mockRejectedValue(new Error('token expired'));
+
+    const res = await request(app)
+      .put('/api/projects/p1/tasks/uuid')
+      .send({ completed: true });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual(
+      expect.objectContaining({ success: false, error: 'AUTH_EXPIRED' })
+    );
+  });
+});
+
+Run smoke-test script and paste its JSON result.
+
