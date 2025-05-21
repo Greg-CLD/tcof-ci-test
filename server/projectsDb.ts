@@ -659,19 +659,33 @@ export const projectsDb = {
           // 🆕 auto-create ONLY for Success-Factor (or factor) updates
           if (data.origin === 'success-factor' || data.origin === 'factor') {
             console.log('[TASK_LOOKUP] Upserting missing Success-Factor task', taskId);
-            const insertRes = await db
-              .insert(projectTasksTable)
-              .values({
-                id: taskId,                 // use clean UUID as primary id 
-                project_id: data.projectId,
-                text: data.text || '',
-                stage: data.stage ?? 'identification',
-                completed: false,
-                origin: data.origin,
-                source_id: taskId            // match sourceId to primary id
-              })
-              .returning();
-            validTaskId = insertRes[0].id;
+            // Using direct SQL for insertion with custom ID to avoid schema/field mapping issues
+            const sql = `
+              INSERT INTO project_tasks 
+              (id, project_id, text, stage, completed, origin, source_id) 
+              VALUES 
+              ($1, $2, $3, $4, $5, $6, $7) 
+              RETURNING *
+            `;
+            
+            const values = [
+              taskId,                     // use clean UUID as primary id
+              data.projectId,
+              data.text || '',
+              data.stage || 'identification',
+              false,                      // default to not completed
+              data.origin,
+              taskId                      // match sourceId to primary id
+            ];
+            
+            const insertRes = await db.execute(sql, values);
+            // Get the ID from the newly inserted task
+            if (insertRes && insertRes.length > 0) {
+              validTaskId = insertRes[0].id;
+            } else {
+              // Fall back to the taskId we provided
+              validTaskId = taskId;
+            }
             lookupMethod = 'upsert';
           } else {
             const err = new Error(`Task with ID ${taskId} does not exist`);
