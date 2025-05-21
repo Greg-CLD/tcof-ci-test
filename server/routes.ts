@@ -1008,11 +1008,14 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             });
           }
           
-          // Check if this is a task not found error
+          // Check if this is a task not found error or an invalid UUID format error
           if (dbError instanceof Error && 
               (dbError.message.includes('does not exist') || 
                dbError.message.includes('not found') ||
-               (dbError as any)?.code === 'TASK_NOT_FOUND')) {
+               dbError.message.includes('invalid input syntax for type uuid') ||
+               dbError.message.includes('Task with ID') ||
+               (dbError as any)?.code === 'TASK_NOT_FOUND' ||
+               (dbError as any)?.code === '22P02')) {
             return res.status(404).json({
               success: false,
               error: 'TASK_NOT_FOUND',
