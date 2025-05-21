@@ -1008,6 +1008,19 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             });
           }
           
+          // Check if this is a task not found error
+          if (dbError instanceof Error && 
+              (dbError.message.includes('does not exist') || 
+               dbError.message.includes('not found') ||
+               (dbError as any)?.code === 'TASK_NOT_FOUND')) {
+            return res.status(404).json({
+              success: false,
+              error: 'TASK_NOT_FOUND',
+              message: `Task ${taskId} not found or does not exist`
+            });
+          }
+          
+          // Otherwise, it's a different type of error
           return res.status(500).json({
             success: false,
             error: 'TASK_UPDATE_ERROR',
@@ -1099,8 +1112,13 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             error: err.message
           });
         }
-        // Re-throw any other errors to be caught by the outer catch
-        throw err; 
+        
+        // Always return JSON response instead of re-throwing
+        return res.status(500).json({
+          success: false,
+          error: 'TASK_UPDATE_ERROR',
+          message: err instanceof Error ? err.message : String(err)
+        });
       }
     } catch (error) {
       console.error('Error updating project task:', error);
