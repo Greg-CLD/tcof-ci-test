@@ -1,0 +1,59 @@
+' OBJECTIVE: Ensure that PUT to /api/projects/:projectId/tasks/:taskId for missing "success-factor" tasks triggers upsert (create if not found) and returns 200, not 500.
+
+' FILE GROUP: server/projectsDb.ts (and routes.ts if route error handling is involved)
+
+' Minimal code diff for server/projectsDb.ts (and possibly routes.ts):
+' (The key: if lookup fails AND request is for origin "success-factor", create a stub task with correct defaults)
+
+diff
+--- a/server/projectsDb.ts
++++ b/server/projectsDb.ts
+@@ ... @@
+-    // If no task found, throw error
+-    if (!validTaskId) {
+-      const noMatchError = new Error(`No task found with ID, sourceId, or ID prefix '${taskId}'`);
+-      noMatchError.code = 'TASK_NOT_FOUND';
+-      throw noMatchError;
+-    }
++    // If no task found, but updates.origin === 'success-factor', upsert stub
++    if (!validTaskId && updates?.origin === 'success-factor') {
++      console.log('[TASK_LOOKUP] No task found, upserting stub for success-factor:', taskId);
++      const stubTask = {
++        id: taskId,
++        sourceId: taskId,
++        stage: updates.stage || 'identification',
++        completed: !!updates.completed,
++        text: updates.text || '',
++        status: updates.status || '',
++        origin: 'success-factor',
++        updated_at: new Date().toISOString()
++      };
++      const [created] = await db.insert(projectTasks).values(stubTask).returning();
++      return created;
++    }
++    if (!validTaskId) {
++      const noMatchError = new Error(`No task found with ID, sourceId, or ID prefix '${taskId}'`);
++      noMatchError.code = 'TASK_NOT_FOUND';
++      throw noMatchError;
++    }
+
+' Outline of matching unit test (in tests/unit/taskUpsertSuccessFactor.test.ts):
+
+ts
+import { updateTask } from '../server/projectsDb';
+test('Upserts missing success-factor task', async () => {
+  const newId = 'some-uuid-for-missing-task';
+  const updates = { origin: 'success-factor', completed: true, text: 'Test', stage: 'identification', status: 'Done' };
+  const result = await updateTask(newId, updates);
+  expect(result).toBeDefined();
+  expect(result.id).toBe(newId);
+  expect(result.origin).toBe('success-factor');
+  expect(result.completed).toBe(true);
+});
+
+' === INSTRUCTIONS TO AGENT ===
+1. Apply the minimal diff above to server/projectsDb.ts (and update routes.ts only if API error handling must change for upsert).
+2. Add the provided unit test to tests/unit/taskUpsertSuccessFactor.test.ts.
+3. Commit as: fix(server): enable upsert for missing success-factor tasks
+4. Run the full smoke-test script for browser-based PUT of a missing success-factor task, and paste the JSON results.
+5. If the app restarts, paste the SSR logs as well.

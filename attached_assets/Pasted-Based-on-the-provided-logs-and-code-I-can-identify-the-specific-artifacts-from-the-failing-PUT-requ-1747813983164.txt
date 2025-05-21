@@ -1,0 +1,44 @@
+Based on the provided logs and code, I can identify the specific artifacts from the failing PUT request for a Success Factor task:
+
+Browser Network Panel Row (from console logs):
+PUT /api/projects/bc55c1a2-0cdf-4108-aa9e-44b44baea3b8/tasks/2f565bf9-70c7-5c41-93e7-c6c4cde32312
+Request Body: {"completed": true, "status": "Done", "stage": "identification"}
+Status: 500
+Response: Task not found (TASK_NOT_FOUND)
+Server Console Logs for this request (from workflow output):
+[TASK_LOOKUP] Looking up task with ID: 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[TASK_LOOKUP] Attempting sourceId lookup for 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[TASK_LOOKUP] No task found with sourceId 2f565bf9-70c7-5c41-93e7-c6c4cde32312, trying exact match
+[TASK_LOOKUP] Attempting exact ID lookup for 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[TASK_LOOKUP] No task found with exact ID 2f565bf9-70c7-5c41-93e7-c6c4cde32312, trying prefix match
+[TASK_LOOKUP] Attempting prefix match for 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[TASK_LOOKUP] No task found with ID prefix 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[TASK_UPDATE_ERROR] Task with ID 2f565bf9-70c7-5c41-93e7-c6c4cde32312 does not exist
+GET Tasks Response after the failing PUT (from debug-output/get-tasks-after.json):
+{
+  "id": "456db3d9-0f93-4dae-8ccf-04f0530d6064",
+  "text": "Test ",
+  "completed": true,
+  "updated_at": "2025-05-20T19:45:32.678Z"
+}
+From the smoke test results (debug-output/smoke-test-results.json):
+{
+  "tests": [
+    {
+      "name": "Exact match with compound ID",
+      "taskId": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1/success-factor/identification/1",
+      "expectedMatch": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1/success-factor/identification/1", 
+      "cleanedId": "2f565bf9-70c7-5c41-93e7-c6c44fb747d1",
+      "passed": true
+    }
+  ],
+  "passCount": 3,
+  "totalTests": 3,
+  "passRate": "100",
+  "allPassed": true
+}
+The logs show that the task lookup is failing because the server isn't properly handling compound IDs for Success Factor tasks. Here's the proposed fix for projectsDb.ts:
+
+server/projectsDb.ts
+Fix Success Factor task lookup logic
+This change ensures that Success Factor tasks with compound IDs are properly handled during both creation and updates.
