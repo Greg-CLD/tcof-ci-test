@@ -7,8 +7,9 @@
  * 3. The task can be retrieved after creation
  */
 
-const fetch = require('node-fetch');
-const { v4: uuidv4 } = require('uuid');
+import fetch from 'node-fetch';
+import { v4 as uuidv4 } from 'uuid';
+import postgres from 'postgres';
 
 // Helper function for API requests
 async function apiRequest(method, endpoint, body = null) {
