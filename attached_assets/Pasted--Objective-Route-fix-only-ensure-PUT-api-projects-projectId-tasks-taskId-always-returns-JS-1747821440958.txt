@@ -1,0 +1,70 @@
+' Objective: Route fix only – ensure PUT /api/projects/:projectId/tasks/:taskId
+' always returns JSON and never falls through to SPA fallback.
+' File group: server/routes.ts
+' ---
+' 1. Apply the minimal diff below.
+' 2. Commit with message "fix(api): always return JSON for task update".
+' 3. Run the smoke-test script suite and paste the full JSON result.
+' 4. If the server restarts, wait and paste the SSR logs.
+' 5. Paste the Network response JSON for PUT /tasks (should now be { success:true, ... }).
+
+'--- diff
+diff --git a/server/routes.ts b/server/routes.ts
+@@
+   app.put('/api/projects/:projectId/tasks/:taskId', async (req, res, next) => {
+     try {
+       const { projectId, taskId } = req.params;
+       const updates = req.body;
+-      const updatedTask = await projectsDb.updateTask(taskId, updates);
+-      next();               // ← falls through to index.html
++      const updatedTask = await projectsDb.updateTask(taskId, updates);
++
++      if (!updatedTask) {
++        return res.status(404).json({
++          success: false,
++          error: 'TASK_NOT_FOUND',
++          message: `Task ${taskId} not found`
++        });
++      }
++
++      return res.status(200).json({
++        success: true,
++        task: updatedTask
++      });                    // ← STOP here, do not call next()
+     } catch (err) {
+       console.error('[TASK_UPDATE_ERROR]', err);
+-      next(err);
++      return res.status(500).json({
++        success: false,
++        error: 'TASK_UPDATE_ERROR',
++        message: err instanceof Error ? err.message : String(err)
++      });
+     }
+   });
+'--- end diff
+
+'--- unit-test outline (Vitest, TypeScript)
+import request from 'supertest';
+import app from '../../server/app';
+
+describe('PUT /tasks returns JSON', () => {
+  it('updates task and responds with JSON payload', async () => {
+    const projectId = 'test-project';
+    const taskId    = 'existing-task-id';
+    const res = await request(app)
+      .put(`/api/projects/${projectId}/tasks/${taskId}`)
+      .send({ completed: true });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        task: expect.objectContaining({ id: taskId, completed: true })
+      })
+    );
+  });
+});
+'--- end test
+
+Run smoke-test script and paste its JSON result.
