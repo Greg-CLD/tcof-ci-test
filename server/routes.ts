@@ -753,13 +753,24 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     const originalSend = res.send;
     const originalJson = res.json;
     
+    // Override send to always use JSON for this endpoint
     res.send = function(...args) {
       responseHandled = true;
+      // Set content type to application/json explicitly
+      res.setHeader('Content-Type', 'application/json');
+      
+      // If the argument isn't already a string, convert it to JSON
+      if (args.length > 0 && typeof args[0] !== 'string') {
+        args[0] = JSON.stringify(args[0]);
+      }
+      
       return originalSend.apply(res, args);
     };
     
     res.json = function(...args) {
       responseHandled = true;
+      // Set content type to application/json explicitly
+      res.setHeader('Content-Type', 'application/json');
       return originalJson.apply(res, args);
     };
     
