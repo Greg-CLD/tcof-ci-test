@@ -614,8 +614,16 @@ export const projectsDb = {
             // Basic validation for prefix - should be at least a partial UUID format
             // For a prefix match, we'll accept shorter segments of a UUID
             const isValidUuidPrefix = (id: string): boolean => {
-              // Accept at least the first segment (8 chars) or partial segments with hyphens
-              return /^[0-9a-f]{1,8}(-[0-9a-f]{1,4}){0,4}$/i.test(id);
+              // A valid UUID prefix could be a complete UUID or partial UUID with proper format
+              // First, check if it's a complete UUID
+              if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+                return true;
+              }
+              
+              // Check if it's a partial UUID with proper hyphens and hex format
+              // The pattern requires at least the first segment to be full length (8 chars)
+              // and subsequent segments must be properly formatted with hyphens
+              return /^[0-9a-f]{8}(-[0-9a-f]{1,4}){0,4}$/i.test(id);
             };
             
             if (isValidUuidPrefix(taskId)) {
