@@ -1,0 +1,91 @@
+' OBJECTIVE (UI layer only):
+' Add resilient auth-refresh & retry logic to the fetch helper so a 401/HTML response
+' from the API is handled (refresh session -> retry once), preventing false 200s and
+' ensuring Success-Factor task updates actually persist.
+
+' ------------------------------------------------------------------
+' Minimal code diff (client/src/utils/apiRequest.ts)
+' ------------------------------------------------------------------
+diff --git a/client/src/utils/apiRequest.ts b/client/src/utils/apiRequest.ts
+@@
+ export async function apiRequest<T>(method: string, url: string, body?: unknown): Promise<T> {
+-  const res = await fetch(url, {
+-    method,
+-    credentials: 'include',
+-    headers: { 'Content-Type': 'application/json' },
+-    body: body ? JSON.stringify(body) : undefined,
+-  });
+-
+-  return res.json();
++  async function doFetch(): Promise<Response> {
++    return fetch(url, {
++      method,
++      credentials: 'include',
++      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
++      body: body ? JSON.stringify(body) : undefined,
++    });
++  }
++
++  let res = await doFetch();
++
++  // If the session expired, try to refresh silently once, then retry the original call.
++  if (res.status === 401) {
++    const refreshOK = await tryRefreshSession(); // <- already exists in auth-hook
++    if (refreshOK) res = await doFetch();
++  }
++
++  // Any non-2xx after retry is an error.
++  if (!res.ok) {
++    const text = await res.text();
++    throw new Error(`[API] ${method} ${url} failed ${res.status}: ${text.slice(0,200)}`);
++  }
++
++  // Guard against HTML fallback accidentally being served with 200
++  const ct = res.headers.get('content-type') ?? '';
++  if (!ct.includes('application/json')) {
++    throw new Error(`[API] Expected JSON but got ${ct}`);
++  }
++
++  return res.json() as Promise<T>;
+ }
+
+' ------------------------------------------------------------------
+' Unit-test outline (Vitest) – tests/utils/apiRequest.test.ts
+' ------------------------------------------------------------------
+```ts
+import { vi, expect, test } from 'vitest';
+import { apiRequest } from '../../src/utils/apiRequest';
+import { tryRefreshSession } from '../../src/auth/refresh';
+
+test('retries once on 401 then succeeds', async () => {
+  // 1st call -> 401
+  global.fetch = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'AUTH_EXPIRED' }), { status: 401, headers: { 'Content-Type': 'application/json' } }))
+    // retry -> 200
+    .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  vi.spyOn(require('../../src/auth/refresh'), 'tryRefreshSession').mockResolvedValue(true);
+
+  const data = await apiRequest('PUT', '/any');
+  expect(data).toEqual({ ok: true });
+  expect(tryRefreshSession).toHaveBeenCalledTimes(1);
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+});
+
+test('throws after failed refresh', async () => {
+  global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
+  vi.spyOn(require('../../src/auth/refresh'), 'tryRefreshSession').mockResolvedValue(false);
+
+  await expect(apiRequest('GET', '/any')).rejects.toThrow(/401/);
+});
+
+' ------------------------------------------------------------------
+' Next steps for Agent
+' ------------------------------------------------------------------
+' 1. Apply the diff above to client/src/utils/apiRequest.ts
+' 2. Add the new test file tests/utils/apiRequest.test.ts
+' 3. Commit with message: "fix(ui): retry on 401 and validate JSON responses"
+' 4. Run the smoke-test script (npm run test or equivalent) and paste its JSON result.
+' 5. If the dev-server restarts, wait for SSR logs and paste them too.
+' IMPORTANT: one objective, one file group (UI), follow the steps,
+' and always finish with: “Run smoke-test script and paste its JSON result.”
+
