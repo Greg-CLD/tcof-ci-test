@@ -1,0 +1,50 @@
+' OBJECTIVE: Fix canonical task completion persistence bug for success factor tasks in server/projectsDb.ts
+' FILE GROUP: server/projectsDb.ts (do not edit UI or DB schema in this run)
+' ACTIONS: 
+'   - Show minimal code diff for the server layer.
+'   - Run & paste results from the smoke-test (tests/unit/task-completion-persistence.test.js).
+'   - If app restarts, paste SSR logs.
+' INSTRUCTIONS: 
+'   - Always use one objective and one file group per run.
+'   - Apply only the minimal code change required for this fix.
+
+' --- Minimal code diff below ---
+```diff
+// server/projectsDb.ts
+
+- // Old task update logic:
+- const task = tasks.find(t => t.id === taskId);
+- if (!task) return { success: false };
+
++ // Improved: Try by both id and sourceId to support canonical tasks.
++ let task = tasks.find(t => t.id === taskId);
++ if (!task) {
++   task = tasks.find(t => t.sourceId === taskId);
++ }
++ if (!task) return { success: false };
+
+- // Only updated fields, but sometimes misses sourceId linkage
+- Object.assign(task, updates);
+
++ // Update task and ensure sourceId is preserved for canonical tasks
++ Object.assign(task, updates);
++ if (task.sourceId && !task.id.startsWith('custom-')) {
++   task.id = task.sourceId;
++ }
+' --- Matching Unit Test (place in tests/unit/task-completion-persistence.test.js) ---
+
+it('should persist completed status for canonical success factor tasks after refresh', async () => {
+  // Given a project with canonical (success factor) tasks
+  const { projectId, canonicalTaskId } = await setupProjectWithCanonicalTask();
+  // When marking the task as complete
+  await api.markTaskComplete(projectId, canonicalTaskId, true);
+  // And fetching tasks after "refresh"
+  const tasks = await api.fetchTasks(projectId);
+  // Then the task should remain completed
+  expect(tasks.find(t => t.id === canonicalTaskId).completed).toBe(true);
+});
+--- END ---
+
+' After applying the code diff:
+' - Run the persistence smoke test: DEBUG=true DEBUG_TASK_COMPLETION=true DEBUG_TASK_PERSISTENCE=true node tests/unit/task-completion-persistence.test.js
+' - Paste the results below (and SSR logs if app restarts)

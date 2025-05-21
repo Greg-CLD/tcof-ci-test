@@ -102,3 +102,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "DEBUG=true DEBUG_TASKS=true DEBUG_TASK_API=true DEBUG_TASK_COMPLETION=true DEBUG_TASK_PERSISTENCE=true DEBUG_TASK_STATE=true npm run dev"
+
+[[workflows.workflow]]
+name = "Test Task Persistence"
+author = 42110622
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "DEBUG=true DEBUG_TASK_COMPLETION=true DEBUG_TASK_PERSISTENCE=true node tests/unit/task-completion-persistence.test.js"
