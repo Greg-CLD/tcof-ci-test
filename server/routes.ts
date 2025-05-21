@@ -901,11 +901,22 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             console.log(`[DEBUG_TASK_API] PUT request: Adding success-factor origin to task update`);
           }
           
-          // For success-factor tasks that don't exist, we need to add projectId 
+          // For success-factor tasks that don't exist, we need to add projectId and sourceId
           // to ensure proper upsert (create if not found)
           if ((taskUpdate.origin === 'success-factor' || taskUpdate.origin === 'factor') && !originalTask) {
             taskUpdate.projectId = projectId;
+            
+            // For non-existent success-factor tasks, we need to set the ID and sourceId
+            // to ensure the task is created with the correct identifiers
+            taskUpdate.id = taskId;
+            taskUpdate.sourceId = taskId;
+            
+            // Set default values for required fields if not provided
+            if (!taskUpdate.stage) taskUpdate.stage = 'identification';
+            if (taskUpdate.completed === undefined) taskUpdate.completed = false;
+            
             console.log(`[DEBUG_TASK_API] Adding projectId for success-factor task upsert: ${projectId}`);
+            console.log(`[DEBUG_TASK_API] Setting ID and sourceId for success-factor task upsert: ${taskId}`);
           }
           
           // If we found the task in our previous lookup, use its actual stored ID
@@ -928,6 +939,17 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         } catch (dbError: unknown) {
           // Log database errors immediately
           console.error('[ERROR] Database error during task update:', dbError);
+          
+          // Check if this is a TASK_NOT_FOUND error
+          // This happens when a non-success-factor task can't be found
+          const error = dbError as any;
+          if (error?.code === 'TASK_NOT_FOUND') {
+            return res.status(404).json({
+              success: false,
+              message: `Task with ID ${taskId} not found`,
+              code: 'TASK_NOT_FOUND'
+            });
+          }
           
           if (DEBUG_TASK_PERSISTENCE) {
             console.error(`[DEBUG_TASK_PERSISTENCE] Task update database operation failed:`);
