@@ -546,94 +546,90 @@ export const projectsDb = {
       
       // Check for factor-task compound IDs (like "f219d47b-39b5-5be1-86f2-e0ec3afc8e3b-c1332bc7")
       // These are likely concatenations of a UUID with a suffix
-      let validTaskId = taskId;
+      let validTaskId = null;
       let lookupMethod = 'none';
       
       // Log the task IDs we're working with
       console.log(`[TASK_LOOKUP] Looking up task with ID: ${taskId}`);
       
       try {
-        // First check if this is a factor ID, not a task ID
-        if (taskId && taskId.length === 36 && taskId.includes('-')) {
-          // Check if there are any tasks that have this ID as sourceId (likely a success factor ID)
+        // STEP 1: Check if this is a sourceId for an existing task
+        try {
+          console.log(`[TASK_LOOKUP] Attempting sourceId lookup for ${taskId}`);
           const tasksBySourceId = await db.select()
             .from(projectTasksTable)
             .where(eq(projectTasksTable.sourceId, taskId));
-            
+          
           if (tasksBySourceId.length > 0) {
-            // This is likely a success factor ID being mistakenly passed as a task ID
-            // We should not try to update this as a task
-            console.log(`[TASK_LOOKUP] The ID ${taskId} appears to be a success factor ID, not a task ID`);
-            console.log(`[TASK_UPDATE_ERROR] Failed to process task update for sourceId ${taskId}. This ID is registered as a sourceId, not a task ID.`);
-            throw new Error(`Cannot update ID ${taskId} directly: this appears to be a success factor ID, not a task ID. Try updating a specific task instead.`);
+            validTaskId = tasksBySourceId[0].id as string;
+            lookupMethod = 'sourceId';
+            console.log(`[TASK_LOOKUP] Found task with sourceId ${taskId}, actual id: ${validTaskId}`);
+          } else {
+            console.log(`[TASK_LOOKUP] No task found with sourceId ${taskId}, trying exact match`);
+          }
+        } catch (sourceIdError) {
+          console.error(`[TASK_UPDATE_ERROR] Error during sourceId lookup for ${taskId}:`, sourceIdError);
+          console.error(`[TASK_UPDATE_ERROR] Stack trace:`, sourceIdError instanceof Error ? sourceIdError.stack : 'No stack trace available');
+        }
+        
+        // STEP 2: Check for exact id match if sourceId didn't find anything
+        if (!validTaskId) {
+          try {
+            console.log(`[TASK_LOOKUP] Attempting exact ID lookup for ${taskId}`);
+            const tasksByExactId = await db.select()
+              .from(projectTasksTable)
+              .where(eq(projectTasksTable.id, taskId))
+              .limit(1);
+              
+            if (tasksByExactId.length > 0) {
+              validTaskId = taskId;
+              lookupMethod = 'exactId';
+              console.log(`[TASK_LOOKUP] Found task with exact ID ${taskId}`);
+            } else {
+              console.log(`[TASK_LOOKUP] No task found with exact ID ${taskId}, trying prefix match`);
+            }
+          } catch (exactIdError) {
+            console.error(`[TASK_UPDATE_ERROR] Error during exact ID lookup for ${taskId}:`, exactIdError);
+            console.error(`[TASK_UPDATE_ERROR] Stack trace:`, exactIdError instanceof Error ? exactIdError.stack : 'No stack trace available');
           }
         }
         
-        // CASE 1: Check if this is a sourceId for an existing task
-        const existingTasksBySource = await db.select()
-          .from(projectTasksTable)
-          .where(eq(projectTasksTable.sourceId, taskId));
-          
-        if (existingTasksBySource.length > 0) {
-          // Task exists with this source ID, use its actual UUID instead
-          validTaskId = existingTasksBySource[0].id as string;
-          lookupMethod = 'sourceId';
-          console.log(`[TASK_LOOKUP] Found task with sourceId ${taskId}, using its ID ${validTaskId} for update`);
-        } else {
-          // CASE 2: Check if task exists with the exact ID
-          const existingTasksById = await db.select()
-            .from(projectTasksTable)
-            .where(eq(projectTasksTable.id, taskId))
-            .limit(1);
+        // STEP 3: Try prefix matching as a last resort
+        if (!validTaskId) {
+          try {
+            console.log(`[TASK_LOOKUP] Attempting prefix match for ${taskId}`);
+            const allTasks = await db.select()
+              .from(projectTasksTable);
+              
+            console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID prefix match with: ${taskId}`);
             
-          if (existingTasksById.length > 0) {
-            console.log(`[TASK_LOOKUP] Found task with exact ID match: ${taskId}`);
-            lookupMethod = 'exact';
-            // No need to change validTaskId, it's already correct
-          } else {
-            // CASE 3: Check if this is a clean UUID being used to update a task with a compound ID
-            // Get all tasks and check if any have an ID that starts with the incoming ID
-            try {
-              const allTasks = await db.select()
-                .from(projectTasksTable);
-                
-              console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID prefix match with: ${taskId}`);
-              
-              // Find a task whose ID starts with our clean UUID (the taskId is a prefix of a compound ID)
-              const matchingTask = allTasks.find(task => {
-                // Log the comparison for debugging
-                console.log(`[TASK_LOOKUP] Comparing ${taskId} with ${task.id}`);
-                
-                // Return true if the task ID matches exactly OR if the task ID starts with the input ID
-                return task.id === taskId || task.id.startsWith(taskId);
-              });
-              
-              if (matchingTask) {
-                // Here's the key change: use the matched task's ACTUAL ID, not the incoming ID
-                validTaskId = matchingTask.id as string;
-                lookupMethod = 'prefix';
-                console.log(`[TASK_LOOKUP] Found task with matching clean UUID prefix, using full ID: ${validTaskId}`);
-              } else {
-                // CASE 4: No match found by any method
-                console.log(`[TASK_LOOKUP] Task with ID/sourceId ${taskId} not found by any method`);
-                // Log all available task IDs for debugging
-                console.log('[TASK_LOOKUP] Available task IDs:', allTasks.map(t => t.id).join(', '));
-                console.log(`[TASK_UPDATE_ERROR] Task not found for ID ${taskId}. Searched by exact match, sourceId, and UUID prefix match.`);
-                throw new Error(`Task with ID ${taskId} does not exist. Searched by exact match and UUID prefix match. Task may need to be created first.`);
-              }
-            } catch (lookupError) {
-              console.error(`[TASK_UPDATE_ERROR] Error during prefix matching lookup for task ID ${taskId}:`, lookupError);
-              console.error(`[TASK_UPDATE_ERROR] Stack trace:`, lookupError instanceof Error ? lookupError.stack : 'No stack trace available');
-              throw new Error(`Failed to perform task lookup by prefix matching: ${lookupError instanceof Error ? lookupError.message : String(lookupError)}`);
+            // Find a task whose ID starts with our clean UUID
+            const matchingTask = allTasks.find(task => {
+              return task.id === taskId || task.id.startsWith(taskId);
+            });
+            
+            if (matchingTask) {
+              validTaskId = matchingTask.id as string;
+              lookupMethod = 'prefixMatch';
+              console.log(`[TASK_LOOKUP] Found task with ID prefix ${taskId}, full ID: ${validTaskId}`);
+            } else {
+              console.log(`[TASK_LOOKUP] No task found with ID prefix ${taskId}`);
+              console.log('[TASK_LOOKUP] Available task IDs:', allTasks.map(t => t.id).join(', '));
             }
+          } catch (prefixError) {
+            console.error(`[TASK_UPDATE_ERROR] Error during prefix lookup for ${taskId}:`, prefixError);
+            console.error(`[TASK_UPDATE_ERROR] Stack trace:`, prefixError instanceof Error ? prefixError.stack : 'No stack trace available');
           }
         }
-      } catch (err) {
-        if (err instanceof Error && err.message.includes('Try creating')) {
-          // Pass through our custom error
-          console.error(`[TASK_UPDATE_ERROR] Task lookup failed with custom error for ID ${taskId}:`, err.message);
-          throw err;
+        
+        // STEP 4: If no matching task was found by any method, throw an error
+        if (!validTaskId) {
+          const noMatchError = new Error(`Task with ID ${taskId} does not exist. Searched by sourceId, exact match, and UUID prefix match. Task may need to be created first.`);
+          console.error(`[TASK_UPDATE_ERROR] ${noMatchError.message}`);
+          throw noMatchError;
         }
+        
+      } catch (err) {
         console.error(`[TASK_UPDATE_ERROR] Error looking up task by ID ${taskId}:`, err);
         console.error(`[TASK_UPDATE_ERROR] Stack trace:`, err instanceof Error ? err.stack : 'No stack trace available');
         throw new Error(`Failed to process task ID ${taskId}: ${err instanceof Error ? err.message : String(err)}`);

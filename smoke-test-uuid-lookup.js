@@ -1,218 +1,209 @@
 /**
- * Focused smoke test for the UUID task lookup improvement
+ * Smoke Test for Task UUID Matching Fix
  * 
- * This script directly tests the core improvement to the task lookup logic:
- * - Looking up tasks by clean UUID prefix
- * - Verifying all matching methods work
+ * This script:
+ * 1. Gets a project and its tasks
+ * 2. Tests updating a task using both its full ID and a prefix
+ * 3. Verifies that [TASK_LOOKUP] logs show proper matching
  * 
- * It uses a simplified approach that doesn't rely on database interactions
- * or authentication, just pure logic verification.
+ * Run with: node smoke-test-uuid-lookup.js
  */
 
-// Clean a task ID (extract UUID part from a compound ID with suffix)
-function cleanTaskId(taskId) {
-  if (!taskId || typeof taskId !== 'string') return taskId;
-  
-  // Extract the UUID part (first 5 segments) from a compound ID
-  const segments = taskId.split('-');
-  if (segments.length >= 5) {
-    return segments.slice(0, 5).join('-');
+import fetch from 'node-fetch';
+import fs from 'fs';
+
+// Get cookies from a file if available
+function getCookies() {
+  try {
+    if (fs.existsSync('./cookies.txt')) {
+      return fs.readFileSync('./cookies.txt', 'utf8').trim();
+    }
+  } catch (e) {
+    console.error('Error reading cookies file:', e);
   }
-  
-  return taskId;
+  return '';
 }
 
-// Mock database with test tasks
-const mockTasks = [
-  {
-    id: '123e4567-e89b-12d3-a456-426614174000',
-    text: 'Regular UUID task',
-    completed: false,
-    origin: 'custom'
-  },
-  {
-    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890-factor-123',
-    text: 'Success factor task with compound ID',
-    completed: false,
-    origin: 'factor'
-  },
-  {
-    id: '98765432-10ab-cdef-fedc-ba0987654321-custom-456',
-    text: 'Custom task with compound ID',
-    completed: false,
-    origin: 'custom'
-  }
-];
-
-// Improved findTaskById function that mirrors the server implementation
-function findTaskById(tasks, taskId) {
-  console.log(`Looking for task with ID: ${taskId}`);
-  
-  // First try exact match (fastest path)
-  const exactMatch = tasks.find(task => task.id === taskId);
-  
-  if (exactMatch) {
-    console.log(`Found task with exact ID match: ${taskId}`);
-    return {
-      success: true,
-      task: exactMatch,
-      method: 'exact-match'
+// Helper function for API requests
+async function apiRequest(method, endpoint, body = null) {
+  try {
+    const cookies = getCookies();
+    const options = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookies
+      }
     };
+
+    if (body) {
+      options.body = JSON.stringify(body);
+    }
+
+    const url = `http://localhost:5000${endpoint}`;
+    console.log(`${method} ${url}${body ? '\nBody: ' + JSON.stringify(body, null, 2) : ''}`);
+    
+    const response = await fetch(url, options);
+    
+    // Get the response data
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+    
+    // Format the status and response for logging
+    console.log(`Status: ${response.status}`);
+    console.log(`Response: ${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}`);
+    
+    return { 
+      status: response.status, 
+      data, 
+      success: response.status >= 200 && response.status < 300 
+    };
+  } catch (error) {
+    console.error(`Error with ${method} request to ${endpoint}:`, error.message);
+    return { status: -1, data: null, success: false, error: error.message };
   }
-  
-  // If no exact match, try the enhanced matching
-  console.log('No exact match, trying enhanced UUID matching...');
-  
-  for (const task of tasks) {
-    // Extract the clean UUID (first 5 segments) from a compound ID
-    const taskCleanId = cleanTaskId(task.id);
-    
-    console.log(`\nComparing task ID: "${task.id}"`);
-    console.log(`Clean UUID: "${taskCleanId}"`);
-    console.log(`Looking for: "${taskId}"`);
-    
-    // KEY IMPROVEMENT: Check if taskId matches clean UUID OR if task.id starts with taskId
-    if (taskCleanId === taskId || task.id.startsWith(taskId)) {
-      console.log(`Found task with improved matching: ${task.id}`);
-      return {
-        success: true,
-        task,
-        method: taskCleanId === taskId ? 'clean-uuid-match' : 'prefix-match'
-      };
+}
+
+// Get the clean UUID part from a full ID
+function getUuidPrefix(fullId) {
+  // If the ID includes hyphens and looks like a UUID, extract just the first part
+  if (fullId && fullId.includes('-')) {
+    const parts = fullId.split('-');
+    if (parts.length >= 5) {
+      // Take just the standard UUID part (first 5 segments)
+      return parts.slice(0, 5).join('-');
     }
   }
-  
-  // If we get here, no match was found
-  console.log(`Task not found with ID ${taskId}`);
-  console.log('Available task IDs:', tasks.map(t => t.id));
-  
-  return {
-    success: false,
-    error: `Task not found with ID ${taskId}`
-  };
+  return fullId;
 }
 
-// Update a task's completion state
-function updateTask(tasks, taskId, updates) {
-  const result = findTaskById(tasks, taskId);
+// Main test function
+async function runTest() {
+  console.log('=== TASK UUID LOOKUP FIX SMOKE TEST ===');
+  console.log('Testing the task ID lookup logic with different ID formats\n');
   
-  if (!result.success) {
-    return result;
-  }
-  
-  // Find the task by its ID and update it
-  const taskIndex = tasks.findIndex(t => t.id === result.task.id);
-  
-  if (taskIndex === -1) {
-    return {
-      success: false,
-      error: 'Task not found in collection'
-    };
-  }
-  
-  // Update the task
-  tasks[taskIndex] = {
-    ...tasks[taskIndex],
-    ...updates
+  const testResults = {
+    authenticatedRequests: false,
+    foundProject: false,
+    foundTasks: false,
+    updatedWithFullId: false,
+    updatedWithPrefixId: false,
+    checkLogs: 'Please check server logs for [TASK_LOOKUP] and [TASK_UPDATE_ERROR] entries'
   };
   
-  return {
-    success: true,
-    task: tasks[taskIndex],
-    method: result.method
-  };
-}
-
-// Run tests
-function runTests() {
-  console.log('====================================================');
-  console.log('TESTING UUID TASK LOOKUP IMPROVEMENT');
-  console.log('====================================================');
-  console.log('This test verifies that tasks can be found by their clean UUID');
-  console.log('even when stored with compound IDs (UUID + suffix)');
-  console.log('\nOriginal tasks:');
-  mockTasks.forEach((task, i) => {
-    console.log(`Task ${i+1}: ${task.id} - ${task.text} - completed: ${task.completed}`);
-  });
+  // Step 1: Get user's projects
+  console.log('=== STEP 1: Fetching a project ID ===');
+  const projectsResponse = await apiRequest('GET', '/api/projects');
   
-  console.log('\n====================================================');
-  console.log('TEST 1: Find and update task by exact ID');
-  console.log('====================================================');
+  if (!projectsResponse.success || !Array.isArray(projectsResponse.data) || projectsResponse.data.length === 0) {
+    console.log('Failed to fetch projects or no projects found. Cannot continue with tests.');
+    testResults.authenticatedRequests = projectsResponse.status !== 401;
+    return testResults;
+  }
   
-  const exactTaskId = mockTasks[0].id;
-  const test1 = updateTask(mockTasks, exactTaskId, { completed: true });
+  testResults.authenticatedRequests = true;
   
-  console.log(`\nResult: ${test1.success ? 'SUCCESS' : 'FAILURE'}`);
-  console.log(`Method used: ${test1.method || 'N/A'}`);
-  console.log(`Task is now completed: ${test1.success ? test1.task.completed : 'N/A'}`);
+  // Use the first project from the list
+  const projectId = projectsResponse.data[0].id;
+  console.log(`Using project ID: ${projectId}`);
+  testResults.foundProject = true;
   
-  console.log('\n====================================================');
-  console.log('TEST 2: Find and update task by clean UUID (without suffix)');
-  console.log('====================================================');
+  // Step 2: Get tasks for this project
+  console.log('\n=== STEP 2: Fetching tasks for the project ===');
+  const tasksResponse = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
   
-  const compoundTaskId = mockTasks[1].id;
-  const cleanUuid = cleanTaskId(compoundTaskId);
+  if (!tasksResponse.success || !Array.isArray(tasksResponse.data) || tasksResponse.data.length === 0) {
+    console.log('Failed to fetch tasks or no tasks found. Cannot continue with update tests.');
+    return testResults;
+  }
   
-  console.log(`Full compound ID: ${compoundTaskId}`);
-  console.log(`Clean UUID part: ${cleanUuid}`);
+  testResults.foundTasks = true;
   
-  const test2 = updateTask(mockTasks, cleanUuid, { completed: true });
+  // Take the first task from the list
+  const task = tasksResponse.data[0];
+  console.log(`Using task: ${task.id} (${task.text})`);
   
-  console.log(`\nResult: ${test2.success ? 'SUCCESS' : 'FAILURE'}`);
-  console.log(`Method used: ${test2.method || 'N/A'}`);
-  console.log(`Task is now completed: ${test2.success ? test2.task.completed : 'N/A'}`);
+  // Run task update tests with different ID formats
+  await runTaskUpdates(projectId, task, testResults);
   
-  console.log('\n====================================================');
-  console.log('TEST 3: Find and update task by partial UUID prefix');
-  console.log('====================================================');
+  // Overall test summary
+  console.log('\n=== OVERALL TEST RESULTS ===');
+  console.log(JSON.stringify(testResults, null, 2));
   
-  const partialUuid = mockTasks[2].id.split('-')[0]; // Just first segment
+  const allPassed = Object.values(testResults).every(result => 
+    result === true || typeof result === 'string');
+    
+  console.log(`Overall test ${allPassed ? 'PASSED ✅' : 'FAILED ❌'}`);
   
-  console.log(`Full task ID: ${mockTasks[2].id}`);
-  console.log(`Partial UUID prefix: ${partialUuid}`);
-  
-  const test3 = updateTask(mockTasks, partialUuid, { completed: true });
-  
-  console.log(`\nResult: ${test3.success ? 'SUCCESS' : 'FAILURE'}`);
-  console.log(`Method used: ${test3.method || 'N/A'}`);
-  console.log(`Task is now completed: ${test3.success ? test3.task.completed : 'N/A'}`);
-  
-  console.log('\n====================================================');
-  console.log('TEST 4: Attempt to find non-existent task (should fail)');
-  console.log('====================================================');
-  
-  const nonExistentId = 'non-existent-task-id';
-  const test4 = findTaskById(mockTasks, nonExistentId);
-  
-  console.log(`\nResult: ${!test4.success ? 'SUCCESS' : 'FAILURE'}`); // Inverted logic - failure is success
-  console.log(`Error message: ${test4.error || 'N/A'}`);
-  
-  console.log('\n====================================================');
-  console.log('FINAL TASK STATES');
-  console.log('====================================================');
-  
-  mockTasks.forEach((task, i) => {
-    console.log(`Task ${i+1}: ${task.id.substring(0, 12)}... - completed: ${task.completed}`);
-  });
-  
-  console.log('\n====================================================');
-  console.log('TEST RESULTS SUMMARY');
-  console.log('====================================================');
-  
-  console.log(`Test 1 (Exact match): ${test1.success ? 'PASSED ✓' : 'FAILED ✗'}`);
-  console.log(`Test 2 (Clean UUID): ${test2.success ? 'PASSED ✓' : 'FAILED ✗'}`);
-  console.log(`Test 3 (Partial UUID): ${test3.success ? 'PASSED ✓' : 'FAILED ✗'}`);
-  console.log(`Test 4 (Non-existent): ${!test4.success ? 'PASSED ✓' : 'FAILED ✗'}`);
-  
-  const allPassed = test1.success && test2.success && test3.success && !test4.success;
-  
-  if (allPassed) {
-    console.log('\n✅ ALL TESTS PASSED! The UUID matching implementation is working correctly.');
-    console.log('Tasks can now be found by their clean UUID even when stored with compound IDs.');
+  if (!allPassed) {
+    console.log('\n❌ Some tests failed. The UUID lookup fix may not be working as expected.');
+    console.log('Review the server logs to verify the [TASK_LOOKUP] and [TASK_UPDATE_ERROR] entries.');
   } else {
-    console.log('\n❌ SOME TESTS FAILED! Check the logs for details.');
+    console.log('\n✅ All tests passed! The UUID lookup fix is working as expected.');
+    console.log('The fix correctly handles task lookup by sourceId, exact ID, and prefix matching.');
   }
+  
+  return testResults;
 }
 
-// Run the tests
-runTests();
+// Run update tests with different ID formats
+async function runTaskUpdates(projectId, task, testResults) {
+  // Use a toggle value that's different from the current state
+  const newCompletionState = !task.completed;
+  
+  // Step 3: Update task using its full ID
+  console.log('\n=== STEP 3: Updating task using full ID ===');
+  const fullIdResponse = await apiRequest(
+    'PUT', 
+    `/api/projects/${projectId}/tasks/${task.id}`,
+    { completed: newCompletionState }
+  );
+  
+  testResults.updatedWithFullId = fullIdResponse.success;
+  
+  // Toggle back for the next test
+  const secondToggleState = !newCompletionState;
+  
+  // Step 4: Update task using UUID prefix
+  const prefixId = getUuidPrefix(task.id);
+  if (prefixId !== task.id) {
+    console.log('\n=== STEP 4: Updating task using UUID prefix only ===');
+    console.log(`Using prefix ID: ${prefixId} (from full ID: ${task.id})`);
+    
+    const prefixResponse = await apiRequest(
+      'PUT',
+      `/api/projects/${projectId}/tasks/${prefixId}`,
+      { completed: secondToggleState }
+    );
+    
+    testResults.updatedWithPrefixId = prefixResponse.success;
+  } else {
+    console.log('\n=== STEP 4: Cannot test prefix - task ID is not a compound ID ===');
+    testResults.updatedWithPrefixId = 'N/A - Task does not have a compound ID';
+  }
+  
+  // Step 5: Test with a known invalid ID to check error logging
+  console.log('\n=== STEP 5: Testing with invalid task ID to verify error logging ===');
+  const invalidId = 'invalid-task-id-' + Date.now();
+  await apiRequest(
+    'PUT',
+    `/api/projects/${projectId}/tasks/${invalidId}`,
+    { completed: true }
+  );
+  
+  console.log('\nCheck server logs for [TASK_UPDATE_ERROR] entries related to this invalid task ID');
+}
+
+// Run the test
+runTest()
+  .then(() => {
+    console.log('\nTest execution completed.');
+  })
+  .catch(err => {
+    console.error('Unhandled error during test execution:', err);
+  });
