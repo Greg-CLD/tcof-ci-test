@@ -20,7 +20,7 @@ localPort = 24678
 externalPort = 3000
 
 [workflows]
-runButton = "Debug Session"
+runButton = "Debug Task Updates"
 
 [[workflows.workflow]]
 name = "Project"
@@ -93,3 +93,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "DEBUG=true DEBUG_TASKS=true DEBUG_TASK_STATE=true DEBUG_TASK_COMPLETION=true DEBUG_TASK_PERSISTENCE=true DEBUG_TASK_API=true node test-state-transitions-smoke.mjs"
+
+[[workflows.workflow]]
+name = "Debug Task Updates"
+author = 42110622
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "DEBUG=true DEBUG_TASKS=true DEBUG_TASK_API=true DEBUG_TASK_COMPLETION=true DEBUG_TASK_PERSISTENCE=true DEBUG_TASK_STATE=true npm run dev"
