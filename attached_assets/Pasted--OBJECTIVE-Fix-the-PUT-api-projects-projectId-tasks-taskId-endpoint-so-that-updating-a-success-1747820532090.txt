@@ -1,0 +1,53 @@
+' OBJECTIVE: Fix the PUT /api/projects/:projectId/tasks/:taskId endpoint so that updating a "success-factor" task always works, even if the client sends a sourceId or legacy ID.
+
+' SCOPE: Only update the backend API handler for task updates (e.g., server/routes/tasks.ts). Do not touch DB schema or UI files in this cycle.
+
+' RULES:
+' - Run & paste the full smoke-test JSON output at the end.
+' - Paste SSR logs if the app restarts.
+' - If proposing code, show only the minimal code diff (diff …) for this file group.
+' - Outline a matching unit test (in js or ts fencing).
+
+' TASKS:
+' 1. Update the task lookup logic in the PUT handler to allow lookup by both id and, if not found, by sourceId for success-factor tasks.
+' 2. Fix the smoke-test TS error (handle createError as Error).
+' 3. Paste the smoke-test output.
+
+' CODE DIFF (server/routes/tasks.ts):
+diff --git a/server/routes/tasks.ts b/server/routes/tasks.ts
+--- a/server/routes/tasks.ts
++++ b/server/routes/tasks.ts
+@@ ... @@
+-   const task = await db.tasks.findById(taskId);
+-   if (!task) {
+-     logger.warn(`[TASK_LOOKUP] No task found with exact ID match, trying prefix match`);
+-     // existing fallback code...
+-   }
++   let task = await db.tasks.findById(taskId);
++   if (!task) {
++     logger.warn(`[TASK_LOOKUP] No task found with exact ID match, trying sourceId match`);
++     task = await db.tasks.findFirst({ where: { sourceId: taskId } });
++   }
++   if (!task) {
++     logger.error(`[TASK_UPDATE_ERROR] Task with ID or sourceId ${taskId} not found`);
++     return res.status(404).json({ success: false, message: "Task not found" });
++   }
+
+' SMOKE-TEST FIX (tests/smoke/api.spec.ts):
+diff --git a/tests/smoke/api.spec.ts b/tests/smoke/api.spec.ts
+--- a/tests/smoke/api.spec.ts
++++ b/tests/smoke/api.spec.ts
+@@ ... @@
+-  message: `Error creating success-factor task: ${createError.message}`
++  message: `Error creating success-factor task: ${(createError as Error).message}`
+
+' UNIT TEST (add to tests/unit/tasks.test.ts):
+```ts
+it('should update task by sourceId if id does not match', async () => {
+  // Arrange: seed a task with known sourceId
+  const { body } = await request(app)
+    .put(`/api/projects/${projectId}/tasks/${sourceId}`)
+    .send({ completed: true });
+  expect(body.success).toBe(true);
+  expect(body.task.completed).toBe(true);
+});
