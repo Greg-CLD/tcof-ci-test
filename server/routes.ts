@@ -963,6 +963,14 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           }
           
           updatedTask = await projectsDb.updateTask(idForUpdate, taskUpdate);
+          
+          if (!updatedTask) {
+            return res.status(404).json({
+              success: false,
+              error: 'TASK_NOT_FOUND',
+              message: `Task ${taskId} not found`
+            });
+          }
         } catch (dbError: unknown) {
           // Log database errors immediately
           console.error('[ERROR] Database error during task update:', dbError);
@@ -1000,7 +1008,11 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             });
           }
           
-          throw dbError; // Re-throw to be caught by outer try/catch
+          return res.status(500).json({
+            success: false,
+            error: 'TASK_UPDATE_ERROR',
+            message: dbError instanceof Error ? dbError.message : String(dbError)
+          });
         }
         
         if (!updatedTask) {
