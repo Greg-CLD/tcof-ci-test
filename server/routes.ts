@@ -913,6 +913,15 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             console.error(`[DEBUG_TASK_PERSISTENCE]  - Error: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
           }
           
+          // Check for our custom task not found error code
+          if (dbError && typeof dbError === 'object' && 'code' in dbError && dbError.code === 'TASK_NOT_FOUND') {
+            return res.status(404).json({
+              success: false,
+              message: 'Task not found',
+              error: dbError instanceof Error ? dbError.message : String(dbError)
+            });
+          }
+          
           throw dbError; // Re-throw to be caught by outer try/catch
         }
         
