@@ -746,6 +746,23 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
 
   // Update a specific task for a project
   app.put('/api/projects/:projectId/tasks/:taskId', async (req: Request, res: Response, next: NextFunction) => {
+    // Add flag to detect potential fallthrough
+    let responseHandled = false;
+    
+    // Override the send and json methods to mark response as handled
+    const originalSend = res.send;
+    const originalJson = res.json;
+    
+    res.send = function(...args) {
+      responseHandled = true;
+      return originalSend.apply(res, args);
+    };
+    
+    res.json = function(...args) {
+      responseHandled = true;
+      return originalJson.apply(res, args);
+    };
+    
     // Allow test scripts to bypass authentication with special header
     if (req.headers['x-auth-override'] !== 'true') {
       // Use normal authentication for regular requests
@@ -1149,6 +1166,17 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         success: false,
         error: 'TASK_UPDATE_ERROR',
         message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+    
+    // Final fallthrough prevention - this should never be reached 
+    // if any of the response.json calls above were executed
+    if (!responseHandled) {
+      console.error('[FALLTHROUGH] PUT /api/projects/:projectId/tasks/:taskId handler reached end without response');
+      return res.status(500).json({
+        success: false,
+        error: 'FALLTHROUGH_ERROR',
+        message: 'Task update handler reached end without sending a response'
       });
     }
   });
