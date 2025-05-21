@@ -4,7 +4,7 @@
  * This script tests that the database logic works correctly for the 
  * upsert functionality (create-if-not-exists) for success-factor tasks.
  * 
- * Run with: node smoke-test-success-factor-upsert.js
+ * Run with: node smoke-test-success-factor-upsert.cjs
  */
 
 const { Client } = require('pg');
