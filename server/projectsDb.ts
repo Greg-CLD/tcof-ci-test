@@ -553,6 +553,12 @@ export const projectsDb = {
       console.log(`[TASK_LOOKUP] Looking up task with ID: ${taskId}`);
       
       try {
+        // Helper function to check if a string is UUID-like (basic format check)
+        const isValidUuidFormat = (id: string): boolean => {
+          // Basic pattern for a UUID or UUID-like string
+          return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        };
+      
         // STEP 1: Check if this is a sourceId for an existing task
         try {
           console.log(`[TASK_LOOKUP] Attempting sourceId lookup for ${taskId}`);
@@ -576,17 +582,23 @@ export const projectsDb = {
         if (!validTaskId) {
           try {
             console.log(`[TASK_LOOKUP] Attempting exact ID lookup for ${taskId}`);
-            const tasksByExactId = await db.select()
-              .from(projectTasksTable)
-              .where(eq(projectTasksTable.id, taskId))
-              .limit(1);
-              
-            if (tasksByExactId.length > 0) {
-              validTaskId = taskId;
-              lookupMethod = 'exactId';
-              console.log(`[TASK_LOOKUP] Found task with exact ID ${taskId}`);
+            
+            // Only attempt database query if ID is in valid UUID format
+            if (isValidUuidFormat(taskId)) {
+              const tasksByExactId = await db.select()
+                .from(projectTasksTable)
+                .where(eq(projectTasksTable.id, taskId))
+                .limit(1);
+                
+              if (tasksByExactId.length > 0) {
+                validTaskId = taskId;
+                lookupMethod = 'exactId';
+                console.log(`[TASK_LOOKUP] Found task with exact ID ${taskId}`);
+              } else {
+                console.log(`[TASK_LOOKUP] No task found with exact ID ${taskId}, trying prefix match`);
+              }
             } else {
-              console.log(`[TASK_LOOKUP] No task found with exact ID ${taskId}, trying prefix match`);
+              console.log(`[TASK_LOOKUP] Skipping exact ID lookup - ID ${taskId} is not in valid UUID format`);
             }
           } catch (exactIdError) {
             console.error(`[TASK_UPDATE_ERROR] Error during exact ID lookup for ${taskId}:`, exactIdError);
@@ -598,23 +610,35 @@ export const projectsDb = {
         if (!validTaskId) {
           try {
             console.log(`[TASK_LOOKUP] Attempting prefix match for ${taskId}`);
-            const allTasks = await db.select()
-              .from(projectTasksTable);
+            
+            // Basic validation for prefix - should be at least a partial UUID format
+            // For a prefix match, we'll accept shorter segments of a UUID
+            const isValidUuidPrefix = (id: string): boolean => {
+              // Accept at least the first segment (8 chars) or partial segments with hyphens
+              return /^[0-9a-f]{1,8}(-[0-9a-f]{1,4}){0,4}$/i.test(id);
+            };
+            
+            if (isValidUuidPrefix(taskId)) {
+              const allTasks = await db.select()
+                .from(projectTasksTable);
+                
+              console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID prefix match with: ${taskId}`);
               
-            console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID prefix match with: ${taskId}`);
-            
-            // Find a task whose ID starts with our clean UUID
-            const matchingTask = allTasks.find(task => {
-              return task.id === taskId || task.id.startsWith(taskId);
-            });
-            
-            if (matchingTask) {
-              validTaskId = matchingTask.id as string;
-              lookupMethod = 'prefixMatch';
-              console.log(`[TASK_LOOKUP] Found task with ID prefix ${taskId}, full ID: ${validTaskId}`);
+              // Find a task whose ID starts with our clean UUID
+              const matchingTask = allTasks.find(task => {
+                return task.id === taskId || task.id.startsWith(taskId);
+              });
+              
+              if (matchingTask) {
+                validTaskId = matchingTask.id as string;
+                lookupMethod = 'prefixMatch';
+                console.log(`[TASK_LOOKUP] Found task with ID prefix ${taskId}, full ID: ${validTaskId}`);
+              } else {
+                console.log(`[TASK_LOOKUP] No task found with ID prefix ${taskId}`);
+                console.log('[TASK_LOOKUP] Available task IDs:', allTasks.map(t => t.id).join(', '));
+              }
             } else {
-              console.log(`[TASK_LOOKUP] No task found with ID prefix ${taskId}`);
-              console.log('[TASK_LOOKUP] Available task IDs:', allTasks.map(t => t.id).join(', '));
+              console.log(`[TASK_LOOKUP] Skipping prefix match - ID ${taskId} is not a valid UUID prefix format`);
             }
           } catch (prefixError) {
             console.error(`[TASK_UPDATE_ERROR] Error during prefix lookup for ${taskId}:`, prefixError);
