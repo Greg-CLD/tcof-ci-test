@@ -5,7 +5,7 @@
  * responses in all error cases instead of falling through to the SPA fallback.
  */
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 async function testJsonResponse() {
   console.log('=== Testing JSON Responses for Task Updates ===');
@@ -53,12 +53,12 @@ async function testJsonResponse() {
     console.error('Error making request:', error);
   }
   
-  // Test Case 2: Empty project ID (should return JSON error)
-  console.log('\n2. TEST CASE 2: Empty project ID (should return JSON error)');
+  // Test Case 2: Missing project ID parameter (should return JSON error)
+  console.log('\n2. TEST CASE 2: Missing project ID parameter (should return JSON error)');
   
   try {
     const response = await fetch(
-      `${baseUrl}/api/projects//tasks/some-task-id`,
+      `${baseUrl}/api/projects/null/tasks/some-task-id`,
       {
         method: 'PUT',
         headers: { 

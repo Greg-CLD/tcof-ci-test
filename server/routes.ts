@@ -1128,8 +1128,8 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         if (err instanceof Error && err.message.includes('not found')) {
           return res.status(404).json({
             success: false,
-            message: 'Task not found',
-            error: err.message
+            error: 'TASK_NOT_FOUND',
+            message: 'Task not found'
           });
         }
         
@@ -1141,11 +1141,14 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         });
       }
     } catch (error) {
+      // Log the error for debugging
       console.error('Error updating project task:', error);
-      res.status(500).json({
+      
+      // Always ensure a JSON response, even in the outer catch block
+      return res.status(500).json({
         success: false,
-        message: 'Failed to update project task',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: 'TASK_UPDATE_ERROR',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
