@@ -888,6 +888,20 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         // Attempt to update the task with error tracking
         let updatedTask;
         try {
+          // For PUT requests, add origin info to the taskUpdate if it's missing
+          // This is crucial for the upsert functionality to work properly
+          if (req.method === 'PUT' && !taskUpdate.origin && originalTask?.origin === 'success-factor') {
+            taskUpdate.origin = 'success-factor';
+            console.log(`[DEBUG_TASK_API] PUT request: Adding success-factor origin to task update`);
+          }
+          
+          // For success-factor tasks that don't exist, we need to add projectId 
+          // to ensure proper upsert (create if not found)
+          if ((taskUpdate.origin === 'success-factor' || taskUpdate.origin === 'factor') && !originalTask) {
+            taskUpdate.projectId = projectId;
+            console.log(`[DEBUG_TASK_API] Adding projectId for success-factor task upsert: ${projectId}`);
+          }
+          
           // If we found the task in our previous lookup, use its actual stored ID
           // Otherwise, try both the extracted UUID and raw ID formats
           const idForUpdate = originalTask ? originalTask.id : taskId;
@@ -898,6 +912,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
               console.log(`[DEBUG_TASK_API]  - Using ID from found task object`);
             } else {
               console.log(`[DEBUG_TASK_API]  - Using extracted UUID as fallback`);
+              if (taskUpdate.origin === 'success-factor' || taskUpdate.origin === 'factor') {
+                console.log(`[DEBUG_TASK_API]  - This is a success-factor task, will upsert if not found`);
+              }
             }
           }
           
@@ -915,6 +932,12 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           
           // Check for our custom task not found error code
           if (dbError && typeof dbError === 'object' && 'code' in dbError && dbError.code === 'TASK_NOT_FOUND') {
+            // For PUT requests to success-factor tasks, we should try to create the task instead
+            // The updateTask function already handles this case, so this is just an additional safeguard
+            if (req.method === 'PUT' && taskUpdate.origin === 'success-factor') {
+              console.log(`[DEBUG_TASK_API] PUT request for success-factor task failed with TASK_NOT_FOUND, but this shouldn't happen with upsert`);
+            }
+            
             return res.status(404).json({
               success: false,
               message: 'Task not found',
