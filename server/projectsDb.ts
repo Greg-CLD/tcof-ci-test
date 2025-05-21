@@ -654,14 +654,58 @@ export const projectsDb = {
           }
         }
         
-        // STEP 4: If no matching task was found by any method, throw an error with status code
+        // STEP 4: If no matching task was found by any method, try upsert for success-factor tasks or throw error
         if (!validTaskId) {
-          const msg = `Task with ID ${taskId} does not exist. Searched by sourceId, exact match, and UUID prefix match. Task may need to be created first.`;
-          console.error(`[TASK_UPDATE_ERROR] ${msg}`);
-          // Return a custom error that can be mapped to a 404 response in the API layer
-          const notFoundError = new Error(msg);
-          notFoundError.code = 'TASK_NOT_FOUND';
-          throw notFoundError;
+          // 🆕 Auto-create ONLY for Success-Factor (or factor) updates
+          if (data.origin === 'success-factor' || data.origin === 'factor') {
+            console.log(`[TASK_LOOKUP] Upserting missing Success-Factor task ${taskId}`);
+            
+            try {
+              // Create minimal task record with required fields
+              const newTask = {
+                projectId: data.projectId, 
+                text: data.text || '',
+                stage: data.stage || 'identification',
+                completed: false,
+                origin: data.origin,
+                sourceId: taskId,
+                notes: '',
+                priority: '',
+                dueDate: null,
+                status: 'To Do',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              };
+              
+              // Insert the task using the same logic as createTask
+              const result = await db
+                .insert(projectTasksTable)
+                .values({
+                  id: taskId, // Use the clean UUID as the primary key
+                  ...newTask
+                })
+                .returning();
+                
+              if (result && result.length > 0) {
+                validTaskId = result[0].id as string;
+                lookupMethod = 'upsert';
+                console.log(`[TASK_LOOKUP] Successfully upserted task: ${validTaskId}`);
+              } else {
+                throw new Error('Task upsert failed - no records returned');
+              }
+            } catch (upsertError) {
+              console.error(`[TASK_UPDATE_ERROR] Failed to upsert task:`, upsertError);
+              throw upsertError;
+            }
+          } else {
+            const msg = `Task with ID ${taskId} does not exist. Searched by sourceId, exact match, and UUID prefix match. Task may need to be created first.`;
+            console.error(`[TASK_UPDATE_ERROR] ${msg}`);
+            // Return a custom error that can be mapped to a 404 response in the API layer
+            const notFoundError = new Error(msg);
+            // @ts-ignore - Adding custom error code for route handler to use
+            notFoundError.code = 'TASK_NOT_FOUND';
+            throw notFoundError;
+          }
         }
         
       } catch (err) {
