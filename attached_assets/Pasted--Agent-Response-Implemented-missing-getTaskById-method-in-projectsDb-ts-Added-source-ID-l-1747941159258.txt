@@ -1,0 +1,102 @@
+*** Agent Response
+
+"
+✓ Implemented missing getTaskById method in projectsDb.ts
+✓ Added source ID lookup support for Success Factor tasks
+✓ Enhanced task resolution with detailed logging for debugging
+✓ Created a browser-based test script to verify the solution
+
+Let's test if Success Factor task changes now persist correctly. Please:
+
+Navigate to a project view showing task lists
+Open your browser console (F12 or right-click > Inspect > Console)
+Copy and paste the direct-test-task-toggle.js script content into the console
+Press Enter to run the test
+The script will toggle a Success Factor task and verify the change persists. Do you see the test passing without 500 errors?"
+
+*** User Experience 
+Change in status does not persist
+
+*** Console Log for teh Put (from Replit)
+
+User found in cache: greg@confluity.co.uk
+Session debug: {
+  hasSession: true,
+  sessionID: 'GzFWGtM2karVuxzsRH2nGEjg_yuVt-C1',
+  isAuthenticated: true,
+  passport: { user: 3 },
+  cookie: {
+    path: '/',
+    _expires: 2025-06-21T19:09:52.061Z,
+    originalMaxAge: 2591999919,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax'
+  }
+}
+[DEBUG_TASKS] Task update request headers: {
+  host: '9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0',
+  'content-length': '91',
+  accept: '*/*',
+  'accept-encoding': 'gzip, deflate, br, zstd',
+  'accept-language': 'en-GB,en;q=0.9,en-US;q=0.8',
+  'cache-control': 'no-cache, no-store, max-age=0',
+  'content-type': 'application/json',
+  cookie: 'tcof.sid=s%3AGzFWGtM2karVuxzsRH2nGEjg_yuVt-C1.9wR9EyOBEQ%2B6fxYR0YEzZtcBQA8zp8mRbKNwZaTe4ak',
+  origin: 'https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev',
+  pragma: 'no-cache',
+  referer: 'https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev/organisations/ae92a764-de8c-4aad-ba82-45d686c46623/projects/7277a5fe-899b-4fe6-8e35-05dd6103d054?tab=checklist',
+  'sec-ch-ua': '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'same-origin',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '88.97.211.253, 10.83.0.237',
+  'x-forwarded-proto': 'https',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-requested-with': 'XMLHttpRequest'
+}
+[DEBUG_TASKS] Auth state: { isAuthenticated: true, hasAuthOverride: false }
+[DEBUG_TASKS] Looking up task 2f565bf9-70c7-5c41-93e7-c6c4cde32312 for project 7277a5fe-899b-4fe6-8e35-05dd6103d054 using TaskIdResolver
+[DEBUG_TASKS] Initializing TaskIdResolver with database connection
+[DEBUG_TASKS] Task update request:
+[DEBUG_TASKS] - Project ID: 7277a5fe-899b-4fe6-8e35-05dd6103d054
+[DEBUG_TASKS] - Task ID: 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[DEBUG_TASKS] - Update data: {
+  "completed": true,
+  "status": "Done",
+  "origin": "custom",
+  "sourceId": "",
+  "stage": "identification"
+}
+[DEBUG_TASKS] TaskStateManager initialized with projectsDb
+[DEBUG_TASKS] Using TaskIdResolver with database connection
+[TaskIdResolver] Strategy 1: Exact match lookup for 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[TaskIdResolver] Strategy 4: Source ID lookup for 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[TaskIdResolver] Task not found with any strategy: 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+[ERROR] Unhandled error in task update endpoint: Error: Task not found: 2f565bf9-70c7-5c41-93e7-c6c4cde32312
+    at TaskIdResolver.findTaskById (/home/runner/workspace/server/services/taskIdResolver.ts:180:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:898:20) {
+  code: 'TASK_NOT_FOUND'
+}
+7:10:01 PM [express] PUT /api/projects/7277a5fe-899b-4fe6-8e35-05dd6103d054/tasks/2f565bf9-70c7-5c41…
+
+
+*** Network Output 
+- Status 500
+
+
+**** Question
+
+Imagine we ran another 10-20 cuycles on this, to get this new tack working. What would have we done, and what didn't happen. What weas it that worked in the end?
+
+Let's shortcut to that, and give Agent the prompt.  
