@@ -412,11 +412,51 @@ export default function TaskCard({
     }
   };
 
+  // Function to render sync status indicator
+  const handleRetry = useCallback(() => {
+    console.debug(`[TASK_RETRY] Retrying update for task ${id}`);
+    setLocalSyncStatus('syncing');
+    if (onRetry) {
+      onRetry(id);
+    }
+  }, [id, onRetry]);
+  
+  // Render the sync status indicator
+  const renderSyncStatus = () => {
+    switch (localSyncStatus) {
+      case 'syncing':
+        return (
+          <div className="text-blue-500 animate-pulse" title="Syncing changes...">
+            <Clock size={16} />
+          </div>
+        );
+      case 'error':
+        return (
+          <button 
+            onClick={handleRetry}
+            className="text-red-500 hover:text-red-700 transition-colors" 
+            title="Error syncing, click to retry"
+          >
+            <RefreshCw size={16} />
+          </button>
+        );
+      case 'synced':
+        return isOptimistic ? (
+          <div className="text-green-500 opacity-50" title="Optimistic update applied">
+            <CheckCircle2 size={16} />
+          </div>
+        ) : null;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className={cn(
       'p-4 border rounded-md transition-colors',
       completed || status === 'Done' ? 'bg-gray-50' : 'bg-white',
-      isExpanded && 'ring-2 ring-tcof-teal/30'
+      isExpanded && 'ring-2 ring-tcof-teal/30',
+      localSyncStatus === 'error' && 'border-red-300'
     )}>
       {/* Collapsed View */}
       {!isExpanded ? (
@@ -456,6 +496,11 @@ export default function TaskCard({
                 )}>
                   {cleanTaskTitle}
                 </p>
+                
+                {/* Sync status indicator */}
+                <div className="flex-shrink-0 mr-1">
+                  {renderSyncStatus()}
+                </div>
 
                 {/* Warning icon for unassigned tasks */}
                 {!owner && !completed && (
