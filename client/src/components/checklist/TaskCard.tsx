@@ -146,7 +146,7 @@ export default function TaskCard({
     // Enhanced ID selection with validation
     const isFactorTask = source === 'factor' || origin === 'factor';
     const hasValidSourceId = isFactorTask && sourceId && sourceId.trim().length > 0;
-    
+
     // For factor tasks, try sourceId first, fallback to id
     // For other tasks, always use id
     const updateId = hasValidSourceId ? sourceId : id;
@@ -154,9 +154,9 @@ export default function TaskCard({
     // Debug log ID selection
     console.debug('[TASK_UPDATE]', {
       isFactorTask,
+      selectedId: updateId,
       originalId: id,
-      sourceId: sourceId || 'none',
-      selectedId: updateId
+      sourceId: sourceId || 'none'
     });
 
     // Debug log ID selection
