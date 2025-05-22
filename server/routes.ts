@@ -766,8 +766,13 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     // CRITICAL: First action - Always set Content-Type header for JSON responses
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
-    // Import the TaskIdResolver
-    const { TaskIdResolver, TaskNotFoundError } = require('./services/taskIdResolver');
+    // Start tracking request timing
+    const requestStartTime = Date.now();
+    const requestTimer = { 
+      start: requestStartTime,
+      end: 0,
+      duration: 0
+    };
     
     // Debug logging for headers and auth state
     if (process.env.DEBUG_TASKS === 'true') {
@@ -795,6 +800,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     const { projectId, taskId } = req.params;
     const isDebugEnabled = process.env.DEBUG_TASKS === 'true';
     
+    // Start operation logging
+    const operationId = taskLogger.startOperation('updateTaskRoute', taskId, projectId);
+    
     // Validate the task ID using the TaskIdResolver
     if (isDebugEnabled) {
       console.log(`[DEBUG_TASKS] Looking up task ${taskId} for project ${projectId} using TaskIdResolver`);
@@ -802,23 +810,32 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     
     // Validate required parameters
     if (!projectId) {
-      return res.status(400).json({
-        success: false,
-        error: 'INVALID_PARAMETERS',
-        message: 'Project ID is required'
-      });
+      taskLogger.endOperation(operationId, false, new Error('Project ID is required'));
+      return res.status(400).json(
+        taskLogger.formatErrorResponse(
+          TaskErrorCodes.VALIDATION_ERROR,
+          'Project ID is required',
+          { requestPath: req.path }
+        )
+      );
     }
     
     if (!taskId) {
-      return res.status(400).json({
-        success: false,
-        error: 'INVALID_PARAMETERS',
-        message: 'Task ID is required'
-      });
+      taskLogger.endOperation(operationId, false, new Error('Task ID is required'));
+      return res.status(400).json(
+        taskLogger.formatErrorResponse(
+          TaskErrorCodes.VALIDATION_ERROR,
+          'Task ID is required',
+          { projectId, requestPath: req.path }
+        )
+      );
     }
     
     // Use req.body as the update data
     const updates = req.body;
+    
+    // Log the task update for diagnostic tracking
+    taskLogger.logTaskUpdate(taskId, projectId, updates);
     
     // Log debug information if enabled
     if (isDebugEnabled) {
@@ -842,52 +859,57 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     }
     
     try {
-      // Validate the input task ID format
-      if (taskId && !TaskIdResolver.isValidUUID(TaskIdResolver.cleanTaskId(taskId))) {
+      // Validate the input task ID format using cleanUUID method
+      if (taskId && !validateUUID(TaskIdResolver.cleanUUID(taskId))) {
+        const error = new Error(`Invalid task ID format: ${taskId}`);
+        taskLogger.endOperation(operationId, false, error);
+        
         if (isDebugEnabled) {
           console.log(`[DEBUG_TASKS] Invalid task ID format: ${taskId}`);
         }
-        return res.status(400).json({
-          success: false,
-          error: 'INVALID_TASK_ID',
-          message: `Invalid task ID format: ${taskId}`,
-          details: {
-            taskId,
-            projectId
-          }
-        });
+        
+        return res.status(400).json(
+          taskLogger.formatErrorResponse(
+            TaskErrorCodes.VALIDATION_ERROR,
+            `Invalid task ID format: ${taskId}`,
+            { taskId, projectId }
+          )
+        );
       }
       
       // Use the TaskIdResolver to find the task with intelligent ID resolution
-      const taskLookupResult = await TaskIdResolver.findTaskById(projectId, taskId, projectsDb);
+      // and proper parameter order (taskId, projectId)
+      const findTaskOperationId = taskLogger.startOperation('findTaskById', taskId, projectId);
+      const task = await TaskIdResolver.findTaskById(taskId, projectId);
+      taskLogger.endOperation(findTaskOperationId, !!task);
       
       if (isDebugEnabled) {
         console.log(`[DEBUG_TASKS] Task lookup result:`, {
-          found: !!taskLookupResult.task,
-          lookupMethod: taskLookupResult.lookupMethod,
-          originalId: taskLookupResult.originalId,
-          resolvedId: taskLookupResult.task?.id,
-          metadata: taskLookupResult.metadata
+          found: !!task,
+          id: task?.id,
+          text: task?.text,
+          origin: task?.origin,
+          sourceId: task?.sourceId,
+          completed: task?.completed
         });
       }
       
       // Handle task not found
-      if (!taskLookupResult.task) {
-        return res.status(404).json({
-          success: false,
-          error: 'TASK_NOT_FOUND',
-          message: `Task with ID ${taskId} not found in project ${projectId}`,
-          details: {
-            taskId,
-            projectId,
-            lookupMethod: taskLookupResult.lookupMethod,
-            resolutionPath: taskLookupResult.metadata?.resolutionPath
-          }
-        });
+      if (!task) {
+        const error = new Error(`Task with ID ${taskId} not found in project ${projectId}`);
+        taskLogger.endOperation(operationId, false, error);
+        
+        return res.status(404).json(
+          taskLogger.formatErrorResponse(
+            TaskErrorCodes.NOT_FOUND,
+            `Task with ID ${taskId} not found in project ${projectId}`,
+            { taskId, projectId }
+          )
+        );
       }
       
-      // We've already found the task using TaskIdResolver
-      const originalTask = taskLookupResult.task;
+      // Store the original task for comparison
+      const originalTask = { ...task };
       
       // Additional handling for Success Factor tasks with sourceId
       if (originalTask.origin === 'factor' && originalTask.sourceId) {
