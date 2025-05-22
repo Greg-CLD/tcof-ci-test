@@ -228,13 +228,7 @@ export class TaskIdResolver {
     return id;
   }
   
-  /**
-   * Instance method version of cleanUUID for consistency
-   * This allows the method to be called on instances as well as statically
-   */
-  cleanUUID(id: string): string {
-    return TaskIdResolver.cleanUUID(id);
-  }
+  // Instance method implementation already defined above
 }
 
 // Create a singleton instance with database connection
