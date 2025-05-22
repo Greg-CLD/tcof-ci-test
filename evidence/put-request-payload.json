@@ -1,0 +1,11 @@
+{
+  "url": "/api/projects/bc55c1a2-0cdf-4108-aa9e-44b44baea3b8/tasks/93c11dcd-8d30-404c-8b86-2097b75abad6",
+  "method": "PUT",
+  "body": {
+    "id": "93c11dcd-8d30-404c-8b86-2097b75abad6",
+    "completed": true,
+    "status": "Done",
+    "origin": "factor",
+    "sourceId": "075f1c04-d4fb-4989-97a5-35cb40cac235"
+  }
+}
