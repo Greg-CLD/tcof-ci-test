@@ -407,6 +407,19 @@ export const projectsDb = {
         return null;
       }
 
+      // Get all tasks for the project upfront for enhanced debugging
+      const allProjectTasks = await this.getTasksForProject(projectId);
+      
+      if (DEBUG_TASKS) {
+        console.log(`[getTaskById] Project ${projectId} has ${allProjectTasks.length} total tasks`);
+        
+        // Log all task IDs and sourceIds for diagnostic purposes
+        console.log(`[getTaskById] All task IDs and sourceIds in project:`);
+        for (const task of allProjectTasks) {
+          console.log(`[getTaskById]   - Task: id=${task.id}, origin=${task.origin || 'standard'}, sourceId=${task.sourceId || 'N/A'}`);
+        }
+      }
+
       // Strategy 1: Execute the query to find the task by exact ID match
       if (DEBUG_TASKS) {
         console.log(`[getTaskById] Strategy 1: Direct ID lookup for ${taskId}`);
@@ -417,13 +430,13 @@ export const projectsDb = {
         .where(and(
           eq(projectTasksTable.projectId, projectId),
           eq(projectTasksTable.id, taskId)
-        ))
-        .limit(1);
+        ));
       
       // If task was found by direct ID match, return it
       if (tasks.length > 0) {
         if (DEBUG_TASKS) {
           console.log(`[getTaskById] Found task by exact ID match: ${taskId}`);
+          console.log(`[getTaskById] Task details: origin=${tasks[0].origin || 'standard'}, sourceId=${tasks[0].sourceId || 'N/A'}`);
         }
         
         // Handle Success Factor task IDs with special case for client consistency
@@ -458,12 +471,12 @@ export const projectsDb = {
             .where(and(
               eq(projectTasksTable.projectId, projectId),
               eq(projectTasksTable.id, extractedUuid)
-            ))
-            .limit(1);
+            ));
           
           if (extractedTasks.length > 0) {
             if (DEBUG_TASKS) {
               console.log(`[getTaskById] Found task with extracted UUID: ${extractedUuid}`);
+              console.log(`[getTaskById] Task details: origin=${extractedTasks[0].origin || 'standard'}, sourceId=${extractedTasks[0].sourceId || 'N/A'}`);
             }
             
             // For compound IDs that matched a task, convert properly
@@ -488,26 +501,30 @@ export const projectsDb = {
         .where(and(
           eq(projectTasksTable.projectId, projectId),
           eq(projectTasksTable.sourceId, taskId)
-        ))
-        .limit(1);
+        ));
       
       if (tasksBySourceId.length > 0) {
         if (DEBUG_TASKS) {
-          console.log(`[getTaskById] Found task by sourceId match: ${taskId}`);
+          console.log(`[getTaskById] Found ${tasksBySourceId.length} tasks by sourceId match: ${taskId}`);
+          for (let i = 0; i < tasksBySourceId.length; i++) {
+            const task = tasksBySourceId[i];
+            console.log(`[getTaskById] Task ${i+1} details: id=${task.id}, origin=${task.origin || 'standard'}, sourceId=${task.sourceId || 'N/A'}`);
+          }
         }
         
         // For sourceId matches, use the sourceId as the client-facing ID for consistency
         // This is critical for Success Factor tasks to maintain metadata
         const task = tasksBySourceId[0];
         if (DEBUG_TASKS) {
-          console.log(`[getTaskById] Task metadata - origin: ${task.origin}, sourceId: ${task.sourceId}`);
+          console.log(`[getTaskById] Using first task with sourceId: ${task.sourceId}`);
+          console.log(`[getTaskById] Task metadata - id: ${task.id}, origin: ${task.origin || 'standard'}, sourceId: ${task.sourceId}`);
         }
         
         return convertDbTaskToProjectTask(task, taskId);
       }
       
       // Strategy 4: If this is a potential Success Factor ID, try UUID prefix matching
-      if (validateUuid(taskId)) {
+      if (validateUuid(taskId) || taskId.includes('-')) {
         if (DEBUG_TASKS) {
           console.log(`[getTaskById] Strategy 4: Trying UUID prefix match for sourceId: ${taskId}`);
         }
@@ -519,22 +536,78 @@ export const projectsDb = {
           .where(and(
             eq(projectTasksTable.projectId, projectId),
             sql`CAST(${projectTasksTable.sourceId} AS TEXT) LIKE ${taskId + '%'}`
-          ))
-          .limit(1);
+          ));
         
         if (prefixTasks.length > 0) {
           if (DEBUG_TASKS) {
-            console.log(`[getTaskById] Found task with sourceId prefix matching: ${taskId}`);
-            console.log(`[getTaskById] Matched task sourceId: ${prefixTasks[0].sourceId}`);
+            console.log(`[getTaskById] Found ${prefixTasks.length} tasks with sourceId prefix matching: ${taskId}`);
+            for (let i = 0; i < prefixTasks.length; i++) {
+              console.log(`[getTaskById] Task ${i+1} match: id=${prefixTasks[i].id}, sourceId=${prefixTasks[i].sourceId}`);
+            }
           }
           
           return convertDbTaskToProjectTask(prefixTasks[0], prefixTasks[0].sourceId);
         }
       }
       
+      // Strategy 5: Last resort - try to find task by scanning all tasks in the project
+      if (DEBUG_TASKS) {
+        console.log(`[getTaskById] Strategy 5: Last resort - scanning all tasks in the project for matches`);
+      }
+      
+      // Look for tasks that might have matching IDs or sourceIds
+      const manualMatches = allProjectTasks.filter(task => {
+        // Check if the task ID includes the given taskId or vice versa
+        const idMatch = task.id && (task.id.includes(taskId) || (taskId && taskId.includes(task.id)));
+        
+        // Check if the sourceId includes the given taskId or vice versa
+        const sourceIdMatch = task.sourceId && (task.sourceId.includes(taskId) || (taskId && taskId.includes(task.sourceId)));
+        
+        return idMatch || sourceIdMatch;
+      });
+      
+      if (manualMatches.length > 0) {
+        if (DEBUG_TASKS) {
+          console.log(`[getTaskById] Found ${manualMatches.length} tasks with partial ID/sourceId matches:`);
+          for (let i = 0; i < manualMatches.length; i++) {
+            const task = manualMatches[i];
+            console.log(`[getTaskById] Match ${i+1}: id=${task.id}, origin=${task.origin || 'standard'}, sourceId=${task.sourceId || 'N/A'}`);
+          }
+        }
+        
+        // Prioritize Success Factor tasks if possible
+        const factorMatch = manualMatches.find(task => task.origin === 'factor');
+        if (factorMatch) {
+          if (DEBUG_TASKS) {
+            console.log(`[getTaskById] Using Success Factor task from manual matches: ${factorMatch.id}`);
+          }
+          return convertDbTaskToProjectTask(factorMatch, factorMatch.sourceId);
+        }
+        
+        // Otherwise use the first match
+        if (DEBUG_TASKS) {
+          console.log(`[getTaskById] Using first task from manual matches: ${manualMatches[0].id}`);
+        }
+        return convertDbTaskToProjectTask(manualMatches[0]);
+      }
+      
       // Not found by any strategy
       if (DEBUG_TASKS) {
         console.log(`[getTaskById] Task not found with any lookup strategy: ${taskId} in project ${projectId}`);
+        console.log(`[getTaskById] Showing all available tasks for debugging:`);
+        
+        // Log potential partial matches for each task
+        console.log(`[getTaskById] All tasks with similarity analysis:`);
+        for (const task of allProjectTasks) {
+          let matchScore = 0;
+          
+          // Calculate simple similarity score to help identify potential matches
+          if (task.id && taskId && task.id.substring(0, 8) === taskId.substring(0, 8)) matchScore += 1;
+          if (task.sourceId && taskId && task.sourceId.substring(0, 8) === taskId.substring(0, 8)) matchScore += 2;
+          if (task.origin === 'factor') matchScore += 1;
+          
+          console.log(`[getTaskById] Task: id=${task.id}, origin=${task.origin || 'standard'}, sourceId=${task.sourceId || 'N/A'}, matchScore=${matchScore}`);
+        }
       }
       
       return null;
