@@ -544,10 +544,19 @@ export const projectsDb = {
     try {
       console.log(`Updating task ${taskId} with data:`, data);
       
-      // Check for factor-task compound IDs (like "f219d47b-39b5-5be1-86f2-e0ec3afc8e3b-c1332bc7")
-      // These are likely concatenations of a UUID with a suffix
-      let validTaskId = null;
-      let lookupMethod = 'none';
+      // First try to find task by sourceId
+      const tasksBySourceId = await db.select()
+        .from(projectTasksTable)
+        .where(eq(projectTasksTable.sourceId, taskId));
+      
+      if (tasksBySourceId.length > 0) {
+        console.log(`[TASK_LOOKUP] Found task via sourceId match`);
+        return await this.updateTask(tasksBySourceId[0].id, data);
+      }
+
+      // Regular task lookup logic
+      let validTaskId = taskId;
+      let lookupMethod = 'direct';
       
       // Log the task IDs we're working with
       console.log(`[TASK_LOOKUP] Looking up task with ID: ${taskId}`);
