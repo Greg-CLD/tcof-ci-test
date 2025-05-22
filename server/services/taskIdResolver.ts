@@ -3,6 +3,12 @@
  * 
  * A unified service to handle task ID resolution, translation, and lookup
  * across different formats: UUID, compound ID, and sourceId
+ * 
+ * Supports:
+ * - UUID extraction from compound IDs
+ * - Canonical source ID mapping
+ * - Bidirectional ID translation 
+ * - Comprehensive ID lookup strategies
  */
 
 import { validate as validateUUID } from 'uuid';
@@ -11,14 +17,22 @@ import { validate as validateUUID } from 'uuid';
 const DEBUG_TASK_LOOKUP = process.env.DEBUG_TASKS === 'true';
 const DEBUG_TASK_MAPPING = process.env.DEBUG_TASKS === 'true';
 const DEBUG_TASK_PERSISTENCE = process.env.DEBUG_TASKS === 'true';
+const DEBUG_TASK_ID_RESOLUTION = process.env.DEBUG_TASKS === 'true';
 
 /**
- * Interface for task lookup results
+ * Interface for task lookup results with detailed resolution information
  */
 interface TaskLookupResult {
   task: any;
-  lookupMethod: 'exact' | 'clean-uuid' | 'source-id' | 'not-found';
+  lookupMethod: 'exact' | 'clean-uuid' | 'source-id' | 'compound-id' | 'canonical-id' | 'not-found';
   originalId: string;
+  resolvedId?: string;
+  metadata?: {
+    isCompoundId?: boolean;
+    hasSourceId?: boolean;
+    sourceOrigin?: string;
+    resolutionPath?: string[];
+  };
 }
 
 /**
@@ -80,25 +94,37 @@ export class TaskIdResolver {
    * Find a task by ID using multiple resolution strategies
    * 
    * @param projectId The project ID
-   * @param taskId The task ID (can be exact ID, UUID part, or related to sourceId)
+   * @param taskId The task ID (can be exact ID, UUID part, compound ID, or related to sourceId)
    * @param projectsDb The projects database module
-   * @returns Promise resolving to task or null
+   * @returns Promise resolving to a TaskLookupResult with detailed resolution information
    */
   static async findTaskById(projectId: string, taskId: string, projectsDb: any): Promise<TaskLookupResult> {
     if (!projectId || !taskId) {
       return { 
         task: null,
         lookupMethod: 'not-found',
-        originalId: taskId
+        originalId: taskId,
+        metadata: {
+          resolutionPath: ['invalid-input']
+        }
       };
     }
     
-    if (DEBUG_TASK_LOOKUP) {
+    if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
       console.log(`[TASK_RESOLVER] Looking up task with ID: ${taskId} in project: ${projectId}`);
     }
     
+    // Track resolution path for debugging
+    const resolutionPath: string[] = ['start'];
+    
     // Attempt to clean the task ID (extract UUID if compound)
     const cleanId = this.cleanTaskId(taskId);
+    const isCompoundId = cleanId !== taskId;
+    
+    if (isCompoundId && DEBUG_TASK_ID_RESOLUTION) {
+      console.log(`[TASK_RESOLVER] Extracted clean UUID ${cleanId} from compound ID ${taskId}`);
+      resolutionPath.push('compound-id-detected');
+    }
     
     try {
       // Get all tasks for the project
@@ -108,76 +134,160 @@ export class TaskIdResolver {
         if (DEBUG_TASK_LOOKUP) {
           console.log(`[TASK_RESOLVER] No tasks found for project: ${projectId}`);
         }
+        resolutionPath.push('no-tasks-found');
         return {
           task: null,
           lookupMethod: 'not-found',
-          originalId: taskId
+          originalId: taskId,
+          metadata: {
+            isCompoundId,
+            resolutionPath
+          }
         };
       }
+      
+      resolutionPath.push(`found-${allTasks.length}-tasks`);
       
       // Step 1: Try to find by exact ID match
       const exactMatch = allTasks.find(task => task.id === taskId);
       if (exactMatch) {
-        if (DEBUG_TASK_LOOKUP) {
+        if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
           console.log(`[TASK_RESOLVER] Found task by exact ID match: ${taskId}`);
         }
         
+        resolutionPath.push('exact-match');
         return {
           task: exactMatch,
           lookupMethod: 'exact',
-          originalId: taskId
+          originalId: taskId,
+          resolvedId: exactMatch.id,
+          metadata: {
+            isCompoundId,
+            hasSourceId: !!exactMatch.sourceId,
+            sourceOrigin: exactMatch.origin || 'unknown',
+            resolutionPath
+          }
         };
       }
       
+      resolutionPath.push('no-exact-match');
+      
       // Step 2: If cleanId is different from taskId, try to find by clean UUID
-      if (cleanId !== taskId) {
+      if (isCompoundId) {
         const cleanIdMatch = allTasks.find(task => task.id === cleanId);
         if (cleanIdMatch) {
-          if (DEBUG_TASK_LOOKUP) {
-            console.log(`[TASK_RESOLVER] Found task by clean UUID match: ${cleanId}`);
+          if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
+            console.log(`[TASK_RESOLVER] Found task by clean UUID match: ${cleanId} (from compound ID ${taskId})`);
           }
           
+          resolutionPath.push('compound-id-match');
           return {
             task: cleanIdMatch,
-            lookupMethod: 'clean-uuid',
-            originalId: taskId
+            lookupMethod: 'compound-id',
+            originalId: taskId,
+            resolvedId: cleanIdMatch.id,
+            metadata: {
+              isCompoundId: true,
+              hasSourceId: !!cleanIdMatch.sourceId,
+              sourceOrigin: cleanIdMatch.origin || 'unknown',
+              resolutionPath
+            }
           };
         }
+        resolutionPath.push('no-compound-id-match');
       }
       
       // Step 3: For Success Factor tasks, try to find by sourceId
       if (this.isValidUUID(cleanId)) {
-        const sourceIdMatch = allTasks.find(task => 
-          task.sourceId === cleanId && task.origin === 'factor'
-        );
+        resolutionPath.push('valid-uuid-format');
+        
+        // Find tasks with matching sourceId, prioritizing 'factor' origin
+        const sourceIdMatches = allTasks.filter(task => task.sourceId === cleanId);
+        const factorMatch = sourceIdMatches.find(task => task.origin === 'factor');
+        const sourceIdMatch = factorMatch || sourceIdMatches[0]; // Use factor match if available, otherwise first match
         
         if (sourceIdMatch) {
-          if (DEBUG_TASK_LOOKUP) {
+          if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
             console.log(`[TASK_RESOLVER] Found task by sourceId match: ${cleanId}`);
-            console.log(`[TASK_RESOLVER] Actual task ID: ${sourceIdMatch.id}`);
+            console.log(`[TASK_RESOLVER] Actual task ID: ${sourceIdMatch.id}, origin: ${sourceIdMatch.origin}`);
           }
           
+          resolutionPath.push('source-id-match');
           return {
             task: sourceIdMatch,
             lookupMethod: 'source-id',
-            originalId: taskId
+            originalId: taskId,
+            resolvedId: sourceIdMatch.id,
+            metadata: {
+              isCompoundId,
+              hasSourceId: true,
+              sourceOrigin: sourceIdMatch.origin || 'unknown',
+              resolutionPath
+            }
           };
         }
+        resolutionPath.push('no-source-id-match');
+      }
+      
+      // Step 4: Check for canonical ID (success factor original ID)
+      // This is for newer versions where we use the UUID as sourceId directly
+      const canonicalMatches = allTasks.filter(task => 
+        task.origin === 'factor' && 
+        (task.id === cleanId || task.sourceId === cleanId)
+      );
+      
+      if (canonicalMatches.length > 0) {
+        // Sort to prioritize exact ID matches over sourceId matches
+        canonicalMatches.sort((a, b) => {
+          if (a.id === cleanId) return -1;
+          if (b.id === cleanId) return 1;
+          return 0;
+        });
+        
+        const canonicalMatch = canonicalMatches[0];
+        
+        if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
+          console.log(`[TASK_RESOLVER] Found task by canonical ID match: ${cleanId}`);
+          console.log(`[TASK_RESOLVER] Canonical task ID: ${canonicalMatch.id}, origin: ${canonicalMatch.origin}`);
+        }
+        
+        resolutionPath.push('canonical-id-match');
+        return {
+          task: canonicalMatch,
+          lookupMethod: 'canonical-id',
+          originalId: taskId,
+          resolvedId: canonicalMatch.id,
+          metadata: {
+            isCompoundId,
+            hasSourceId: !!canonicalMatch.sourceId,
+            sourceOrigin: canonicalMatch.origin || 'unknown',
+            resolutionPath
+          }
+        };
       }
       
       // Task not found through any method
-      if (DEBUG_TASK_LOOKUP) {
-        console.log(`[TASK_RESOLVER] Task not found with ID: ${taskId} or clean ID: ${cleanId}`);
+      if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
+        console.log(`[TASK_RESOLVER] Task not found with ID: ${taskId}`);
+        console.log(`[TASK_RESOLVER] Resolution path: ${resolutionPath.join(' → ')}`);
       }
       
+      resolutionPath.push('exhausted-all-methods');
+      
     } catch (err) {
-      console.error('Error during task lookup:', err);
+      console.error('[TASK_RESOLVER] Error during task lookup:', err);
+      resolutionPath.push('lookup-error');
     }
     
+    // Create detailed "not found" result with resolution path
     return {
       task: null,
       lookupMethod: 'not-found',
-      originalId: taskId
+      originalId: taskId,
+      metadata: {
+        isCompoundId,
+        resolutionPath
+      }
     };
   }
   

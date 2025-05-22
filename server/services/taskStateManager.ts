@@ -231,7 +231,7 @@ export class TaskStateManager extends EventEmitter {
     const cacheKey = this.getCacheKey(taskId, projectId);
     
     // Get the current state from cache or database
-    let currentState = this.stateCache.get(cacheKey);
+    let currentState: TaskState | undefined = this.stateCache.get(cacheKey);
     
     if (!currentState) {
       if (DEBUG_TASK_STATE) {
@@ -246,7 +246,7 @@ export class TaskStateManager extends EventEmitter {
             ...lookupResult.task,
             syncStatus: 'synced',
             updatedAt: lookupResult.task.updatedAt || new Date()
-          };
+          } as TaskState;
           
           if (syncOptions.storeInCache) {
             this.cacheTaskState(currentState);
