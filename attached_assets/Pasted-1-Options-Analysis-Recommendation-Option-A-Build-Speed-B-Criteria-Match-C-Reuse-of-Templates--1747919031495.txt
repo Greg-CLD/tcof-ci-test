@@ -1,0 +1,59 @@
+1. Options Analysis & Recommendation
+Option	A) Build Speed	B) Criteria Match	C) Reuse of Templates	D) Simplicity & Low Risk	Notes
+PDF via Client-side Library (html2pdf/html2canvas + jsPDF)					
+• Render the task list DOM element → html2canvas → jsPDF → download PDF					
+★★★★★	★★★★★	★★★★☆ (many examples online; no new infra)	★★★★★	Pure frontend, zero backend changes; minimal config.	
+PDF via “Print to PDF” / Print Styles					
+• Provide a “Print view” route with print-optimized CSS → window.print() → user chooses “Save as PDF” in browser					
+★★★★★	★★★☆☆ (relies on user to hit Save; less “one-click”)	★★★☆☆ (print CSS exists in other parts)	★★★★★	Fastest, but UX isn’t a direct “Download PDF” button.	
+PDF via Server-side Generation (Puppeteer)					
+• POST /api/export/pdf → server renders headless Chrome snapshot of HTML → returns PDF					
+★★☆☆☆	★★★★★★ (most reliable layout)	★☆☆☆☆ (no existing Puppeteer setups)	★★☆☆☆	Heavy dependency; may not run on Replit reliably.	
+Email via Client-side mailto:					
+• Build a mailto link with URL-encoded subject/body listing tasks or attaching a PDF link					
+★★★★★	★★★★★	★★★★★ (simple anchor tag)	★★★★★	Easiest: pure UI change.	
+Email via Backend SMTP API					
+• POST /api/send-email → server sends via nodemailer					
+★★★☆☆	★★★★★	★★★☆☆ (some mail util exists but requires server changes)	★★★☆☆	More control but added config for SMTP; not needed per spec.	
+
+	Recommendation:
+		○ PDF Export: Client-side html2pdf (Option A). Fastest to build, meets “one-click download,” and leverages existing React/UI patterns.
+		○ Email Results: Client-side mailto: link. Zero backend work, directly opens user’s mail client with pre-filled content.
+
+2. Epic & Feature Summary
+	• Epic 4: Sharing, Export & Collaboration
+		○ PDF Export of Task List & Progress
+			§ User Story: As a user, I want to export tasks to PDF
+			§ Acceptance Criteria: PDF generation works clearly and reliably via a single click.
+		○ Email Results via mailto Link
+			§ User Story: As a user, I want to email task results
+			§ Acceptance Criteria: Clicking “Email Results” opens the default mail client with subject and body pre-filled with task information.
+
+3. Agent Prompt (VB.NET container)
+
+
+' Prompt for Replit Agent: EPIC 4 – PDF Export & Mailto Email
+
+Module AgentPrompt
+    Sub Main()
+        Dim prompt As String = "
+Objective: Deliver EPIC 4’s PDF export and mailto-link email features. User testing confirms neither flow is functional—treat as unresolved.
+
+Rules (internal):
+1) One clear objective: add PDF download + email button.  
+2) Always run & paste smoke-test JSON for any fetches (if used).  
+3) If the app restarts, include SSR logs verbatim.
+
+Deliverables:
+1. **Code diff** (```diff``` fencing) for the **UI layer only**:  
+   - Add `DownloadPDF` button in `TaskList.tsx`, integrate html2pdf/html2canvas + jsPDF.  
+   - Add `EmailResults` button building a `mailto:` link with encoded subject/body.
+
+2. **Unit test outline** (```ts``` fencing):  
+   - Mock clicking “Download PDF” → spy on html2pdf/jsPDF methods → assert download triggered.  
+   - Mock clicking “Email Results” → assert `window.location.href` set to proper `mailto:` URI including all task titles and statuses.
+
+Please output the diff and the unit test code in the specified fences."
+        Console.WriteLine(prompt)
+    End Sub
+End Module
