@@ -128,6 +128,10 @@ export default function TaskCard({
   
   // Handle task completion toggle
   const handleToggleCompleted = () => {
+    // Safely handle potentially undefined props
+    const safeOrigin = typeof origin !== 'undefined' ? origin : null;
+    const safeSourceId = typeof sourceId !== 'undefined' ? sourceId : null;
+    
     // TRACE: Log all props on render for debugging
     console.debug('[TASK_PROPS]', {
       id,
@@ -140,8 +144,8 @@ export default function TaskCard({
       status,
       stage,
       source,
-      origin,
-      sourceId,
+      origin: safeOrigin,
+      sourceId: safeSourceId,
       sourceName,
       frameworkCode,
       isGoodPractice
@@ -151,25 +155,35 @@ export default function TaskCard({
     setEditedStatus(newStatus);
     
     // Safely determine which ID to use based on task type
-    const isFactorTask = source === 'factor' || origin === 'factor';
-    const updateId = isFactorTask ? (sourceId || id) : id;
+    const isFactorTask = source === 'factor' || safeOrigin === 'factor';
+    const updateId = isFactorTask && safeSourceId ? safeSourceId : id;
     
     // Enhanced debug logging for task updates
     console.debug(`[TASK_UPDATE] Toggle task completion:
-    - Using ID: ${updateId} (${(source === 'factor' || origin === 'factor') ? 'sourceId' : 'id'})
+    - Using ID: ${updateId} (${isFactorTask ? 'sourceId or fallback to id' : 'id'})
     - Original ID: ${id}
-    - Source ID: ${sourceId}
-    - Origin: ${origin}
+    - Source ID: ${safeSourceId || 'N/A'}
+    - Origin: ${safeOrigin || 'N/A'}
     - Source: ${source}
     - New completed state: ${!completed}
     - New status: ${newStatus}`);
     
-    onUpdate(updateId, {
+    // Create update object with safe null checks
+    const updateData = {
       completed: !completed,
       status: newStatus,
-      origin: origin || source,
-      sourceId: sourceId
-    }, isGoodPractice);
+    };
+    
+    // Only include origin and sourceId if they exist
+    if (safeOrigin || source) {
+      updateData.origin = safeOrigin || source;
+    }
+    
+    if (safeSourceId) {
+      updateData.sourceId = safeSourceId;
+    }
+    
+    onUpdate(updateId, updateData, isGoodPractice);
   };
   
   // Handle priority change
