@@ -184,7 +184,7 @@ export default function TaskCard({
       origin as TaskUpdates['origin'] : null;
       
     const safeSourceId = typeof sourceId !== 'undefined' && sourceId !== null ? 
-      String(sourceId) : null;
+      String(sourceId) : '';
     
     // Determine if we have a valid sourceId for a Success Factor task
     const isFactorTask = source === 'factor' || safeOrigin === 'factor';
@@ -240,7 +240,7 @@ export default function TaskCard({
       updateData.origin = originValue as TaskUpdates['origin'];
     }
     
-    // Only include sourceId if it exists
+    // Only include sourceId if it exists and is not empty
     if (safeSourceId) {
       updateData.sourceId = safeSourceId;
     }
@@ -256,7 +256,7 @@ export default function TaskCard({
         console.debug(`[TASK_TOGGLE] Reset processing flag for request #${currentRequestId}`);
       }, 1000);
     }
-  }, [id, completed, source, origin, sourceId, stage, status, isGoodPractice, onUpdate]);
+  }, [id, completed, source, origin, sourceId ?? '', stage, status, isGoodPractice, onUpdate]);
 
   // Handle priority change
   const handlePriorityChange = (newPriority: TaskPriority | undefined) => {

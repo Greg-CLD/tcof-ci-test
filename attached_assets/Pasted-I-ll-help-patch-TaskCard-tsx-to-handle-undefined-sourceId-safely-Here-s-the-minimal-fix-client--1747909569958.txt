@@ -1,0 +1,101 @@
+I'll help patch TaskCard.tsx to handle undefined sourceId safely. Here's the minimal fix:
+
+client/src/components/checklist/TaskCard.tsx
+Add safe sourceId handling to prevent runtime errors
+Here's a smoke test to verify the fix:
+
+// Save as tests/smoke/task-source-id-handling.spec.ts
+import { test, expect } from '@playwright/test';
+test.describe('TaskCard sourceId handling', () => {
+  test('loads checklist without runtime errors', async ({ page }) => {
+    // Start recording console errors
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    // Load the checklist page
+    await page.goto('/checklist');
+    
+    // Verify no runtime errors occurred
+    expect(errors.length).toBe(0);
+    expect(errors.find(e => e.includes('sourceId is not defined'))).toBeUndefined();
+  });
+  test('toggles completion for all task types', async ({ page }) => {
+    await page.goto('/checklist');
+    // Test custom task toggle
+    const customTask = page.locator('[data-source="custom"]').first();
+    const customInitialState = await customTask.getAttribute('data-completed');
+    await customTask.click();
+    expect(await customTask.getAttribute('data-completed')).not.toBe(customInitialState);
+    // Test Success Factor task with sourceId
+    const sfTaskWithSource = page.locator('[data-source="factor"][data-has-source-id="true"]').first();
+    const sfWithSourceInitial = await sfTaskWithSource.getAttribute('data-completed');
+    await sfTaskWithSource.click();
+    expect(await sfTaskWithSource.getAttribute('data-completed')).not.toBe(sfWithSourceInitial);
+    // Test Success Factor task without sourceId
+    const sfTaskNoSource = page.locator('[data-source="factor"][data-has-source-id="false"]').first();
+    const sfNoSourceInitial = await sfTaskNoSource.getAttribute('data-completed');
+    await sfTaskNoSource.click();
+    expect(await sfTaskNoSource.getAttribute('data-completed')).not.toBe(sfNoSourceInitial);
+  });
+});
+The changes:
+
+Add early sourceId normalization with fallback
+Use safe string comparison and null coalescing
+Conditionally include sourceId debug info
+Keep all logging and updates functional regardless of sourceId presence
+The smoke test verifies:
+
+Checklist loads without runtime errors
+All task types can be toggled
+Both sourceId and non-sourceId tasks work correctly
+Please summarise the proposed minimal fix
+
+GK
+
+Greg309
+Assistant
+just now
+Here is the proposed minimal fix to ensure that all references to sourceId in the TaskCard component are safe when sourceId is undefined or missing:
+
+interface TaskCardProps {
+  ...
+  sourceId?: string;
+  ...
+}
+export default function TaskCard({
+  ...
+  sourceId = '', // Default fallback to empty string
+  ...
+}: TaskCardProps) {
+  ...
+  // TRACE: Log task ID and completion state on render
+  console.debug(`[TRACE_UI] TaskCard rendered:
+  - Task ID: ${id}
+  - Completed: ${completed}
+  - Source: ${source}
+  - SourceId: ${sourceId} // Log sourceId safely
+  - Stage: ${stage}`);
+  
+  // Safe usage of sourceId in any logic or rendering
+  const safeSourceId = sourceId ?? ''; // Use safe value in logic
+  
+  ...
+  // Prepare data for any updates or API calls, ensuring safeSourceId is used
+  const taskPayload = {
+    ...
+    sourceId: safeSourceId, // Only send if defined
+    ...
+  };
+}
+Smoke Test Plan:
+Checklist Page Load Test:
+
+Verify that the checklist page loads without any runtime errors, even if some tasks have no sourceId.
+Task Completion Toggle Test:
+
+Ensure that toggling task completion works correctly for custom tasks and Success Factor tasks, both with and without sourceId.
+This patch uses a fallback value for sourceId to guarantee that it is never undefined and enhances logging and task updates to handle the absence of sourceId gracefully.
