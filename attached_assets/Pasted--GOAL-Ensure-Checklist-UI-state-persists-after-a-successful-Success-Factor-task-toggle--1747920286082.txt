@@ -1,0 +1,43 @@
+### GOAL  
+Ensure **Checklist** UI state **persists** after a successful Success‐Factor task toggle (no more 200s that immediately revert).
+
+### TASKS
+
+1. **Invalidate & Refetch on Mutation Success**  
+   - In `client/src/lib/useProjectTasks.ts` (or wherever the `useMutation` lives), add an `onSuccess` handler that calls:  
+     ```ts
+     queryClient.invalidateQueries(['projectTasks', projectId]);
+     ```  
+   - This guarantees the task list is re-fetched from the server immediately after a PUT.
+
+2. **Lift Updated Task into UI State**  
+   - In `Checklist.tsx`, stop relying solely on local cache. After the `onUpdate` callback, ensure you either:  
+     - Replace the toggled task in your component state with the mutation response, **or**  
+     - Let the refetched query drive the rendered list.  
+   - Show me the minimal **diff** in `Checklist.tsx` where you wire the mutation’s `onSuccess` to update your displayed tasks.
+
+3. **Fix Duplicate React Keys**  
+   - In the task‐list rendering map, change every `key={\`factor-${task.id}\`}` (or similar) to simply `key={task.id}`.  
+   - Remove any string prefixes that cause collisions.  
+
+### SMOKE TEST  
+Provide a tiny Playwright or console script that:  
+```ts
+(async () => {
+  // 1. Fetch tasks, pick one Success-Factor task ID
+  const tasks = await fetch('/api/projects/…/tasks', { credentials: 'include' }).then(r=>r.json());
+  const t = tasks.find(x => x.origin==='factor');
+  // 2. Toggle it
+  await fetch(`/api/projects/…/tasks/${t.id}`, {
+    method:'PUT',
+    credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ completed: !t.completed })
+  });
+  // 3. Re-fetch and assert
+  const tasks2 = await fetch('/api/projects/…/tasks', { credentials: 'include' }).then(r=>r.json());
+  console.log('Persisted?', tasks2.find(x=>x.id===t.id).completed !== t.completed);
+})();
+and show me the JSON output.
+If you propose code, include the summary in a single copy-pasteable JS/TS code block.
+Deliverable: “CHECKLIST PERSISTENCE FIXED ✅” or raw errors & logs.

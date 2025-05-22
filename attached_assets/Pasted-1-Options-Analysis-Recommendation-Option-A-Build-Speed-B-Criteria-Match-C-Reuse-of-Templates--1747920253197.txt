@@ -1,0 +1,81 @@
+1. Options Analysis & Recommendation
+
+Option	A) Build Speed	B) Criteria Match	C) Reuse of Templates	D) Simplicity & Low Risk	Notes
+A. Enhance Existing Pages Only					
+• Dashboard: Tweak Dashboard.tsx to surface project list via existing useProjectQuery hook.					
+• CRUD: Refine AllProjects.tsx forms/dialogs for create/edit/delete using existing UI Dialog & Card components.					
+• Persistence: Ensure ProjectContext writes current projectId into localStorage on select.	★★★★★	★★★★★	★★★★★ (reuse pages/hooks/components)	★★★★★	Purely front-end tweaks and small context changes—no new tables or APIs.
+B. New Dashboard & CRUD Module					
+• Scaffold a fresh client/src/components/dashboard/* folder with new components.					
+• Duplicate CRUD forms from AllProjects.tsx.					
+• Persistence as above.	★★☆☆☆	★★★★★	★★★☆☆ (some duplication)	★★☆☆☆	Heavy lift, duplicate code risk.
+C. Backend-Driven Dashboard					
+• Create new API GET /api/dashboard-overview that aggregates user’s projects + stats.					
+• Consume in a new Dashboard page.					
+• CRUD remains in AllProjects.tsx.					
+• Persistence unchanged.	★★★☆☆	★★★★★	★★★☆☆ (new endpoint but uses existing query utils)	★★★☆☆	Introduces new backend route; moderate risk.
+D. Client-State-Only Persistence					
+• Skip any context change; rely solely on server session cookies for project state.					
+• Automatically redirect user to last opened project via a query param.	★★★☆☆	★★★☆☆ (partial persistence)	★★★☆☆	★★★☆☆	Doesn’t fully satisfy “Projects persist between browser sessions.”
+
+Recommendation:
+Option A is the fastest and lowest-risk: we’ll enhance the existing Dashboard and AllProjects pages, and augment the ProjectContext to write/read the current projectId to/from localStorage. This meets all user stories without adding new routes or database changes.
+
+2. Epic & Feature Summary
+
+Epic 6: System & Account Management
+
+Basic User Dashboard
+
+User Story: As a user, I want a clear overview of my projects
+
+Acceptance: Dashboard clearly shows all my current projects.
+
+Create/Edit/Delete Project
+
+User Story: As a user, I want simple project management
+
+Acceptance: I can easily create, edit, or delete projects via existing UI patterns.
+
+Persistent Session / Project IDs
+
+User Story: As a user, I want session persistence
+
+Acceptance: Projects persist between browser sessions (via localStorage).
+
+3. Agent Prompt (VB.NET container)
+
+vbnet
+Copy
+Edit
+' Prompt for Replit Agent: EPIC 6 – Dashboard, Project CRUD & Persistence
+
+Module AgentPrompt
+    Sub Main()
+        Dim prompt As String = "
+Objective: Deliver EPIC 6’s enhancements to the existing Dashboard, AllProjects CRUD flows, and project-ID persistence. Although previous updates were claimed fixed, user testing shows dashboards aren’t loading correctly, CRUD modals misbehave, and last-opened project isn’t remembered—treat all as unresolved.
+
+Rules (internal):
+1) One clear objective: refine Dashboard.tsx, AllProjects.tsx, and ProjectContext only.  
+2) Always run & paste smoke-test JSON outputs for any API calls used by these pages.  
+3) If the app restarts, include the full SSR logs verbatim.
+
+Deliverables:
+1. **Code diff** (```diff``` fencing) for the **UI & Context layer only**:
+   - **Dashboard.tsx**: ensure it fetches and renders the user’s project list with loading/error states.  
+   - **AllProjects.tsx**: fix create/edit/delete handlers to use existing `server/routes/projects.ts` endpoints and display feedback modals.  
+   - **ProjectContext.tsx**: read/write `currentProjectId` to `localStorage` on project select.
+
+2. **Unit test outline** (```ts``` fencing):
+   - In `client/src/pages/__tests__/Dashboard.test.tsx`:  
+     • Mock the project query hook → assert correct project cards render.  
+   - In `client/src/pages/__tests__/AllProjects.test.tsx`:  
+     • Simulate ‘Create Project’ dialog submission → assert POST call and new project appears.  
+     • Simulate ‘Delete’ action → assert DELETE call and project removed.  
+   - In `client/src/contexts/__tests__/ProjectContext.test.tsx`:  
+     • Set `currentProjectId` via context setter → assert `localStorage` value; reload context → assert the state initializes from `localStorage`.
+
+Please provide the diff and the matching unit test code in the specified fences."
+        Console.WriteLine(prompt)
+    End Sub
+End Module
