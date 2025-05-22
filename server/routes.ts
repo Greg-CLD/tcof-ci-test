@@ -41,6 +41,7 @@ declare module './projectsDb' {
 import { relationsDb, createRelation, loadRelations, saveRelations, saveRelation, RelationType } from './relationsDb';
 import { outcomeProgressDb, outcomesDb } from './outcomeProgressDb';
 import { setupAuth, isAuthenticated } from './auth'; 
+import { registerAdminRoutes } from './admin-routes';
 
 // Define admin check middleware
 function isAdmin(req: Request, res: Response, next: any) {
