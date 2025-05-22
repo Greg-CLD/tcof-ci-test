@@ -1,37 +1,39 @@
 /**
- * Test script for verifying JSON responses from the task update endpoint
+ * Quick test script to verify task update JSON response
+ * 
+ * This script sends direct requests to the task update endpoint
+ * and verifies that proper JSON responses are returned with the correct Content-Type header.
  */
+const https = require('https');
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 
-function getCookieFromFile() {
+// Use local server for testing
+const USE_LOCAL = false;
+const BASE_URL = USE_LOCAL ? 'localhost' : '9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev';
+const PORT = USE_LOCAL ? 5000 : 443;
+
+// Test data
+const TEST_PROJECT_ID = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
+const TEST_TASK_ID = '2f565bf9-70c7-5c41-93e7-c6c4cde32312'; // Success Factor task
+
+// Get cookies from session
+function getCookies() {
   try {
-    return fs.readFileSync('./cookies.txt', 'utf8').trim();
-  } catch (err) {
-    console.error('Could not read cookie file:', err.message);
+    const data = fs.readFileSync(path.join(__dirname, 'cookies.txt'), 'utf8');
+    return data.trim();
+  } catch (e) {
+    console.error('Error reading cookies file:', e.message);
     return '';
   }
 }
 
-async function testJsonResponse() {
-  try {
-    const cookie = getCookieFromFile();
-    console.log('Using cookie:', cookie ?  : 'None');
-
-    // First, get a test project
-    const projectsOptions = {
-      hostname: 'localhost',
-      port: 5000,
-      path: '/api/projects',
-      method: 'GET',
-      headers: {
-        'Cookie': cookie,
-        'Content-Type': 'application/json'
-      }
-    };
-
-    // Make a request to get projects
-    const projectsReq = http.request(projectsOptions, (res) => {
+// HTTP request helper
+function request(options, requestBody = null) {
+  return new Promise((resolve, reject) => {
+    const httpModule = USE_LOCAL ? http : https;
+    const req = httpModule.request(options, (res) => {
       let data = '';
       
       res.on('data', (chunk) => {
@@ -39,136 +41,138 @@ async function testJsonResponse() {
       });
       
       res.on('end', () => {
-        try {
-          const projects = JSON.parse(data);
-          if (!projects || !projects.length) {
-            console.error('No projects found!');
-            return;
-          }
-          
-          const testProject = projects[0];
-          console.log();
-          
-          // Get tasks for this project
-          const tasksOptions = {
-            hostname: 'localhost',
-            port: 5000,
-            path: `/api/projects/${testProject.id}/tasks`,
-            method: 'GET',
-            headers: {
-              'Cookie': cookie,
-              'Content-Type': 'application/json'
-            }
-          };
-          
-          const tasksReq = http.request(tasksOptions, (res) => {
-            let taskData = '';
-            
-            res.on('data', (chunk) => {
-              taskData += chunk;
-            });
-            
-            res.on('end', () => {
-              try {
-                const tasks = JSON.parse(taskData);
-                if (!tasks || !tasks.length) {
-                  console.error('No tasks found for project!');
-                  return;
-                }
-                
-                // Find a Success Factor task if possible
-                let testTask = tasks.find(t => t.origin === 'success-factor' || t.origin === 'factor');
-                if (!testTask) {
-                  // Fall back to any task
-                  testTask = tasks[0];
-                }
-                
-                console.log(`Using test task: ${testTask.id}`);
-                console.log(`Task details: ${JSON.stringify({
-                  text: testTask.text,
-                  origin: testTask.origin,
-                  completed: testTask.completed,
-                  sourceId: testTask.sourceId
-                }, null, 2)}`);
-                
-                // Create an update that toggles the completion status
-                const update = {
-                  completed: !testTask.completed
-                };
-                
-                console.log(`Sending update: ${JSON.stringify(update)}`);
-                
-                // Make the PUT request
-                const updateOptions = {
-                  hostname: 'localhost',
-                  port: 5000,
-                  path: `/api/projects/${testProject.id}/tasks/${testTask.id}`,
-                  method: 'PUT',
-                  headers: {
-                    'Cookie': cookie,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                  }
-                };
-                
-                const updateReq = http.request(updateOptions, (res) => {
-                  console.log('Response status:', res.statusCode);
-                  console.log('Content-Type:', res.headers['content-type']);
-                  
-                  let responseData = '';
-                  
-                  res.on('data', (chunk) => {
-                    responseData += chunk;
-                  });
-                  
-                  res.on('end', () => {
-                    try {
-                      // Try to parse as JSON
-                      const parsedData = JSON.parse(responseData);
-                      console.log('Response data:', JSON.stringify(parsedData, null, 2));
-                      console.log('SUCCESS: Received proper JSON response!');
-                    } catch (parseError) {
-                      console.error('Error parsing response as JSON:', parseError.message);
-                      console.error('Raw response (first 500 chars):', responseData.substring(0, 500));
-                      
-                      if (responseData.includes('<!DOCTYPE html>')) {
-                        console.error('ERROR: Received HTML instead of JSON!');
-                      }
-                    }
-                  });
-                });
-                
-                updateReq.on('error', (error) => {
-                  console.error('Error making update request:', error);
-                });
-                
-                updateReq.write(JSON.stringify(update));
-                updateReq.end();
-              } catch (parseError) {
-                console.error('Error parsing tasks response:', parseError);
-              }
-            });
-          });
-          
-          tasksReq.on('error', (error) => {
-            console.error('Error getting tasks:', error);
-          });
-          
-          tasksReq.end();
-        } catch (parseError) {
-          console.error('Error parsing projects response:', parseError);
-        }
+        resolve({
+          status: res.statusCode,
+          headers: res.headers,
+          data
+        });
       });
     });
     
-    projectsReq.on('error', (error) => {
-      console.error('Error getting projects:', error);
+    req.on('error', (error) => {
+      reject(error);
     });
     
-    projectsReq.end();
+    if (requestBody) {
+      req.write(JSON.stringify(requestBody));
+    }
+    
+    req.end();
+  });
+}
+
+// Main test function
+async function testJsonResponse() {
+  console.log('🔍 Testing task update endpoint for proper JSON responses...');
+  console.log(`🔗 Using API endpoint: ${BASE_URL}:${PORT}`);
+  
+  const cookies = getCookies();
+  if (!cookies) {
+    console.warn('⚠️ No cookies found - authentication may fail');
+  } else {
+    console.log('✅ Session cookies loaded');
+  }
+  
+  try {
+    // Get the test task
+    console.log(`📋 Getting task details for task ${TEST_TASK_ID}`);
+    
+    const taskResponse = await request({
+      hostname: BASE_URL,
+      port: PORT,
+      path: `/api/projects/${TEST_PROJECT_ID}/tasks`,
+      method: 'GET',
+      headers: {
+        'Cookie': cookies,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (taskResponse.status !== 200) {
+      console.error(`❌ Failed to get tasks: ${taskResponse.status}`);
+      console.error(taskResponse.data);
+      return;
+    }
+    
+    // Parse tasks
+    let tasks;
+    try {
+      tasks = JSON.parse(taskResponse.data);
+    } catch (e) {
+      console.error('❌ Failed to parse tasks response:', e.message);
+      console.error('Response:', taskResponse.data.substring(0, 200) + '...');
+      return;
+    }
+    
+    // Find our test task
+    const testTask = tasks.find(t => t.id === TEST_TASK_ID);
+    if (!testTask) {
+      console.error(`❌ Test task ${TEST_TASK_ID} not found in project`);
+      return;
+    }
+    
+    console.log(`✅ Found test task: "${testTask.text}" (Completed: ${testTask.completed})`);
+    
+    // Send task update
+    const updateBody = {
+      completed: !testTask.completed,
+      origin: testTask.origin || 'success-factor'
+    };
+    
+    console.log(`📝 Sending update: ${JSON.stringify(updateBody)}`);
+    
+    const updateResponse = await request({
+      hostname: BASE_URL,
+      port: PORT,
+      path: `/api/projects/${TEST_PROJECT_ID}/tasks/${TEST_TASK_ID}`,
+      method: 'PUT',
+      headers: {
+        'Cookie': cookies,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    }, updateBody);
+    
+    // Examine response
+    console.log(`📊 Response Status: ${updateResponse.status}`);
+    console.log(`📊 Content-Type: ${updateResponse.headers['content-type']}`);
+    
+    if (updateResponse.headers['content-type']?.includes('application/json')) {
+      console.log('✅ SUCCESS: Received proper JSON Content-Type header');
+    } else {
+      console.error(`❌ ERROR: Wrong Content-Type header: ${updateResponse.headers['content-type']}`);
+    }
+    
+    try {
+      // Attempt to parse response as JSON
+      const responseData = JSON.parse(updateResponse.data);
+      console.log('✅ SUCCESS: Response successfully parsed as JSON');
+      
+      if (responseData.success === true) {
+        console.log('✅ SUCCESS: Task update confirmed successful');
+        console.log('📊 Task state after update:', responseData.task ? 
+          `Completed: ${responseData.task.completed}` : '(Task data not included in response)');
+      } else {
+        console.warn(`⚠️ Task update returned success: false`);
+        console.warn('Message:', responseData.message || 'No message provided');
+      }
+    } catch (e) {
+      console.error('❌ ERROR: Failed to parse response as JSON:', e.message);
+      
+      // Check if response is HTML
+      if (updateResponse.data.includes('<!DOCTYPE html>')) {
+        console.error('❌ CRITICAL ERROR: Received HTML instead of JSON!');
+        console.error('First 200 characters of response:');
+        console.error(updateResponse.data.substring(0, 200) + '...');
+      } else {
+        console.error('Raw response:', updateResponse.data);
+      }
+    }
+    
   } catch (error) {
-    console.error('Test failed:', error);
+    console.error('❌ Test failed with error:', error.message);
   }
 }
 
+// Run the test
 testJsonResponse();

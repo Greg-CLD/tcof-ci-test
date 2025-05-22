@@ -3,10 +3,14 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorLogger } from "./middlewares/errorLogger";
 import { registerSuccessFactorsRoutes } from "./routes.factorsDb.simple";
+import { forceJsonResponses } from "./middleware/forceJsonResponses";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Apply JSON response middleware to ensure proper content type headers
+app.use(forceJsonResponses);
 
 // Move health check to /health endpoint
 app.get('/health', (_req, res) => {

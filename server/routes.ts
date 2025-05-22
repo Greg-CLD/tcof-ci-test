@@ -755,9 +755,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     });
   });
 
-  // Task update endpoint with fixed JSON responses and proper Success Factor handling
+  // Task update endpoint with guaranteed JSON responses and proper Success Factor handling
   app.put("/api/projects/:projectId/tasks/:taskId", async (req: Request, res: Response) => {
-    // CRITICAL: Always set Content-Type header to ensure JSON responses
+    // CRITICAL: First action - Always set Content-Type header for JSON responses
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
     // Authentication check
