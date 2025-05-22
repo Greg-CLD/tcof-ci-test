@@ -1,0 +1,33 @@
+' GOAL REMINDER:
+' The overall goal is for TCOF Success Factor tasks to persist their completion state—toggled via UI—in all real-world usage, with consistent JSON responses, and source/origin data remaining correct.
+' Despite repeated Agent assertions that the issue is fixed, user testing shows the problem is not resolved in prod. The UI still cannot mark some Success Factor tasks complete and have them persist after refresh.
+
+' OBJECTIVE (one only):
+' Provide clear, stepwise, *real-world* evidence that the Success Factor task toggle workflow works from UI through to server and DB—using a true UI-driven test, not just curl or local Playwright on localhost.
+
+' FILE-GROUP: server/projectsDb.ts (or minimal matching change at server, if required).
+'
+' INSTRUCTIONS:
+' - Run a UI-driven test to create or toggle a Success Factor task and show:
+'   1. The full JSON object for the affected task *before* and *after* update (GET /api/projects/:projectId/tasks).
+'   2. The server logs (with [TASK_LOOKUP], [TASK_UPDATE], [TASK_SOURCE_MATCH] or similar) for those PUT/GET calls.
+'   3. Confirmation that the task's `origin` and `sourceId` fields remain correct (not mismatched) after the update.
+' - Paste any test script or test output directly in this thread if not exposed via browser.
+' - Always paste smoke-test JSON result and last 50 lines of SSR logs if app is restarted.
+' - If you propose code, show the minimal code diff in ```diff``` fencing (server layer only).
+' - Outline a matching unit test in ```js``` or ```ts``` fencing.
+
+' Example matching unit test:
+```js
+// test/smoke-success-factor-persistence.spec.ts
+it('should persist completion and retain correct origin/sourceId', async () => {
+  const created = await api.createTask({ origin: 'factor', ... });
+  expect(created.origin).toBe('factor');
+  expect(created.sourceId).toBeDefined();
+  const updated = await api.updateTask({ id: created.id, completed: true });
+  expect(updated.completed).toBe(true);
+  const refreshed = await api.getTask(created.id);
+  expect(refreshed.completed).toBe(true);
+  expect(refreshed.origin).toBe('factor');
+  expect(refreshed.sourceId).toBe(created.sourceId);
+});
