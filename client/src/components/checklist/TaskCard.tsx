@@ -68,6 +68,8 @@ interface TaskCardProps {
   sourceName?: string;
   frameworkCode?: string;
   isGoodPractice?: boolean;
+  origin?: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
+  sourceId?: string;
   onUpdate: (id: string, updates: TaskUpdates, isGoodPractice?: boolean) => void;
   onDelete?: (id: string) => void;
   dragHandleProps?: any;
@@ -131,7 +133,7 @@ export default function TaskCard({
    * @param str String to check for UUID validity
    * @returns true if string is a valid UUID, false otherwise
    */
-  const isValidUUID = (str: string | null | undefined): boolean => {
+  const isValidUUID = (str: any): boolean => {
     if (!str) return false;
     if (typeof str !== 'string') return false;
     if (!str.trim()) return false;
@@ -149,9 +151,12 @@ export default function TaskCard({
       return;
     }
 
-    // Safely handle potentially undefined props
-    const safeOrigin = typeof origin !== 'undefined' ? origin : null;
-    const safeSourceId = typeof sourceId !== 'undefined' && sourceId !== null ? sourceId : null;
+    // Safely handle potentially undefined props using proper types
+    const safeOrigin = typeof origin !== 'undefined' ? 
+      origin as TaskUpdates['origin'] : null;
+      
+    const safeSourceId = typeof sourceId !== 'undefined' && sourceId !== null ? 
+      String(sourceId) : null;
     
     // Determine if we have a valid sourceId for a Success Factor task
     const isFactorTask = source === 'factor' || safeOrigin === 'factor';
@@ -170,7 +175,8 @@ export default function TaskCard({
       status
     });
 
-    const newStatus = !completed ? 'Done' : 'To Do';
+    // Type-safe status assignment
+    const newStatus = !completed ? 'Done' : 'To Do' as const;
     setEditedStatus(newStatus);
 
     // Choose the most appropriate ID to use for the update
@@ -190,17 +196,21 @@ export default function TaskCard({
     - New completed state: ${!completed}
     - New status: ${newStatus}`);
     
-    // Create update object with safe null checks
+    // Create update object with type-safe fields
     const updateData: TaskUpdates = {
       completed: !completed,
       status: newStatus,
     };
     
-    // Only include origin and sourceId if they exist
+    // Only include origin if it exists and as the correct type
     if (safeOrigin || source) {
-      updateData.origin = safeOrigin || source;
+      const originValue = safeOrigin || source;
+      // This type assertion is safe because both origin and source are either
+      // one of the allowed values or undefined
+      updateData.origin = originValue as TaskUpdates['origin'];
     }
     
+    // Only include sourceId if it exists
     if (safeSourceId) {
       updateData.sourceId = safeSourceId;
     }
