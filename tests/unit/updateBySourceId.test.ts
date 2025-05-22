@@ -6,72 +6,151 @@ import { projectTasks as projectTasksTable } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 /**
- * Mock data to create a success factor task for testing
+ * Test data generator: creates test data for all test scenarios
  */
-async function seedFactorTask() {
-  // Create test project id and task data
+async function setupTestData() {
+  // Create test project ids
   const projectId = uuidv4();
-  const taskId = uuidv4();
-  const sourceId = uuidv4(); // Different ID that will be used for lookup
+  const otherProjectId = uuidv4();
 
-  // Create a test task with source_id
-  await db.insert(projectTasksTable).values({
-    id: taskId,
-    projectId: projectId,
-    text: 'Test Success Factor Task',
-    stage: 'identification',
-    origin: 'factor',
-    sourceId: sourceId, // Important: different from taskId
-    completed: false,
-    status: 'pending'
-  }).execute();
+  // Create unique IDs for tasks
+  const factorTaskId = uuidv4();
+  const factorTaskSourceId = uuidv4(); // Different ID used for source_id lookup
+  const regularTaskId = uuidv4();
+  const otherProjectTaskId = uuidv4();
+  
+  // Insert test tasks
+  await db.insert(projectTasksTable).values([
+    {
+      // Success Factor task with different source_id
+      id: factorTaskId,
+      projectId: projectId,
+      text: 'Test Success Factor Task',
+      stage: 'identification',
+      origin: 'factor',
+      sourceId: factorTaskSourceId, // Different from task ID
+      completed: false,
+      status: 'pending'
+    },
+    {
+      // Regular task (non-Success Factor)
+      id: regularTaskId,
+      projectId: projectId,
+      text: 'Test Regular Task',
+      stage: 'identification',
+      origin: 'custom',
+      sourceId: regularTaskId, // Same as task ID
+      completed: false,
+      status: 'pending'
+    },
+    {
+      // Task in a different project (for cross-project test)
+      id: otherProjectTaskId,
+      projectId: otherProjectId,
+      text: 'Task in Other Project',
+      stage: 'identification',
+      origin: 'factor',
+      sourceId: uuidv4(),
+      completed: false,
+      status: 'pending'
+    }
+  ]).execute();
 
-  // Return test data for assertions
   return {
     projectId,
-    task: {
-      id: taskId,
-      sourceId: sourceId,
-      text: 'Test Success Factor Task'
+    otherProjectId,
+    factorTask: {
+      id: factorTaskId,
+      sourceId: factorTaskSourceId
+    },
+    regularTask: {
+      id: regularTaskId
+    },
+    otherProjectTask: {
+      id: otherProjectTaskId
     }
   };
 }
 
 // Clean up test data
-async function cleanup(projectId: string) {
+async function cleanup(projectId: string, otherProjectId: string) {
   await db.delete(projectTasksTable)
     .where(eq(projectTasksTable.projectId, projectId))
     .execute();
+  
+  await db.delete(projectTasksTable)
+    .where(eq(projectTasksTable.projectId, otherProjectId))
+    .execute();
 }
 
-describe('Task Update API by sourceId fallback', () => {
-  it('updates factor task by sourceId fallback', async () => {
-    // Create test data
-    const { projectId, task } = await seedFactorTask();
+describe('Task Update API Hardening Tests', () => {
+  let testData: any;
+
+  beforeAll(async () => {
+    testData = await setupTestData();
+  });
+
+  afterAll(async () => {
+    await cleanup(testData.projectId, testData.otherProjectId);
+  });
+
+  // Scenario 1: Task found by direct ID match (baseline case)
+  it('updates task when taskId equals task.id', async () => {
+    const res = await request(app)
+      .put(`/api/projects/${testData.projectId}/tasks/${testData.factorTask.id}`)
+      .set('x-auth-override', 'true') // Bypass auth for testing
+      .send({ completed: true });
     
-    try {
-      // Make PUT request using sourceId instead of the task's primary ID
-      const res = await request(app)
-        .put(`/api/projects/${projectId}/tasks/${task.sourceId}`)
-        .set('x-auth-override', 'true') // Bypass auth for testing
-        .send({ completed: true });
-      
-      // Validate response
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.task.completed).toBe(true);
-      
-      // Verify database was updated correctly
-      const updatedTasks = await db.select()
-        .from(projectTasksTable)
-        .where(eq(projectTasksTable.id, task.id))
-        .execute();
-      
-      expect(updatedTasks.length).toBe(1);
-      expect(updatedTasks[0].completed).toBe(true);
-    } finally {
-      // Clean up test data
-      await cleanup(projectId);
-    }
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.task.completed).toBe(true);
+  });
+
+  // Scenario 2: Task found by source_id fallback
+  it('updates factor task when taskId equals task.sourceId', async () => {
+    const res = await request(app)
+      .put(`/api/projects/${testData.projectId}/tasks/${testData.factorTask.sourceId}`)
+      .set('x-auth-override', 'true')
+      .send({ completed: false });
+    
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.task.completed).toBe(false);
+  });
+
+  // Scenario 3: Valid UUID but from another project (should 404)
+  it('returns 404 when taskId is valid but belongs to another project', async () => {
+    const res = await request(app)
+      .put(`/api/projects/${testData.projectId}/tasks/${testData.otherProjectTask.id}`)
+      .set('x-auth-override', 'true')
+      .send({ completed: true });
+    
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toBe('TASK_NOT_FOUND');
+  });
+
+  // Scenario 4: Invalid UUID format (should 400)
+  it('returns 400 when taskId is not a valid UUID', async () => {
+    const res = await request(app)
+      .put(`/api/projects/${testData.projectId}/tasks/not-a-valid-uuid`)
+      .set('x-auth-override', 'true')
+      .send({ completed: true });
+    
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toBe('INVALID_FORMAT');
+  });
+
+  // Scenario 5: Regular non-factor task updates still work
+  it('updates regular (non-factor) task correctly', async () => {
+    const res = await request(app)
+      .put(`/api/projects/${testData.projectId}/tasks/${testData.regularTask.id}`)
+      .set('x-auth-override', 'true')
+      .send({ completed: true });
+    
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.task.completed).toBe(true);
   });
 });

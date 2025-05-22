@@ -5,10 +5,11 @@ import { storage } from "./storage";
 import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, validate as validateUuid } from 'uuid';
 import * as factorsDb from './factorsDb';
 import { db } from "./db";
 import { sql } from 'drizzle-orm';
+import { findTaskBySourceId } from './projectsDb';
 import type { FactorTask } from '../scripts/factorUtils';
 // Import debug flags
 import { 
@@ -817,6 +818,18 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       }
     }
     
+    // Validate taskId is a valid UUID format for proper lookup
+    if (!validateUuid(taskId)) {
+      if (isDebugEnabled) {
+        console.log(`[DEBUG_TASK_API] Invalid UUID format for taskId: ${taskId}`);
+      }
+      return res.status(400).json({
+        success: false,
+        error: 'INVALID_FORMAT',
+        message: 'Task ID must be a valid UUID format'
+      });
+    }
+    
     try {
       // Step 1: Find the original task to ensure proper updates
       let originalTask = null;
@@ -848,8 +861,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       
       // If still not found, try to find task by sourceId for the same project (Success Factor tasks)
       if (!originalTask) {
-        const taskBySourceId = await projectsDb.findTaskBySourceId(projectId, taskId);
+        // Look up by sourceId as a fallback (especially for Success Factor tasks)
+        const taskBySourceId = await findTaskBySourceId(projectId, taskId);
         if (taskBySourceId) {
+          // If found by sourceId, update originalTask reference
           originalTask = tasks.find(t => t.id === taskBySourceId.id);
           if (isDebugEnabled && originalTask) {
             console.log(`[DEBUG_TASK_API] Found task using sourceId match: ${taskId} -> ${taskBySourceId.id}`);

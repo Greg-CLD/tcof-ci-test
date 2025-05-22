@@ -201,12 +201,18 @@ function convertDbTaskToProjectTask(dbTask: any, clientTaskId?: string): Project
  */
 export async function findTaskBySourceId(projectId: string, sourceId: string) {
   try {
+    if (!validateUuid(sourceId)) {
+      console.warn(`Invalid UUID format for sourceId lookup: "${sourceId}"`);
+      return null;
+    }
+
     const task = await db.select()
       .from(projectTasksTable)
-      .where(eq(projectTasksTable.projectId, projectId))
-      .where(eq(projectTasksTable.sourceId, sourceId))
-      .limit(1)
-      .execute();
+      .where(and(
+        eq(projectTasksTable.projectId, projectId),
+        eq(projectTasksTable.sourceId, sourceId)
+      ))
+      .limit(1);
     
     return task.length > 0 ? task[0] : null;
   } catch (error) {
