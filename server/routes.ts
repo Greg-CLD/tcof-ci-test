@@ -885,16 +885,29 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       
       // Step 2: Update the task
       try {
-        const updatedTask = await projectsDb.updateTask(taskId, updateData);
+        // Store original task details before update
+        const userTaskId = originalTask.id;
+        
+        // Update the underlying task (which might be a different object for success factors)
+        const updatedSourceTask = await projectsDb.updateTask(taskId, updateData);
         
         if (isDebugEnabled) {
           console.log(`[DEBUG_TASK_API] Task updated successfully`);
+          console.log(`[DEBUG_TASK_API] Using user's task ID for response: ${userTaskId}`);
         }
+        
+        // Create an updated user task object by merging original task with updates
+        // This ensures we return the task object with the ID that the user expects
+        const updatedUserTask = {
+          ...originalTask,           // Start with the user's original task (includes correct ID)
+          ...updateData,             // Apply the user's updates
+          updatedAt: new Date()      // Add updatedAt timestamp
+        };
         
         return res.status(200).json({
           success: true,
           message: 'Task updated successfully',
-          task: updatedTask
+          task: updatedUserTask      // Return user's task with updates applied, not source task
         });
       } catch (updateError) {
         console.error(`[TASK_UPDATE_ERROR] Failed to update task:`, updateError);
