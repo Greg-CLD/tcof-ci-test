@@ -1393,7 +1393,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     
     // Final check - if we somehow get here without sending a response,
     // explicitly send a JSON response to prevent HTML fallthrough
-    if (!responseHandled) {
+    if (!res.headersSent) {
       console.error('[ERROR] No response was sent in task update handler, sending fallback JSON response');
       res.status(500).json({
         success: false,
@@ -1404,7 +1404,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     
     // Final fallthrough prevention - this should never be reached 
     // if any of the response.json calls above were executed
-    if (!responseHandled) {
+    if (!res.headersSent) {
       console.error('[FALLTHROUGH] PUT /api/projects/:projectId/tasks/:taskId handler reached end without response');
       return res.status(500).json({
         success: false,
