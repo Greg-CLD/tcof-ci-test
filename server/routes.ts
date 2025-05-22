@@ -815,20 +815,20 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       });
     }
     
+    // Use req.body as the update data
+    const updates = req.body;
+    
     // Log debug information if enabled
     if (isDebugEnabled) {
       console.log('[DEBUG_TASKS] Task update request:');
       console.log(`[DEBUG_TASKS] - Project ID: ${projectId}`);
       console.log(`[DEBUG_TASKS] - Task ID: ${taskId}`);
-      console.log(`[DEBUG_TASKS] - Update data:`, JSON.stringify(req.body, null, 2));
+      console.log(`[DEBUG_TASKS] - Update data:`, JSON.stringify(updates, null, 2));
       
-      if (req.body.origin === 'success-factor' || req.body.origin === 'factor') {
+      if (updates.origin === 'success-factor' || updates.origin === 'factor') {
         console.log(`[DEBUG_TASKS] *** Success Factor task update detected ***`);
       }
     }
-    
-    // Use req.body as the update data
-    const updates = req.body;
     
     // Initialize TaskStateManager if not already initialized
     if (!taskStateManager.projectsDb) {
@@ -1103,17 +1103,17 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
               console.log(`[DEBUG_TASK_COMPLETION] *** SuccessFactor task update operation ***`);
               console.log(`[DEBUG_TASK_COMPLETION]  - Task ID: ${originalTask.id}`);
               console.log(`[DEBUG_TASK_COMPLETION]  - Current completion state: ${originalTask.completed}`);
-              console.log(`[DEBUG_TASK_COMPLETION]  - Requested completion state: ${taskUpdate.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION]  - Requested completion state: ${updates.completed}`);
               console.log(`[DEBUG_TASK_COMPLETION]  - Source ID: ${originalTask.sourceId}`);
               
               // Log the entire task update object for comprehensive debugging
               if (DEBUG_TASK_PERSISTENCE) {
-                console.log(`[DEBUG_TASK_PERSISTENCE] Full task update object:`, taskUpdate);
+                console.log(`[DEBUG_TASK_PERSISTENCE] Full task update object:`, updates);
               }
             }
             
             // Track state transitions with the new debug flag
-            if (DEBUG_TASK_STATE && taskUpdate.hasOwnProperty('completed')) {
+            if (DEBUG_TASK_STATE && updates.hasOwnProperty('completed')) {
               console.log(`[DEBUG_TASK_STATE] Task state transition tracked:`);
               console.log(`[DEBUG_TASK_STATE]  - Task ID: ${originalTask.id}`);
               console.log(`[DEBUG_TASK_STATE]  - Title: ${originalTask.text?.substring(0, 40)}...`);
@@ -1136,10 +1136,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           console.log(`[DEBUG_TASK_PERSISTENCE] Preparing to update task in database`);
           console.log(`[DEBUG_TASK_PERSISTENCE]  - Task ID: ${taskId}`);
           console.log(`[DEBUG_TASK_PERSISTENCE]  - Project ID: ${projectId}`);
-          console.log(`[DEBUG_TASK_PERSISTENCE]  - Update fields:`, Object.keys(taskUpdate));
+          console.log(`[DEBUG_TASK_PERSISTENCE]  - Update fields:`, Object.keys(updates));
           
-          if (taskUpdate.hasOwnProperty('completed')) {
-            console.log(`[DEBUG_TASK_PERSISTENCE]  - Completion value being set: ${taskUpdate.completed}`);
+          if (updates.hasOwnProperty('completed')) {
+            console.log(`[DEBUG_TASK_PERSISTENCE]  - Completion value being set: ${updates.completed}`);
           }
         }
         
