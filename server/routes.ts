@@ -1098,7 +1098,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
               console.log(`[DEBUG_TASK_STATE]  - Title: ${originalTask.text?.substring(0, 40)}...`);
               console.log(`[DEBUG_TASK_STATE]  - Origin: ${originalTask.origin}`);
               console.log(`[DEBUG_TASK_STATE]  - From state: ${originalTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
-              console.log(`[DEBUG_TASK_STATE]  - To state: ${taskUpdate.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+              console.log(`[DEBUG_TASK_STATE]  - To state: ${updates.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
               
               if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
                 console.log(`[DEBUG_TASK_STATE] *** SuccessFactor task detected - tracking for completion bug ***`);
