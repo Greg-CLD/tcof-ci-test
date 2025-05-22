@@ -191,6 +191,30 @@ function convertDbTaskToProjectTask(dbTask: any, clientTaskId?: string): Project
 /**
  * Project database operations
  */
+/**
+ * Finds a task by source_id for a specific project
+ * Used as a fallback when findTaskById fails to find by primary ID
+ * 
+ * @param projectId The project ID to search in
+ * @param sourceId The source ID to search for
+ * @returns Task object if found, null otherwise
+ */
+export async function findTaskBySourceId(projectId: string, sourceId: string) {
+  try {
+    const task = await db.select()
+      .from(projectTasksTable)
+      .where(eq(projectTasksTable.projectId, projectId))
+      .where(eq(projectTasksTable.sourceId, sourceId))
+      .limit(1)
+      .execute();
+    
+    return task.length > 0 ? task[0] : null;
+  } catch (error) {
+    console.error(`Error finding task by sourceId ${sourceId}:`, error);
+    return null;
+  }
+}
+
 export const projectsDb = {
   /**
    * Create a new project

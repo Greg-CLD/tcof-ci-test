@@ -846,6 +846,17 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         }
       }
       
+      // If still not found, try to find task by sourceId for the same project (Success Factor tasks)
+      if (!originalTask) {
+        const taskBySourceId = await projectsDb.findTaskBySourceId(projectId, taskId);
+        if (taskBySourceId) {
+          originalTask = tasks.find(t => t.id === taskBySourceId.id);
+          if (isDebugEnabled && originalTask) {
+            console.log(`[DEBUG_TASK_API] Found task using sourceId match: ${taskId} -> ${taskBySourceId.id}`);
+          }
+        }
+      }
+      
       // Handle task not found
       if (!originalTask) {
         if (isDebugEnabled) {
