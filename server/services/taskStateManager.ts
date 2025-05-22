@@ -167,8 +167,8 @@ export class TaskStateManager extends EventEmitter {
    * 
    * @param state The task state to cache
    */
-  public cacheTaskState(state: TaskState): void {
-    if (!state.id || !state.projectId) {
+  public cacheTaskState(state: TaskState | undefined): void {
+    if (!state || !state.id || !state.projectId) {
       console.error('[TASK_STATE_MANAGER] Cannot cache task state without id and projectId');
       return;
     }
@@ -504,10 +504,17 @@ export class TaskStateManager extends EventEmitter {
       const tasks = await this.projectsDb.getTasksForProject(projectId);
       
       // Convert to task states and cache them
-      const taskStates: TaskState[] = tasks.map(task => ({
-        ...task,
+      const taskStates: TaskState[] = tasks.map((task: Record<string, any>) => ({
+        id: task.id,
+        projectId: task.projectId || projectId,
+        text: task.text || '',
+        origin: task.origin || 'custom',
+        sourceId: task.sourceId,
+        completed: typeof task.completed === 'boolean' ? task.completed : false,
+        stage: task.stage || 'identification',
         syncStatus: 'synced',
-        updatedAt: task.updatedAt || new Date()
+        updatedAt: task.updatedAt || new Date(),
+        retryCount: 0
       }));
       
       // Cache task states

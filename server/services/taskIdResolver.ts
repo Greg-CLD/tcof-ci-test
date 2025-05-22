@@ -149,7 +149,7 @@ export class TaskIdResolver {
       resolutionPath.push(`found-${allTasks.length}-tasks`);
       
       // Step 1: Try to find by exact ID match
-      const exactMatch = allTasks.find(task => task.id === taskId);
+      const exactMatch = allTasks.find((task: Record<string, any>) => task.id === taskId);
       if (exactMatch) {
         if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
           console.log(`[TASK_RESOLVER] Found task by exact ID match: ${taskId}`);
@@ -174,7 +174,7 @@ export class TaskIdResolver {
       
       // Step 2: If cleanId is different from taskId, try to find by clean UUID
       if (isCompoundId) {
-        const cleanIdMatch = allTasks.find(task => task.id === cleanId);
+        const cleanIdMatch = allTasks.find((task: Record<string, any>) => task.id === cleanId);
         if (cleanIdMatch) {
           if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
             console.log(`[TASK_RESOLVER] Found task by clean UUID match: ${cleanId} (from compound ID ${taskId})`);
@@ -202,8 +202,8 @@ export class TaskIdResolver {
         resolutionPath.push('valid-uuid-format');
         
         // Find tasks with matching sourceId, prioritizing 'factor' origin
-        const sourceIdMatches = allTasks.filter(task => task.sourceId === cleanId);
-        const factorMatch = sourceIdMatches.find(task => task.origin === 'factor');
+        const sourceIdMatches = allTasks.filter((task: Record<string, any>) => task.sourceId === cleanId);
+        const factorMatch = sourceIdMatches.find((task: Record<string, any>) => task.origin === 'factor');
         const sourceIdMatch = factorMatch || sourceIdMatches[0]; // Use factor match if available, otherwise first match
         
         if (sourceIdMatch) {
@@ -231,14 +231,14 @@ export class TaskIdResolver {
       
       // Step 4: Check for canonical ID (success factor original ID)
       // This is for newer versions where we use the UUID as sourceId directly
-      const canonicalMatches = allTasks.filter(task => 
+      const canonicalMatches = allTasks.filter((task: Record<string, any>) => 
         task.origin === 'factor' && 
         (task.id === cleanId || task.sourceId === cleanId)
       );
       
       if (canonicalMatches.length > 0) {
         // Sort to prioritize exact ID matches over sourceId matches
-        canonicalMatches.sort((a, b) => {
+        canonicalMatches.sort((a: Record<string, any>, b: Record<string, any>) => {
           if (a.id === cleanId) return -1;
           if (b.id === cleanId) return 1;
           return 0;
