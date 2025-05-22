@@ -1,0 +1,51 @@
+OBJECTIVE:
+Diagnose and fix the root cause of task state persistence failures across all task types (custom, factor, practice), with deep instrumentation of the update lifecycle.
+
+CONTEXT:
+- Task state changes are not persisting for any task type.
+- Possible failure points: TaskStateManager queue processing, compound/source ID resolution, transaction handling, or cache invalidation.
+
+DELIVERABLES:
+
+1. TaskStateManager Instrumentation & Queue Processing:
+   - Log the contents of the update queue before and after each process cycle.
+   - Track retry counts and any updates that fail or are dropped.
+   - Explicitly log cache invalidation and timing after updates.
+   - Add checks to ensure source ID and origin are preserved for each task update.
+
+2. Task ID Resolution Chain:
+   - For every task update (PUT), log:
+     a) The raw client-provided ID
+     b) Any transformation by TaskIdResolver (e.g., compound → canonical ID)
+     c) Source ID and resolved DB record ID at every step
+     d) Final ID used for DB update
+
+3. Database Layer Validation:
+   - Log transaction boundaries for every task update (start, commit, rollback).
+   - For every task update, log:
+     - Pre-update DB state for the record
+     - Post-update DB state after commit
+   - Add or verify source ID and compound ID indexing and lookup in DB.
+
+4. End-to-End Cross-Reference Testing:
+   - For each task type:
+     - Log pre-update task state (via GET)
+     - Log the update payload and all resolved IDs
+     - After update, log task state via GET and direct DB query
+     - On browser refresh, verify UI reflects correct state
+
+SPECIFIC FOCUS:
+- TaskStateManager.processUpdateQueue error handling and dropped updates
+- Source ID and compound ID preservation throughout TaskIdResolver and all service layers
+- Transaction boundary completion and rollback detection
+- React Query or cache invalidation after mutation
+
+OUTPUT:
+A comprehensive debug log and short report showing:
+- The flow of each task update with IDs at every layer
+- Queue and transaction processing status
+- Before/after state for both cache and DB
+
+GOAL:
+Pinpoint the exact location (queue, ID resolution, transaction, or cache) where state is dropped or mismatched, and fix for all task types. Do not skip any layer in the chain. Include instrumentation diffs as a single code block if proposing code.
+

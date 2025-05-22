@@ -189,6 +189,10 @@ export class TaskIdResolver {
     
     // Apply the updates
     try {
+      // Keep track of the original sourceId for potential related task updates
+      const sourceId = task.sourceId;
+      const isFactorTask = task.origin === 'factor';
+      
       const result = await db.update(projectTasks)
         .set({
           ...updates,
@@ -204,6 +208,54 @@ export class TaskIdResolver {
         if (DEBUG_RESOLVER) {
           console.log(`[TASK_ID_RESOLVER] Updated task ${taskId} successfully`);
         }
+        
+        // If this is a Success Factor task and we're changing completion status, 
+        // sync other tasks with the same sourceId as well
+        if (isFactorTask && sourceId && updates.completed !== undefined) {
+          try {
+            if (DEBUG_RESOLVER) {
+              console.log(`[TASK_ID_RESOLVER] Syncing related tasks with sourceId ${sourceId}`);
+            }
+            
+            // Find all other tasks with the same sourceId
+            const relatedTasks = await db.query.projectTasks.findMany({
+              where: and(
+                eq(projectTasks.projectId, projectId),
+                eq(projectTasks.sourceId, sourceId),
+                ne(projectTasks.id, task.id) // Exclude the current task
+              )
+            });
+            
+            if (relatedTasks.length > 0) {
+              if (DEBUG_RESOLVER) {
+                console.log(`[TASK_ID_RESOLVER] Found ${relatedTasks.length} related tasks to sync`);
+              }
+              
+              // Update all related tasks with the same completion state
+              const updatePromises = relatedTasks.map(relatedTask => 
+                db.update(projectTasks)
+                  .set({
+                    completed: updates.completed,
+                    updatedAt: new Date()
+                  })
+                  .where(and(
+                    eq(projectTasks.id, relatedTask.id),
+                    eq(projectTasks.projectId, projectId)
+                  ))
+              );
+              
+              await Promise.all(updatePromises);
+              
+              if (DEBUG_RESOLVER) {
+                console.log(`[TASK_ID_RESOLVER] Synchronized ${relatedTasks.length} related tasks`);
+              }
+            }
+          } catch (syncError) {
+            console.error(`[TASK_ID_RESOLVER] Error syncing related tasks:`, syncError);
+            // Don't fail the primary update if syncing fails
+          }
+        }
+        
         return result[0];
       }
       

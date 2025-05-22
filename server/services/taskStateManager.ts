@@ -12,6 +12,9 @@
 import { EventEmitter } from 'events';
 import { validate as validateUUID } from 'uuid';
 import { TaskIdResolver } from './taskIdResolver';
+import { projectTasks } from '../../shared/schema';
+import { db } from '../../db';
+import { and, eq } from 'drizzle-orm';
 
 // Debug flags - inherit from environment
 const DEBUG_TASK_STATE = process.env.DEBUG_TASKS === 'true';
@@ -486,13 +489,24 @@ export class TaskStateManager extends EventEmitter {
     }
     
     try {
-      // Use TaskIdResolver to sync related tasks
-      const syncCount = await TaskIdResolver.syncRelatedTasks(
-        projectId,
-        sourceId,
-        update,
-        this.projectsDb
-      );
+      // The syncRelatedTasks method may not exist in TaskIdResolver yet
+      // Let's implement this feature directly here for now
+      const relatedTasks = await db.query.projectTasks.findMany({
+        where: and(
+          eq(projectTasks.projectId, projectId),
+          eq(projectTasks.sourceId, sourceId)
+        )
+      });
+      
+      let syncCount = 0;
+      for (const task of relatedTasks) {
+        try {
+          await this.updateTaskState(task.id, projectId, update);
+          syncCount++;
+        } catch (error) {
+          console.error(`[TASK_STATE_MANAGER] Error syncing related task ${task.id}:`, error);
+        }
+      }
       
       if (DEBUG_TASK_SYNC && syncCount > 0) {
         console.log(`[TASK_STATE_MANAGER] Synchronized ${syncCount} related tasks with sourceId ${sourceId}`);
