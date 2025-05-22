@@ -131,16 +131,24 @@ export default function TaskCard({
     const newStatus = !completed ? 'Done' : 'To Do';
     setEditedStatus(newStatus);
     
-    // TRACE: Log task ID and new completion state before update
-    console.debug(`[TRACE_UI] Toggle completion for task:
-    - Task ID: ${id}
-    - New completed state: ${!completed}
+    // Determine which ID to use based on task type
+    const updateId = (source === 'factor' || origin === 'factor') ? sourceId : id;
+    
+    // Enhanced debug logging for task updates
+    console.debug(`[TASK_UPDATE] Toggle task completion:
+    - Using ID: ${updateId} (${(source === 'factor' || origin === 'factor') ? 'sourceId' : 'id'})
+    - Original ID: ${id}
+    - Source ID: ${sourceId}
+    - Origin: ${origin}
     - Source: ${source}
+    - New completed state: ${!completed}
     - New status: ${newStatus}`);
     
-    onUpdate(id, { 
+    onUpdate(updateId, {
       completed: !completed,
-      status: newStatus
+      status: newStatus,
+      origin: origin || source,
+      sourceId: sourceId
     }, isGoodPractice);
   };
   
