@@ -755,49 +755,72 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
 
   // Update a specific task for a project
   app.put("/api/projects/:projectId/tasks/:taskId", async (req, res, next) => {
-    // Add flag to detect potential fallthrough
+    // Ensure we always return JSON for API endpoints
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
+    // Flag to track if we've sent a response
     let responseHandled = false;
     
-    // Override the send and json methods to mark response as handled
-    const originalSend = res.send;
-    const originalJson = res.json;
-    
-    // Override send to always use JSON for this endpoint
-    res.send = function(...args) {
+    // Create wrapped versions of response methods that set our flag
+    const wrappedSend = function(...args: any[]) {
       responseHandled = true;
-      // Set content type to application/json explicitly
-      res.setHeader('Content-Type', 'application/json');
+      // Ensure content type is JSON
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
       
-      // If the argument isn't already a string, convert it to JSON
+      // Convert non-string args to JSON
       if (args.length > 0 && typeof args[0] !== 'string') {
         args[0] = JSON.stringify(args[0]);
       }
       
-      return originalSend.apply(res, args);
+      return res.send(...args);
     };
     
-    res.json = function(...args) {
+    const wrappedJson = function(data: any) {
       responseHandled = true;
-      // Set content type to application/json explicitly
-      res.setHeader('Content-Type', 'application/json');
-      return originalJson.apply(res, args);
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      return res.json(data);
     };
     
-    // Set up a fallback response handler to prevent HTML fallthrough
-    // This ensures we always return JSON even if we hit unexpected edge cases
+    // Store the original methods
+    const originalEnd = res.end;
+    const originalSend = res.send;
+    const originalJson = res.json;
+    
+    // Override methods to track response status
+    res.send = wrappedSend;
+    res.json = wrappedJson;
+    
+    // Add a safety net that runs at the end of the request lifecycle
     res.on('finish', () => {
       if (!responseHandled) {
-        console.error('[ERROR] API request completed but no response was sent, preventing HTML fallthrough');
-        // Response already sent, can't do anything at this point
+        console.error('[ERROR] Task API request completed but no response was handled');
       }
     });
     
+    // Add a final catchall to ensure we always send JSON
+    const sendJsonResponse = (statusCode: number, data: any) => {
+      if (!responseHandled) {
+        responseHandled = true;
+        res.status(statusCode).json(data);
+        return true;
+      }
+      return false;
+    };
+    
+    // Handle authentication first
     // Allow test scripts to bypass authentication with special header
     if (req.headers['x-auth-override'] !== 'true') {
-      // Use normal authentication for regular requests
-      return isAuthenticated(req, res, next);
+      // Check if user is authenticated
+      if (!req.isAuthenticated || !req.isAuthenticated()) {
+        // Return 401 as JSON
+        return sendJsonResponse(401, {
+          success: false,
+          message: 'Authentication required'
+        });
+      }
     }
-    // Continue with request for test scripts
+    
+    // Authentication passed, continue with request
     try {
       const { projectId, taskId } = req.params;
       const taskUpdate = req.body;
@@ -1000,11 +1023,11 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
                   message: 'Failed to create success-factor task'
                 });
               }
-            } catch (error) {
+            } catch (error: unknown) {
               console.error(`[DEBUG_TASK_API] Error creating success-factor task:`, error);
               return res.status(500).json({
                 success: false,
-                message: `Error creating success-factor task: ${error.message}`
+                message: `Error creating success-factor task: ${error instanceof Error ? error.message : String(error)}`
               });
             }
           }
