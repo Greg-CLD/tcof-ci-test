@@ -806,7 +806,12 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     // Validate the task ID using the TaskIdResolver
     if (isDebugEnabled) {
       console.log(`[DEBUG_TASKS] Looking up task ${taskId} for project ${projectId} using TaskIdResolver`);
+      console.log(`[DEBUG_TASKS] Initializing TaskIdResolver with database connection`);
     }
+    
+    // CRITICAL FIX: Always initialize the TaskIdResolver with database connection
+    // This ensures we have a valid database connection for all task lookup strategies
+    const taskIdResolver = getTaskIdResolver(projectsDb);
     
     // Validate required parameters
     if (!projectId) {
@@ -887,6 +892,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         console.log('[DEBUG_TASKS] Using TaskIdResolver with database connection');
       }
       
+      // CRITICAL FIX: Explicitly use the TaskIdResolver instance to find tasks 
+      // This ensures proper ID resolution with all formats (UUID, prefixes, sourceId, etc.)
+      // The order of parameters (taskId, projectId) is important for proper resolution
       const task = await taskIdResolver.findTaskById(taskId, projectId);
       taskLogger.endOperation(findTaskOperationId, !!task);
       

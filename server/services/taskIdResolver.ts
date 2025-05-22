@@ -42,18 +42,10 @@ export class TaskIdResolver {
   /**
    * Instance method for cleaning UUIDs
    * This is needed for compatibility across different contexts
+   * Delegates to the static method to reduce code duplication
    */
   cleanUUID(id: string): string {
-    if (!id) return '';
-    
-    // Check if this is a compound ID with a UUID part
-    const uuidMatch = id.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-    
-    if (uuidMatch && uuidMatch[1]) {
-      return uuidMatch[1];
-    }
-    
-    return id;
+    return TaskIdResolver.cleanUUID(id);
   }
   
   /**
