@@ -128,18 +128,36 @@ export default function TaskCard({
 
   // Handle task completion toggle
   const handleToggleCompleted = () => {
-    // Debug log all props for tracing
+    // Validate required fields
+    if (!id) {
+      console.error('TaskCard: Missing required id field');
+      return;
+    }
+
+    // Debug log all props 
     console.debug('[TASK_PROPS]', {
-      id, text, completed, source, origin, sourceId, 
+      id, text, completed, source, origin, sourceId,
       stage, status
     });
 
     const newStatus = !completed ? 'Done' : 'To Do';
     setEditedStatus(newStatus);
 
-    // Enhanced ID selection logic with fallback
+    // Enhanced ID selection with validation
     const isFactorTask = source === 'factor' || origin === 'factor';
-    const updateId = isFactorTask && sourceId ? sourceId : id;
+    const hasValidSourceId = isFactorTask && sourceId && sourceId.trim().length > 0;
+    
+    // For factor tasks, try sourceId first, fallback to id
+    // For other tasks, always use id
+    const updateId = hasValidSourceId ? sourceId : id;
+
+    // Debug log ID selection
+    console.debug('[TASK_UPDATE]', {
+      isFactorTask,
+      originalId: id,
+      sourceId: sourceId || 'none',
+      selectedId: updateId
+    });
 
     // Debug log ID selection
     console.debug('[TASK_UPDATE]', {
