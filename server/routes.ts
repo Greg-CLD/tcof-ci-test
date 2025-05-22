@@ -879,15 +879,18 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         }
       }
       
+      // Create a copy of req.body for task updates
+      let updates = { ...req.body };
+      
       // Special handling for Success Factor tasks to preserve metadata
       if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
-        if (!taskUpdate.origin) {
-          taskUpdate.origin = originalTask.origin;
+        if (!updates.origin) {
+          updates.origin = originalTask.origin;
         }
         
         // Critical: Ensure sourceId is preserved for Success Factor tasks
-        if (originalTask.sourceId && !taskUpdate.sourceId) {
-          taskUpdate.sourceId = originalTask.sourceId;
+        if (originalTask.sourceId && !updates.sourceId) {
+          updates.sourceId = originalTask.sourceId;
           
           if (isDebugEnabled) {
             console.log(`[DEBUG_TASKS] Preserved sourceId: ${originalTask.sourceId}`);
@@ -901,7 +904,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         const userTaskId = originalTask.id;
         
         // Update the underlying task using the actual database ID
-        const updatedSourceTask = await projectsDb.updateTask(originalTask.id, taskUpdate);
+        const updatedSourceTask = await projectsDb.updateTask(originalTask.id, updates);
         
         if (isDebugEnabled) {
           console.log(`[DEBUG_TASKS] Task updated successfully`);
@@ -910,12 +913,12 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         
         // For Success Factor tasks, sync all related tasks with the same sourceId
         if (originalTask.origin === 'factor' && originalTask.sourceId && 
-            taskUpdate.hasOwnProperty('completed')) {
+            updates.hasOwnProperty('completed')) {
           try {
             const syncCount = await TaskIdResolver.syncRelatedTasks(
               projectId, 
               originalTask.sourceId, 
-              { completed: taskUpdate.completed },
+              { completed: updates.completed },
               projectsDb
             );
             
@@ -931,7 +934,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         // This ensures we return the task object with the ID that the user expects
         const updatedUserTask = {
           ...originalTask,           // Start with the user's original task (includes correct ID)
-          ...taskUpdate,             // Apply the user's updates
+          ...updates,                // Apply the user's updates
           updatedAt: new Date(),     // Add updatedAt timestamp
           // Ensure we return the original task ID that the user sent,
           // this is crucial for proper client-side caching
