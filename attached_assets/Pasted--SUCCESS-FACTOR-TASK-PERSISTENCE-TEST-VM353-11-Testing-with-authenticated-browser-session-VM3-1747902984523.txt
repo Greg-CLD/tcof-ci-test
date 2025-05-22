@@ -1,0 +1,94 @@
+=== SUCCESS FACTOR TASK PERSISTENCE TEST ===
+VM353:11 Testing with authenticated browser session
+VM353:15 
+STEP 1: Retrieving all tasks for current project...
+Promise {<pending>}[[Prototype]]: Promise[[PromiseState]]: "fulfilled"[[PromiseResult]]: undefined
+VM353:30 Found 111 tasks in the project
+VM353:33 
+STEP 2: Finding a Success Factor task to test with...
+VM353:42 Found 7 Success Factor tasks
+VM353:46 
+Selected test task:
+VM353:47 {
+  "id": "a5bdff93-3e7d-4e7c-bea5-1ffb0dc7cdaf",
+  "projectId": "bc55c1a2-0cdf-4108-aa9e-44b44baea3b8",
+  "text": "Debug-XYZ Success Factor",
+  "stage": "identification",
+  "origin": "factor",
+  "source": "factor",
+  "sourceId": "17f0c2de-1195-458b-9481-efce8d297b55",
+  "completed": false,
+  "notes": "",
+  "priority": "medium",
+  "dueDate": "",
+  "owner": "",
+  "status": "To Do",
+  "createdAt": "2025-05-18T07:35:38.851Z",
+  "updatedAt": "2025-05-22T08:31:13.541Z"
+}
+VM353:59 
+STEP 3: Toggling task completion state from false to true...
+VM353:76 Response Content-Type: application/json; charset=utf-8
+VM353:79 
+Updated task data:
+VM353:80 {
+  "success": true,
+  "message": "Task updated successfully",
+  "task": {
+    "id": "17f0c2de-1195-458b-9481-efce8d297b55",
+    "projectId": "bc55c1a2-0cdf-4108-aa9e-44b44baea3b8",
+    "text": "Debug-XYZ Success Factor",
+    "stage": "identification",
+    "origin": "factor",
+    "source": "factor",
+    "sourceId": "17f0c2de-1195-458b-9481-efce8d297b55",
+    "completed": true,
+    "notes": "",
+    "priority": "medium",
+    "dueDate": "",
+    "owner": "",
+    "status": "To Do",
+    "createdAt": "2025-05-18T07:35:38.851Z",
+    "updatedAt": "2025-05-22T08:35:52.886Z"
+  }
+}
+VM353:83 
+STEP 4: Verifying update success...
+VM353:84 ID Match: ✗
+VM353:85 Completion Toggled: ✓
+VM353:86 Origin Preserved: ✗
+VM353:87 SourceId Preserved: ✗
+VM353:90 
+STEP 5: Getting tasks again to verify persistence...
+VM353:111 
+Refreshed task data:
+VM353:112 {
+  "id": "a5bdff93-3e7d-4e7c-bea5-1ffb0dc7cdaf",
+  "projectId": "bc55c1a2-0cdf-4108-aa9e-44b44baea3b8",
+  "text": "Debug-XYZ Success Factor",
+  "stage": "identification",
+  "origin": "factor",
+  "source": "factor",
+  "sourceId": "17f0c2de-1195-458b-9481-efce8d297b55",
+  "completed": true,
+  "notes": "",
+  "priority": "medium",
+  "dueDate": "",
+  "owner": "",
+  "status": "To Do",
+  "createdAt": "2025-05-18T07:35:38.851Z",
+  "updatedAt": "2025-05-22T08:35:52.886Z"
+}
+VM353:115 
+STEP 6: Verifying persistence...
+VM353:116 ID Match: ✓
+VM353:117 Completion Toggled: ✓
+VM353:118 Origin Preserved: ✓
+VM353:119 SourceId Preserved: ✓
+VM353:122 
+=== TEST RESULTS ===
+VM353:135 Initial Update: FAILURE ✗
+VM353:136 Persistence Check: SUCCESS ✓
+VM353:137 Content-Type Check: SUCCESS ✓
+VM353:138 
+OVERALL TEST RESULT: FAILURE ✗
