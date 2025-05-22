@@ -257,12 +257,12 @@ export class TaskStateManager extends EventEmitter {
       
       // Try to find the task using TaskIdResolver
       try {
-        const lookupResult = await TaskIdResolver.findTaskById(projectId, taskId, this.projectsDb);
-        if (lookupResult.task) {
+        const task = await TaskIdResolver.findTaskById(taskId, projectId);
+        if (task) {
           currentState = {
-            ...lookupResult.task,
+            ...task,
             syncStatus: 'synced',
-            updatedAt: lookupResult.task.updatedAt || new Date()
+            updatedAt: task.updatedAt || new Date()
           } as TaskState;
           
           if (syncOptions.storeInCache) {
@@ -367,15 +367,15 @@ export class TaskStateManager extends EventEmitter {
       }
       
       try {
-        // Use TaskIdResolver to find the task
-        const lookupResult = await TaskIdResolver.findTaskById(projectId, taskId, this.projectsDb);
+        // Use TaskIdResolver to find the task with correct parameter order
+        const task = await TaskIdResolver.findTaskById(taskId, projectId);
         
-        if (!lookupResult.task) {
+        if (!task) {
           throw new Error(`Task not found: ${taskId}`);
         }
         
         // Update the task in the database
-        const updatedTask = await this.projectsDb.updateTask(lookupResult.task.id, projectId, taskUpdate);
+        const updatedTask = await this.projectsDb.updateTask(task.id, projectId, taskUpdate);
         
         // Create the synced state
         const syncedState: TaskState = {
