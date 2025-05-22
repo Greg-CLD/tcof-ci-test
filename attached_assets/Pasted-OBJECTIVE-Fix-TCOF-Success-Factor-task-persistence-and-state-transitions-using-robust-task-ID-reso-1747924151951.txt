@@ -1,0 +1,52 @@
+OBJECTIVE: Fix TCOF Success Factor task persistence and state transitions, using robust task ID resolution and error handling across the stack.
+
+DELIVERABLES:
+
+1. **TaskStateManager:**
+   - Add `validateStateTransition()` to check for invalid/duplicate completion state changes.
+   - Log all state transitions under DEBUG_TASK_STATE.
+   - Ensure all updates to task state are routed through TaskStateManager (including PUT).
+
+2. **TaskIdResolver:**
+   - Ensure every task endpoint uses `TaskIdResolver.findTaskById()`—never skip for any update, get, or delete.
+   - Add compound ID and canonical source ID support.
+   - Log all ID resolutions with debug info.
+
+3. **Client/apiRequest.ts:**
+   - Add explicit error handling for task-related 404 and 400 codes.
+   - Show a clear user-facing message if a task state cannot be changed (or task not found).
+   - Add retry logic only for recoverable errors.
+
+4. **Testing:**
+   - Use `task-completion-persistence.test.ts` as baseline.
+   - Add/extend tests for:
+     - Compound ID resolution
+     - Success Factor task updates
+     - State persistence through GET/refresh
+   - Do not introduce ad hoc test scripts; update real test infra.
+
+**SHOW CODE DIFF (summary):**
+```diff
+// server/services/taskStateManager.ts
++ private validateStateTransition(currentState: TaskState | null, update: TaskUpdate): boolean {
++   if (!currentState) return true;
++   if (update.completed !== undefined && update.completed === currentState.completed) {
++     if (DEBUG_TASK_STATE) {
++       console.log(`[TASK_STATE_MANAGER] Invalid state transition - already ${update.completed ? 'completed' : 'incomplete'}`);
++     }
++     return false;
++   }
++   return true;
++ }
+
+// client/src/utils/apiRequest.ts
++ if (!res.ok) {
++   const text = await res.text();
++   if (res.status === 404 && url.includes('/tasks/')) {
++     throw new Error(`Task not found - the ID may have changed or been deleted`);
++   }
++   if (res.status === 400 && url.includes('/tasks/')) {
++     throw new Error(`Invalid task state change: ${text}`);
++   }
++   throw new Error(`[API] ${method} ${url} failed ${res.status}: ${text.slice(0,200)}`);
++ }

@@ -6,6 +6,7 @@
  * - Real-time state broadcasting
  * - Retry logic for failed updates
  * - Synchronized state transitions
+ * - State transition validation
  */
 
 import { EventEmitter } from 'events';
@@ -17,6 +18,7 @@ const DEBUG_TASK_STATE = process.env.DEBUG_TASKS === 'true';
 const DEBUG_TASK_SYNC = process.env.DEBUG_TASKS === 'true';
 const DEBUG_TASK_RETRY = process.env.DEBUG_TASKS === 'true';
 const DEBUG_TASK_CACHE = process.env.DEBUG_TASKS === 'true';
+const DEBUG_TASK_TRANSITION = process.env.DEBUG_TASKS === 'true';
 
 // Task state types
 export type TaskState = {
@@ -80,6 +82,30 @@ export class TaskStateManager extends EventEmitter {
     this.pendingUpdates = new Map();
     this.updateQueue = [];
     this.processing = false;
+  }
+  
+  /**
+   * Validate a state transition to prevent invalid/duplicate completion changes
+   * 
+   * @param currentState The current task state
+   * @param update The proposed update
+   * @returns boolean indicating if the transition is valid
+   */
+  private validateStateTransition(currentState: TaskState | null, update: TaskUpdate): boolean {
+    if (!currentState) return true;
+    
+    if (update.completed !== undefined && update.completed === currentState.completed) {
+      if (DEBUG_TASK_TRANSITION) {
+        console.log(`[TASK_STATE_MANAGER] Invalid state transition - already ${update.completed ? 'completed' : 'incomplete'}`);
+      }
+      return false;
+    }
+    
+    if (DEBUG_TASK_TRANSITION && update.completed !== undefined) {
+      console.log(`[TASK_STATE_MANAGER] Valid state transition: ${currentState.completed ? 'completed' : 'incomplete'} -> ${update.completed ? 'completed' : 'incomplete'}`);
+    }
+    
+    return true;
   }
   
   /**
@@ -228,6 +254,20 @@ export class TaskStateManager extends EventEmitter {
         }
       } catch (err) {
         console.error(`[TASK_STATE_MANAGER] Error fetching task state:`, err);
+      }
+    }
+    
+    // Validate the state transition if it involves completion status
+    if (currentState && update.hasOwnProperty('completed')) {
+      const isValidTransition = this.validateStateTransition(currentState, update);
+      
+      if (!isValidTransition) {
+        if (DEBUG_TASK_STATE) {
+          console.log(`[TASK_STATE_MANAGER] Skipping invalid state transition for task ${taskId}`);
+        }
+        
+        // Return current state if transition is invalid
+        return currentState;
       }
     }
     
