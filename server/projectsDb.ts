@@ -382,6 +382,88 @@ export const projectsDb = {
     }
   },
   
+  /**
+   * Get a single task by its ID for a specific project
+   * 
+   * This method is required by TaskIdResolver for proper task resolution
+   * It supports both direct UUID lookup and compound ID formats
+   * 
+   * @param projectId The project ID the task belongs to
+   * @param taskId The task ID to look up
+   * @returns The task object if found, or null if not found
+   */
+  async getTaskById(projectId, taskId) {
+    try {
+      if (DEBUG_TASKS) {
+        console.log(`[getTaskById] Looking up task with ID ${taskId} in project ${projectId}`);
+      }
+      
+      // Validate inputs
+      if (!projectId || !taskId) {
+        console.warn(`[getTaskById] Missing required parameters: projectId=${projectId}, taskId=${taskId}`);
+        return null;
+      }
+
+      // Execute the query to find the task by exact ID match
+      const tasks = await db.select()
+        .from(projectTasksTable)
+        .where(and(
+          eq(projectTasksTable.projectId, projectId),
+          eq(projectTasksTable.id, taskId)
+        ))
+        .limit(1);
+      
+      // If task was found by direct ID match, return it
+      if (tasks.length > 0) {
+        if (DEBUG_TASKS) {
+          console.log(`[getTaskById] Found task by exact ID match: ${taskId}`);
+        }
+        
+        // Handle Success Factor task IDs with special case for client consistency
+        const task = tasks[0];
+        if (task.origin === 'factor' && task.sourceId && task.sourceId.includes('-')) {
+          return convertDbTaskToProjectTask(task, task.sourceId);
+        }
+        
+        return convertDbTaskToProjectTask(task);
+      }
+      
+      // Task not found by direct ID, try looking for a task with this ID as sourceId
+      // This handles Success Factor tasks where the ID passed might be the canonical sourceId
+      if (DEBUG_TASKS) {
+        console.log(`[getTaskById] Task not found by direct ID, checking sourceId match for ${taskId}`);
+      }
+      
+      const tasksBySourceId = await db.select()
+        .from(projectTasksTable)
+        .where(and(
+          eq(projectTasksTable.projectId, projectId),
+          eq(projectTasksTable.sourceId, taskId)
+        ))
+        .limit(1);
+      
+      if (tasksBySourceId.length > 0) {
+        if (DEBUG_TASKS) {
+          console.log(`[getTaskById] Found task by sourceId match: ${taskId}`);
+        }
+        
+        // For sourceId matches, use the sourceId as the client-facing ID for consistency
+        return convertDbTaskToProjectTask(tasksBySourceId[0], taskId);
+      }
+      
+      // Not found by either direct ID or sourceId
+      if (DEBUG_TASKS) {
+        console.log(`[getTaskById] Task not found: ${taskId} in project ${projectId}`);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`[ERROR] Failed to get task by ID ${taskId}:`, error);
+      console.error(error.stack); // Log the full stack trace for debugging
+      return null;
+    }
+  },
+  
   // Get all tasks for a project
   async getTasksForProject(projectId) {
     try {

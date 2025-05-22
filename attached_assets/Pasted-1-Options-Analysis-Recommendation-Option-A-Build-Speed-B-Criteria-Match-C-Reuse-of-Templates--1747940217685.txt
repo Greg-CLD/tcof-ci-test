@@ -1,0 +1,119 @@
+1. Options Analysis & Recommendation
+
+Option	A) Build Speed	B) Criteria Match	C) Reuse of Templates	D) Simplicity & Low Risk	Notes
+A. Enhance Existing ErrorBoundary & Storage Adapter					
+• ErrorBoundary: Augment componentDidCatch to log context (stack, URL, user agent, timestamp).					
+• BrowserStorageAdapter: Add in-memory fallback map and useMemoryFallback flag inside existing adapter.					
+★★★★★	★★★★★	★★★★★ (reuses existing components and adapter)	★★★★★	Purely UI + utility tweaks; no new files or infra.	
+B. New Global Error Handler & Separate Storage Service					
+• Introduce a separate GlobalErrorHandler utility plus wrap ReactRoot with it.					
+• Replace browserStorage entirely with a new service layer.					
+★★☆☆☆	★★★★★	★★★☆☆	★★☆☆☆	Overkill: duplicates existing ErrorBoundary and adapter.	
+C. Third-Party Libraries					
+• Plug in Sentry’s React SDK for error handling; use a persistent storage library (localForage) for storage resilience.					
+★★☆☆☆	★★★★★	★★☆☆☆	★★☆☆☆	External deps, configuration risk, opposite of “lowest risk.”	
+
+Recommendation:
+Option A is the fastest and lowest-risk: it augments your existing ErrorBoundary.tsx and browserStorage.ts in place, fully meeting the user stories with minimal changes.
+
+2. Epic & Feature Summary
+
+System Risk Reducers
+
+Universal React Error Boundary
+
+User Story: As a user, I want the app to catch unexpected errors so the UI never crashes
+
+Acceptance: All uncaught exceptions in React components are caught by a top-level ErrorBoundary, displaying a friendly fallback UI and logging detailed error context.
+
+Resilient Storage Adapter
+
+User Story: As a user, I want my settings and progress saved reliably
+
+Acceptance: Reads/writes via browserStorage gracefully fall back to in-memory storage on failure, and any storage errors are logged with warning messages.
+
+3. Agent Prompt (VB.NET container)
+
+vbnet
+Copy
+Edit
+' Prompt for Replit Agent: System Risk Reducers Epic
+
+Module AgentPrompt
+    Sub Main()
+        Dim prompt As String = "
+Objective: Deliver the System Risk Reducers epic by enhancing the existing `ErrorBoundary.tsx` and `browserStorage.ts` adapter. Previous attempts at resilience remain broken in user testing—treat as unresolved.
+
+Rules (internal):
+1) One clear objective: update only ErrorBoundary and BrowserStorageAdapter.  
+2) Always run & paste smoke-test JSON output for any storage operations.  
+3) If the app/server restarts, include the full SSR logs verbatim.
+
+Deliverables:
+1. **Code diff** (```diff``` fencing) for the **UI & Utility layer only**. Example diffs:
+
+**In client/src/components/ErrorBoundary.tsx**:
+```diff
+@@ -25,7 +25,17 @@
+   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+-    console.error('Error caught by ErrorBoundary:', error, errorInfo);
++    // Enhanced error logging with context
++    const errorContext = {
++      message: error.toString(),
++      stack: errorInfo.componentStack,
++      url: window.location.href,
++      userAgent: navigator.userAgent,
++      timestamp: new Date().toISOString()
++    };
++    console.error('[ErrorBoundary]', errorContext);
+   }
+In client/src/lib/browserStorage.ts:
+
+diff
+Copy
+Edit
+@@ -1,6 +1,15 @@
+ export class BrowserStorageAdapter {
++  private memoryFallback = new Map<string, any>();
++  private useMemoryFallback = false;
+
+   async set(key: string, value: any): Promise<void> {
+-    localStorage.setItem(key, JSON.stringify(value));
++    try {
++      localStorage.setItem(key, JSON.stringify(value));
++    } catch (err) {
++      console.warn('[Storage] Falling back to memory:', err);
++      this.useMemoryFallback = true;
++      this.memoryFallback.set(key, value);
++    }
+   }
+
+   async get(key: string): Promise<any> {
+-    const item = localStorage.getItem(key);
+-    return item ? JSON.parse(item) : null;
++    try {
++      if (this.useMemoryFallback) return this.memoryFallback.get(key);
++      const item = localStorage.getItem(key);
++      return item ? JSON.parse(item) : null;
++    } catch (err) {
++      console.warn('[Storage] Read error, using memory:', err);
++      return this.memoryFallback.get(key);
++    }
+   }
+ }
+Unit test outline (ts fencing):
+
+ErrorBoundary.test.tsx:
+• Render a child component that throws → assert the fallback UI renders and console.error is called with enriched context.
+
+BrowserStorageAdapter.test.ts:
+• Mock localStorage.setItem to throw → assert memoryFallback is used and warning logged.
+• Mock localStorage.getItem to throw → assert read returns from memoryFallback and warning logged.
+
+Smoke tests:
+• Directly call set and get on the adapter → capture JSON logs of fallback events.
+
+Please provide the diff and the matching test code in the specified fences."
+Console.WriteLine(prompt)
+End Sub
+End Module
