@@ -1,195 +1,314 @@
 /**
- * Edge Case Testing Script for Success-Factor Task Updates
+ * Test Success Factor Task Update with Test User Authentication
  * 
- * This script tests specific edge cases for Success-Factor task updates:
- * 1. Updates using various ID formats (full ID, UUID part, compound ID)
- * 2. Updates when a task has a sourceId that differs from its ID
- * 3. Error handling for non-existent tasks
+ * This script:
+ * 1. Logs in as the test user
+ * 2. Finds and toggles a specific Success Factor task
+ * 3. Verifies the response contains the correct user task
+ * 4. Gets the tasks again to verify persistence
+ * 5. Logs all server responses and debug information
  */
 
 import fetch from 'node-fetch';
 import fs from 'fs';
 
-// Get authentication cookie
-function getCookies() {
-  try {
-    return fs.readFileSync('./cookies.txt', 'utf8').trim();
-  } catch (error) {
-    console.error('Error reading cookies file:', error.message);
-    console.log('Please run extract-session-cookie.js first');
-    process.exit(1);
-  }
-}
+// Configuration
+const BASE_URL = 'http://localhost:5000';
+const PROJECT_ID = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
+const TARGET_TASK_ID = 'a5bdff93-3e7d-4e7c-bea5-1ffb0dc7cdaf'; // The specific Success Factor task
+const TEST_USER = {
+  username: 'admin',
+  password: 'admin123'
+};
 
-// API request helper
+// Store cookie for authenticated requests
+let authCookie = '';
+
+// Helper function for API requests
 async function apiRequest(method, endpoint, body = null) {
-  const baseUrl = 'http://localhost:3000';
-  const url = `${baseUrl}${endpoint}`;
-  const cookies = getCookies();
-  
   const options = {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'Cookie': cookies
-    }
+      'Accept': 'application/json'
+    },
+    credentials: 'include'
   };
   
-  if (body && (method === 'POST' || method === 'PUT')) {
+  // Add authentication cookie if available
+  if (authCookie) {
+    options.headers.Cookie = authCookie;
+  }
+  
+  // Add body for non-GET requests
+  if (body && method !== 'GET') {
     options.body = JSON.stringify(body);
   }
   
   console.log(`Making ${method} request to ${endpoint}`);
-  if (body) console.log('Request body:', JSON.stringify(body, null, 2));
+  
+  const response = await fetch(`${BASE_URL}${endpoint}`, options);
+  
+  // Capture cookies from response if present
+  const setCookie = response.headers.get('set-cookie');
+  if (setCookie) {
+    authCookie = setCookie;
+    console.log('Captured authentication cookie');
+  }
+  
+  // Return full response details
+  return {
+    status: response.status,
+    headers: Object.fromEntries(response.headers),
+    body: await response.json().catch(() => null)
+  };
+}
+
+// Main test function
+async function testSuccessFactorUpdate() {
+  console.log('\n=== Success Factor Task Update Test ===\n');
+  let testResults = {};
   
   try {
-    const response = await fetch(url, options);
-    console.log(`Response status: ${response.status}`);
+    // Step 1: Log in as test user
+    console.log('STEP 1: Authenticating as test user...');
     
-    let data;
-    try {
-      const text = await response.text();
-      try {
-        data = JSON.parse(text);
-        console.log('Response data:', JSON.stringify(data, null, 2));
-      } catch (e) {
-        console.log('Raw response (not JSON):', text);
-        data = { text };
-      }
-    } catch (error) {
-      console.error('Error reading response:', error);
-      return { status: response.status, ok: response.ok, data: null };
+    const loginResponse = await apiRequest('POST', '/api/login', TEST_USER);
+    console.log(`Login status: ${loginResponse.status}`);
+    
+    if (loginResponse.status !== 200 || !loginResponse.body) {
+      console.error('Login failed:', loginResponse.body);
+      return false;
     }
     
-    return { status: response.status, ok: response.ok, data };
-  } catch (error) {
-    console.error(`Request failed:`, error);
-    return { status: 0, ok: false, error: error.message };
-  }
-}
-
-/**
- * Test success factor task updates with various ID formats
- */
-async function testSuccessFactorTaskUpdates() {
-  console.log('=== TESTING SUCCESS-FACTOR TASK UPDATES ===\n');
-  
-  // Get a test project
-  console.log('1. Getting a test project...');
-  const projectsResponse = await apiRequest('GET', '/api/projects');
-  
-  if (!projectsResponse.ok || !projectsResponse.data?.length) {
-    console.error('Failed to get projects or no projects available');
-    return;
-  }
-  
-  const projectId = projectsResponse.data[0].id;
-  console.log(`Using project: ${projectId}`);
-  
-  // Get tasks for this project
-  console.log('\n2. Getting tasks for project...');
-  const tasksResponse = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
-  
-  if (!tasksResponse.ok) {
-    console.error('Failed to get tasks');
-    return;
-  }
-  
-  // Find a success factor task or create one if none exists
-  let successFactorTask = tasksResponse.data.find(task => 
-    task.origin === 'success-factor' || task.origin === 'factor'
-  );
-  
-  if (!successFactorTask) {
-    console.log('\n3. No success factor task found, creating one...');
-    const createTaskResponse = await apiRequest('POST', `/api/projects/${projectId}/tasks`, {
-      text: 'Test Success Factor Task',
-      origin: 'success-factor',
-      completed: false,
-      stage: 'Identification'
+    console.log('Login successful:', loginResponse.body.username);
+    testResults.login = {
+      status: loginResponse.status,
+      user: loginResponse.body.username
+    };
+    
+    // Step 2: Get all tasks for the project
+    console.log('\nSTEP 2: Getting all tasks for the project...');
+    
+    const tasksResponse = await apiRequest('GET', `/api/projects/${PROJECT_ID}/tasks`);
+    console.log(`Get tasks status: ${tasksResponse.status}`);
+    
+    if (tasksResponse.status !== 200 || !Array.isArray(tasksResponse.body)) {
+      console.error('Failed to get tasks:', tasksResponse.body);
+      return false;
+    }
+    
+    console.log(`Found ${tasksResponse.body.length} tasks`);
+    
+    // Find our target Success Factor task
+    const targetTask = tasksResponse.body.find(task => task.id === TARGET_TASK_ID);
+    
+    if (!targetTask) {
+      console.error(`Target task with ID ${TARGET_TASK_ID} not found`);
+      
+      // Look for any Success Factor task as fallback
+      const factorTasks = tasksResponse.body.filter(task => 
+        task.origin === 'factor' || task.origin === 'success-factor'
+      );
+      
+      if (factorTasks.length > 0) {
+        console.log(`Found ${factorTasks.length} other Success Factor tasks. Using the first one instead.`);
+        targetTask = factorTasks[0];
+      } else {
+        console.error('No Success Factor tasks found in the project');
+        return false;
+      }
+    }
+    
+    console.log('Target task found:', {
+      id: targetTask.id,
+      text: targetTask.text,
+      origin: targetTask.origin,
+      sourceId: targetTask.sourceId,
+      completed: targetTask.completed
     });
     
-    if (!createTaskResponse.ok) {
-      console.error('Failed to create test task');
-      return;
-    }
+    testResults.originalTask = {
+      id: targetTask.id,
+      text: targetTask.text,
+      origin: targetTask.origin,
+      sourceId: targetTask.sourceId,
+      completed: targetTask.completed
+    };
     
-    successFactorTask = createTaskResponse.data;
-  }
-  
-  console.log(`\nUsing Success-Factor task: ${successFactorTask.id}`);
-  console.log(`Current state: ${successFactorTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
-  
-  // TEST CASE 1: Update with the full task ID
-  console.log('\n4. TEST CASE 1: Update with full task ID');
-  const fullIdResponse = await apiRequest('PUT', 
-    `/api/projects/${projectId}/tasks/${successFactorTask.id}`,
-    { completed: !successFactorTask.completed }
-  );
-  
-  console.log(`Update with full ID: ${fullIdResponse.ok ? 'SUCCESS' : 'FAILED'}`);
-  
-  // Get the current task state after the first update
-  console.log('\n5. Getting updated task state...');
-  const updatedTasksResponse = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
-  
-  if (!updatedTasksResponse.ok) {
-    console.error('Failed to get updated tasks');
-    return;
-  }
-  
-  const updatedTask = updatedTasksResponse.data.find(task => task.id === successFactorTask.id);
-  if (!updatedTask) {
-    console.error('Could not find the task after update');
-    return;
-  }
-  
-  console.log(`Task state after first update: ${updatedTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
-  
-  // TEST CASE 2: Update with just the UUID part of the ID
-  // Extract the UUID part (first 5 segments) if this is a compound ID
-  const uuidPart = successFactorTask.id.split('-').slice(0, 5).join('-');
-  
-  if (uuidPart !== successFactorTask.id && uuidPart.length >= 36) {
-    console.log(`\n6. TEST CASE 2: Update with UUID part: ${uuidPart}`);
+    // Step 3: Toggle the task completion state
+    console.log(`\nSTEP 3: Toggling task completion from ${targetTask.completed} to ${!targetTask.completed}...`);
     
-    const uuidResponse = await apiRequest('PUT',
-      `/api/projects/${projectId}/tasks/${uuidPart}`,
-      { completed: !updatedTask.completed }
+    const updateResponse = await apiRequest(
+      'PUT',
+      `/api/projects/${PROJECT_ID}/tasks/${targetTask.id}`,
+      { completed: !targetTask.completed }
     );
     
-    console.log(`Update with UUID part: ${uuidResponse.ok ? 'SUCCESS' : 'FAILED'}`);
+    console.log(`Update status: ${updateResponse.status}`);
+    console.log('Update response headers:', updateResponse.headers);
     
-    // Get the final task state
-    console.log('\n7. Getting final task state...');
-    const finalTasksResponse = await apiRequest('GET', `/api/projects/${projectId}/tasks`);
-    
-    if (finalTasksResponse.ok) {
-      const finalTask = finalTasksResponse.data.find(task => task.id === successFactorTask.id);
-      if (finalTask) {
-        console.log(`Final task state: ${finalTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
-      }
+    if (updateResponse.status !== 200 || !updateResponse.body) {
+      console.error('Failed to update task:', updateResponse.body);
+      return false;
     }
-  } else {
-    console.log('\n6. Task does not have a compound ID, skipping UUID part test');
+    
+    // Log the full update response
+    console.log('\nPUT /api/projects/:projectId/tasks/:taskId response:');
+    console.log(JSON.stringify(updateResponse.body, null, 2));
+    
+    testResults.updateResponse = {
+      status: updateResponse.status,
+      headers: updateResponse.headers,
+      body: updateResponse.body
+    };
+    
+    // Step 4: Verify the response contains the correct task
+    console.log('\nSTEP 4: Verifying response integrity...');
+    
+    if (!updateResponse.body.task) {
+      console.error('Response does not contain a task object');
+      return false;
+    }
+    
+    const updatedTask = updateResponse.body.task;
+    
+    // Check critical fields
+    const idMatch = updatedTask.id === targetTask.id;
+    const completionToggled = updatedTask.completed !== targetTask.completed;
+    const originPreserved = updatedTask.origin === targetTask.origin;
+    const sourceIdPreserved = updatedTask.sourceId === targetTask.sourceId;
+    
+    console.log(`ID Match: ${idMatch ? '✓' : '✗'}`);
+    console.log(`Completion Toggled: ${completionToggled ? '✓' : '✗'}`);
+    console.log(`Origin Preserved: ${originPreserved ? '✓' : '✗'}`);
+    console.log(`SourceId Preserved: ${sourceIdPreserved ? '✓' : '✗'}`);
+    
+    testResults.responseVerification = {
+      idMatch,
+      completionToggled,
+      originPreserved,
+      sourceIdPreserved
+    };
+    
+    // Step 5: Get tasks again to verify persistence
+    console.log('\nSTEP 5: Getting tasks again to verify persistence...');
+    
+    const refreshResponse = await apiRequest('GET', `/api/projects/${PROJECT_ID}/tasks`);
+    console.log(`Refresh status: ${refreshResponse.status}`);
+    
+    if (refreshResponse.status !== 200 || !Array.isArray(refreshResponse.body)) {
+      console.error('Failed to refresh tasks:', refreshResponse.body);
+      return false;
+    }
+    
+    // Log the full GET response after update
+    console.log('\nGET /api/projects/:projectId/tasks after update:');
+    console.log(JSON.stringify(refreshResponse.body, null, 2));
+    
+    // Find our task in the refreshed list
+    const refreshedTask = refreshResponse.body.find(task => task.id === targetTask.id);
+    
+    if (!refreshedTask) {
+      console.error('Could not find the task in the refreshed task list');
+      return false;
+    }
+    
+    console.log('\nRefreshed task state:');
+    console.log({
+      id: refreshedTask.id,
+      text: refreshedTask.text,
+      origin: refreshedTask.origin,
+      sourceId: refreshedTask.sourceId,
+      completed: refreshedTask.completed
+    });
+    
+    testResults.refreshedTask = {
+      id: refreshedTask.id, 
+      text: refreshedTask.text,
+      origin: refreshedTask.origin,
+      sourceId: refreshedTask.sourceId,
+      completed: refreshedTask.completed
+    };
+    
+    // Step 6: Verify persistence
+    console.log('\nSTEP 6: Verifying persistence after refresh...');
+    
+    const idMatchRefreshed = refreshedTask.id === targetTask.id;
+    const completionToggledRefreshed = refreshedTask.completed !== targetTask.completed;
+    const originPreservedRefreshed = refreshedTask.origin === targetTask.origin;
+    const sourceIdPreservedRefreshed = refreshedTask.sourceId === targetTask.sourceId;
+    
+    console.log(`ID Match: ${idMatchRefreshed ? '✓' : '✗'}`);
+    console.log(`Completion Toggled: ${completionToggledRefreshed ? '✓' : '✗'}`);
+    console.log(`Origin Preserved: ${originPreservedRefreshed ? '✓' : '✗'}`);
+    console.log(`SourceId Preserved: ${sourceIdPreservedRefreshed ? '✓' : '✗'}`);
+    
+    testResults.persistenceVerification = {
+      idMatchRefreshed,
+      completionToggledRefreshed,
+      originPreservedRefreshed,
+      sourceIdPreservedRefreshed
+    };
+    
+    // Step 7: Reset to original state (cleanup)
+    console.log('\nSTEP 7: Resetting task to original state...');
+    
+    const resetResponse = await apiRequest(
+      'PUT',
+      `/api/projects/${PROJECT_ID}/tasks/${targetTask.id}`,
+      { completed: targetTask.completed }
+    );
+    
+    if (resetResponse.status === 200) {
+      console.log('Task reset successful');
+    } else {
+      console.log('Warning: Failed to reset task to original state');
+    }
+    
+    // Save test results to a file
+    fs.writeFileSync('test-results.json', JSON.stringify(testResults, null, 2));
+    
+    // Get the latest git commit
+    let gitInfo = 'Git info not available';
+    try {
+      gitInfo = require('child_process').execSync('git log -1').toString();
+    } catch (err) {
+      console.log('Could not get git info:', err.message);
+    }
+    
+    // Final summary
+    console.log('\n=== TEST RESULTS ===');
+    console.log(`Task Update Response: ${idMatch && completionToggled ? 'PASS ✓' : 'FAIL ✗'}`);
+    console.log(`Persistence Verification: ${idMatchRefreshed && completionToggledRefreshed ? 'PASS ✓' : 'FAIL ✗'}`);
+    console.log(`Metadata Preservation: ${originPreserved && sourceIdPreserved && originPreservedRefreshed && sourceIdPreservedRefreshed ? 'PASS ✓' : 'FAIL ✗'}`);
+    
+    const allPassed = idMatch && completionToggled && originPreserved && sourceIdPreserved && 
+                       idMatchRefreshed && completionToggledRefreshed && originPreservedRefreshed && sourceIdPreservedRefreshed;
+    
+    console.log(`\nOVERALL TEST RESULT: ${allPassed ? 'PASS ✓' : 'FAIL ✗'}`);
+    
+    if (allPassed) {
+      console.log('\n✓ SUCCESS FACTOR TASK UPDATE FIX VERIFIED');
+      console.log('The server is correctly returning the user task object after updates.');
+      console.log('Task completion state is properly persisted.');
+    } else {
+      console.log('\n✗ SUCCESS FACTOR TASK UPDATE FIX NOT VERIFIED');
+      console.log('There may still be issues with the task update response or persistence.');
+    }
+    
+    console.log('\nGit Commit Info:');
+    console.log(gitInfo);
+    
+    return allPassed;
+  } catch (error) {
+    console.error('\nTest failed with unexpected error:', error);
+    return false;
   }
-  
-  // TEST CASE 3: Test error handling with non-existent task
-  console.log('\n8. TEST CASE 3: Update non-existent task');
-  const nonExistentTaskId = 'non-existent-task-id';
-  
-  const errorResponse = await apiRequest('PUT',
-    `/api/projects/${projectId}/tasks/${nonExistentTaskId}`,
-    { completed: true }
-  );
-  
-  console.log(`Error response status: ${errorResponse.status}`);
-  console.log(`Error handling: ${errorResponse.status === 404 ? 'CORRECT (404)' : 'INCORRECT'}`);
-  
-  console.log('\n=== SUCCESS-FACTOR TASK UPDATE TESTS COMPLETE ===');
 }
 
-// Run the tests
-testSuccessFactorTaskUpdates().catch(error => {
-  console.error('Test script failed:', error);
+// Run the test
+testSuccessFactorUpdate().then(success => {
+  console.log(`\nTest ${success ? 'PASSED' : 'FAILED'}`);
+  process.exit(success ? 0 : 1);
 });
