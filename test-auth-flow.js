@@ -2,8 +2,8 @@
 import fetch from 'node-fetch';
 
 const TEST_USER = {
-  email: 'greg@confluity.co.uk',
-  password: 'confluity123'
+  username: 'admin',
+  password: 'admin123'
 };
 
 async function testAuthFlow() {
