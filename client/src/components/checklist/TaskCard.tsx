@@ -128,11 +128,31 @@ export default function TaskCard({
   
   // Handle task completion toggle
   const handleToggleCompleted = () => {
+    // TRACE: Log all props on render for debugging
+    console.debug('[TASK_PROPS]', {
+      id,
+      text,
+      completed,
+      notes,
+      priority,
+      dueDate,
+      owner,
+      status,
+      stage,
+      source,
+      origin,
+      sourceId,
+      sourceName,
+      frameworkCode,
+      isGoodPractice
+    });
+
     const newStatus = !completed ? 'Done' : 'To Do';
     setEditedStatus(newStatus);
     
-    // Determine which ID to use based on task type
-    const updateId = (source === 'factor' || origin === 'factor') ? sourceId : id;
+    // Safely determine which ID to use based on task type
+    const isFactorTask = source === 'factor' || origin === 'factor';
+    const updateId = isFactorTask ? (sourceId || id) : id;
     
     // Enhanced debug logging for task updates
     console.debug(`[TASK_UPDATE] Toggle task completion:
