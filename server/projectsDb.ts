@@ -337,6 +337,51 @@ export const projectsDb = {
     }
   },
   
+  /**
+   * Find tasks by source ID for a specific project
+   * This method is critical for the TaskIdResolver to find Success Factor tasks by their canonical ID
+   * 
+   * @param projectId The project ID to limit the search to
+   * @param sourceId The source ID to search for
+   * @returns Array of matching tasks
+   */
+  async findTasksBySourceId(projectId, sourceId) {
+    try {
+      if (DEBUG_TASKS) {
+        console.log(`[findTasksBySourceId] Searching for tasks with projectId=${projectId} and sourceId=${sourceId}`);
+      }
+      
+      // We need to explicitly cast UUID fields to text for string operations
+      // This is critical for prefix matching to work correctly
+      const tasks = await db.select()
+        .from(projectTasksTable)
+        .where(and(
+          eq(projectTasksTable.projectId, projectId),
+          eq(projectTasksTable.sourceId, sourceId)
+        ))
+        .orderBy(asc(projectTasksTable.createdAt));
+      
+      if (DEBUG_TASKS) {
+        console.log(`[findTasksBySourceId] Found ${tasks.length} tasks with sourceId=${sourceId}`);
+        if (tasks.length > 0) {
+          console.log(`[findTasksBySourceId] First match: id=${tasks[0].id}, text=${tasks[0].text}`);
+        }
+      }
+      
+      // Convert database rows to project tasks with consistent ID handling
+      return tasks.map(task => {
+        // For factor-origin tasks with matching sourceId, use it for ID consistency
+        if (task.origin === 'factor' && task.sourceId === sourceId) {
+          return convertDbTaskToProjectTask(task, sourceId);
+        }
+        return convertDbTaskToProjectTask(task);
+      });
+    } catch (error) {
+      console.error(`[ERROR] Error finding tasks by sourceId ${sourceId}:`, error);
+      return [];
+    }
+  },
+  
   // Get all tasks for a project
   async getTasksForProject(projectId) {
     try {
