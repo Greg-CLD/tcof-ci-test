@@ -999,12 +999,12 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         console.log(`[DEBUG_TASK_API] PUT request to update task ${taskId} for project ${projectId}`);
         console.log(`[DEBUG_TASK_API] taskId:`, taskId);
         console.log(`[DEBUG_TASK_API] extracted UUID:`, taskIdClean);
-        console.log(`[DEBUG_TASK_API] Task update payload:`, JSON.stringify(taskUpdate));
+        console.log(`[DEBUG_TASK_API] Task update payload:`, JSON.stringify(updates));
         
         // Special diagnostic for completion status updates
-        if (taskUpdate.hasOwnProperty('completed')) {
+        if (updates.hasOwnProperty('completed')) {
           console.log(`[DEBUG_TASK_API] *** Completion status update detected ***`);
-          console.log(`[DEBUG_TASK_API] New completion value: ${taskUpdate.completed}`);
+          console.log(`[DEBUG_TASK_API] New completion value: ${updates.completed}`);
         }
         
         // Get all tasks for this project to diagnose ID matching issues
@@ -1025,7 +1025,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       }
 
       // Ensure we have the required fields
-      if (!taskUpdate) {
+      if (!updates) {
         return res.status(400).json({ 
           success: false,
           message: 'Task data is required' 

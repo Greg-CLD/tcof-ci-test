@@ -442,8 +442,22 @@ const updateTaskMutation = useMutation({
         // CRITICAL FIX: Update all tasks with matching sourceId for Success Factor tasks
         // This ensures that if multiple instances of the same logical task exist, they all stay in sync
         return oldTasks.map(task => {
-          // First check exact ID match
-          if (task.id === updatedTask.id) {
+          // First check exact ID match with original requested ID 
+          // This ensures we update the task with the ID the user clicked on
+          if (task.id === variables.taskId) {
+            if (DEBUG_TASK_PERSISTENCE) {
+              console.log(`[DEBUG_TASK_PERSISTENCE] Found exact match for original requested ID: ${variables.taskId}`);
+            }
+            // Return updated task but preserve the original ID the user interacted with
+            return { ...updatedTask, id: variables.taskId };
+          }
+          
+          // Also check for ID match with the response task ID
+          // This handles the case where the server normalized the ID
+          if (task.id === updatedTask.id && variables.taskId !== updatedTask.id) {
+            if (DEBUG_TASK_PERSISTENCE) {
+              console.log(`[DEBUG_TASK_PERSISTENCE] Found match for server-normalized ID: ${updatedTask.id}`);
+            }
             return updatedTask;
           }
           
