@@ -28,6 +28,8 @@ import {
 type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 // Import projectsDb with augmented type definition to fix TypeScript errors
 import { projectsDb } from './projectsDb';
+import taskStateManager from './services/taskStateManager';
+import { TaskIdResolver } from './services/taskIdResolver';
 
 // Add type augmentation for projectsDb to include the missing methods
 declare module './projectsDb' {
@@ -826,7 +828,16 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     }
     
     // Use req.body as the update data
-    let taskUpdate = req.body;
+    const updates = req.body;
+    
+    // Initialize TaskStateManager if not already initialized
+    if (!taskStateManager.projectsDb) {
+      taskStateManager.initialize(projectsDb);
+      
+      if (isDebugEnabled) {
+        console.log('[DEBUG_TASKS] TaskStateManager initialized with projectsDb');
+      }
+    }
     
     try {
       // Use the TaskIdResolver to find the task with intelligent ID resolution
@@ -898,16 +909,21 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         }
       }
       
-      // Step 2: Update the task
+      // Step 2: Update the task using TaskStateManager
       try {
         // Store original task details before update
         const userTaskId = originalTask.id;
         
-        // Update the underlying task using the actual database ID
-        const updatedSourceTask = await projectsDb.updateTask(originalTask.id, updates);
+        // Use TaskStateManager to update the task with optimistic updates and sync
+        const updatedState = await taskStateManager.updateTaskState(
+          originalTask.id,
+          projectId, 
+          updates
+        );
         
         if (isDebugEnabled) {
-          console.log(`[DEBUG_TASKS] Task updated successfully`);
+          console.log(`[DEBUG_TASKS] Task update initiated with TaskStateManager`);
+          console.log(`[DEBUG_TASKS] Current sync status: ${updatedState.syncStatus}`);
           console.log(`[DEBUG_TASKS] Using user's task ID for response: ${userTaskId}`);
         }
         
@@ -915,11 +931,11 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         if (originalTask.origin === 'factor' && originalTask.sourceId && 
             updates.hasOwnProperty('completed')) {
           try {
-            const syncCount = await TaskIdResolver.syncRelatedTasks(
+            // Use TaskStateManager to sync related tasks
+            const syncCount = await taskStateManager.syncRelatedTasks(
               projectId, 
               originalTask.sourceId, 
-              { completed: updates.completed },
-              projectsDb
+              { completed: updates.completed }
             );
             
             if (isDebugEnabled && syncCount > 0) {
@@ -930,12 +946,12 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           }
         }
         
-        // Create an updated user task object by merging original task with updates
-        // This ensures we return the task object with the ID that the user expects
+        // Create an updated user task object that includes sync status
         const updatedUserTask = {
-          ...originalTask,           // Start with the user's original task (includes correct ID)
-          ...updates,                // Apply the user's updates
-          updatedAt: new Date(),     // Add updatedAt timestamp
+          ...originalTask,                    // Start with the user's original task (includes correct ID)
+          ...updates,                         // Apply the user's updates
+          updatedAt: new Date(),              // Add updatedAt timestamp
+          syncStatus: updatedState.syncStatus, // Include sync status for client
           // Ensure we return the original task ID that the user sent,
           // this is crucial for proper client-side caching
           id: taskLookupResult.originalId
@@ -944,7 +960,12 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         return res.status(200).json({
           success: true,
           message: 'Task updated successfully',
-          task: updatedUserTask      // Return user's task with updates applied, not source task
+          task: updatedUserTask,     // Return user's task with updates applied, not source task
+          sync: {
+            status: updatedState.syncStatus,
+            timestamp: new Date().toISOString(),
+            retryCount: updatedState.retryCount || 0
+          }
         });
       } catch (updateError) {
         console.error(`[TASK_UPDATE_ERROR] Failed to update task:`, updateError);
