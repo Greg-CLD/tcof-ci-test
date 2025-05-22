@@ -136,14 +136,9 @@ export default function TaskCard({
 
     // For Success Factor tasks, validate sourceId format
     if (source === 'factor' && sourceId) {
-      if (!sourceId.trim()) {
-        console.error('TaskCard: Invalid sourceId format for Success Factor task');
-        return;
-      }
-      // Validate UUID format for sourceId
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(sourceId)) {
-        console.error('TaskCard: Invalid UUID format for sourceId');
+      if (!sourceId.trim() || !uuidRegex.test(sourceId)) {
+        console.error('TaskCard: Invalid sourceId format for Success Factor task');
         return;
       }
     }
