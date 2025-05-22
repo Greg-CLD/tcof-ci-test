@@ -1,0 +1,21 @@
+Proposed Prompt to Agent
+	OBJECTIVE:
+	Fix the PUT request timeout and complete end-to-end persistence for Success Factor tasks.
+	DELIVERABLES:
+		1. Diagnose and fix the cause of the PUT /tasks/:taskId timeout (check server logs for async loops, DB locks, or unresolved promises).
+		2. Confirm that on a PUT, the state change is written to the DB and returned in the API response—verify with DB query/log.
+		3. Run a full browser-based user journey:  - Toggle a Success Factor task  - Confirm 200 OK response and returned JSON matches server state  - Refresh: UI displays persisted state, no regression  - Log and fix any step where the flow breaksBONUS: Update test scripts to mimic this browser sequence, including authentication/session handling.
+	If you propose code, include the summary as a single diff or block.
+	Report back with:
+		○ What was broken (root cause)
+		○ What you changed (diff summary)
+		○ User-level test proof (manual/browser, not just script)
+
+C) Brief Summary for Assistant
+	We’re now focusing on the critical “last mile” issue: the PUT request for Success Factor tasks times out and changes don’t persist even after all the architectural refactors. All core backend services (ID resolution, state manager, error handling) are in place, but a low-level server or DB bug is blocking real-world use.
+	This prompt aims to:
+		○ Direct Agent to diagnose and fix the backend timeout and persistence failure, not just patch logs.
+		○ Require a manual, browser-based end-to-end test for Success Factor tasks—not just unit tests or mocks.
+		○ Mandate reporting of root cause and a single diff/code summary for transparency.
+	The goal is to cut through partial fixes and ensure that, after this, a user can toggle any Success Factor task, get a 200 OK, refresh, and see that change persist—real, production behaviour, not just test passing.
+	This is exactly what we’d have discovered after 20 cycles—so we’re skipping straight there, focused on the true system bottleneck.
