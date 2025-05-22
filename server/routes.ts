@@ -860,7 +860,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     
     try {
       // Validate the input task ID format using cleanUUID method
-      if (taskId && !validateUUID(TaskIdResolver.cleanUUID(taskId))) {
+      if (taskId && !validateUuid(TaskIdResolver.cleanUUID(taskId))) {
         const error = new Error(`Invalid task ID format: ${taskId}`);
         taskLogger.endOperation(operationId, false, error);
         
