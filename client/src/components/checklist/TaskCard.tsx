@@ -95,12 +95,20 @@ export default function TaskCard({
   onDelete,
   dragHandleProps
 }: TaskCardProps) {
-  // TRACE: Log task ID and completion state on render
+  // TRACE: Log task ID and completion state on render with safe handling of all properties
+  // This helps diagnose issues by showing valid values for all relevant props
   console.debug(`[TRACE_UI] TaskCard rendered:
   - Task ID: ${id}
   - Completed: ${completed}
   - Source: ${source}
-  - Stage: ${stage}`);
+  - Stage: ${stage}
+  - SourceId: ${sourceId || '<empty>'}
+  - Origin: ${origin || '<empty>'}`);
+  
+  // Create safe reference values for potentially undefined properties
+  // This prevents runtime errors when these values are used in the component
+  const safeSourceId = sourceId || '';
+  const safeOrigin = origin || '';
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [editedTaskTitle, setEditedTaskTitle] = useState(text);
@@ -181,27 +189,29 @@ export default function TaskCard({
     // Log debounced request with unique ID and timestamp
     console.debug(`[TASK_TOGGLE] Processing toggle request #${currentRequestId} at ${now}`);
 
-    // Safely handle potentially undefined props using proper types
-    const safeOrigin = typeof origin !== 'undefined' ? 
-      origin as TaskUpdates['origin'] : null;
-      
-    const safeSourceId = typeof sourceId !== 'undefined' && sourceId !== null ? 
-      String(sourceId) : '';
+    // We don't need these here since we already have safeOrigin and safeSourceId defined at component level
+    // Using the component-level variables ensures consistent handling throughout the component
     
     // Determine if we have a valid sourceId for a Success Factor task
+    // Always do null/empty checks before validation to prevent runtime errors
     const isFactorTask = source === 'factor' || safeOrigin === 'factor';
-    const hasValidSourceId = isFactorTask && safeSourceId !== null && isValidUUID(safeSourceId);
+    // Safe validation that never crashes, even with empty/null/undefined sourceId
+    const hasValidSourceId = isFactorTask && 
+                             typeof safeSourceId === 'string' && 
+                             safeSourceId !== '' && 
+                             isValidUUID(safeSourceId);
     
-    // Debug log all props with validation info
+    // Debug log all props with validation info - ensuring we never pass undefined values
     console.debug('[TASK_PROPS]', {
       requestId: currentRequestId,
       id, 
       text, 
       completed,
       source,
-      origin: safeOrigin,
-      sourceId: safeSourceId,
+      origin: safeOrigin || '<empty>',
+      sourceId: safeSourceId || '<empty>',
       sourceIdValid: hasValidSourceId ? 'Yes' : 'No',
+      sourceIdType: typeof safeSourceId,
       stage, 
       status
     });
@@ -242,10 +252,9 @@ export default function TaskCard({
       updateData.origin = originValue as TaskUpdates['origin'];
     }
     
-    // Only include sourceId if it exists and is not empty
-    if (safeSourceId) {
-      updateData.sourceId = safeSourceId;
-    }
+    // Always include sourceId (empty string if not available) to ensure consistency
+    // This prevents undefined errors when the API expects sourceId to be present
+    updateData.sourceId = safeSourceId;
     
     try {
       // Send the update with validated ID and clean payload
@@ -258,7 +267,9 @@ export default function TaskCard({
         console.debug(`[TASK_TOGGLE] Reset processing flag for request #${currentRequestId}`);
       }, 1000);
     }
-  }, [id, completed, source, origin, sourceId ?? '', stage, status, isGoodPractice, onUpdate]);
+  // Important: Using nullish coalescing operator for sourceId to prevent 'undefined' runtime errors
+  // This ensures the dependency array never includes undefined values that cause React hooks to break
+  }, [id, completed, source, origin || '', sourceId || '', stage, status, isGoodPractice, onUpdate]);
 
   // Handle priority change
   const handlePriorityChange = (newPriority: TaskPriority | undefined) => {
