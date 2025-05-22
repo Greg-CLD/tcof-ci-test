@@ -1,1 +1,1 @@
-tcof.sid=s%3AnOkVJqIA_ebyR-FfsswF0IfQy6xk_SKs.irOw4pURwzmQDODTTnmzQo11Oz2nZe6PoO%2Bt6N9M2nE; Path=/; Expires=Fri, 20 Jun 2025 16:30:00 GMT; HttpOnly; SameSite=Lax
+connect.sid=nOkVJqIA_ebyR-FfsswF0IfQy6xk_SKs

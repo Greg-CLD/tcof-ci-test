@@ -760,14 +760,26 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     // CRITICAL: First action - Always set Content-Type header for JSON responses
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
-    // Authentication check
-    if (req.headers['x-auth-override'] !== 'true') {
+    // Debug logging for headers and auth state
+    if (process.env.DEBUG_TASKS === 'true') {
+      console.log('[DEBUG_TASKS] Task update request headers:', req.headers);
+      console.log('[DEBUG_TASKS] Auth state:', {
+        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+        hasAuthOverride: req.headers['x-auth-override'] === 'true'
+      });
+    }
+    
+    // Authentication check with special bypass for testing
+    const isAuthBypassed = req.headers['x-auth-override'] === 'true';
+    if (!isAuthBypassed) {
       if (!req.isAuthenticated || !req.isAuthenticated()) {
         return res.status(401).json({
           success: false,
           message: 'Authentication required'
         });
       }
+    } else if (process.env.DEBUG_TASKS === 'true') {
+      console.log('[DEBUG_TASKS] Auth check bypassed for testing');
     }
     
     // Extract parameters
