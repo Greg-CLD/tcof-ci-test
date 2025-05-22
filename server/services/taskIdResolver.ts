@@ -182,7 +182,7 @@ export class TaskIdResolver {
       
       // Ensure these fields are not modified for Success Factor tasks
       delete updates.origin;
-      delete updates.source_id;
+      delete updates.sourceId; // Using correct camelCase field name
       delete updates.text;
       delete updates.stage;
     }
