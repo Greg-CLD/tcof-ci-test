@@ -336,7 +336,7 @@ export class TaskLogger {
    * Log task lookup operations
    */
   logTaskLookup(
-    lookupStrategy: 'exact' | 'uuid' | 'sourceId' | 'compound',
+    lookupStrategy: 'exact' | 'uuid' | 'sourceId' | 'compound' | 'partial' | 'fallback',
     taskId: string,
     projectId: string,
     success: boolean,

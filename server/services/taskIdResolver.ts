@@ -266,7 +266,8 @@ export class TaskIdResolver {
             });
           }
           
-          taskLogger.logTaskLookup('partial', taskId, projectId, true, factorMatch.id, factorMatch.sourceId);
+          // Use 'fallback' as the strategy type to match taskLogger's allowed types
+          taskLogger.logTaskLookup('fallback', taskId, projectId, true, factorMatch.id, factorMatch.sourceId);
           taskResolutionCache[cacheKey] = factorMatch;
           taskLogger.endOperation(operationId, true);
           return factorMatch;
@@ -283,7 +284,8 @@ export class TaskIdResolver {
           });
         }
         
-        taskLogger.logTaskLookup('partial', taskId, projectId, true, partialMatches[0].id);
+        // Use 'fallback' as the strategy type to match taskLogger's allowed types
+        taskLogger.logTaskLookup('fallback', taskId, projectId, true, partialMatches[0].id);
         taskResolutionCache[cacheKey] = partialMatches[0];
         taskLogger.endOperation(operationId, true);
         return partialMatches[0];

@@ -1046,6 +1046,31 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         // Store original task details before update
         const userTaskId = originalTask.id;
         
+        // ENHANCED SAFEGUARD: Ensure critical Success Factor metadata is preserved in the updates
+        if (originalTask.origin === 'factor' || originalTask.origin === 'success-factor') {
+          // Always preserve the origin for Success Factor tasks (overwriting any incorrect values)
+          updates.origin = originalTask.origin;
+          
+          // Always preserve the sourceId for Success Factor tasks
+          if (originalTask.sourceId) {
+            updates.sourceId = originalTask.sourceId;
+          }
+          
+          // Preserve source field for consistent filtering
+          if (originalTask.source) {
+            updates.source = originalTask.source;
+          }
+          
+          if (isDebugEnabled) {
+            console.log(`[DEBUG_TASKS] Enhanced safeguard: Success Factor metadata explicitly preserved in updates payload:`, {
+              id: originalTask.id,
+              origin: updates.origin,
+              sourceId: updates.sourceId,
+              source: updates.source
+            });
+          }
+        }
+        
         // Use TaskStateManager to update the task with optimistic updates and sync
         const updatedState = await taskStateManager.updateTaskState(
           originalTask.id,
@@ -1067,11 +1092,17 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             const syncCount = await taskStateManager.syncRelatedTasks(
               projectId, 
               originalTask.sourceId, 
-              { completed: updates.completed }
+              { 
+                completed: updates.completed,
+                // Always include critical metadata in sync operations
+                origin: originalTask.origin,
+                sourceId: originalTask.sourceId,
+                source: originalTask.source || 'factor'
+              }
             );
             
             if (isDebugEnabled && syncCount > 0) {
-              console.log(`[DEBUG_TASKS] Synchronized ${syncCount} related Success Factor tasks`);
+              console.log(`[DEBUG_TASKS] Synchronized ${syncCount} related Success Factor tasks with metadata preservation`);
             }
           } catch (syncError) {
             console.error(`[ERROR] Failed to sync related Success Factor tasks:`, syncError);
@@ -1080,9 +1111,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         
         // Create an updated user task object that includes sync status with proper metadata preservation
         const updatedUserTask = {
-          ...originalTask,                    // Start with the user's original task (includes correct ID)
-          ...updates,                         // Apply the user's updates
-          updatedAt: new Date(),              // Add updatedAt timestamp
+          ...originalTask,                     // Start with the user's original task (includes correct ID)
+          ...updates,                          // Apply the user's updates
+          updatedAt: new Date(),               // Add updatedAt timestamp
           syncStatus: updatedState.syncStatus, // Include sync status for client
         };
         
@@ -1099,6 +1130,11 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             updatedUserTask.source = originalTask.source;
           }
           
+          // Double-check that task stage is preserved for Success Factor tasks if it exists
+          if (originalTask.stage && !updatedUserTask.stage) {
+            updatedUserTask.stage = originalTask.stage;
+          }
+          
           // Ensure we return the original task ID that the client sent (for consistent caching)
           // This is crucial for client-side state handling
           updatedUserTask.id = taskId;
@@ -1108,6 +1144,8 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
               id: updatedUserTask.id, 
               origin: updatedUserTask.origin,
               sourceId: updatedUserTask.sourceId,
+              source: updatedUserTask.source || 'N/A',
+              stage: updatedUserTask.stage || 'N/A',
               completed: updatedUserTask.completed
             });
           }
