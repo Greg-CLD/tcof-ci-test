@@ -19,6 +19,9 @@ const VALID_STAGES = ['identification', 'definition', 'delivery', 'closure'];
 // Cache for Success Factor definitions to avoid repeated DB lookups
 let cachedFactors: any[] = [];
 
+// Import additional schema elements
+import { successFactors, successFactorTasks } from '../shared/schema';
+
 /**
  * Get all canonical Success Factors from the database
  * 
@@ -124,9 +127,12 @@ export async function cloneSuccessFactorTasks(projectId: string, factorId: strin
       
       // Check if a task with this Success Factor ID and stage already exists
       const existingTasksInStage = existingTasksByStage[stage] || [];
-      const taskExists = existingTasksInStage.some(task => 
-        task.sourceId === factorId && task.stage === stage && task.text === sfTask.text
-      );
+      const taskExists = existingTasksInStage.some(task => {
+        // Check all fields to make sure we don't duplicate tasks
+        return task.sourceId === factorId && 
+               task.stage.toLowerCase() === stage.toLowerCase() && 
+               task.text === sfTask.text;
+      });
       
       if (taskExists) {
         if (DEBUG_CLONE) {
@@ -135,7 +141,7 @@ export async function cloneSuccessFactorTasks(projectId: string, factorId: strin
         continue;
       }
       
-      // Create the task in the project
+      // Create the task in the project with proper field mappings
       await db.insert(projectTasks).values({
         id: uuidv4(),
         projectId: projectId,
@@ -145,7 +151,12 @@ export async function cloneSuccessFactorTasks(projectId: string, factorId: strin
         sourceId: factorId,
         stage: stage,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        notes: null,
+        priority: null,
+        dueDate: null,
+        owner: null,
+        status: 'pending'
       });
       
       clonedCount++;
