@@ -94,6 +94,23 @@ export class TaskStateManager extends EventEmitter {
   private validateStateTransition(currentState: TaskState | null, update: TaskUpdate): boolean {
     if (!currentState) return true;
     
+    // Special handling for Success Factor tasks
+    if (currentState.origin === 'factor' || currentState.source === 'factor') {
+      if (!currentState.sourceId) {
+        if (DEBUG_TASK_TRANSITION) {
+          console.log(`[TASK_STATE_MANAGER] Invalid Success Factor task - missing sourceId`);
+        }
+        return false;
+      }
+      
+      // Additional validation for Success Factor state changes
+      if (update.completed !== undefined) {
+        if (DEBUG_TASK_TRANSITION) {
+          console.log(`[TASK_STATE_MANAGER] Success Factor task state change: ${currentState.sourceId} -> ${update.completed}`);
+        }
+      }
+    }
+    
     if (update.completed !== undefined && update.completed === currentState.completed) {
       if (DEBUG_TASK_TRANSITION) {
         console.log(`[TASK_STATE_MANAGER] Invalid state transition - already ${update.completed ? 'completed' : 'incomplete'}`);
