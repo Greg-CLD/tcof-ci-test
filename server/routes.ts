@@ -1249,7 +1249,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           if (dbError && typeof dbError === 'object' && 'code' in dbError && dbError.code === 'TASK_NOT_FOUND') {
             // For PUT requests to success-factor tasks, we should try to create the task instead
             // The updateTask function already handles this case, so this is just an additional safeguard
-            if (req.method === 'PUT' && updates.origin === 'success-factor') {
+            if (req.method === 'PUT' && req.body.origin === 'success-factor') {
               console.log(`[DEBUG_TASK_API] PUT request for success-factor task failed with TASK_NOT_FOUND, but this shouldn't happen with upsert`);
             }
             
@@ -1301,20 +1301,20 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         }
         
         // Critical validation: verify the update was applied correctly
-        if (updates.hasOwnProperty('completed')) {
-          const completionUpdated = updatedTask.completed === updates.completed;
+        if (req.body.hasOwnProperty('completed')) {
+          const completionUpdated = updatedTask.completed === req.body.completed;
           
           if (!completionUpdated) {
             // This would indicate the critical bug we're tracking!
             console.error(`[ERROR] CRITICAL: Task completion state mismatch after update!`);
             console.error(`[ERROR]  - Task ID: ${updatedTask.id}`);
-            console.error(`[ERROR]  - Requested state: ${updates.completed}`);
+            console.error(`[ERROR]  - Requested state: ${req.body.completed}`);
             console.error(`[ERROR]  - Actual state: ${updatedTask.completed}`);
             
             if (DEBUG_TASK_COMPLETION) {
               console.error(`[DEBUG_TASK_COMPLETION] *** CRITICAL ERROR: Task completion mismatch! ***`);
               console.error(`[DEBUG_TASK_COMPLETION]  - This is likely the SuccessFactor task completion bug`);
-              console.error(`[DEBUG_TASK_COMPLETION]  - Requested completion: ${updates.completed}`);
+              console.error(`[DEBUG_TASK_COMPLETION]  - Requested completion: ${req.body.completed}`);
               console.error(`[DEBUG_TASK_COMPLETION]  - Actual completion: ${updatedTask.completed}`);
               console.error(`[DEBUG_TASK_COMPLETION]  - Origin: ${originalTask?.origin || updatedTask.origin}`);
               console.error(`[DEBUG_TASK_COMPLETION]  - Source ID: ${originalTask?.sourceId || updatedTask.sourceId}`);
@@ -1327,7 +1327,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         }
         
         // Double-check after update by fetching the task again directly from the database
-        if (DEBUG_TASK_PERSISTENCE && updates.hasOwnProperty('completed')) {
+        if (DEBUG_TASK_PERSISTENCE && req.body.hasOwnProperty('completed')) {
           try {
             // Using getTasksForProject instead of the non-existent getTaskById
             // and then filtering the results manually
@@ -1338,9 +1338,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             if (verifiedTask) {
               console.log(`[DEBUG_TASK_PERSISTENCE] Verification check after update:`);
               console.log(`[DEBUG_TASK_PERSISTENCE]  - Re-fetched task completion state: ${verifiedTask.completed}`);
-              console.log(`[DEBUG_TASK_PERSISTENCE]  - Expected completion state: ${updates.completed}`);
+              console.log(`[DEBUG_TASK_PERSISTENCE]  - Expected completion state: ${req.body.completed}`);
               
-              if (verifiedTask.completed !== updates.completed) {
+              if (verifiedTask.completed !== req.body.completed) {
                 console.error(`[DEBUG_TASK_PERSISTENCE] *** CRITICAL: Verification check failed! ***`);
                 console.error(`[DEBUG_TASK_PERSISTENCE]  - Task data was not correctly persisted in database`);
               } else {
