@@ -225,7 +225,7 @@ export const projectsDb = {
   /**
    * Create a new project
    */
-  createProject(userId, data) {
+  async createProject(userId, data) {
     try {
       const now = new Date().toISOString();
       const project = {
@@ -262,6 +262,16 @@ export const projectsDb = {
       };
       plans.push(emptyPlan);
       saveProjectPlans(plans);
+      
+      // Clone all canonical Success Factor tasks to this project
+      // This ensures every Success Factor task exists in project_tasks when projects are created
+      try {
+        const { cloneSuccessFactorsToProject } = require('./cloneSuccessFactors');
+        await cloneSuccessFactorsToProject(project.id);
+      } catch (cloneError) {
+        console.error('Error cloning success factors to new project:', cloneError);
+        // Continue even if cloning fails - project creation should still succeed
+      }
       
       return project;
     } catch (error) {
