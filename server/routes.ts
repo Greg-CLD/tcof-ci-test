@@ -28,6 +28,8 @@ import {
 type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 // Import projectsDb with augmented type definition to fix TypeScript errors
 import { projectsDb } from './projectsDb';
+// Import the task logger for detailed instrumentation
+import { taskLogger, TaskErrorCodes } from './services/taskLogger';
 import taskStateManager from './services/taskStateManager';
 import { TaskIdResolver } from './services/taskIdResolver';
 

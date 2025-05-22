@@ -360,26 +360,51 @@ export class TaskStateManager extends EventEmitter {
     
     this.processing = true;
     
+    // Log queue state at the start of processing
+    taskLogger.logQueueState(this.updateQueue.length, this.pendingUpdates);
+    
     while (this.updateQueue.length > 0) {
       const update = this.updateQueue.shift();
       if (!update) continue;
       
       const { taskId, projectId, update: taskUpdate, options } = update;
       
+      // Start timing the task update operation
+      const operationId = taskLogger.startOperation('processTaskUpdate', taskId, projectId);
+      taskLogger.logTaskUpdate(taskId, projectId, taskUpdate);
+      
       if (DEBUG_TASK_SYNC) {
         console.log(`[TASK_STATE_MANAGER] Processing update for task ${taskId}`);
       }
       
       try {
-        // Use TaskIdResolver to find the task with correct parameter order
+        // Find the task with timing instrumentation
+        const findTaskOperationId = taskLogger.startOperation('findTaskById', taskId, projectId);
         const task = await TaskIdResolver.findTaskById(taskId, projectId);
+        taskLogger.endOperation(findTaskOperationId, !!task);
         
         if (!task) {
-          throw new Error(`Task not found: ${taskId}`);
+          const error = new Error(`Task not found: ${taskId}`);
+          taskLogger.endOperation(operationId, false, error);
+          throw error;
         }
         
-        // Update the task in the database
+        // Store original task for comparison
+        const originalTask = { ...task };
+        
+        // Update the task with timing instrumentation
+        const updateOperationId = taskLogger.startOperation('updateTaskInDatabase', taskId, projectId);
         const updatedTask = await this.projectsDb.updateTask(task.id, projectId, taskUpdate);
+        taskLogger.endOperation(updateOperationId, !!updatedTask);
+        
+        if (!updatedTask) {
+          const error = new Error(`Failed to update task in database: ${taskId}`);
+          taskLogger.endOperation(operationId, false, error);
+          throw error;
+        }
+        
+        // Log detailed before/after comparison to identify field mismatches
+        taskLogger.logTaskUpdateDetails(taskId, projectId, originalTask, updatedTask, taskUpdate);
         
         // Create the synced state
         const syncedState: TaskState = {
@@ -405,6 +430,22 @@ export class TaskStateManager extends EventEmitter {
         
         if (DEBUG_TASK_SYNC) {
           console.log(`[TASK_STATE_MANAGER] Successfully synced task ${taskId}`);
+        }
+        
+        // Log successful completion
+        taskLogger.endOperation(operationId, true);
+        
+        // If this is a Success Factor task, synchronize related tasks
+        if (task.origin === 'factor' && task.sourceId && taskUpdate.completed !== undefined) {
+          const syncOperationId = taskLogger.startOperation('syncRelatedTasks', taskId, projectId);
+          try {
+            await this.syncRelatedTasks(projectId, task.sourceId, taskUpdate);
+            taskLogger.endOperation(syncOperationId, true);
+          } catch (syncError) {
+            console.error(`[TASK_STATE_MANAGER] Error syncing related tasks:`, syncError);
+            taskLogger.endOperation(syncOperationId, false, syncError as Error);
+            // Don't rethrow since primary update succeeded
+          }
         }
         
       } catch (error) {
@@ -440,6 +481,13 @@ export class TaskStateManager extends EventEmitter {
               error: error as Error
             });
           }
+          
+          // Log the error with detailed information
+          taskLogger.endOperation(
+            operationId, 
+            false, 
+            new Error(`Task update failed: ${(error as Error).message}`)
+          );
           
           // Retry update if retry count is less than max retries
           if (retryCount < (options.maxRetries || 3)) {
