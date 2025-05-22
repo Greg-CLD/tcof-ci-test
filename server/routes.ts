@@ -31,7 +31,7 @@ import { projectsDb } from './projectsDb';
 // Import the task logger for detailed instrumentation
 import { taskLogger, TaskErrorCodes } from './services/taskLogger';
 import { taskStateManager } from './services/taskStateManager';
-import { TaskIdResolver, validateUuid } from './services/taskIdResolver';
+import { getTaskIdResolver, TaskIdResolver, validateUuid } from './services/taskIdResolver';
 
 // Add type augmentation for projectsDb to include the missing methods
 declare module './projectsDb' {
@@ -849,18 +849,20 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       }
     }
     
-    // Initialize TaskStateManager if not already initialized
-    if (!taskStateManager.projectsDb) {
-      taskStateManager.initialize(projectsDb);
-      
-      if (isDebugEnabled) {
-        console.log('[DEBUG_TASKS] TaskStateManager initialized with projectsDb');
-      }
+    // Ensure TaskStateManager is initialized with database connection
+    // No need to check internal state, just call initialize which handles re-initialization safely
+    taskStateManager.initialize(projectsDb);
+    
+    if (isDebugEnabled) {
+      console.log('[DEBUG_TASKS] TaskStateManager initialized with projectsDb');
     }
     
     try {
+      // Get TaskIdResolver with proper database connection
+      const taskIdResolver = getTaskIdResolver(projectsDb);
+      
       // Validate the input task ID format using cleanUUID method
-      if (taskId && !validateUuid(TaskIdResolver.cleanUUID(taskId))) {
+      if (taskId && !validateUuid(taskIdResolver.cleanUUID(taskId))) {
         const error = new Error(`Invalid task ID format: ${taskId}`);
         taskLogger.endOperation(operationId, false, error);
         
@@ -877,10 +879,15 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         );
       }
       
-      // Use the TaskIdResolver to find the task with intelligent ID resolution
-      // and proper parameter order (taskId, projectId)
+      // Use the TaskIdResolver with proper database connection to find the task
+      // with intelligent ID resolution and proper parameter order (taskId, projectId)
       const findTaskOperationId = taskLogger.startOperation('findTaskById', taskId, projectId);
-      const task = await TaskIdResolver.findTaskById(taskId, projectId);
+      
+      if (isDebugEnabled) {
+        console.log('[DEBUG_TASKS] Using TaskIdResolver with database connection');
+      }
+      
+      const task = await taskIdResolver.findTaskById(taskId, projectId);
       taskLogger.endOperation(findTaskOperationId, !!task);
       
       if (isDebugEnabled) {
@@ -1051,7 +1058,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           syncStatus: updatedState.syncStatus, // Include sync status for client
           // Ensure we return the original task ID that the user sent,
           // this is crucial for proper client-side caching
-          id: taskLookupResult.originalId
+          id: taskId // Use the original taskId from request params
         };
         
         return res.status(200).json({

@@ -19,33 +19,34 @@ const taskResolutionCache: Record<string, any> = {};
 
 // Class implementation
 export class TaskIdResolver {
-  private static projectsDb: any = null;
-  private static debugEnabled: boolean = false;
+  private debugEnabled: boolean = false;
   
   /**
-   * Initialize with database connection
+   * Constructor with required database connection
+   * @param db The database connection object
    */
-  static initialize(db: any): void {
-    this.projectsDb = db;
+  constructor(private projectsDb: any) {
+    if (!this.projectsDb) {
+      throw new Error('[TaskIdResolver] Database connection is required');
+    }
     
     // Check if debugging is enabled via environment variables
     this.debugEnabled = process.env.DEBUG_TASKS === 'true' || 
-                        process.env.DEBUG_TASK_STATE === 'true' || 
-                        process.env.DEBUG_TASK_COMPLETION === 'true' || 
-                        process.env.DEBUG_TASK_PERSISTENCE === 'true';
+                      process.env.DEBUG_TASK_STATE === 'true' || 
+                      process.env.DEBUG_TASK_COMPLETION === 'true' || 
+                      process.env.DEBUG_TASK_PERSISTENCE === 'true';
     
-    if (this.debugEnabled) {
-      console.log('[TaskIdResolver] Initialized with database connection');
-    }
+    console.log('[TaskIdResolver] Successfully initialized with database connection');
   }
   
   /**
    * Find a task by its ID with intelligent ID resolution
    * This is the main entry point for task lookup
    */
-  static async findTaskById(taskId: string, projectId: string): Promise<any> {
+  async findTaskById(taskId: string, projectId: string): Promise<any> {
+    // Always verify database connection is available
     if (!this.projectsDb) {
-      throw new Error('TaskIdResolver not initialized with database connection');
+      throw new Error('TaskIdResolver missing database connection during task lookup');
     }
     
     if (!taskId || !projectId) {
@@ -87,7 +88,7 @@ export class TaskIdResolver {
       }
       
       // Strategy 2: Try with clean UUID
-      const cleanedId = this.cleanUUID(taskId);
+      const cleanedId = TaskIdResolver.cleanUUID(taskId);
       
       if (cleanedId && cleanedId !== taskId) {
         if (this.debugEnabled) {
@@ -184,7 +185,21 @@ export class TaskIdResolver {
   }
   
   /**
-   * Clean a UUID by removing any prefix or suffix
+   * Clear the task resolution cache
+   */
+  clearCache(): void {
+    Object.keys(taskResolutionCache).forEach(key => {
+      delete taskResolutionCache[key];
+    });
+    
+    if (this.debugEnabled) {
+      console.log(`[TaskIdResolver] Cleared task resolution cache`);
+    }
+  }
+  
+  /**
+   * Helper method to clean a UUID by removing any prefix or suffix
+   * Made static for use without an instance
    */
   static cleanUUID(id: string): string {
     if (!id) return id;
@@ -204,17 +219,30 @@ export class TaskIdResolver {
   }
   
   /**
-   * Clear the task resolution cache
+   * Instance method version of cleanUUID for consistency
+   * This allows the method to be called on instances as well as statically
    */
-  static clearCache(): void {
-    Object.keys(taskResolutionCache).forEach(key => {
-      delete taskResolutionCache[key];
-    });
-    
-    if (this.debugEnabled) {
-      console.log(`[TaskIdResolver] Cleared task resolution cache`);
-    }
+  cleanUUID(id: string): string {
+    return TaskIdResolver.cleanUUID(id);
   }
+}
+
+// Create a singleton instance with database connection
+let taskIdResolverInstance: TaskIdResolver | null = null;
+
+/**
+ * Get or create the TaskIdResolver instance with database connection
+ * This ensures a single properly initialized instance throughout the application
+ */
+export function getTaskIdResolver(db: any): TaskIdResolver {
+  if (!taskIdResolverInstance) {
+    if (!db) {
+      throw new Error('[getTaskIdResolver] Database connection is required');
+    }
+    console.log('[TaskIdResolver] Creating new instance with database connection');
+    taskIdResolverInstance = new TaskIdResolver(db);
+  }
+  return taskIdResolverInstance;
 }
 
 // Export validate function from uuid for convenience

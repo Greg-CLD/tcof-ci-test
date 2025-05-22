@@ -11,7 +11,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { taskLogger } from './taskLogger';
-import { TaskIdResolver } from './taskIdResolver';
+import { getTaskIdResolver } from './taskIdResolver';
 
 // Task update options
 interface TaskUpdateOptions {
@@ -73,6 +73,10 @@ export class TaskStateManager {
    * Initialize with database connection
    */
   initialize(db: any): void {
+    if (!db) {
+      throw new Error('[TaskStateManager] Database connection is required');
+    }
+    
     this.projectsDb = db;
     
     if (this.debugEnabled) {
@@ -139,9 +143,10 @@ export class TaskStateManager {
           console.log(`[TaskStateManager] Found task in cache: ${taskId}`);
         }
       } else {
-        // Use TaskIdResolver to find the task with all lookup strategies
+        // Use TaskIdResolver with proper database connection
+        const taskIdResolver = getTaskIdResolver(this.projectsDb);
         const operationId = taskLogger.startOperation('findTaskByIdForUpdate', taskId, projectId);
-        existingTask = await TaskIdResolver.findTaskById(taskId, projectId);
+        existingTask = await taskIdResolver.findTaskById(taskId, projectId);
         taskLogger.endOperation(operationId, !!existingTask);
         
         if (existingTask && options.storeInCache) {
@@ -236,8 +241,9 @@ export class TaskStateManager {
           // Update attempt count
           item.attempts++;
           
-          // Use TaskIdResolver to find the task
-          const task = await TaskIdResolver.findTaskById(item.taskId, item.projectId);
+          // Use TaskIdResolver with proper database connection
+          const taskIdResolver = getTaskIdResolver(this.projectsDb);
+          const task = await taskIdResolver.findTaskById(item.taskId, item.projectId);
           
           if (!task) {
             const error = new Error(`Task not found: ${item.taskId}`);

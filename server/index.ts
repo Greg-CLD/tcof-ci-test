@@ -4,6 +4,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import { errorLogger } from "./middlewares/errorLogger";
 import { registerSuccessFactorsRoutes } from "./routes.factorsDb.simple";
 import { forceJsonResponses } from "./middleware/forceJsonResponses";
+import { initializeServices } from "./services";
+import { projectsDb } from "./projectsDb";
 
 const app = express();
 app.use(express.json());
@@ -91,6 +93,11 @@ process.on('uncaughtException', (error) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     log(`Error running success factors integrity check: ${errorMessage}`);
   }
+
+  // Initialize all task-related services with database connection
+  log('Initializing task-related services with database connection...');
+  initializeServices(projectsDb);
+  log('Services initialization complete');
 
   // Register our database-backed success factors routes
   await registerSuccessFactorsRoutes(app);
