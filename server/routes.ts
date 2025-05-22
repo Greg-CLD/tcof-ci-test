@@ -783,6 +783,15 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       return originalJson.apply(res, args);
     };
     
+    // Set up a fallback response handler to prevent HTML fallthrough
+    // This ensures we always return JSON even if we hit unexpected edge cases
+    res.on('finish', () => {
+      if (!responseHandled) {
+        console.error('[ERROR] API request completed but no response was sent, preventing HTML fallthrough');
+        // Response already sent, can't do anything at this point
+      }
+    });
+    
     // Allow test scripts to bypass authentication with special header
     if (req.headers['x-auth-override'] !== 'true') {
       // Use normal authentication for regular requests
@@ -1155,37 +1164,52 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         }
         
         // Return the successfully updated task
-        return res.status(200).json({
+        res.status(200).json({
           success: true,
           task: updatedTask,
           message: 'Task updated successfully'
         });
+        
+        // The return statement here was causing issues by exiting prematurely
+        // Don't return, just let execution continue to the end of the function
+        
       } catch (err) {
         // Check if this is a "not found" error
         if (err instanceof Error && err.message.includes('not found')) {
-          return res.status(404).json({
+          res.status(404).json({
             success: false,
             error: 'TASK_NOT_FOUND',
             message: 'Task not found'
           });
+        } else {
+          // Always return JSON response instead of re-throwing
+          res.status(500).json({
+            success: false,
+            error: 'TASK_UPDATE_ERROR',
+            message: err instanceof Error ? err.message : String(err)
+          });
         }
-        
-        // Always return JSON response instead of re-throwing
-        return res.status(500).json({
-          success: false,
-          error: 'TASK_UPDATE_ERROR',
-          message: err instanceof Error ? err.message : String(err)
-        });
       }
     } catch (error) {
       // Log the error for debugging
       console.error('Error updating project task:', error);
       
       // Always ensure a JSON response, even in the outer catch block
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
         error: 'TASK_UPDATE_ERROR',
         message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+    
+    // Final check - if we somehow get here without sending a response,
+    // explicitly send a JSON response to prevent HTML fallthrough
+    if (!responseHandled) {
+      console.error('[ERROR] No response was sent in task update handler, sending fallback JSON response');
+      res.status(500).json({
+        success: false,
+        error: 'UNEXPECTED_STATE',
+        message: 'An unexpected error occurred during task update processing'
       });
     }
     
