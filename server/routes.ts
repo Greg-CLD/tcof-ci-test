@@ -916,7 +916,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         const userTaskId = originalTask.id;
         
         // Update the underlying task (which might be a different object for success factors)
-        const updatedSourceTask = await projectsDb.updateTask(taskId, updateData);
+        const updatedSourceTask = await projectsDb.updateTask(originalTask.id, updateData);
         
         if (isDebugEnabled) {
           console.log(`[DEBUG_TASK_API] Task updated successfully`);
