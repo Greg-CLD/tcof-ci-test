@@ -789,7 +789,6 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     
     // Extract parameters
     const { projectId, taskId } = req.params;
-    const taskUpdate = req.body;
     const isDebugEnabled = process.env.DEBUG_TASKS === 'true';
     
     // Validate the task ID using the TaskIdResolver
@@ -819,12 +818,15 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       console.log('[DEBUG_TASKS] Task update request:');
       console.log(`[DEBUG_TASKS] - Project ID: ${projectId}`);
       console.log(`[DEBUG_TASKS] - Task ID: ${taskId}`);
-      console.log(`[DEBUG_TASKS] - Update data:`, JSON.stringify(taskUpdate, null, 2));
+      console.log(`[DEBUG_TASKS] - Update data:`, JSON.stringify(req.body, null, 2));
       
-      if (taskUpdate.origin === 'success-factor' || taskUpdate.origin === 'factor') {
+      if (req.body.origin === 'success-factor' || req.body.origin === 'factor') {
         console.log(`[DEBUG_TASKS] *** Success Factor task update detected ***`);
       }
     }
+    
+    // Use req.body as the update data
+    let taskUpdate = req.body;
     
     try {
       // Use the TaskIdResolver to find the task with intelligent ID resolution
@@ -866,25 +868,29 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       
       // Log found task details
       if (isDebugEnabled) {
-        console.log(`[DEBUG_TASK_API] Original task found:`);
-        console.log(`[DEBUG_TASK_API] - ID: ${originalTask.id}`);
-        console.log(`[DEBUG_TASK_API] - Text: ${originalTask.text || 'N/A'}`);
-        console.log(`[DEBUG_TASK_API] - Origin: ${originalTask.origin || 'N/A'}`);
-        console.log(`[DEBUG_TASK_API] - Completed: ${originalTask.completed}`);
+        console.log(`[DEBUG_TASKS] Original task found:`);
+        console.log(`[DEBUG_TASKS] - ID: ${originalTask.id}`);
+        console.log(`[DEBUG_TASKS] - Text: ${originalTask.text || 'N/A'}`);
+        console.log(`[DEBUG_TASKS] - Origin: ${originalTask.origin || 'N/A'}`);
+        console.log(`[DEBUG_TASKS] - Completed: ${originalTask.completed}`);
+        
+        if (originalTask.sourceId) {
+          console.log(`[DEBUG_TASKS] - Source ID: ${originalTask.sourceId}`);
+        }
       }
       
       // Special handling for Success Factor tasks to preserve metadata
       if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
-        if (!updateData.origin) {
-          updateData.origin = originalTask.origin;
+        if (!taskUpdate.origin) {
+          taskUpdate.origin = originalTask.origin;
         }
         
         // Critical: Ensure sourceId is preserved for Success Factor tasks
-        if (originalTask.sourceId && !updateData.sourceId) {
-          updateData.sourceId = originalTask.sourceId;
+        if (originalTask.sourceId && !taskUpdate.sourceId) {
+          taskUpdate.sourceId = originalTask.sourceId;
           
           if (isDebugEnabled) {
-            console.log(`[DEBUG_TASK_API] Preserved sourceId: ${originalTask.sourceId}`);
+            console.log(`[DEBUG_TASKS] Preserved sourceId: ${originalTask.sourceId}`);
           }
         }
       }
@@ -894,20 +900,42 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         // Store original task details before update
         const userTaskId = originalTask.id;
         
-        // Update the underlying task (which might be a different object for success factors)
-        const updatedSourceTask = await projectsDb.updateTask(originalTask.id, updateData);
+        // Update the underlying task using the actual database ID
+        const updatedSourceTask = await projectsDb.updateTask(originalTask.id, taskUpdate);
         
         if (isDebugEnabled) {
-          console.log(`[DEBUG_TASK_API] Task updated successfully`);
-          console.log(`[DEBUG_TASK_API] Using user's task ID for response: ${userTaskId}`);
+          console.log(`[DEBUG_TASKS] Task updated successfully`);
+          console.log(`[DEBUG_TASKS] Using user's task ID for response: ${userTaskId}`);
+        }
+        
+        // For Success Factor tasks, sync all related tasks with the same sourceId
+        if (originalTask.origin === 'factor' && originalTask.sourceId && 
+            taskUpdate.hasOwnProperty('completed')) {
+          try {
+            const syncCount = await TaskIdResolver.syncRelatedTasks(
+              projectId, 
+              originalTask.sourceId, 
+              { completed: taskUpdate.completed },
+              projectsDb
+            );
+            
+            if (isDebugEnabled && syncCount > 0) {
+              console.log(`[DEBUG_TASKS] Synchronized ${syncCount} related Success Factor tasks`);
+            }
+          } catch (syncError) {
+            console.error(`[ERROR] Failed to sync related Success Factor tasks:`, syncError);
+          }
         }
         
         // Create an updated user task object by merging original task with updates
         // This ensures we return the task object with the ID that the user expects
         const updatedUserTask = {
           ...originalTask,           // Start with the user's original task (includes correct ID)
-          ...updateData,             // Apply the user's updates
-          updatedAt: new Date()      // Add updatedAt timestamp
+          ...taskUpdate,             // Apply the user's updates
+          updatedAt: new Date(),     // Add updatedAt timestamp
+          // Ensure we return the original task ID that the user sent,
+          // this is crucial for proper client-side caching
+          id: taskLookupResult.originalId
         };
         
         return res.status(200).json({
