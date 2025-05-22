@@ -1,226 +1,195 @@
 /**
- * Direct Test for Success Factor Task Toggle
+ * Direct Test for Task Toggle Persistence
  * 
- * This is a minimal script that directly tests the task toggle functionality
- * using direct curl commands with authentication bypass.
+ * This script directly tests the PUT /api/projects/:projectId/tasks/:taskId endpoint
+ * to verify our implementation of getTaskById is fixing the 500 errors.
+ * 
+ * This script can be run in the browser console to test with the authenticated session.
  */
 
-const { spawnSync } = require('child_process');
-
 // Configuration
-const PROJECT_ID = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
-const TASK_ID = 'a5bdff93-3e7d-4e7c-bea5-1ffb0dc7cdaf';
+const RESET = '\x1b[0m';
+const GREEN = '\x1b[32m';
+const RED = '\x1b[31m';
+const BLUE = '\x1b[34m';
+const YELLOW = '\x1b[33m';
 
-// Helper function to run curl commands
-function runCurl(command) {
-  const result = spawnSync('bash', ['-c', command], { encoding: 'utf8' });
-  if (result.error) {
-    console.error('Error executing command:', result.error);
-    return null;
-  }
-  if (result.stderr) {
-    console.error('Command stderr:', result.stderr);
-  }
-  return result.stdout;
-}
+// Toggle timeout (ms)
+const TOGGLE_DELAY = 1000;
 
-// Log with timestamp
-function log(message) {
-  console.log(`[${new Date().toISOString()}] ${message}`);
+// API request helper with logging
+async function apiRequest(method, endpoint, body = null) {
+  console.log(`${BLUE}[API] ${method} ${endpoint}${RESET}`);
+  
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  };
+  
+  if (body) {
+    options.body = JSON.stringify(body);
+    console.log(`Request body:`, body);
+  }
+  
+  try {
+    const response = await fetch(endpoint, options);
+    const contentType = response.headers.get('Content-Type') || '';
+    
+    // Log status code
+    const statusColor = response.ok ? GREEN : RED;
+    console.log(`${statusColor}[API] Response status: ${response.status}${RESET}`);
+    
+    // Parse response based on content type
+    let data;
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+      console.log(`Response data:`, data);
+    } else {
+      data = await response.text();
+      console.log(`Response text:`, data.substring(0, 100) + (data.length > 100 ? '...' : ''));
+    }
+    
+    return { ok: response.ok, status: response.status, data };
+  } catch (error) {
+    console.error(`${RED}[API] Request failed:${RESET}`, error);
+    return { ok: false, status: 0, error };
+  }
 }
 
 // Main test function
 async function testTaskToggle() {
-  log('=== Direct Success Factor Task Toggle Test ===');
+  console.log(`${BLUE}=== Success Factor Task Toggle Test ===${RESET}`);
   
-  // Step 1: Find a Success Factor task to test with
-  log('\nStep 1: Finding a test task...');
-  const getTasksCmd = `curl -s -X GET "http://localhost:5000/api/projects/${PROJECT_ID}/tasks" -H "X-Auth-Override: true"`;
-  const tasksOutput = runCurl(getTasksCmd);
-  
-  if (!tasksOutput) {
-    log('Error: Failed to get tasks');
-    return;
-  }
-  
-  let tasks;
   try {
-    tasks = JSON.parse(tasksOutput);
-  } catch (error) {
-    log('Error parsing tasks response:');
-    log(tasksOutput);
-    return;
-  }
-  
-  if (!Array.isArray(tasks)) {
-    log('Error: Expected tasks response to be an array');
-    log('Response was:');
-    log(tasksOutput);
-    return;
-  }
-  
-  log(`Found ${tasks.length} tasks in the project`);
-  
-  // Try to find our specific target task
-  let targetTask = tasks.find(task => task.id === TASK_ID);
-  
-  // If the specific task isn't found, look for any Success Factor task
-  if (!targetTask) {
-    log(`Task with ID ${TASK_ID} not found, looking for any Success Factor task...`);
-    const factorTasks = tasks.filter(task => 
-      task.origin === 'factor' || task.origin === 'success-factor'
-    );
+    // Step 1: Get projects
+    console.log(`\nStep 1: Getting projects...`);
+    const projectsResponse = await apiRequest('GET', '/api/projects');
     
-    if (factorTasks.length === 0) {
-      log('No Success Factor tasks found in the project');
-      return;
+    if (!projectsResponse.ok || !projectsResponse.data || !projectsResponse.data.length) {
+      console.error(`${RED}Failed to get projects${RESET}`);
+      return false;
     }
     
-    targetTask = factorTasks[0];
-    log(`Using alternative Success Factor task: ${targetTask.id}`);
-  }
-  
-  log('Target task:');
-  log(JSON.stringify(targetTask, null, 2));
-  
-  // Store original state for comparison
-  const originalState = {
-    id: targetTask.id,
-    text: targetTask.text,
-    origin: targetTask.origin,
-    sourceId: targetTask.sourceId,
-    completed: targetTask.completed
-  };
-  
-  // Step 2: Toggle the task completion state
-  log(`\nStep 2: Toggling task completion from ${targetTask.completed} to ${!targetTask.completed}...`);
-  
-  // Start server log capture
-  log('Starting server log capture...');
-  runCurl('tail -50 -f .replit/logs/console.log > server-logs.txt & echo $! > log-pid.txt');
-  
-  // Add a slight delay for the log capture to start
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  const updateCmd = `curl -v -X PUT "http://localhost:5000/api/projects/${PROJECT_ID}/tasks/${targetTask.id}" \\
-  -H "X-Auth-Override: true" \\
-  -H "Content-Type: application/json" \\
-  -H "Accept: application/json" \\
-  -d '{"completed": ${!targetTask.completed}}'`;
-  
-  log('\nExecuting PUT request:');
-  log(updateCmd);
-  
-  const updateOutput = runCurl(updateCmd);
-  
-  // Add delay for logs to be captured
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Stop log capture
-  const logPid = runCurl('cat log-pid.txt').trim();
-  if (logPid) {
-    runCurl(`kill ${logPid}`);
-    log('Stopped log capture');
-  }
-  
-  log('\nPUT Response:');
-  log(updateOutput);
-  
-  let updateResponse;
-  try {
-    updateResponse = JSON.parse(updateOutput);
+    const project = projectsResponse.data[0];
+    console.log(`${GREEN}Using project:${RESET} ${project.name} (${project.id})`);
+    
+    // Step 2: Get tasks for this project
+    console.log(`\nStep 2: Getting tasks for project...`);
+    const tasksResponse = await apiRequest('GET', `/api/projects/${project.id}/tasks`);
+    
+    if (!tasksResponse.ok || !tasksResponse.data || !tasksResponse.data.length) {
+      console.error(`${RED}Failed to get tasks for project${RESET}`);
+      return false;
+    }
+    
+    console.log(`${GREEN}Found ${tasksResponse.data.length} tasks${RESET}`);
+    
+    // Step 3: Find a Success Factor task to toggle
+    console.log(`\nStep 3: Finding a Success Factor task to toggle...`);
+    const sfTasks = tasksResponse.data.filter(task => 
+      (task.origin === 'factor' || task.origin === 'success-factor') && task.sourceId
+    );
+    
+    if (!sfTasks.length) {
+      console.log(`${YELLOW}No Success Factor tasks found in this project${RESET}`);
+      return false;
+    }
+    
+    const taskToToggle = sfTasks[0];
+    console.log(`${GREEN}Selected task:${RESET} "${taskToToggle.text}" (ID: ${taskToToggle.id})`);
+    console.log(`Current state: ${taskToToggle.completed ? 'Completed' : 'Not completed'}`);
+    console.log(`Origin: ${taskToToggle.origin}, Source ID: ${taskToToggle.sourceId}`);
+    
+    // Step 4: Toggle the task
+    console.log(`\nStep 4: Toggling task completion state...`);
+    const newState = !taskToToggle.completed;
+    const toggleResponse = await apiRequest('PUT', `/api/projects/${project.id}/tasks/${taskToToggle.id}`, {
+      completed: newState
+    });
+    
+    if (!toggleResponse.ok) {
+      console.error(`${RED}Failed to toggle task state${RESET}`);
+      if (toggleResponse.status === 500) {
+        console.error(`${RED}500 Server Error - This is what we're trying to fix!${RESET}`);
+      }
+      return false;
+    }
+    
+    console.log(`${GREEN}Successfully toggled task state to: ${newState ? 'Completed' : 'Not completed'}${RESET}`);
+    
+    // Step 5: Verify the change with a fresh GET request
+    console.log(`\nStep 5: Verifying task state change persistence...`);
+    console.log(`Waiting ${TOGGLE_DELAY}ms before verification...`);
+    await new Promise(resolve => setTimeout(resolve, TOGGLE_DELAY));
+    
+    const verifyResponse = await apiRequest('GET', `/api/projects/${project.id}/tasks`);
+    
+    if (!verifyResponse.ok) {
+      console.error(`${RED}Failed to verify task state${RESET}`);
+      return false;
+    }
+    
+    // Find the same task in the fresh response
+    const updatedTask = verifyResponse.data.find(task => task.id === taskToToggle.id);
+    
+    if (!updatedTask) {
+      console.error(`${RED}Could not find the task after toggle${RESET}`);
+      return false;
+    }
+    
+    // Verify the state was persisted correctly
+    const stateMatches = updatedTask.completed === newState;
+    
+    if (stateMatches) {
+      console.log(`${GREEN}Verified: Task state was correctly persisted${RESET}`);
+      console.log(`${GREEN}New state: ${updatedTask.completed ? 'Completed' : 'Not completed'}${RESET}`);
+    } else {
+      console.error(`${RED}Task state was not correctly persisted${RESET}`);
+      console.log(`Expected: ${newState ? 'Completed' : 'Not completed'}`);
+      console.log(`Actual: ${updatedTask.completed ? 'Completed' : 'Not completed'}`);
+    }
+    
+    // Verify metadata was preserved
+    const sourceIdPreserved = updatedTask.sourceId === taskToToggle.sourceId;
+    const originPreserved = updatedTask.origin === taskToToggle.origin;
+    
+    if (sourceIdPreserved && originPreserved) {
+      console.log(`${GREEN}Verified: Task metadata was preserved${RESET}`);
+    } else {
+      console.error(`${RED}Task metadata was not preserved${RESET}`);
+      console.log(`Original sourceId: ${taskToToggle.sourceId}, New sourceId: ${updatedTask.sourceId}`);
+      console.log(`Original origin: ${taskToToggle.origin}, New origin: ${updatedTask.origin}`);
+    }
+    
+    // Final status
+    if (stateMatches && sourceIdPreserved && originPreserved) {
+      console.log(`\n${GREEN}TEST PASSED: Task toggle persistence is working correctly${RESET}`);
+      return true;
+    } else {
+      console.log(`\n${RED}TEST FAILED: Some verification checks did not pass${RESET}`);
+      return false;
+    }
+    
   } catch (error) {
-    log('Error parsing update response:');
-    log(updateOutput);
-    return;
+    console.error(`${RED}Test failed with error:${RESET}`, error);
+    return false;
   }
-  
-  if (!updateResponse.success || !updateResponse.task) {
-    log('Update failed or missing task object in response');
-    return;
-  }
-  
-  const updatedTask = updateResponse.task;
-  
-  // Step 3: Verify the response
-  log('\nStep 3: Verifying response integrity...');
-  
-  // Check critical fields
-  const idMatch = updatedTask.id === targetTask.id;
-  const completionToggled = updatedTask.completed !== targetTask.completed;
-  const originPreserved = updatedTask.origin === targetTask.origin;
-  const sourceIdPreserved = updatedTask.sourceId === targetTask.sourceId;
-  
-  log(`ID Match: ${idMatch ? '✓' : '✗'}`);
-  log(`Completion Toggled: ${completionToggled ? '✓' : '✗'}`);
-  log(`Origin Preserved: ${originPreserved ? '✓' : '✗'}`);
-  log(`SourceId Preserved: ${sourceIdPreserved ? '✓' : '✗'}`);
-  
-  // Step 4: Get tasks again to verify persistence
-  log('\nStep 4: Getting tasks again to verify persistence...');
-  const refreshOutput = runCurl(getTasksCmd);
-  
-  let refreshedTasks;
-  try {
-    refreshedTasks = JSON.parse(refreshOutput);
-  } catch (error) {
-    log('Error parsing refreshed tasks response');
-    return;
-  }
-  
-  const refreshedTask = refreshedTasks.find(task => task.id === targetTask.id);
-  
-  if (!refreshedTask) {
-    log('Could not find the task in the refreshed task list');
-    return;
-  }
-  
-  log('\nRefreshed task state:');
-  log(JSON.stringify(refreshedTask, null, 2));
-  
-  // Step 5: Verify persistence
-  log('\nStep 5: Verifying persistence after refresh...');
-  
-  const idMatchRefreshed = refreshedTask.id === targetTask.id;
-  const completionToggledRefreshed = refreshedTask.completed !== targetTask.completed;
-  const originPreservedRefreshed = refreshedTask.origin === targetTask.origin;
-  const sourceIdPreservedRefreshed = refreshedTask.sourceId === targetTask.sourceId;
-  
-  log(`ID Match: ${idMatchRefreshed ? '✓' : '✗'}`);
-  log(`Completion Toggled: ${completionToggledRefreshed ? '✓' : '✗'}`);
-  log(`Origin Preserved: ${originPreservedRefreshed ? '✓' : '✗'}`);
-  log(`SourceId Preserved: ${sourceIdPreservedRefreshed ? '✓' : '✗'}`);
-  
-  // Display server logs
-  log('\nServer logs during task update:');
-  const serverLogs = runCurl('cat server-logs.txt');
-  log(serverLogs);
-  
-  // Step 6: Reset to original state
-  log('\nStep 6: Resetting task to original state...');
-  const resetCmd = `curl -s -X PUT "http://localhost:5000/api/projects/${PROJECT_ID}/tasks/${targetTask.id}" \\
-  -H "X-Auth-Override: true" \\
-  -H "Content-Type: application/json" \\
-  -d '{"completed": ${targetTask.completed}}'`;
-  
-  runCurl(resetCmd);
-  log('Task reset complete');
-  
-  // Get git commit info
-  log('\nGit commit information:');
-  const gitInfo = runCurl('git log -1');
-  log(gitInfo);
-  
-  // Final result
-  const responseValid = idMatch && completionToggled && originPreserved && sourceIdPreserved;
-  const persistenceValid = idMatchRefreshed && completionToggledRefreshed && 
-                          originPreservedRefreshed && sourceIdPreservedRefreshed;
-  
-  log('\n=== TEST RESULTS ===');
-  log(`Response Integrity: ${responseValid ? 'PASS ✓' : 'FAIL ✗'}`);
-  log(`Persistence Verified: ${persistenceValid ? 'PASS ✓' : 'FAIL ✗'}`);
-  log(`\nOVERALL RESULT: ${responseValid && persistenceValid ? 'PASS ✓' : 'FAIL ✗'}`);
 }
 
 // Run the test
-testTaskToggle();
+console.log(`${BLUE}Starting Success Factor task toggle persistence test...${RESET}`);
+console.log(`${YELLOW}Copy and paste this ENTIRE script into your browser console while logged in${RESET}`);
+console.log(`${YELLOW}The test will run automatically and report results${RESET}`);
+
+// Self-executing function to allow for async/await
+(async () => {
+  try {
+    const result = await testTaskToggle();
+    console.log(`\n${result ? GREEN : RED}Test ${result ? 'PASSED' : 'FAILED'}${RESET}`);
+  } catch (e) {
+    console.error(`${RED}Test execution error:${RESET}`, e);
+  }
+})();
