@@ -1,0 +1,55 @@
+' GOAL:
+'   Eliminate the remaining runtime error in TaskCard.tsx (“sourceId is not defined”) and prove,
+'   via a live smoke test, that toggling ANY task (regular or Success-Factor) no longer crashes
+'   and always reaches the server with a valid ID.
+'
+' OVER-ARCHING REMINDER:
+'   Despite repeated “fixes”, user testing still shows the error.  The task is NOT done until a
+'   real browser toggle, refresh, and GET show correct behaviour with **no runtime errors**.
+'
+' OBJECTIVE (one only):
+'   Patch TaskCard.tsx so every reference to sourceId / origin is null-safe and UUID-validated
+'   **before** use, then run and paste a smoke-test JSON proving success.
+'
+' FILE-GROUP: client/src/components/checklist/TaskCard.tsx  (UI only)
+'
+' DELIVERABLES (required in this order):
+'   1. Minimal code diff for TaskCard.tsx in ```diff``` fencing.
+'   2. Matching unit test in ```ts``` fencing that covers:
+'        a) normal task  • b) factor task with valid sourceId  • c) factor task with missing / invalid sourceId.
+'   3. Run a live smoke test (toggle those three cases in the browser or with test script) and paste:
+'        • PUT request & response JSON
+'        • GET /tasks JSON after toggle
+'        • Console log snippet showing no runtime error
+'   4. If the app restarts, paste the last 50 lines of SSR logs.
+'
+' RULES:
+'   – One objective, one file group (TaskCard.tsx only).
+'   – Always run & paste smoke-test JSON.
+'   – Paste SSR logs if the server restarts.
+'   – If proposing code, include ALL of ①-② inside a single copy-pasteable JS/TS block.
+'
+' EXAMPLE PATCH OUTLINE (for guidance only – adjust as needed):
+'
+' ```diff
+' --- a/client/src/components/checklist/TaskCard.tsx
+' +++ b/client/src/components/checklist/TaskCard.tsx
+' @@
+' - if (source === "factor" && sourceId) {
+' -   if (!sourceId.trim()) {
+' -     console.error("Invalid sourceId");
+' -     return;
+' -   }
+' + // validate sourceId only if it's defined AND a valid UUID
+' + const uuidOk = sourceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sourceId);
+' + if (source === "factor" && !uuidOk) {
+' +   // fall back to id
+' +   console.warn("sourceId missing or invalid; using id");
+' + }
+' ```
+'
+' ```ts
+' // TaskCard.spec.ts – unit test outline …
+' ```
+'
+' (Replace the example with the real diff & test.)

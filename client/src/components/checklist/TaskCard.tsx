@@ -126,76 +126,86 @@ export default function TaskCard({
   // Get the clean task title
   const cleanTaskTitle = getCleanTaskTitle(text);
 
+  /**
+   * Helper function to validate UUID v4 format
+   * @param str String to check for UUID validity
+   * @returns true if string is a valid UUID, false otherwise
+   */
+  const isValidUUID = (str: string | null | undefined): boolean => {
+    if (!str) return false;
+    if (typeof str !== 'string') return false;
+    if (!str.trim()) return false;
+    
+    // Strict UUID v4 validation pattern
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidPattern.test(str.trim());
+  };
+
   // Handle task completion toggle
   const handleToggleCompleted = () => {
-    // Enhanced validation to prevent undefined IDs
-    if (!id && !sourceId) {
-      console.error('TaskCard: Task must have either id or sourceId');
+    // Ensure we always have a valid task ID
+    if (!id) {
+      console.error('[TASK_ERROR] Missing required task ID, cannot update task');
       return;
     }
 
-    // For Success Factor tasks, validate sourceId format
-    if (source === 'factor' && sourceId) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!sourceId.trim() || !uuidRegex.test(sourceId)) {
-        console.error('TaskCard: Invalid sourceId format for Success Factor task');
-        return;
-      }
-    }
-
-    // Debug log all props 
+    // Safely handle potentially undefined props
+    const safeOrigin = typeof origin !== 'undefined' ? origin : null;
+    const safeSourceId = typeof sourceId !== 'undefined' && sourceId !== null ? sourceId : null;
+    
+    // Determine if we have a valid sourceId for a Success Factor task
+    const isFactorTask = source === 'factor' || safeOrigin === 'factor';
+    const hasValidSourceId = isFactorTask && safeSourceId !== null && isValidUUID(safeSourceId);
+    
+    // Debug log all props with validation info
     console.debug('[TASK_PROPS]', {
-      id, text, completed, source, origin, sourceId,
-      stage, status
+      id, 
+      text, 
+      completed,
+      source,
+      origin: safeOrigin,
+      sourceId: safeSourceId,
+      sourceIdValid: hasValidSourceId ? 'Yes' : 'No',
+      stage, 
+      status
     });
 
     const newStatus = !completed ? 'Done' : 'To Do';
     setEditedStatus(newStatus);
 
-    // Enhanced ID selection with validation
-    const isFactorTask = source === 'factor' || origin === 'factor';
-    const hasValidSourceId = isFactorTask && sourceId && sourceId.trim().length > 0;
-
-    // Determine most appropriate ID to use
-    let updateId = id; // Default to main id
-    if (isFactorTask && hasValidSourceId) {
-      updateId = sourceId; // Use sourceId for factor tasks when available
-    } else if (!updateId?.trim()) {
-      console.error('TaskCard: No valid ID available for update');
-      return;
-    }
-
-    // Debug log ID selection
-    console.debug('[TASK_UPDATE]', {
-      isFactorTask,
-      selectedId: updateId,
-      originalId: id,
-      sourceId: sourceId || 'none'
-    });
-
-    // Debug log ID selection
-    console.debug('[TASK_UPDATE]', {
-      isFactorTask,
-      selectedId: updateId,
-      originalId: id,
-      sourceId: sourceId || 'none'
-    });
-
+    // Choose the most appropriate ID to use for the update
+    // For Success Factor tasks with valid sourceId, use sourceId
+    // Otherwise fall back to the task's id
+    const updateId = hasValidSourceId ? safeSourceId : id;
+    
+    // Detailed debug logging for task update
+    console.debug(`[TASK_UPDATE] Toggle task completion:
+    - Using ID: ${updateId} (${hasValidSourceId ? 'valid sourceId' : 'fallback to id'})
+    - Original ID: ${id}
+    - Source ID: ${safeSourceId || 'N/A'}
+    - Source ID Valid UUID: ${hasValidSourceId ? 'Yes' : 'No'}
+    - Origin: ${safeOrigin || 'N/A'}
+    - Source: ${source}
+    - Is Factor Task: ${isFactorTask ? 'Yes' : 'No'}
+    - New completed state: ${!completed}
+    - New status: ${newStatus}`);
+    
     // Create update object with safe null checks
-    const updateData = {
+    const updateData: TaskUpdates = {
       completed: !completed,
       status: newStatus,
     };
-
+    
     // Only include origin and sourceId if they exist
-    if (origin || source) {
-      updateData.origin = origin || source;
+    if (safeOrigin || source) {
+      updateData.origin = safeOrigin || source;
     }
-
-    if (sourceId) {
-      updateData.sourceId = sourceId;
+    
+    if (safeSourceId) {
+      updateData.sourceId = safeSourceId;
     }
-
+    
+    // Send the update with validated ID and clean payload
     onUpdate(updateId, updateData, isGoodPractice);
   };
 
