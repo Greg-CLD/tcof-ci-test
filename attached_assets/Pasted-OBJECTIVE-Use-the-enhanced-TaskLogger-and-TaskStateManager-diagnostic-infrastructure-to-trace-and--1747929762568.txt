@@ -1,0 +1,47 @@
+OBJECTIVE:
+Use the enhanced TaskLogger and TaskStateManager diagnostic infrastructure to trace and fix the 500 errors during task PUT updates.
+
+STEPS:
+
+1. **Enable Comprehensive Logging:**
+   - Set the following environment/debug flags to true:
+     - DEBUG_TASK_STATE
+     - DEBUG_TASK_API
+     - DEBUG_TASK_COMPLETION
+     - DEBUG_TASK_PERSISTENCE
+
+2. **Capture and Record the Full Update Lifecycle:**
+   - Record TaskStateManager queue contents before and after the update.
+   - Log TaskIdResolver lookup strategies and results (UUID, compound ID, source ID).
+   - Capture full DB transaction boundaries and timing for the update operation.
+   - Track cache invalidation and update timing in memory/state layer.
+   - Use TaskLogger.compareTaskFields() to log all field changes on every update.
+
+3. **Analyze the Update Flow:**
+   - Trace execution of TaskStateManager.processUpdateQueue for the failed PUT.
+   - Log all lookup attempts and their success/failure in TaskIdResolver.
+   - Verify field preservation, especially for Success Factor tasks (origin, sourceId, etc).
+   - Confirm transaction completion and record any rollback or partial commit.
+   - Ensure updated task state is reflected in cache and subsequent GET calls.
+
+4. **Perform Root Cause Analysis:**
+   - Compare successful and failed task updates (look for patterns in IDs, origins, payloads).
+   - Analyze field mismatches/differences using TaskLogger.
+   - Review logs for transaction start/end and any errors in-between.
+   - Check if source ID and compound ID are preserved throughout.
+   - Pay special attention to any error stack trace thrown in TaskStateManager, TaskIdResolver, or DB layer.
+
+5. **Deliverables:**
+   - Provide the **comprehensive debug log** for at least one failing and one successful task update, with timestamps and task IDs.
+   - Give a root cause explanation based on the logs (what’s failing, where, and why).
+   - Propose the *precise* code fix or next engineering step (patch or refactor) to resolve the identified bug.
+
+SPECIFIC FOCUS AREAS:
+   - Error handling and queue processing in TaskStateManager
+   - Source ID and compound ID preservation in TaskIdResolver
+   - Transaction completion and rollback in the DB layer
+   - State/caching layer reflection and cache invalidation
+   - Use TaskLogger for field-by-field comparison
+
+This approach leverages the new diagnostic infrastructure and ensures we are targeting the precise root cause, rather than patching symptoms. Once the failing line or mismatch is identified, propose the specific fix.
+

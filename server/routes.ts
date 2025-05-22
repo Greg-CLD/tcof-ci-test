@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4, validate as validateUuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import * as factorsDb from './factorsDb';
 import { db } from "./db";
 import { sql } from 'drizzle-orm';
@@ -30,8 +30,8 @@ type Stage = 'Identification' | 'Definition' | 'Delivery' | 'Closure';
 import { projectsDb } from './projectsDb';
 // Import the task logger for detailed instrumentation
 import { taskLogger, TaskErrorCodes } from './services/taskLogger';
-import taskStateManager from './services/taskStateManager';
-import { TaskIdResolver } from './services/taskIdResolver';
+import { taskStateManager } from './services/taskStateManager';
+import { TaskIdResolver, validateUuid } from './services/taskIdResolver';
 
 // Add type augmentation for projectsDb to include the missing methods
 declare module './projectsDb' {

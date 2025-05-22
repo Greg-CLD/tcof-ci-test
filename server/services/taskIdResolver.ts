@@ -1,303 +1,221 @@
 /**
  * TaskIdResolver Service
  * 
- * A unified service for resolving task IDs across different formats:
- * - Exact UUID match
- * - Compound ID extraction (clean UUID from compound format)
- * - Source ID lookup (for Success Factor tasks)
+ * Provides robust task lookup strategies including:
+ * - Exact ID matching
+ * - UUID cleaning and validation
+ * - Source ID resolution for Success Factor tasks
+ * - Compound ID extraction and validation
  * 
- * This service ensures consistent task lookup regardless of ID format
- * and provides specialized error handling for missing tasks.
+ * This service is critical for handling different ID formats across the application
+ * and ensuring Success Factor tasks can be properly located and updated.
  */
 
-import { db } from '../../db';
-import { eq, and, ne } from 'drizzle-orm';
-import { projectTasks } from '../../shared/schema';
+import { taskLogger } from './taskLogger';
+import { validate as validateUuid } from 'uuid';
 
-// Debug flag for detailed logging
-const DEBUG_RESOLVER = process.env.DEBUG_TASKS === 'true';
+// Cache for task ID resolution
+const taskResolutionCache: Record<string, any> = {};
 
-// Regular expression to extract a UUID from a compound ID
-const UUID_REGEX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
-
-// Specialized error classes for task resolution failures
-export class TaskNotFoundError extends Error {
-  code: string;
-  status: number;
-  
-  constructor(taskId: string, projectId: string) {
-    super(`Task with ID ${taskId} not found in project ${projectId}`);
-    this.name = 'TaskNotFoundError';
-    this.code = 'TASK_NOT_FOUND';
-    this.status = 404;
-  }
-}
-
-export class TaskAccessDeniedError extends Error {
-  code: string;
-  status: number;
-  
-  constructor(taskId: string, projectId: string) {
-    super(`Access denied to task ${taskId} in project ${projectId}`);
-    this.name = 'TaskAccessDeniedError';
-    this.code = 'TASK_ACCESS_DENIED';
-    this.status = 403;
-  }
-}
-
+// Class implementation
 export class TaskIdResolver {
+  private static projectsDb: any = null;
+  private static debugEnabled: boolean = false;
+  
   /**
-   * Clean a potentially compound UUID to extract just the UUID portion
-   * 
-   * @param rawId The raw ID that may contain a UUID
-   * @returns The extracted UUID or the original ID if no UUID is found
+   * Initialize with database connection
    */
-  static cleanUUID(rawId: string): string {
-    if (!rawId) return rawId;
+  static initialize(db: any): void {
+    this.projectsDb = db;
     
-    // Try to extract a UUID using regex
-    const match = rawId.match(UUID_REGEX);
-    if (match && match[1]) {
-      if (DEBUG_RESOLVER) {
-        console.log(`[TASK_ID_RESOLVER] Extracted UUID ${match[1]} from ${rawId}`);
-      }
-      return match[1];
+    // Check if debugging is enabled via environment variables
+    this.debugEnabled = process.env.DEBUG_TASKS === 'true' || 
+                        process.env.DEBUG_TASK_STATE === 'true' || 
+                        process.env.DEBUG_TASK_COMPLETION === 'true' || 
+                        process.env.DEBUG_TASK_PERSISTENCE === 'true';
+    
+    if (this.debugEnabled) {
+      console.log('[TaskIdResolver] Initialized with database connection');
+    }
+  }
+  
+  /**
+   * Find a task by its ID with intelligent ID resolution
+   * This is the main entry point for task lookup
+   */
+  static async findTaskById(taskId: string, projectId: string): Promise<any> {
+    if (!this.projectsDb) {
+      throw new Error('TaskIdResolver not initialized with database connection');
     }
     
-    // Return the original ID if no UUID is found
-    return rawId;
-  }
-  
-  /**
-   * Find a task by its ID, with support for multiple lookup strategies
-   * 
-   * @param taskId The task ID to look up
-   * @param projectId The project ID the task belongs to
-   * @returns The task object if found
-   * @throws TaskNotFoundError if the task cannot be found
-   */
-  static async findTaskById(taskId: string, projectId: string) {
     if (!taskId || !projectId) {
       throw new Error('Task ID and Project ID are required');
     }
     
-    if (DEBUG_RESOLVER) {
-      console.log(`[TASK_ID_RESOLVER] Looking up task ${taskId} in project ${projectId}`);
-    }
+    const operationId = taskLogger.startOperation('findTaskById', taskId, projectId);
     
-    // Strategy 1: Try exact ID match
     try {
-      const task = await db.query.projectTasks.findFirst({
-        where: and(
-          eq(projectTasks.id, taskId),
-          eq(projectTasks.projectId, projectId)
-        )
-      });
+      // Try looking up in cache first
+      const cacheKey = `${projectId}:${taskId}`;
+      if (taskResolutionCache[cacheKey]) {
+        const cachedTask = taskResolutionCache[cacheKey];
+        
+        if (this.debugEnabled) {
+          console.log(`[TaskIdResolver] Found task in cache: ${taskId} -> ${cachedTask.id}`);
+        }
+        
+        taskLogger.endOperation(operationId, true);
+        return cachedTask;
+      }
+      
+      // Strategy 1: First try exact match by ID
+      if (this.debugEnabled) {
+        console.log(`[TaskIdResolver] Strategy 1: Exact match lookup for ${taskId}`);
+      }
+      
+      let task = await this.projectsDb.getTaskById(projectId, taskId);
       
       if (task) {
-        if (DEBUG_RESOLVER) {
-          console.log(`[TASK_ID_RESOLVER] Found task by exact ID match: ${taskId}`);
+        if (this.debugEnabled) {
+          console.log(`[TaskIdResolver] Found task with exact ID match: ${taskId}`);
         }
+        
+        taskLogger.logTaskLookup('exact', taskId, projectId, true, task.id);
+        taskResolutionCache[cacheKey] = task;
+        taskLogger.endOperation(operationId, true);
         return task;
       }
-    } catch (error) {
-      console.error(`[TASK_ID_RESOLVER] Error looking up task by exact ID: ${error}`);
-    }
-    
-    // Strategy 2: Try clean UUID extraction
-    try {
-      const cleanId = TaskIdResolver.cleanUUID(taskId);
       
-      // Skip if cleanId is the same as taskId (no change)
-      if (cleanId !== taskId) {
-        const task = await db.query.projectTasks.findFirst({
-          where: and(
-            eq(projectTasks.id, cleanId),
-            eq(projectTasks.projectId, projectId)
-          )
-        });
+      // Strategy 2: Try with clean UUID
+      const cleanedId = this.cleanUUID(taskId);
+      
+      if (cleanedId && cleanedId !== taskId) {
+        if (this.debugEnabled) {
+          console.log(`[TaskIdResolver] Strategy 2: Clean UUID lookup for ${taskId} -> ${cleanedId}`);
+        }
+        
+        task = await this.projectsDb.getTaskById(projectId, cleanedId);
         
         if (task) {
-          if (DEBUG_RESOLVER) {
-            console.log(`[TASK_ID_RESOLVER] Found task by clean UUID: ${cleanId}`);
+          if (this.debugEnabled) {
+            console.log(`[TaskIdResolver] Found task with clean UUID: ${cleanedId}`);
           }
+          
+          taskLogger.logTaskLookup('uuid', taskId, projectId, true, task.id);
+          taskResolutionCache[cacheKey] = task;
+          taskLogger.endOperation(operationId, true);
           return task;
         }
       }
-    } catch (error) {
-      console.error(`[TASK_ID_RESOLVER] Error looking up task by clean UUID: ${error}`);
-    }
-    
-    // Strategy 3: Check if it's a Success Factor ID
-    try {
-      // For Success Factor tasks, check if taskId matches source_id
-      const task = await db.query.projectTasks.findFirst({
-        where: and(
-          eq(projectTasks.sourceId, taskId),
-          eq(projectTasks.projectId, projectId),
-          eq(projectTasks.origin, 'factor')
-        )
-      });
       
-      if (task) {
-        if (DEBUG_RESOLVER) {
-          console.log(`[TASK_ID_RESOLVER] Found task by Success Factor source_id: ${taskId}`);
-        }
-        return task;
-      }
-    } catch (error) {
-      console.error(`[TASK_ID_RESOLVER] Error looking up task by source_id: ${error}`);
-    }
-    
-    // Task not found after all strategies
-    if (DEBUG_RESOLVER) {
-      console.log(`[TASK_ID_RESOLVER] Task not found with ID ${taskId} in project ${projectId}`);
-    }
-    
-    throw new TaskNotFoundError(taskId, projectId);
-  }
-  
-  /**
-   * Update a task by its ID
-   * 
-   * @param taskId The task ID to update
-   * @param projectId The project ID the task belongs to
-   * @param updates The updates to apply to the task
-   * @returns The updated task
-   * @throws TaskNotFoundError if the task cannot be found
-   */
-  static async updateTask(taskId: string, projectId: string, updates: any) {
-    // Find the task first
-    const task = await TaskIdResolver.findTaskById(taskId, projectId);
-    
-    if (!task) {
-      throw new TaskNotFoundError(taskId, projectId);
-    }
-    
-    // For Success Factor tasks, ensure we preserve critical metadata
-    if (task.origin === 'factor') {
-      if (DEBUG_RESOLVER) {
-        console.log(`[TASK_ID_RESOLVER] Preserving Success Factor metadata for task ${taskId}`);
-      }
-      
-      // Ensure these fields are not modified for Success Factor tasks
-      delete updates.origin;
-      delete updates.sourceId; // Using correct camelCase field name
-      delete updates.text;
-      delete updates.stage;
-    }
-    
-    // Apply the updates
-    try {
-      // Keep track of the original sourceId for potential related task updates
-      const sourceId = task.sourceId;
-      const isFactorTask = task.origin === 'factor';
-      
-      const result = await db.update(projectTasks)
-        .set({
-          ...updates,
-          updatedAt: new Date()
-        })
-        .where(and(
-          eq(projectTasks.id, task.id),
-          eq(projectTasks.projectId, projectId)
-        ))
-        .returning();
-      
-      if (result && result.length > 0) {
-        if (DEBUG_RESOLVER) {
-          console.log(`[TASK_ID_RESOLVER] Updated task ${taskId} successfully`);
-        }
+      // Strategy 3: Try compound ID extraction (TaskType-UUID format)
+      if (taskId.includes('-') && !validateUuid(taskId)) {
+        const parts = taskId.split('-');
+        const potentialUuid = parts.slice(1).join('-'); // Combine parts after the first hyphen
         
-        // If this is a Success Factor task and we're changing completion status, 
-        // sync other tasks with the same sourceId as well
-        if (isFactorTask && sourceId && updates.completed !== undefined) {
-          try {
-            if (DEBUG_RESOLVER) {
-              console.log(`[TASK_ID_RESOLVER] Syncing related tasks with sourceId ${sourceId}`);
+        if (validateUuid(potentialUuid)) {
+          if (this.debugEnabled) {
+            console.log(`[TaskIdResolver] Strategy 3: Compound ID extraction for ${taskId} -> ${potentialUuid}`);
+          }
+          
+          task = await this.projectsDb.getTaskById(projectId, potentialUuid);
+          
+          if (task) {
+            if (this.debugEnabled) {
+              console.log(`[TaskIdResolver] Found task with compound ID extraction: ${potentialUuid}`);
             }
             
-            // Find all other tasks with the same sourceId
-            const relatedTasks = await db.query.projectTasks.findMany({
-              where: and(
-                eq(projectTasks.projectId, projectId),
-                eq(projectTasks.sourceId, sourceId),
-                ne(projectTasks.id, task.id) // Exclude the current task
-              )
-            });
-            
-            if (relatedTasks.length > 0) {
-              if (DEBUG_RESOLVER) {
-                console.log(`[TASK_ID_RESOLVER] Found ${relatedTasks.length} related tasks to sync`);
-              }
-              
-              // Update all related tasks with the same completion state
-              const updatePromises = relatedTasks.map(relatedTask => 
-                db.update(projectTasks)
-                  .set({
-                    completed: updates.completed,
-                    updatedAt: new Date()
-                  })
-                  .where(and(
-                    eq(projectTasks.id, relatedTask.id),
-                    eq(projectTasks.projectId, projectId)
-                  ))
-              );
-              
-              await Promise.all(updatePromises);
-              
-              if (DEBUG_RESOLVER) {
-                console.log(`[TASK_ID_RESOLVER] Synchronized ${relatedTasks.length} related tasks`);
-              }
-            }
-          } catch (syncError) {
-            console.error(`[TASK_ID_RESOLVER] Error syncing related tasks:`, syncError);
-            // Don't fail the primary update if syncing fails
+            taskLogger.logTaskLookup('compound', taskId, projectId, true, task.id);
+            taskResolutionCache[cacheKey] = task;
+            taskLogger.endOperation(operationId, true);
+            return task;
           }
         }
-        
-        return result[0];
       }
       
-      throw new Error(`Failed to update task ${taskId}`);
+      // Strategy 4: For Success Factor tasks, try finding by sourceId
+      // This is critical for TCOF Success Factor tasks to be found consistently
+      if (this.debugEnabled) {
+        console.log(`[TaskIdResolver] Strategy 4: Source ID lookup for ${taskId}`);
+      }
+      
+      // Try to find a Success Factor task with this ID as sourceId
+      const tasksWithSourceId = await this.projectsDb.findTasksBySourceId(projectId, taskId);
+      
+      if (tasksWithSourceId && tasksWithSourceId.length > 0) {
+        // Use the first task found with this sourceId
+        const sourceTask = tasksWithSourceId[0];
+        
+        if (this.debugEnabled) {
+          console.log(`[TaskIdResolver] Found task by sourceId: ${taskId} -> ${sourceTask.id}`);
+          console.log(`[TaskIdResolver] Found ${tasksWithSourceId.length} tasks with sourceId ${taskId}`);
+        }
+        
+        taskLogger.logTaskLookup('sourceId', taskId, projectId, true, sourceTask.id, sourceTask.sourceId);
+        taskResolutionCache[cacheKey] = sourceTask;
+        taskLogger.endOperation(operationId, true);
+        return sourceTask;
+      }
+      
+      // If we reach here, the task was not found with any strategy
+      if (this.debugEnabled) {
+        console.log(`[TaskIdResolver] Task not found with any strategy: ${taskId}`);
+      }
+      
+      taskLogger.logTaskLookup('exact', taskId, projectId, false);
+      taskLogger.endOperation(operationId, false);
+      
+      // Create a structured error with code for proper error handling
+      const error = new Error(`Task not found: ${taskId}`);
+      (error as any).code = 'TASK_NOT_FOUND';
+      throw error;
+      
     } catch (error) {
-      console.error(`[TASK_ID_RESOLVER] Error updating task ${taskId}:`, error);
+      // Re-throw TASK_NOT_FOUND errors
+      if ((error as any).code === 'TASK_NOT_FOUND') {
+        throw error;
+      }
+      
+      // Log other errors
+      console.error(`[TaskIdResolver] Error finding task ${taskId}:`, error);
+      taskLogger.endOperation(operationId, false, error as Error);
       throw error;
     }
   }
   
   /**
-   * Get all tasks for a project, with optional filtering
-   * 
-   * @param projectId The project ID to get tasks for
-   * @param options Optional filtering options
-   * @returns Array of tasks for the project
+   * Clean a UUID by removing any prefix or suffix
    */
-  static async getTasksForProject(projectId: string, options: any = {}) {
-    try {
-      const tasks = await db.query.projectTasks.findMany({
-        where: eq(projectTasks.projectId, projectId)
-      });
-      
-      if (DEBUG_RESOLVER) {
-        console.log(`[TASK_ID_RESOLVER] Found ${tasks.length} tasks for project ${projectId}`);
-        
-        // Count tasks by origin
-        const originCounts = tasks.reduce((acc, task) => {
-          const origin = task.origin || 'unknown';
-          acc[origin] = (acc[origin] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        
-        console.log(`[TASK_ID_RESOLVER] Tasks by origin:`, originCounts);
-      }
-      
-      return tasks;
-    } catch (error) {
-      console.error(`[TASK_ID_RESOLVER] Error getting tasks for project ${projectId}:`, error);
-      return [];
+  static cleanUUID(id: string): string {
+    if (!id) return id;
+    
+    // If it's already a valid UUID, return as is
+    if (validateUuid(id)) return id;
+    
+    // Try to extract a UUID from a compound format (e.g., "prefix-00000000-0000-0000-0000-000000000000")
+    const uuidPattern = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+    const match = id.match(uuidPattern);
+    
+    if (match && match[1]) {
+      return match[1];
+    }
+    
+    return id;
+  }
+  
+  /**
+   * Clear the task resolution cache
+   */
+  static clearCache(): void {
+    Object.keys(taskResolutionCache).forEach(key => {
+      delete taskResolutionCache[key];
+    });
+    
+    if (this.debugEnabled) {
+      console.log(`[TaskIdResolver] Cleared task resolution cache`);
     }
   }
 }
 
-export default TaskIdResolver;
+// Export validate function from uuid for convenience
+export { validateUuid };

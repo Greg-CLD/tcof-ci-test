@@ -1,366 +1,380 @@
 /**
- * Task Logger Service
+ * TaskLogger Service
  * 
- * Provides comprehensive logging and performance tracking for task operations:
- * - Request/response timing and payload logging
- * - Database transaction timing
- * - TaskStateManager queue processing metrics
- * - Field-by-field comparison for request/response
- * - Detailed error tracking with standardized error codes
+ * Comprehensive diagnostic and instrumentation service for task operations
+ * Provides detailed logging, timing, error tracking and field-level comparison
+ * for task state transitions and updates.
  */
 
-import { performance } from 'perf_hooks';
+import { v4 as uuidv4 } from 'uuid';
 
-// Configuration
-const DEBUG = process.env.DEBUG_TASKS === 'true';
-const PERFORMANCE_THRESHOLD_MS = 200; // Flag queries taking longer than this
-const QUEUE_STUCK_THRESHOLD_MS = 1000; // Flag tasks stuck in queue longer than this
+// Define task error code types for consistent error handling
+export enum TaskErrorCodes {
+  // Validation errors
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  INVALID_TASK_ID = 'INVALID_TASK_ID',
+  INVALID_PROJECT_ID = 'INVALID_PROJECT_ID',
+  
+  // Not found errors
+  NOT_FOUND = 'TASK_NOT_FOUND',
+  PROJECT_NOT_FOUND = 'PROJECT_NOT_FOUND',
+  
+  // Permission errors
+  ACCESS_DENIED = 'TASK_ACCESS_DENIED',
+  
+  // Database errors
+  DATABASE_ERROR = 'DATABASE_ERROR',
+  TRANSACTION_FAILED = 'TRANSACTION_FAILED',
+  
+  // State management errors
+  STATE_TRANSITION_ERROR = 'STATE_TRANSITION_ERROR',
+  UPDATE_CONFLICT = 'UPDATE_CONFLICT',
+  
+  // System errors
+  INTERNAL_ERROR = 'INTERNAL_SERVER_ERROR',
+  TIMEOUT = 'REQUEST_TIMEOUT'
+}
 
-// Standardized error codes
-export const TaskErrorCodes = {
-  NOT_FOUND: 'TASK_NOT_FOUND',
-  ACCESS_DENIED: 'TASK_ACCESS_DENIED',
-  VALIDATION_ERROR: 'TASK_VALIDATION_ERROR',
-  DATABASE_ERROR: 'TASK_DATABASE_ERROR',
-  TIMEOUT: 'TASK_TIMEOUT',
-  UPDATE_CONFLICT: 'TASK_UPDATE_CONFLICT',
-  QUEUE_OVERFLOW: 'TASK_QUEUE_OVERFLOW',
-  ID_RESOLUTION_ERROR: 'TASK_ID_RESOLUTION_ERROR'
-};
-
-// Type definitions
-export type TaskTimingMetric = {
-  operation: string;
-  taskId: string;
-  projectId: string;
+// Type for operation tracking
+interface Operation {
+  id: string;
+  name: string;
   startTime: number;
   endTime?: number;
   duration?: number;
-  success: boolean;
-  error?: string;
-  stackTrace?: string;
-};
+  success?: boolean;
+  error?: Error | null;
+  metadata: Record<string, any>;
+}
 
-export type TaskFieldDiff = {
-  field: string;
-  originalValue: any;
-  newValue: any;
-};
+// Type for task update details
+interface TaskUpdateDetails {
+  taskId: string;
+  projectId: string;
+  timestamp: string;
+  originalTask: any;
+  updatedTask: any;
+  updateData: any;
+  fieldChanges: Record<string, { before: any; after: any }>;
+  preservedFields: string[];
+  operation: {
+    id: string;
+    duration: number;
+    success: boolean;
+  };
+}
 
-// Singleton Task Logger instance
-class TaskLogger {
-  private static instance: TaskLogger;
-  private timingMetrics: Map<string, TaskTimingMetric>;
-  private operationCounter: number;
+// Class implementation
+export class TaskLogger {
+  private operations: Map<string, Operation> = new Map();
+  private taskUpdates: Map<string, TaskUpdateDetails> = new Map();
+  private activeOperations: Set<string> = new Set();
+  private debugEnabled: boolean = false;
   
-  private constructor() {
-    this.timingMetrics = new Map();
-    this.operationCounter = 0;
-  }
-  
-  /**
-   * Get the singleton TaskLogger instance
-   */
-  public static getInstance(): TaskLogger {
-    if (!TaskLogger.instance) {
-      TaskLogger.instance = new TaskLogger();
+  constructor() {
+    // Check if debugging is enabled via environment variables
+    this.debugEnabled = process.env.DEBUG_TASKS === 'true' || 
+                        process.env.DEBUG_TASK_STATE === 'true' || 
+                        process.env.DEBUG_TASK_API === 'true' || 
+                        process.env.DEBUG_TASK_COMPLETION === 'true' || 
+                        process.env.DEBUG_TASK_PERSISTENCE === 'true';
+    
+    if (this.debugEnabled) {
+      console.log('[TaskLogger] Initialized with debugging enabled');
     }
-    return TaskLogger.instance;
   }
   
   /**
-   * Start timing an operation
-   * 
-   * @param operation The operation name (e.g., 'findTaskById', 'updateTask')
-   * @param taskId The task ID
-   * @param projectId The project ID
-   * @returns Operation ID for later reference
+   * Start tracking a new operation
    */
-  public startOperation(operation: string, taskId: string, projectId: string): string {
-    const operationId = `${Date.now()}-${++this.operationCounter}`;
+  startOperation(name: string, taskId?: string, projectId?: string): string {
+    const operationId = uuidv4();
+    const operation: Operation = {
+      id: operationId,
+      name,
+      startTime: Date.now(),
+      metadata: {
+        taskId,
+        projectId,
+        timestamp: new Date().toISOString()
+      }
+    };
     
-    this.timingMetrics.set(operationId, {
-      operation,
-      taskId,
-      projectId,
-      startTime: performance.now(),
-      success: false
-    });
+    this.operations.set(operationId, operation);
+    this.activeOperations.add(operationId);
     
-    if (DEBUG) {
-      console.log(`[TASK_LOGGER] Started operation ${operation} for task ${taskId} in project ${projectId} (ID: ${operationId})`);
+    if (this.debugEnabled) {
+      console.log(`[TaskLogger] Started operation '${name}' with ID ${operationId}`);
+      if (taskId) console.log(`[TaskLogger] - Task ID: ${taskId}`);
+      if (projectId) console.log(`[TaskLogger] - Project ID: ${projectId}`);
     }
     
     return operationId;
   }
   
   /**
-   * End timing an operation
-   * 
-   * @param operationId The operation ID from startOperation
-   * @param success Whether the operation was successful
-   * @param error Optional error message if the operation failed
-   * @returns Duration of the operation in ms
+   * End tracking an operation and record results
    */
-  public endOperation(operationId: string, success: boolean, error?: Error): number | null {
-    const metric = this.timingMetrics.get(operationId);
-    if (!metric) {
-      console.error(`[TASK_LOGGER] Cannot end unknown operation: ${operationId}`);
-      return null;
+  endOperation(operationId: string, success: boolean, error?: Error): void {
+    const operation = this.operations.get(operationId);
+    if (!operation) {
+      console.warn(`[TaskLogger] Attempted to end unknown operation: ${operationId}`);
+      return;
     }
     
-    const endTime = performance.now();
-    const duration = endTime - metric.startTime;
+    operation.endTime = Date.now();
+    operation.duration = operation.endTime - operation.startTime;
+    operation.success = success;
+    operation.error = error || null;
     
-    metric.endTime = endTime;
-    metric.duration = duration;
-    metric.success = success;
+    this.activeOperations.delete(operationId);
     
-    if (!success && error) {
-      metric.error = error.message;
-      metric.stackTrace = error.stack;
-    }
-    
-    // Log slow operations
-    if (duration > PERFORMANCE_THRESHOLD_MS) {
-      console.warn(`[TASK_LOGGER] ⚠️ Slow operation: ${metric.operation} for task ${metric.taskId} took ${duration.toFixed(2)}ms`);
-    }
-    
-    if (DEBUG) {
-      console.log(`[TASK_LOGGER] Finished operation ${metric.operation} for task ${metric.taskId} in ${duration.toFixed(2)}ms (success: ${success})`);
-      if (!success && error) {
-        console.error(`[TASK_LOGGER] Error in operation ${metric.operation}:`, error);
+    if (this.debugEnabled) {
+      console.log(`[TaskLogger] Ended operation '${operation.name}' (${operationId})`);
+      console.log(`[TaskLogger] - Duration: ${operation.duration}ms`);
+      console.log(`[TaskLogger] - Success: ${success}`);
+      
+      if (error) {
+        console.error(`[TaskLogger] - Error: ${error.message}`);
+        console.error(`[TaskLogger] - Stack: ${error.stack}`);
       }
-    }
-    
-    return duration;
-  }
-  
-  /**
-   * Log a task update request
-   * 
-   * @param taskId The task ID being updated
-   * @param projectId The project ID
-   * @param updates The updates being applied
-   */
-  public logTaskUpdate(taskId: string, projectId: string, updates: any): void {
-    if (DEBUG) {
-      console.log(`[TASK_LOGGER] Task update request for task ${taskId} in project ${projectId}:`, updates);
     }
   }
   
   /**
-   * Log task queue state
-   * 
-   * @param queueSize Current size of the update queue
-   * @param pendingUpdates Map of pending updates
+   * Log task update request details
    */
-  public logQueueState(queueSize: number, pendingUpdates: Map<string, any>): void {
-    if (DEBUG) {
-      console.log(`[TASK_LOGGER] Task update queue state: ${queueSize} items in queue`);
-      
-      // Check for tasks stuck in the queue
-      pendingUpdates.forEach((update, key) => {
-        const [taskId, projectId] = key.split('|');
-        const queueTime = update.queuedAt ? Date.now() - update.queuedAt : 0;
-        
-        if (queueTime > QUEUE_STUCK_THRESHOLD_MS) {
-          console.warn(`[TASK_LOGGER] ⚠️ Task ${taskId} stuck in queue for ${queueTime}ms`);
-        }
-      });
+  logTaskUpdate(taskId: string, projectId: string, updateData: any): void {
+    if (!this.debugEnabled) return;
+    
+    console.log(`[TaskLogger] Received task update request:`);
+    console.log(`[TaskLogger] - Task ID: ${taskId}`);
+    console.log(`[TaskLogger] - Project ID: ${projectId}`);
+    
+    const importantFields = ['completed', 'text', 'status', 'origin', 'sourceId'];
+    const importantUpdates = Object.entries(updateData)
+      .filter(([key]) => importantFields.includes(key))
+      .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+    
+    console.log(`[TaskLogger] - Key updates:`, JSON.stringify(importantUpdates, null, 2));
+    
+    // Log full update data if very detailed debugging is enabled
+    if (process.env.DEBUG_TASK_API === 'true') {
+      console.log(`[TaskLogger] - Full update data:`, JSON.stringify(updateData, null, 2));
     }
   }
   
   /**
-   * Compare fields between original and updated task
-   * 
-   * @param originalTask The original task before update
-   * @param updatedTask The task after update
-   * @returns Array of field differences, or null if no differences
+   * Compare and log differences between original and updated task
    */
-  public compareTaskFields(originalTask: any, updatedTask: any): TaskFieldDiff[] | null {
-    if (!originalTask || !updatedTask) return null;
-    
-    const differences: TaskFieldDiff[] = [];
-    
-    // Get all unique keys from both objects
-    const allKeys = new Set([
-      ...Object.keys(originalTask),
-      ...Object.keys(updatedTask)
-    ]);
-    
-    for (const key of allKeys) {
-      // Skip timestamps and internal fields
-      if (key === 'updatedAt' || key === 'createdAt' || key === 'id') continue;
-      
-      // Check for missing keys
-      if (!(key in originalTask)) {
-        differences.push({
-          field: key,
-          originalValue: undefined,
-          newValue: updatedTask[key]
-        });
-        continue;
-      }
-      
-      if (!(key in updatedTask)) {
-        differences.push({
-          field: key,
-          originalValue: originalTask[key],
-          newValue: undefined
-        });
-        continue;
-      }
-      
-      // Compare values
-      const originalValue = originalTask[key];
-      const newValue = updatedTask[key];
-      
-      // Special handling for null/undefined comparison
-      if ((originalValue === null || originalValue === undefined) && 
-          (newValue === null || newValue === undefined)) {
-        continue;
-      }
-      
-      // Compare primitive values directly, complex values with JSON.stringify
-      if (typeof originalValue === 'object' || typeof newValue === 'object') {
-        if (JSON.stringify(originalValue) !== JSON.stringify(newValue)) {
-          differences.push({ field: key, originalValue, newValue });
-        }
-      } else if (originalValue !== newValue) {
-        differences.push({ field: key, originalValue, newValue });
-      }
-    }
-    
-    if (differences.length === 0) return null;
-    
-    if (DEBUG) {
-      console.log(`[TASK_LOGGER] Found ${differences.length} field differences in task update:`, differences);
-    }
-    
-    return differences;
-  }
-  
-  /**
-   * Log a detailed task update operation including all field changes
-   * 
-   * @param taskId The task ID
-   * @param projectId The project ID
-   * @param originalTask The task before update
-   * @param updatedTask The task after update
-   * @param requestFields Fields from the original update request
-   */
-  public logTaskUpdateDetails(
-    taskId: string, 
-    projectId: string, 
-    originalTask: any, 
+  logTaskUpdateDetails(
+    taskId: string,
+    projectId: string,
+    originalTask: any,
     updatedTask: any,
-    requestFields?: any
+    updateData: any
   ): void {
-    if (!DEBUG) return;
+    if (!this.debugEnabled) return;
     
-    console.log(`[TASK_LOGGER] Task update details for task ${taskId} in project ${projectId}:`);
-    console.log('Original task:', originalTask);
-    console.log('Updated task:', updatedTask);
+    const timestamp = new Date().toISOString();
+    const operationId = Array.from(this.activeOperations).find(id => {
+      const op = this.operations.get(id);
+      return op && op.metadata.taskId === taskId;
+    }) || 'unknown';
     
-    if (requestFields) {
-      console.log('Original request fields:', requestFields);
-      
-      // Compare request fields with updated task
-      const fieldsPreserved = Object.entries(requestFields).every(([key, value]) => {
-        return updatedTask[key] === value;
-      });
-      
-      if (!fieldsPreserved) {
-        console.warn(`[TASK_LOGGER] ⚠️ Some request fields were not preserved in the updated task`);
-      }
-    }
+    const operation = this.operations.get(operationId) || {
+      id: operationId,
+      duration: 0,
+      success: false
+    };
     
-    // Compare fields and log differences
-    this.compareTaskFields(originalTask, updatedTask);
-  }
-  
-  /**
-   * Format an error response with standardized error code
-   * 
-   * @param code Error code from TaskErrorCodes
-   * @param message Human-readable error message
-   * @param details Additional error details
-   * @returns Formatted error object for API response
-   */
-  public formatErrorResponse(code: string, message: string, details?: any): any {
-    const error = {
-      success: false,
-      error: {
-        code,
-        message,
-        timestamp: new Date().toISOString()
+    // Compare fields
+    const fieldChanges = this.compareTaskFields(originalTask, updatedTask);
+    
+    // Identify preserved fields (especially important for Success Factor tasks)
+    const preservedFields = ['id', 'origin', 'sourceId'].filter(field => 
+      originalTask[field] === updatedTask[field]
+    );
+    
+    const updateDetails: TaskUpdateDetails = {
+      taskId,
+      projectId,
+      timestamp,
+      originalTask,
+      updatedTask,
+      updateData,
+      fieldChanges,
+      preservedFields,
+      operation: {
+        id: operationId,
+        duration: operation.duration || 0,
+        success: !!operation.success
       }
     };
     
-    if (details) {
-      error.error['details'] = details;
-    }
+    this.taskUpdates.set(`${taskId}_${timestamp}`, updateDetails);
     
-    return error;
+    if (this.debugEnabled) {
+      console.log(`[TaskLogger] Task update details for ${taskId}:`);
+      console.log(`[TaskLogger] - Field changes:`, JSON.stringify(fieldChanges, null, 2));
+      console.log(`[TaskLogger] - Preserved fields: ${preservedFields.join(', ')}`);
+      
+      // Log success or failure
+      if (operation.success) {
+        console.log(`[TaskLogger] - Update successful in ${operation.duration}ms`);
+      } else {
+        console.log(`[TaskLogger] - Update failed or incomplete`);
+      }
+      
+      // Special logging for Success Factor tasks
+      if (originalTask.origin === 'factor' || originalTask.origin === 'success-factor') {
+        console.log(`[TaskLogger] - Success Factor task detected:`);
+        console.log(`[TaskLogger]   - sourceId preserved: ${preservedFields.includes('sourceId')}`);
+        console.log(`[TaskLogger]   - origin preserved: ${preservedFields.includes('origin')}`);
+      }
+    }
   }
   
   /**
-   * Get recent timing metrics for analysis
-   * 
-   * @param limit Maximum number of metrics to return
-   * @returns Array of timing metrics
+   * Compare fields between original and updated tasks
    */
-  public getRecentMetrics(limit: number = 100): TaskTimingMetric[] {
-    // Convert map to array and sort by start time (descending)
-    return Array.from(this.timingMetrics.values())
-      .sort((a, b) => b.startTime - a.startTime)
-      .slice(0, limit);
+  compareTaskFields(originalTask: any, updatedTask: any): Record<string, { before: any; after: any }> {
+    const changes: Record<string, { before: any; after: any }> = {};
+    
+    // Define fields to compare
+    const fieldsToCompare = [
+      'id', 'text', 'completed', 'status', 'priority', 
+      'origin', 'sourceId', 'stage', 'notes', 'dueDate'
+    ];
+    
+    // Compare each field
+    fieldsToCompare.forEach(field => {
+      if (originalTask[field] !== updatedTask[field]) {
+        changes[field] = {
+          before: originalTask[field],
+          after: updatedTask[field]
+        };
+      }
+    });
+    
+    return changes;
   }
   
   /**
-   * Calculate performance statistics
-   * 
-   * @returns Object with performance statistics
+   * Format a standardized error response
    */
-  public getPerformanceStats(): any {
-    const metrics = Array.from(this.timingMetrics.values());
-    const completedMetrics = metrics.filter(m => m.duration !== undefined);
-    
-    if (completedMetrics.length === 0) {
-      return {
-        totalOperations: 0,
-        completedOperations: 0,
-        successRate: 0,
-        averageDuration: 0,
-        slowOperations: 0,
-        failedOperations: 0
-      };
-    }
-    
-    const successfulOperations = completedMetrics.filter(m => m.success);
-    const slowOperations = completedMetrics.filter(m => m.duration && m.duration > PERFORMANCE_THRESHOLD_MS);
-    
-    const totalDuration = completedMetrics.reduce((sum, m) => sum + (m.duration || 0), 0);
+  formatErrorResponse(
+    code: TaskErrorCodes,
+    message: string,
+    details: Record<string, any> = {}
+  ): any {
+    const timestamp = new Date().toISOString();
     
     return {
-      totalOperations: metrics.length,
-      completedOperations: completedMetrics.length,
-      successRate: (successfulOperations.length / completedMetrics.length) * 100,
-      averageDuration: totalDuration / completedMetrics.length,
-      slowOperations: slowOperations.length,
-      failedOperations: completedMetrics.length - successfulOperations.length
+      success: false,
+      error: code,
+      message,
+      timestamp,
+      details
     };
+  }
+  
+  /**
+   * Log task state transition
+   */
+  logTaskStateTransition(
+    taskId: string, 
+    projectId: string, 
+    fromState: any, 
+    toState: any, 
+    triggerEvent: string
+  ): void {
+    if (!this.debugEnabled) return;
+    
+    console.log(`[TaskLogger] Task state transition for ${taskId}:`);
+    console.log(`[TaskLogger] - Trigger: ${triggerEvent}`);
+    
+    // Only log the completed state change for brevity
+    if (fromState.completed !== toState.completed) {
+      console.log(`[TaskLogger] - Completed: ${fromState.completed} -> ${toState.completed}`);
+    }
+    
+    // Log other important state changes
+    ['status', 'priority'].forEach(field => {
+      if (fromState[field] !== toState[field]) {
+        console.log(`[TaskLogger] - ${field}: ${fromState[field]} -> ${toState[field]}`);
+      }
+    });
+  }
+  
+  /**
+   * Log database operations for task updates
+   */
+  logDatabaseOperation(
+    operationType: 'query' | 'insert' | 'update' | 'delete',
+    taskId: string,
+    projectId: string,
+    success: boolean,
+    duration: number,
+    error?: Error
+  ): void {
+    if (!this.debugEnabled) return;
+    
+    console.log(`[TaskLogger] Database ${operationType} for task ${taskId}:`);
+    console.log(`[TaskLogger] - Duration: ${duration}ms`);
+    console.log(`[TaskLogger] - Success: ${success}`);
+    
+    if (error) {
+      console.error(`[TaskLogger] - Error: ${error.message}`);
+      if (process.env.DEBUG_TASK_PERSISTENCE === 'true') {
+        console.error(`[TaskLogger] - Stack: ${error.stack}`);
+      }
+    }
+  }
+  
+  /**
+   * Log task lookup operations
+   */
+  logTaskLookup(
+    lookupStrategy: 'exact' | 'uuid' | 'sourceId' | 'compound',
+    taskId: string,
+    projectId: string,
+    success: boolean,
+    resolvedId?: string,
+    sourceId?: string
+  ): void {
+    if (!this.debugEnabled) return;
+    
+    console.log(`[TaskLogger] Task lookup using ${lookupStrategy} strategy:`);
+    console.log(`[TaskLogger] - Original ID: ${taskId}`);
+    console.log(`[TaskLogger] - Project ID: ${projectId}`);
+    console.log(`[TaskLogger] - Success: ${success}`);
+    
+    if (success) {
+      console.log(`[TaskLogger] - Resolved ID: ${resolvedId}`);
+      if (sourceId) {
+        console.log(`[TaskLogger] - Source ID: ${sourceId}`);
+      }
+    }
+  }
+  
+  /**
+   * Get operation history for a specific task
+   */
+  getTaskOperationHistory(taskId: string): Operation[] {
+    return Array.from(this.operations.values())
+      .filter(op => op.metadata.taskId === taskId)
+      .sort((a, b) => a.startTime - b.startTime);
+  }
+  
+  /**
+   * Get update history for a specific task
+   */
+  getTaskUpdateHistory(taskId: string): TaskUpdateDetails[] {
+    return Array.from(this.taskUpdates.values())
+      .filter(update => update.taskId === taskId);
   }
 }
 
-// Export the singleton instance
-export const taskLogger = TaskLogger.getInstance();
-
-// Export a helper function to standardize error responses
-export function createTaskErrorResponse(statusCode: number, errorCode: string, message: string, details?: any): any {
-  return {
-    status: statusCode,
-    body: taskLogger.formatErrorResponse(errorCode, message, details)
-  };
-}
+// Export singleton instance
+export const taskLogger = new TaskLogger();
