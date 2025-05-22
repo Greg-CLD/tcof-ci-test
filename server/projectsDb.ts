@@ -632,9 +632,10 @@ export const projectsDb = {
               console.log(`[TASK_LOOKUP] Extracted UUID ${uuidPart} from compound ID ${taskId}, trying partial sourceId match`);
               
               // Try to find tasks where the sourceId contains the UUID part
+              // Cast to text to ensure proper string operations
               const tasksByPartialSourceId = await db.execute(sql`
                 SELECT * FROM project_tasks 
-                WHERE source_id LIKE ${uuidPart + '%'} 
+                WHERE source_id::text LIKE ${uuidPart + '%'} 
                 LIMIT 1
               `);
               
@@ -717,9 +718,10 @@ export const projectsDb = {
               if (isValidUuidPrefix(idToCheck)) {
                 // ENHANCED: Special handling for Success Factor tasks
                 // First try to find any factor-origin tasks with this UUID part
+                // Cast to text to ensure proper string operations with UUID fields
                 const factorTasksQuery = await db.execute(sql`
                   SELECT * FROM project_tasks 
-                  WHERE (id LIKE ${idToCheck + '%'} OR source_id LIKE ${idToCheck + '%'})
+                  WHERE (id::text LIKE ${idToCheck + '%'} OR source_id::text LIKE ${idToCheck + '%'})
                   AND (origin = 'factor' OR origin = 'success-factor')
                   LIMIT 1
                 `);
@@ -732,10 +734,11 @@ export const projectsDb = {
                 }
                 
                 // If no factor task found, try the general prefix match
+                // Cast to text to ensure proper string operations with UUID fields
                 const matchingTasks = await db.execute(sql`
                   SELECT * FROM project_tasks 
-                  WHERE id LIKE ${idToCheck + '%'} 
-                  OR source_id LIKE ${idToCheck + '%'}
+                  WHERE id::text LIKE ${idToCheck + '%'} 
+                  OR source_id::text LIKE ${idToCheck + '%'}
                   LIMIT 1
                 `);
                 
