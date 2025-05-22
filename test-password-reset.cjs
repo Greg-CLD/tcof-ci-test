@@ -39,15 +39,19 @@ function getReplitUrl() {
 // Make a simple HTTP POST request
 function postRequest(url, data) {
   return new Promise((resolve, reject) => {
-    const postData = querystring.stringify(data);
+    // Convert data to JSON format for our API
+    const postData = JSON.stringify(data);
     
     const options = {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(postData)
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData),
+        'X-Requested-With': 'XMLHttpRequest' // Important for our API to recognize it as AJAX
       }
     };
+    
+    console.log(`Making request to ${url} with data:`, data);
     
     const req = https.request(url, options, (res) => {
       let responseData = '';
@@ -57,14 +61,19 @@ function postRequest(url, data) {
       });
       
       res.on('end', () => {
+        console.log(`Response status: ${res.statusCode}`);
+        console.log(`Response headers:`, res.headers);
+        
         try {
           const jsonResponse = JSON.parse(responseData);
+          console.log(`Response body:`, jsonResponse);
           resolve({
             statusCode: res.statusCode,
             headers: res.headers,
             body: jsonResponse
           });
         } catch (e) {
+          console.log(`Response body (not JSON):`, responseData);
           resolve({
             statusCode: res.statusCode,
             headers: res.headers,
@@ -75,6 +84,7 @@ function postRequest(url, data) {
     });
     
     req.on('error', (e) => {
+      console.error(`Request error:`, e);
       reject(e);
     });
     

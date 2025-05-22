@@ -21,14 +21,26 @@ const pool = new Pool({
 /**
  * Hash password using scrypt (matching server/replitAuth.ts implementation)
  * This is the primary auth method used by the application
+ * 
+ * The authentication in the application uses scrypt with:
+ * - 64-byte key length
+ * - 16-byte salt (as hex string)
+ * - Format: "hash.salt" where hash is hex and salt is hex
  */
 async function hashPassword(password) {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(16).toString('hex');
     
+    // Using crypto.scrypt with 64-byte length - must match server implementation exactly
     crypto.scrypt(password, salt, 64, (err, derivedKey) => {
       if (err) return reject(err);
-      resolve(`${derivedKey.toString('hex')}.${salt}`);
+      
+      // Format must be "hash.salt" as the server expects
+      const hash = derivedKey.toString('hex');
+      const fullHash = `${hash}.${salt}`;
+      console.log(`Generated hash for "${password}" (first 10 chars): ${fullHash.substring(0, 10)}...`);
+      
+      resolve(fullHash);
     });
   });
 }

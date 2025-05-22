@@ -1484,6 +1484,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     }
   });
 
+  // Register admin routes for password resets and other admin functions
+  registerAdminRoutes(app);
+  console.log('Admin routes registered successfully');
+
   // Simply create HTTP server for Express app without WebSocket server 
   // to avoid port conflicts with Vite HMR WebSocket
   const httpServer = createServer(app);
