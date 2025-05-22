@@ -19,6 +19,16 @@ const TEST_USER = {
   password: 'admin123'
 };
 
+// Test task IDs
+const CUSTOM_TASK_ID = '7d8f9a2b-3c4d-5e6f-7g8h-9i0j1k2l3m4n'; 
+const VALID_SF_TASK_ID = '2f565bf9-70c7-5c41-93e7-c6c4cde32312';
+const INVALID_SF_TASK_ID = 'invalid-sf-task-id';
+
+console.log('\n=== Task Type Test Parameters ===');
+console.log('Custom Task ID:', CUSTOM_TASK_ID);
+console.log('Valid SF Task ID:', VALID_SF_TASK_ID);
+console.log('Invalid SF Task ID:', INVALID_SF_TASK_ID);
+
 // Main test function
 async function testTaskToggle() {
   console.log('=== SUCCESS FACTOR TASK TOGGLE TEST ===\n');
@@ -77,6 +87,12 @@ async function testTaskToggle() {
     }
     
     console.log(`Found ${tasks.length} tasks in the project`);
+console.log('\nTask Type Analysis:');
+const customTasks = tasks.filter(t => t.origin === 'custom');
+const sfTasks = tasks.filter(t => t.origin === 'factor');
+console.log(`- Custom tasks: ${customTasks.length}`);
+console.log(`- Success Factor tasks: ${sfTasks.length}`);
+console.log(`- Tasks with valid sourceId: ${tasks.filter(t => t.sourceId && isValidUUID(t.sourceId)).length}`);
     
     // Find the target Success Factor task
     let targetTask = tasks.find(task => task.id === SF_TASK_ID);
