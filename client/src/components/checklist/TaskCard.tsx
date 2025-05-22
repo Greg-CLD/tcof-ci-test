@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { format } from 'date-fns';
 import { 
   Circle, 
@@ -143,13 +143,41 @@ export default function TaskCard({
     return uuidPattern.test(str.trim());
   };
 
-  // Handle task completion toggle
-  const handleToggleCompleted = () => {
+  // Use refs to track toggle state and debounce
+  const isProcessingToggle = useRef(false);
+  const lastToggleTime = useRef(0);
+  const requestId = useRef(0);
+  
+  // Handle task completion toggle with debounce to prevent duplicate requests
+  const handleToggleCompleted = useCallback(() => {
+    // Generate unique request ID for this toggle operation
+    const currentRequestId = ++requestId.current;
+    const now = Date.now();
+    
     // Ensure we always have a valid task ID
     if (!id) {
       console.error('[TASK_ERROR] Missing required task ID, cannot update task');
       return;
     }
+    
+    // Debounce: Prevent rapid repeated toggles (avoid duplicate requests)
+    if (isProcessingToggle.current) {
+      console.debug(`[TASK_DEBOUNCE] Ignoring duplicate toggle request #${currentRequestId} while previous request is processing`);
+      return;
+    }
+    
+    // Add time-based throttling (prevent multiple requests within 500ms)
+    if (now - lastToggleTime.current < 500) {
+      console.debug(`[TASK_DEBOUNCE] Ignoring rapid toggle request #${currentRequestId} (within 500ms)`);
+      return;
+    }
+    
+    // Mark that we're processing a toggle request and update timestamp
+    isProcessingToggle.current = true;
+    lastToggleTime.current = now;
+    
+    // Log debounced request with unique ID and timestamp
+    console.debug(`[TASK_TOGGLE] Processing toggle request #${currentRequestId} at ${now}`);
 
     // Safely handle potentially undefined props using proper types
     const safeOrigin = typeof origin !== 'undefined' ? 
@@ -164,6 +192,7 @@ export default function TaskCard({
     
     // Debug log all props with validation info
     console.debug('[TASK_PROPS]', {
+      requestId: currentRequestId,
       id, 
       text, 
       completed,
@@ -186,6 +215,7 @@ export default function TaskCard({
     
     // Detailed debug logging for task update
     console.debug(`[TASK_UPDATE] Toggle task completion:
+    - Request ID: ${currentRequestId}
     - Using ID: ${updateId} (${hasValidSourceId ? 'valid sourceId' : 'fallback to id'})
     - Original ID: ${id}
     - Source ID: ${safeSourceId || 'N/A'}
@@ -215,9 +245,18 @@ export default function TaskCard({
       updateData.sourceId = safeSourceId;
     }
     
-    // Send the update with validated ID and clean payload
-    onUpdate(updateId, updateData, isGoodPractice);
-  };
+    try {
+      // Send the update with validated ID and clean payload
+      onUpdate(updateId, updateData, isGoodPractice);
+    } finally {
+      // Set a timeout to reset the processing flag after a reasonable time 
+      // to ensure we don't block future toggles if something goes wrong
+      setTimeout(() => {
+        isProcessingToggle.current = false;
+        console.debug(`[TASK_TOGGLE] Reset processing flag for request #${currentRequestId}`);
+      }, 1000);
+    }
+  }, [id, completed, source, origin, sourceId, stage, status, isGoodPractice, onUpdate]);
 
   // Handle priority change
   const handlePriorityChange = (newPriority: TaskPriority | undefined) => {
