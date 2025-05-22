@@ -8,22 +8,22 @@
  * 4. Gets tasks after update to show persistence
  */
 
-const fetch = require('node-fetch');
-const { Pool } = require('pg');
+const https = require('https');
 const fs = require('fs');
+const { Pool } = require('pg');
 
 // Configuration
 const PROJECT_ID = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
-const TASK_ID_TO_UPDATE = '2f565bf9-70c7-5c41-93e7-c6c4cde32312-success-factor';
+const DOMAIN = '9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev';
+const SESSION_COOKIE = 'tcof.sid=s%3AGzFWGtM2karVuxzsRH2nGEjg_yuVt-C1.%2FXHiyUHSC0FiiFyOJiAc4fUO55WsxaMuzanEgZpGHDw';
 
-// Connect to DB for direct checks
+// Database connection for direct task verification
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Helper for DB queries
+// Helper functions
 async function query(sql, params = []) {
-  console.log('\n🔍 Executing SQL:', sql, params);
   const client = await pool.connect();
   try {
     const result = await client.query(sql, params);
@@ -33,107 +33,175 @@ async function query(sql, params = []) {
   }
 }
 
-// API helpers
+// API request helper
 async function apiRequest(method, endpoint, body = null) {
-  console.log(`\n🌐 Making ${method} request to ${endpoint}`);
-  if (body) console.log('📦 Request body:', JSON.stringify(body, null, 2));
-  
-  const options = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': `tcof.sid=${process.env.REPLIT_SESSION_ID}`
-    }
-  };
-  
-  if (body) {
-    options.body = JSON.stringify(body);
-  }
-  
-  try {
-    const response = await fetch(`http://localhost:5000${endpoint}`, options);
-    const contentType = response.headers.get('content-type');
-    console.log('⚡ Response status:', response.status);
-    console.log('📋 Content-Type:', contentType);
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: DOMAIN,
+      port: 443,
+      path: endpoint,
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': SESSION_COOKIE,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    };
     
-    // Log all response headers
-    console.log('📋 Response headers:');
-    response.headers.forEach((value, name) => {
-      console.log(`  ${name}: ${value}`);
+    console.log(`\n🌐 ${method} ${endpoint}`);
+    if (body) {
+      console.log(`📦 Request payload: ${JSON.stringify(body, null, 2)}`);
+    }
+    
+    const req = https.request(options, (res) => {
+      let data = '';
+      
+      console.log(`📡 Response status: ${res.statusCode}`);
+      console.log(`🔖 Response headers: ${JSON.stringify(res.headers, null, 2)}`);
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const responseData = data ? JSON.parse(data) : {};
+          console.log(`📄 Response body: ${data.length > 1000 ? data.substring(0, 1000) + "..." : data}`);
+          resolve({ status: res.statusCode, headers: res.headers, data: responseData });
+        } catch (error) {
+          console.log(`🔴 Raw response (not JSON): ${data}`);
+          console.error(`❌ Error parsing response: ${error.message}`);
+          resolve({ status: res.statusCode, headers: res.headers, data: null, rawData: data });
+        }
+      });
     });
     
-    // Get raw response text first to examine
-    const rawText = await response.text();
-    console.log('📃 Raw response body:', rawText);
+    req.on('error', (error) => {
+      console.error(`🚨 Request error: ${error.message}`);
+      reject(error);
+    });
     
-    // Try to parse as JSON if appropriate
-    let data = rawText;
-    if (contentType && contentType.includes('application/json')) {
-      try {
-        data = JSON.parse(rawText);
-        console.log('📊 Parsed JSON response:', JSON.stringify(data, null, 2));
-      } catch (e) {
-        console.log('⚠️ Response claims to be JSON but failed to parse:', e.message);
-      }
+    if (body) {
+      const jsonBody = JSON.stringify(body);
+      req.write(jsonBody);
     }
     
-    return {
-      status: response.status,
-      contentType,
-      rawText,
-      data,
-      headers: Object.fromEntries([...response.headers.entries()])
-    };
-  } catch (error) {
-    console.error('❌ API request error:', error);
-    throw error;
-  }
+    req.end();
+  });
 }
 
 async function captureTaskUpdate() {
-  console.log('🧪 STARTING TASK UPDATE CAPTURE...');
-  
   try {
-    // 1. First check database directly to see the current task state
-    const tasks = await query(`
-      SELECT * FROM project_tasks 
-      WHERE project_id = $1 AND source_id LIKE $2
-    `, [PROJECT_ID, TASK_ID_TO_UPDATE.split('-')[0] + '%']);
+    console.log('🔍 STARTING SUCCESS FACTOR TASK UPDATE CAPTURE 🔍');
     
-    console.log('\n📊 Current task state in database:', JSON.stringify(tasks, null, 2));
+    // 1. Get all tasks before update
+    console.log('\n===== EVIDENCE 2: GET ALL TASKS (BEFORE) =====');
+    const tasksEndpoint = `/api/projects/${PROJECT_ID}/tasks`;
+    const beforeResponse = await apiRequest('GET', tasksEndpoint);
     
-    // 2. Make PUT request to update the task
-    console.log('\n🔄 Updating task completion status...');
-    const updateResult = await apiRequest(
-      'PUT',
-      `/api/projects/${PROJECT_ID}/tasks/${TASK_ID_TO_UPDATE}`,
-      { completed: true }
+    // Filter for Success Factor tasks
+    const sfTasks = beforeResponse.data.filter(task => 
+      task.origin === 'factor' || task.source === 'factor'
     );
     
-    // 3. Verify task state has been updated with a GET request
-    console.log('\n✅ Verifying task state after update...');
-    const getResult = await apiRequest(
-      'GET',
-      `/api/projects/${PROJECT_ID}/tasks`
-    );
+    console.log(`\n📊 Found ${sfTasks.length} Success Factor tasks out of ${beforeResponse.data.length} total tasks`);
     
-    // 4. Check database again to confirm persistence
-    const updatedTasks = await query(`
+    // 2. Select a task to update
+    if (sfTasks.length === 0) {
+      console.error('❌ No Success Factor tasks found to update');
+      return;
+    }
+    
+    const taskToUpdate = sfTasks[0];
+    console.log('\n===== TASK SELECTED FOR UPDATE =====');
+    console.log(JSON.stringify(taskToUpdate, null, 2));
+    
+    // 3. Capture task ID mapping information
+    console.log('\n===== EVIDENCE 4: TASK MAPPING FOR UI =====');
+    const mapping = sfTasks.slice(0, 5).map(task => ({
+      id: task.id,
+      sourceId: task.sourceId || '<empty>',
+      text: task.text.substring(0, 30) + (task.text.length > 30 ? '...' : ''),
+      completed: task.completed,
+      origin: task.origin || '<empty>',
+      source: task.source || '<empty>',
+      updateIdUsed: (task.origin === 'factor' && task.sourceId) ? 'sourceId' : 'id'
+    }));
+    
+    console.log(JSON.stringify(mapping, null, 2));
+    
+    // 4. Update the task (toggle completion)
+    console.log('\n===== EVIDENCE 1: PUT REQUEST TO UPDATE TASK =====');
+    const updateData = {
+      completed: !taskToUpdate.completed,
+      status: !taskToUpdate.completed ? 'Done' : 'To Do',
+      origin: taskToUpdate.origin || 'factor',
+      sourceId: taskToUpdate.sourceId || ''
+    };
+    
+    // Determine which ID to use in the update URL
+    const updateId = taskToUpdate.id;
+    const updateEndpoint = `/api/projects/${PROJECT_ID}/tasks/${updateId}`;
+    
+    console.log(`Using task ID "${updateId}" in PUT request URL`);
+    const updateResponse = await apiRequest('PUT', updateEndpoint, updateData);
+    
+    // 5. Get all tasks after update
+    console.log('\n===== EVIDENCE 2: GET ALL TASKS (AFTER) =====');
+    const afterResponse = await apiRequest('GET', tasksEndpoint);
+    
+    // 6. Find the updated task to confirm changes
+    const updatedTask = afterResponse.data.find(t => t.id === taskToUpdate.id);
+    
+    if (updatedTask) {
+      console.log('\n===== TASK AFTER UPDATE =====');
+      console.log(JSON.stringify(updatedTask, null, 2));
+      
+      console.log('\n✅ UPDATE VERIFICATION:');
+      console.log(`Before: completed=${taskToUpdate.completed}`);
+      console.log(`After: completed=${updatedTask.completed}`);
+      console.log(`Update persisted: ${updatedTask.completed !== taskToUpdate.completed ? 'YES ✓' : 'NO ✗'}`);
+    } else {
+      console.log('\n❌ TASK NOT FOUND AFTER UPDATE');
+    }
+    
+    // 7. Direct database verification
+    console.log('\n===== EVIDENCE 3: DIRECT DATABASE VERIFICATION =====');
+    const dbTasks = await query(`
       SELECT * FROM project_tasks 
-      WHERE project_id = $1 AND source_id LIKE $2
-    `, [PROJECT_ID, TASK_ID_TO_UPDATE.split('-')[0] + '%']);
+      WHERE project_id = $1 AND id = $2
+    `, [PROJECT_ID, taskToUpdate.id]);
     
-    console.log('\n📊 Updated task state in database:', JSON.stringify(updatedTasks, null, 2));
+    if (dbTasks.length > 0) {
+      console.log(`Task found in database: ${JSON.stringify(dbTasks[0], null, 2)}`);
+    } else {
+      console.log(`Task not found in database with ID: ${taskToUpdate.id}`);
+      
+      // Try looking up by sourceId if available
+      if (taskToUpdate.sourceId) {
+        const sourceIdTasks = await query(`
+          SELECT * FROM project_tasks 
+          WHERE project_id = $1 AND source_id = $2
+        `, [PROJECT_ID, taskToUpdate.sourceId]);
+        
+        if (sourceIdTasks.length > 0) {
+          console.log(`Task found in database by sourceId: ${JSON.stringify(sourceIdTasks[0], null, 2)}`);
+        } else {
+          console.log(`Task not found in database by sourceId: ${taskToUpdate.sourceId}`);
+        }
+      }
+    }
     
-    // 5. Print summary
-    console.log('\n✨ TASK UPDATE CAPTURE COMPLETE ✨');
+    console.log('\n🏁 EVIDENCE COLLECTION COMPLETE 🏁');
+    
   } catch (error) {
-    console.error('❌ Test failed:', error);
+    console.error(`\n❌ ERROR CAPTURING TASK UPDATE: ${error.message}`);
+    console.error(error.stack);
   } finally {
-    // Close the pool
+    // Close database pool
     await pool.end();
   }
 }
 
-// Run the test
+// Run the evidence collection
 captureTaskUpdate();
