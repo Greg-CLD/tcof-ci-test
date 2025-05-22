@@ -1103,23 +1103,23 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
               console.log(`[DEBUG_TASK_COMPLETION] *** SuccessFactor task update operation ***`);
               console.log(`[DEBUG_TASK_COMPLETION]  - Task ID: ${originalTask.id}`);
               console.log(`[DEBUG_TASK_COMPLETION]  - Current completion state: ${originalTask.completed}`);
-              console.log(`[DEBUG_TASK_COMPLETION]  - Requested completion state: ${updates.completed}`);
+              console.log(`[DEBUG_TASK_COMPLETION]  - Requested completion state: ${req.body.completed}`);
               console.log(`[DEBUG_TASK_COMPLETION]  - Source ID: ${originalTask.sourceId}`);
               
               // Log the entire task update object for comprehensive debugging
               if (DEBUG_TASK_PERSISTENCE) {
-                console.log(`[DEBUG_TASK_PERSISTENCE] Full task update object:`, updates);
+                console.log(`[DEBUG_TASK_PERSISTENCE] Full task update object:`, req.body);
               }
             }
             
             // Track state transitions with the new debug flag
-            if (DEBUG_TASK_STATE && updates.hasOwnProperty('completed')) {
+            if (DEBUG_TASK_STATE && req.body.hasOwnProperty('completed')) {
               console.log(`[DEBUG_TASK_STATE] Task state transition tracked:`);
               console.log(`[DEBUG_TASK_STATE]  - Task ID: ${originalTask.id}`);
               console.log(`[DEBUG_TASK_STATE]  - Title: ${originalTask.text?.substring(0, 40)}...`);
               console.log(`[DEBUG_TASK_STATE]  - Origin: ${originalTask.origin}`);
               console.log(`[DEBUG_TASK_STATE]  - From state: ${originalTask.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
-              console.log(`[DEBUG_TASK_STATE]  - To state: ${updates.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
+              console.log(`[DEBUG_TASK_STATE]  - To state: ${req.body.completed ? 'COMPLETED' : 'NOT COMPLETED'}`);
               
               if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
                 console.log(`[DEBUG_TASK_STATE] *** SuccessFactor task detected - tracking for completion bug ***`);
@@ -1136,10 +1136,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           console.log(`[DEBUG_TASK_PERSISTENCE] Preparing to update task in database`);
           console.log(`[DEBUG_TASK_PERSISTENCE]  - Task ID: ${taskId}`);
           console.log(`[DEBUG_TASK_PERSISTENCE]  - Project ID: ${projectId}`);
-          console.log(`[DEBUG_TASK_PERSISTENCE]  - Update fields:`, Object.keys(updates));
+          console.log(`[DEBUG_TASK_PERSISTENCE]  - Update fields:`, Object.keys(req.body));
           
-          if (updates.hasOwnProperty('completed')) {
-            console.log(`[DEBUG_TASK_PERSISTENCE]  - Completion value being set: ${updates.completed}`);
+          if (req.body.hasOwnProperty('completed')) {
+            console.log(`[DEBUG_TASK_PERSISTENCE]  - Completion value being set: ${req.body.completed}`);
           }
         }
         
@@ -1148,13 +1148,13 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         try {
           // For PUT requests, add origin info to the updates if it's missing
           // This is crucial for the upsert functionality to work properly
-          if (req.method === 'PUT' && !updates.origin && originalTask?.origin === 'success-factor') {
-            updates.origin = 'success-factor';
+          if (req.method === 'PUT' && !req.body.origin && originalTask?.origin === 'success-factor') {
+            req.body.origin = 'success-factor';
             console.log(`[DEBUG_TASK_API] PUT request: Adding success-factor origin to task update`);
           }
           
           // For success-factor tasks that don't exist, explicitly create them instead of updating
-          if ((updates.origin === 'success-factor' || updates.origin === 'factor') && !originalTask) {
+          if ((req.body.origin === 'success-factor' || req.body.origin === 'factor') && !originalTask) {
             console.log(`[DEBUG_TASK_API] Success-factor task not found, creating instead of updating`);
             console.log(`[DEBUG_TASK_API] Task ID: ${taskId}, Project ID: ${projectId}`);
             
@@ -1164,10 +1164,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
                 id: taskId,
                 projectId: projectId,
                 sourceId: taskId,
-                text: updates.text || '',
-                origin: updates.origin,
-                stage: updates.stage || 'identification',
-                completed: updates.completed !== undefined ? updates.completed : false
+                text: req.body.text || '',
+                origin: req.body.origin,
+                stage: req.body.stage || 'identification',
+                completed: req.body.completed !== undefined ? req.body.completed : false
               };
               
               console.log(`[DEBUG_TASK_API] Creating new success-factor task with data:`, JSON.stringify(newTaskData));
@@ -1208,13 +1208,13 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
               console.log(`[DEBUG_TASK_API]  - Using ID from found task object`);
             } else {
               console.log(`[DEBUG_TASK_API]  - Using extracted UUID as fallback`);
-              if (updates.origin === 'success-factor' || updates.origin === 'factor') {
+              if (req.body.origin === 'success-factor' || req.body.origin === 'factor') {
                 console.log(`[DEBUG_TASK_API]  - This is a success-factor task, will upsert if not found`);
               }
             }
           }
           
-          updatedTask = await projectsDb.updateTask(idForUpdate, updates);
+          updatedTask = await projectsDb.updateTask(idForUpdate, req.body);
           
           if (!updatedTask) {
             return res.status(404).json({
