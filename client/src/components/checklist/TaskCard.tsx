@@ -128,9 +128,15 @@ export default function TaskCard({
 
   // Handle task completion toggle
   const handleToggleCompleted = () => {
-    // Required field validation
+    // Enhanced validation to prevent undefined IDs
     if (!id && !sourceId) {
       console.error('TaskCard: Task must have either id or sourceId');
+      return;
+    }
+
+    // For Success Factor tasks, validate sourceId format
+    if (source === 'factor' && sourceId && !sourceId.trim()) {
+      console.error('TaskCard: Invalid sourceId format for Success Factor task');
       return;
     }
 
