@@ -1,0 +1,43 @@
+A) Status Against the Progress Tracker
+Architectural Checklist
+Step	Status	Comments
+Unified Task ID Resolution	☑️ (Done)	TaskIdResolver service created and integrated
+Central Task State Manager	☑️ (Done)	TaskStateManager in place and used by PUT endpoint
+Consistent API Responses	☑️ (Done)	Response returns updated task with all fields
+Client-Side State & Sync Handling	⬜ (Likely Still Broken)	UI not reflecting server state on refresh; needs fix
+Deduplication & Key Uniqueness	⬜ (Check Needed)	Console errors show duplicate keys, likely unresolved
+Persistence Verification	⬜ (Manual Fails)	Status does NOT persist on refresh; bug not fixed
+Automated/Manual End-to-End Tests	⬜ (Attempted, Failing)	Auth errors in scripts; UI test fails; manual test fails
+
+Summary:
+The back-end refactor and variable clean-up are done. Server logic should now save state, but persistence does NOT work in the browser. The front-end (client-side) state management and/or deduplication is still broken.
+
+B) Next-Step Agent Prompt
+A laser-focused, 3-part, goal-oriented Agent prompt to finish the job:
+
+vbnet
+Copy
+Edit
+OBJECTIVE: Fully resolve TCOF Success Factor task persistence so that toggling a task in the UI *always* persists after refresh for all Success Factor and custom tasks.
+
+DELIVERABLES (IN PRIORITY ORDER):
+
+1. **Diagnose and fix why server state is NOT reflected in the UI after refresh:**
+   - Confirm in DB that completed status actually updates for the task when toggled.
+   - Confirm the GET /tasks endpoint returns the correct status.
+   - Confirm the client fetch code (`useProjectTasks`, etc.) rehydrates the UI from the server state on load.
+
+2. **Fix any React list deduplication issues:**
+   - Resolve ALL duplicate key warnings in Checklist/TaskCard components.
+   - Ensure each rendered task row has a truly unique key (use canonical DB id).
+
+3. **Prove the fix with a manual and automated smoke test:**
+   - Manually toggle several Success Factor and custom tasks in the UI, refresh, and confirm state persists.
+   - Run/record a test script that exercises PUT and GET for at least 3 task IDs, with before/after DB queries.
+
+Show **minimal code diff** and logs for all fixes.  
+Only mark complete when both user and script confirm state persists after refresh and no duplicate key errors are in the console.
+
+Summary:
+
+Back-end is likely fixed, but the UI is NOT reflecting DB changes on refresh. Fix the data flow, deduplication, and prove end-to-end in the browser and test script. Only close when the bug is proven fixed in real user testing.

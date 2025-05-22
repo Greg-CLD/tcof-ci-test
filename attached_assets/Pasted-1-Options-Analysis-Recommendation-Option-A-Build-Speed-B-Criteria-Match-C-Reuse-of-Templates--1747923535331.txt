@@ -1,0 +1,97 @@
+1. Options Analysis & Recommendation
+
+Option	A) Build Speed	B) Criteria Match	C) Reuse of Templates	D) Simplicity & Low Risk	Notes
+A. Enhance Existing Admin UI Only					
+• AdminSuccessFactorEditor.tsx: adjust layout to two‐column grid, add scroll container.					
+• SuccessFactorEditor.tsx: enable draggable task list (isDraggable), add “Bulk Import Tasks” button invoking existing import modal.					
+★★★★★	★★★★★	★★★★★ (reuses existing components/hooks)	★★★★★	Pure UI tweaks; no DB or server changes.	
+B. Full CRUD API + UI					
+• Add new endpoints in server/admin-routes.ts for bulk import and drag‐reorder persistence.					
+• Update useAdminSuccessFactors to call new APIs.					
+• Expand UI accordingly.					
+★★★☆☆	★★★★★	★★★★☆ (reuses hook patterns)	★★★☆☆	Requires server, DB, and hook changes; moderate risk.	
+C. External Admin Tool					
+• Stand up a separate admin micro‐frontend using a tool like Retool.					
+★★☆☆☆	★★★☆☆	★★☆☆☆	★☆☆☆☆	Too heavyweight and external to your stack.	
+
+Recommendation:
+Option A is the fastest, lowest‐risk path: minimal enhancements to the existing admin pages deliver full view/edit capability without touching the backend. Later, if bulk reorder persistence is needed, you can layer in Option B.
+
+2. Epic & Feature Summary
+
+Epic 8: Analytics & Admin
+
+Admin Dashboard for TCOF Factor Management
+
+User Story: As an admin, I want to manage success factors
+
+Acceptance: I can clearly view and edit default success factors via a two‐column scrollable grid.
+
+View/Edit Default Success Factors & Tasks
+
+User Story: As an admin, I want control of default tasks
+
+Acceptance: Default tasks display in an editable, draggable list with a “Bulk Import Tasks” button.
+
+3. Agent Prompt (VB.NET container)
+
+vbnet
+Copy
+Edit
+' Prompt for Replit Agent: EPIC 8 – Admin Success Factor Management
+
+Module AgentPrompt
+    Sub Main()
+        Dim prompt As String = "
+Objective: Implement EPIC 8 by enhancing the existing admin UI for success factor and task management. Previous attempts remain non-functional in user testing—treat as unresolved.
+
+Rules (internal):
+1) One clear objective: update UI only in AdminSuccessFactorEditor.tsx and SuccessFactorEditor.tsx.  
+2) Always run & paste smoke-test JSON for fetch calls in useAdminSuccessFactors.  
+3) If the app restarts, include full SSR logs verbatim.
+
+Deliverables:
+1. **Code diff** (```diff``` fencing) for the **UI layer only**. Example in `client/src/pages/AdminSuccessFactorEditor.tsx`:
+```diff
+@@ -10,7 +10,12 @@
+ export function AdminSuccessFactorEditor() {
+-  return <div className=\"grid grid-cols-1 gap-4\"> … </div>;
++  return (
++    <div className=\"grid grid-cols-1 md:grid-cols-2 gap-4\">
++      <div className=\"p-4 border rounded overflow-y-auto max-h-[600px]\">
++        {factors.map(f => <FactorCard key={f.id} factor={f} />)}
++      </div>
++    </div>
++  );
+ }
+And in client/src/components/admin/SuccessFactorEditor.tsx:
+
+diff
+Copy
+Edit
+@@ -25,6 +25,10 @@
+     <TaskList tasks={factor.tasks} />
++    <TaskList
++      tasks={factor.tasks}
++      onSort={handleTaskReorder}
++      isDraggable={true}
++    />
+     <div className=\"mt-4 space-y-2\">
+       <Button onClick={() => setShowBulkImport(true)}>
+         Bulk Import Tasks
+Unit test outline (ts fencing):
+
+AdminSuccessFactorEditor.test.tsx:
+• Mock useAdminSuccessFactors → assert grid renders two columns and scroll container.
+
+SuccessFactorEditor.test.tsx:
+• Simulate drag-and-drop → assert onSort handler called.
+• Simulate clicking “Bulk Import Tasks” → assert modal appears.
+
+Smoke tests:
+• Call useAdminSuccessFactors() → capture JSON output.
+
+Please provide the diff and matching test code in the specified fences."
+Console.WriteLine(prompt)
+End Sub
+End Module
