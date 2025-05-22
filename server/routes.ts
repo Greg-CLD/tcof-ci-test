@@ -762,6 +762,9 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     // CRITICAL: First action - Always set Content-Type header for JSON responses
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
+    // Import the TaskIdResolver
+    const { TaskIdResolver, TaskNotFoundError } = require('./services/taskIdResolver');
+    
     // Debug logging for headers and auth state
     if (process.env.DEBUG_TASKS === 'true') {
       console.log('[DEBUG_TASKS] Task update request headers:', req.headers);
@@ -788,6 +791,11 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     const { projectId, taskId } = req.params;
     const updateData = req.body;
     const isDebugEnabled = process.env.DEBUG_TASKS === 'true';
+    
+    // Validate the task ID using the TaskIdResolver
+    if (isDebugEnabled) {
+      console.log(`[DEBUG_TASKS] Looking up task ${taskId} for project ${projectId} using TaskIdResolver`);
+    }
     
     // Validate required parameters
     if (!projectId) {
