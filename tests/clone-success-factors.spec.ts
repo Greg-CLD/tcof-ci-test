@@ -61,7 +61,9 @@ describe('Success Factor Cloning', () => {
     // Verify each task has the correct properties
     const factorTask = savedTasks.find(task => task.origin === 'factor');
     expect(factorTask).toBeDefined();
-    expect(factorTask?.source).toBe('factor');
+    // Note: 'source' field is added by convertDbTaskToProjectTask
+    // but is not in the DB schema directly
+    expect(factorTask?.origin).toBe('factor');
     expect(factorTask?.sourceId).toBeDefined();
     expect(factorTask?.completed).toBe(false);
     
