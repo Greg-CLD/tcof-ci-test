@@ -666,7 +666,23 @@ export const projectsDb = {
             // Check each ID format
             for (const idToCheck of idsToCheck) {
               if (isValidUuidPrefix(idToCheck)) {
-                // Use SQL LIKE for more efficient prefix matching
+                // ENHANCED: Special handling for Success Factor tasks
+                // First try to find any factor-origin tasks with this UUID part
+                const factorTasksQuery = await db.execute(sql`
+                  SELECT * FROM project_tasks 
+                  WHERE (id LIKE ${idToCheck + '%'} OR source_id LIKE ${idToCheck + '%'})
+                  AND (origin = 'factor' OR origin = 'success-factor')
+                  LIMIT 1
+                `);
+                
+                if (factorTasksQuery.rows && factorTasksQuery.rows.length > 0) {
+                  validTaskId = factorTasksQuery.rows[0].id;
+                  lookupMethod = 'factorMatch';
+                  console.log(`[TASK_LOOKUP] Found factor/success-factor task with ID/sourceId prefix ${idToCheck}, full ID: ${validTaskId}`);
+                  break; // Success - exit the loop
+                }
+                
+                // If no factor task found, try the general prefix match
                 const matchingTasks = await db.execute(sql`
                   SELECT * FROM project_tasks 
                   WHERE id LIKE ${idToCheck + '%'} 
