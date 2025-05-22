@@ -97,7 +97,7 @@ export default function TaskCard({
   - Completed: ${completed}
   - Source: ${source}
   - Stage: ${stage}`);
-  
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [editedTaskTitle, setEditedTaskTitle] = useState(text);
   const [editedNotes, setEditedNotes] = useState(notes);
@@ -105,7 +105,7 @@ export default function TaskCard({
   const [editedStatus, setEditedStatus] = useState<'To Do' | 'Working On It' | 'Done'>(
     completed ? 'Done' : (status || 'To Do')
   );
-  
+
   // Extract the actual task title without auto-IDs or prefixes
   const getCleanTaskTitle = (taskText: string): string => {
     // Check if the task has an auto-id prefix like "Auto-id-1746387431125-512"
@@ -118,90 +118,71 @@ export default function TaskCard({
         }
       }
     }
-    
+
     // If it doesn't match the auto-id pattern, return the original text
     return taskText;
   };
-  
+
   // Get the clean task title
   const cleanTaskTitle = getCleanTaskTitle(text);
-  
+
   // Handle task completion toggle
   const handleToggleCompleted = () => {
-    // Safely handle potentially undefined props
-    const safeOrigin = typeof origin !== 'undefined' ? origin : null;
-    const safeSourceId = typeof sourceId !== 'undefined' ? sourceId : null;
-    
-    // TRACE: Log all props on render for debugging
+    // Debug log all props for tracing
     console.debug('[TASK_PROPS]', {
-      id,
-      text,
-      completed,
-      notes,
-      priority,
-      dueDate,
-      owner,
-      status,
-      stage,
-      source,
-      origin: safeOrigin,
-      sourceId: safeSourceId,
-      sourceName,
-      frameworkCode,
-      isGoodPractice
+      id, text, completed, source, origin, sourceId, 
+      stage, status
     });
 
     const newStatus = !completed ? 'Done' : 'To Do';
     setEditedStatus(newStatus);
-    
-    // Safely determine which ID to use based on task type
-    const isFactorTask = source === 'factor' || safeOrigin === 'factor';
-    const updateId = isFactorTask && safeSourceId ? safeSourceId : id;
-    
-    // Enhanced debug logging for task updates
-    console.debug(`[TASK_UPDATE] Toggle task completion:
-    - Using ID: ${updateId} (${isFactorTask ? 'sourceId or fallback to id' : 'id'})
-    - Original ID: ${id}
-    - Source ID: ${safeSourceId || 'N/A'}
-    - Origin: ${safeOrigin || 'N/A'}
-    - Source: ${source}
-    - New completed state: ${!completed}
-    - New status: ${newStatus}`);
-    
+
+    // Enhanced ID selection logic with fallback
+    const isFactorTask = source === 'factor' || origin === 'factor';
+    const updateId = isFactorTask && sourceId ? sourceId : id;
+
+    // Debug log ID selection
+    console.debug('[TASK_UPDATE]', {
+      isFactorTask,
+      selectedId: updateId,
+      originalId: id,
+      sourceId: sourceId || 'none'
+    });
+
     // Create update object with safe null checks
     const updateData = {
       completed: !completed,
       status: newStatus,
     };
-    
+
     // Only include origin and sourceId if they exist
-    if (safeOrigin || source) {
-      updateData.origin = safeOrigin || source;
+    if (origin || source) {
+      updateData.origin = origin || source;
     }
-    
-    if (safeSourceId) {
-      updateData.sourceId = safeSourceId;
+
+    if (sourceId) {
+      updateData.sourceId = sourceId;
     }
-    
+
     onUpdate(updateId, updateData, isGoodPractice);
   };
-  
+
   // Handle priority change
   const handlePriorityChange = (newPriority: TaskPriority | undefined) => {
     onUpdate(id, { priority: newPriority }, isGoodPractice);
   };
-  
+
   // Handle date change
   const handleDateChange = (date: Date | undefined) => {
     // Convert Date to ISO string, or undefined if no date
     const dateString = date ? date.toISOString() : undefined;
     onUpdate(id, { dueDate: dateString }, isGoodPractice);
   };
-  
+
   // Handle save all edited details
   const handleSaveEdits = () => {
     const isCompletedStatus = editedStatus === 'Done';
-    
+
     onUpdate(id, {
       text: editedTaskTitle,
       notes: editedNotes,
@@ -209,10 +190,10 @@ export default function TaskCard({
       status: editedStatus,
       completed: isCompletedStatus
     }, isGoodPractice);
-    
+
     setIsExpanded(false);
   };
-  
+
   // Handle cancel edits
   const handleCancelEdits = () => {
     setEditedTaskTitle(text);
@@ -221,7 +202,7 @@ export default function TaskCard({
     setEditedStatus(completed ? 'Done' : (status || 'To Do'));
     setIsExpanded(false);
   };
-  
+
   const getPriorityColor = (priorityValue?: TaskPriority): string => {
     switch (priorityValue) {
       case 'high':
@@ -234,12 +215,12 @@ export default function TaskCard({
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-  
+
   const getSourceBadgeColor = (): string => {
     if (isGoodPractice || source === 'framework') {
       return 'bg-purple-100 text-purple-800 border-purple-200'; // Good Practice (purple)
     }
-    
+
     switch (source) {
       case 'heuristic':
         return 'bg-blue-100 text-blue-800 border-blue-200'; // Personal Heuristic (blue)
@@ -251,13 +232,13 @@ export default function TaskCard({
         return 'bg-gray-100 text-gray-800 border-gray-200'; // Custom Task (gray)
     }
   };
-  
+
   const getSourceLabel = (): string => {
     // Handle special case for good practice tasks with framework code
     if (isGoodPractice) {
       return frameworkCode ? `Good Practice: ${frameworkCode}` : 'Good Practice';
     }
-    
+
     // Use the origin labels from constants file
     // Import directly here to avoid circular dependencies with Checklist.tsx
     const originLabels: Record<string, string> = {
@@ -267,16 +248,16 @@ export default function TaskCard({
       custom: 'General',
       framework: 'Good Practice'
     };
-    
+
     // Add the source name for factors if available
     if (source === 'factor' && sourceName) {
       return `${originLabels[source]}: ${sourceName}`;
     }
-    
+
     // Return the mapped friendly label or a default
     return originLabels[source] || 'Custom Task';
   };
-  
+
   const getStatusColor = (status: string): string => {
     switch (status) {
       case 'Done':
@@ -287,7 +268,7 @@ export default function TaskCard({
         return 'bg-blue-100 text-blue-800 border-blue-200';
     }
   };
-  
+
   return (
     <div className={cn(
       'p-4 border rounded-md transition-colors',
@@ -303,7 +284,7 @@ export default function TaskCard({
               <GripVertical className="h-5 w-5 text-gray-400" />
             </div>
           )}
-          
+
           {/* Completion checkbox */}
           <div className="flex-shrink-0 pt-1">
             <button
@@ -318,7 +299,7 @@ export default function TaskCard({
               )}
             </button>
           </div>
-          
+
           {/* Task content */}
           <div className="flex-grow">
             <button 
@@ -332,7 +313,7 @@ export default function TaskCard({
                 )}>
                   {cleanTaskTitle}
                 </p>
-                
+
                 {/* Warning icon for unassigned tasks */}
                 {!owner && !completed && (
                   <div className="ml-2 group relative" data-testid="unassigned-warning">
@@ -343,13 +324,13 @@ export default function TaskCard({
                   </div>
                 )}
               </div>
-              
+
               {notes && (
                 <div className="mt-1 text-xs text-gray-600 truncate">
                   {notes}
                 </div>
               )}
-              
+
               {/* Tags & metadata */}
               <div className="flex flex-wrap gap-2 mt-3">
                 {/* Priority indicator */}
@@ -358,26 +339,26 @@ export default function TaskCard({
                     {priority === 'high' ? 'High' : priority === 'medium' ? 'Medium' : 'Low'} Priority
                   </Badge>
                 )}
-                
+
                 {/* Status indicator */}
                 <Badge variant="outline" className={getStatusColor(status)}>
                   {status}
                 </Badge>
-                
+
                 {/* Owner indicator */}
                 {owner && (
                   <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200">
                     Owner: {owner}
                   </Badge>
                 )}
-                
+
                 {/* Due date indicator */}
                 {dueDate && (
                   <Badge variant="outline" className="bg-gray-100 text-gray-800">
                     Due: {format(new Date(dueDate), 'MMM d, yyyy')}
                   </Badge>
                 )}
-                
+
                 {/* Source type indicator - hidden in collapsed view
                 <Badge variant="outline" className={getSourceBadgeColor()}>
                   {getSourceLabel()}
@@ -386,7 +367,7 @@ export default function TaskCard({
               </div>
             </button>
           </div>
-          
+
           {/* Actions menu */}
           <div className="flex-shrink-0">
             <DropdownMenu>
@@ -400,24 +381,24 @@ export default function TaskCard({
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Task Details
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuSeparator />
-                
+
                 <DropdownMenuItem onClick={() => handlePriorityChange('high')}>
                   <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
                   Set High Priority
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuItem onClick={() => handlePriorityChange('medium')}>
                   <AlertTriangle className="mr-2 h-4 w-4 text-amber-500" />
                   Set Medium Priority
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuItem onClick={() => handlePriorityChange('low')}>
                   <AlertTriangle className="mr-2 h-4 w-4 text-blue-500" />
                   Set Low Priority
                 </DropdownMenuItem>
-                
+
                 {onDelete && source !== 'factor' && (
                   <>
                     <DropdownMenuSeparator />
@@ -430,9 +411,9 @@ export default function TaskCard({
                     </DropdownMenuItem>
                   </>
                 )}
-                
+
                 <DropdownMenuSeparator />
-                
+
                 <Popover>
                   <PopoverTrigger asChild>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -448,21 +429,21 @@ export default function TaskCard({
                     />
                   </PopoverContent>
                 </Popover>
-                
+
                 {dueDate && (
                   <DropdownMenuItem onClick={() => handleDateChange(undefined)}>
                     Clear Due Date
                   </DropdownMenuItem>
                 )}
-                
+
                 {priority && (
                   <DropdownMenuItem onClick={() => handlePriorityChange(undefined)}>
                     Clear Priority
                   </DropdownMenuItem>
                 )}
-                
+
                 <DropdownMenuSeparator />
-                
+
                 {/* Send via Email option */}
                 <DropdownMenuItem 
                   onClick={() => {
@@ -499,7 +480,7 @@ export default function TaskCard({
               required
             />
           </div>
-          
+
           {/* Description */}
           <div>
             <Label htmlFor={`task-notes-${id}`} className="text-sm font-medium mb-1">
@@ -513,7 +494,7 @@ export default function TaskCard({
               placeholder="Add notes or description..."
             />
           </div>
-          
+
           {/* Owner */}
           <div>
             <Label htmlFor={`task-owner-${id}`} className="text-sm font-medium mb-1">
@@ -530,7 +511,7 @@ export default function TaskCard({
               />
             </div>
           </div>
-          
+
           {/* Status */}
           <div>
             <Label htmlFor={`task-status-${id}`} className="text-sm font-medium mb-1">
@@ -552,7 +533,7 @@ export default function TaskCard({
               </SelectContent>
             </Select>
           </div>
-          
+
           {/* Metadata tags - in a more compact layout */}
           <div className="pt-2 flex flex-wrap gap-2">
             {/* Priority indicator */}
@@ -561,25 +542,25 @@ export default function TaskCard({
                 {priority === 'high' ? 'High' : priority === 'medium' ? 'Medium' : 'Low'} Priority
               </Badge>
             )}
-            
+
             {/* Due date indicator */}
             {dueDate && (
               <Badge variant="outline" className="bg-gray-100 text-gray-800">
                 Due: {format(new Date(dueDate), 'MMM d, yyyy')}
               </Badge>
             )}
-            
+
             {/* Source type indicator */}
             <Badge variant="outline" className={getSourceBadgeColor()}>
               {getSourceLabel()}
             </Badge>
-            
+
             {/* Stage indicator */}
             <Badge variant="outline" className="bg-gray-100 text-gray-800">
               {stage}
             </Badge>
           </div>
-          
+
           {/* Action buttons */}
           <div className="flex justify-end space-x-2 pt-2">
             <Button
