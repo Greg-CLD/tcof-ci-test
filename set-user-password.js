@@ -19,7 +19,7 @@ async function setUserPassword() {
     console.log('Setting password for greg@confluity.co.uk');
     
     // Hash the new password
-    const hashedPassword = hashPassword('confluity123');
+    const hashedPassword = hashPassword('C0nfluity123#');
     
     // Update user with new password
     const result = await client.query(
