@@ -415,6 +415,11 @@ const updateTaskMutation = useMutation({
       // Get the exact query key using our helper
       const key = getTasksKey(projectId);
       
+      // CRITICAL FIX: Immediately invalidate the projectTasks query for this project
+      // This ensures that after a task is updated, the task list will be refetched
+      // and changes will persist, specifically fixing the Success Factor task persistence issue
+      queryClient.invalidateQueries({ queryKey: key, exact: true });
+      
       // Update cache optimistically to show the updated task immediately
       queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
         if (DEBUG_TASKS) console.log('Optimistically updating task in UI:', updatedTask);
@@ -434,12 +439,33 @@ const updateTaskMutation = useMutation({
           }
         }
         
-        return oldTasks.map(task => 
-          task.id === updatedTask.id ? updatedTask : task
-        );
+        // CRITICAL FIX: Update all tasks with matching sourceId for Success Factor tasks
+        // This ensures that if multiple instances of the same logical task exist, they all stay in sync
+        return oldTasks.map(task => {
+          // First check exact ID match
+          if (task.id === updatedTask.id) {
+            return updatedTask;
+          }
+          
+          // For Success Factor tasks, sync all tasks with the same sourceId within the same project
+          if (updatedTask.origin === 'factor' && 
+              task.origin === 'factor' && 
+              updatedTask.sourceId && 
+              task.sourceId === updatedTask.sourceId &&
+              task.projectId === updatedTask.projectId) {
+            if (DEBUG_TASK_PERSISTENCE) {
+              console.log(`[DEBUG_TASK_PERSISTENCE] Syncing associated task ${task.id} via sourceId ${task.sourceId}`);
+            }
+            // Keep original ID but update completion state and other properties
+            return { ...task, completed: updatedTask.completed };
+          }
+          
+          // No match, return unchanged
+          return task;
+        });
       });
       
-      // Robust cache invalidation and refetching
+      // Robust cache invalidation and refetching with additional verification
       try {
         // Invalidate the query cache with exact matching to ensure consistency
         if (DEBUG_TASK_PERSISTENCE) {
@@ -461,6 +487,43 @@ const updateTaskMutation = useMutation({
         }
         
         if (DEBUG_TASKS) console.log(`Refetched ${freshData.data?.length || 0} tasks after update`);
+        
+        // CRITICAL FIX: Verify and synchronize state for SuccessFactor tasks with the same sourceId
+        if (updatedTask.origin === 'factor' && updatedTask.sourceId) {
+          const relatedTasks = freshData.data?.filter(t => 
+            t.origin === 'factor' && 
+            t.sourceId === updatedTask.sourceId &&
+            t.projectId === updatedTask.projectId);
+            
+          if (relatedTasks && relatedTasks.length > 0) {
+            if (DEBUG_TASK_PERSISTENCE) {
+              console.log(`[DEBUG_TASK_PERSISTENCE] Found ${relatedTasks.length} related Success Factor tasks with sourceId ${updatedTask.sourceId}`);
+            }
+            
+            // Check if all related tasks have the same completion state
+            const inconsistentTasks = relatedTasks.filter(t => t.completed !== updatedTask.completed);
+            
+            if (inconsistentTasks.length > 0) {
+              // State inconsistency detected - force a synchronized update
+              if (DEBUG_TASK_PERSISTENCE) {
+                console.log(`[DEBUG_TASK_PERSISTENCE] State inconsistency detected among related tasks!`);
+                console.log(`[DEBUG_TASK_PERSISTENCE] Synchronizing ${inconsistentTasks.length} inconsistent tasks`);
+              }
+              
+              // Final force update to maintain consistency - update all instances to match our expected state
+              queryClient.setQueryData(key, (oldTasks: ProjectTask[] = []) => {
+                return oldTasks.map(task => {
+                  if (task.origin === 'factor' && 
+                      task.sourceId === updatedTask.sourceId && 
+                      task.projectId === updatedTask.projectId) {
+                    return { ...task, completed: updatedTask.completed };
+                  }
+                  return task;
+                });
+              });
+            }
+          }
+        }
         
         // Verify the update was reflected in the fetched data
         if (updatedTask && updatedTask.id) {
