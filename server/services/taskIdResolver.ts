@@ -228,7 +228,7 @@ export class TaskIdResolver {
     return id;
   }
   
-  // Instance method implementation already defined above
+
 }
 
 // Create a singleton instance with database connection
