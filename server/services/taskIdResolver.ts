@@ -40,6 +40,23 @@ export class TaskIdResolver {
   }
   
   /**
+   * Instance method for cleaning UUIDs
+   * This is needed for compatibility across different contexts
+   */
+  cleanUUID(id: string): string {
+    if (!id) return '';
+    
+    // Check if this is a compound ID with a UUID part
+    const uuidMatch = id.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    
+    if (uuidMatch && uuidMatch[1]) {
+      return uuidMatch[1];
+    }
+    
+    return id;
+  }
+  
+  /**
    * Find a task by its ID with intelligent ID resolution
    * This is the main entry point for task lookup
    */
@@ -88,7 +105,8 @@ export class TaskIdResolver {
       }
       
       // Strategy 2: Try with clean UUID
-      const cleanedId = TaskIdResolver.cleanUUID(taskId);
+      // Use instance method for better compatibility across different contexts
+      const cleanedId = this.cleanUUID(taskId);
       
       if (cleanedId && cleanedId !== taskId) {
         if (this.debugEnabled) {
