@@ -386,7 +386,10 @@ export const projectsDb = {
    * Get a single task by its ID for a specific project
    * 
    * This method is required by TaskIdResolver for proper task resolution
-   * It supports both direct UUID lookup and compound ID formats
+   * It supports multiple lookup strategies for robust task resolution:
+   * 1. Direct UUID lookup
+   * 2. Compound/prefixed ID extraction and lookup
+   * 3. Source ID lookup for Success Factor tasks
    * 
    * @param projectId The project ID the task belongs to
    * @param taskId The task ID to look up
@@ -404,7 +407,11 @@ export const projectsDb = {
         return null;
       }
 
-      // Execute the query to find the task by exact ID match
+      // Strategy 1: Execute the query to find the task by exact ID match
+      if (DEBUG_TASKS) {
+        console.log(`[getTaskById] Strategy 1: Direct ID lookup for ${taskId}`);
+      }
+      
       const tasks = await db.select()
         .from(projectTasksTable)
         .where(and(
@@ -428,10 +435,52 @@ export const projectsDb = {
         return convertDbTaskToProjectTask(task);
       }
       
-      // Task not found by direct ID, try looking for a task with this ID as sourceId
+      // Strategy 2: Try to extract a UUID from a compound format
+      if (taskId.includes('-') && !validateUuid(taskId)) {
+        if (DEBUG_TASKS) {
+          console.log(`[getTaskById] Strategy 2: Attempting to extract UUID from compound ID: ${taskId}`);
+        }
+        
+        // Try to extract a UUID from a compound format (e.g., "prefix-00000000-0000-0000-0000-000000000000")
+        const uuidPattern = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+        const match = taskId.match(uuidPattern);
+        
+        if (match && match[1]) {
+          const extractedUuid = match[1];
+          
+          if (DEBUG_TASKS) {
+            console.log(`[getTaskById] Extracted UUID: ${extractedUuid} from compound ID: ${taskId}`);
+          }
+          
+          // Query for the task with the extracted UUID
+          const extractedTasks = await db.select()
+            .from(projectTasksTable)
+            .where(and(
+              eq(projectTasksTable.projectId, projectId),
+              eq(projectTasksTable.id, extractedUuid)
+            ))
+            .limit(1);
+          
+          if (extractedTasks.length > 0) {
+            if (DEBUG_TASKS) {
+              console.log(`[getTaskById] Found task with extracted UUID: ${extractedUuid}`);
+            }
+            
+            // For compound IDs that matched a task, convert properly
+            const task = extractedTasks[0];
+            if (task.origin === 'factor' && task.sourceId) {
+              return convertDbTaskToProjectTask(task, task.sourceId);
+            }
+            
+            return convertDbTaskToProjectTask(task);
+          }
+        }
+      }
+      
+      // Strategy 3: Try looking for a task with this ID as sourceId
       // This handles Success Factor tasks where the ID passed might be the canonical sourceId
       if (DEBUG_TASKS) {
-        console.log(`[getTaskById] Task not found by direct ID, checking sourceId match for ${taskId}`);
+        console.log(`[getTaskById] Strategy 3: Checking sourceId match for ${taskId}`);
       }
       
       const tasksBySourceId = await db.select()
@@ -448,12 +497,44 @@ export const projectsDb = {
         }
         
         // For sourceId matches, use the sourceId as the client-facing ID for consistency
-        return convertDbTaskToProjectTask(tasksBySourceId[0], taskId);
+        // This is critical for Success Factor tasks to maintain metadata
+        const task = tasksBySourceId[0];
+        if (DEBUG_TASKS) {
+          console.log(`[getTaskById] Task metadata - origin: ${task.origin}, sourceId: ${task.sourceId}`);
+        }
+        
+        return convertDbTaskToProjectTask(task, taskId);
       }
       
-      // Not found by either direct ID or sourceId
+      // Strategy 4: If this is a potential Success Factor ID, try UUID prefix matching
+      if (validateUuid(taskId)) {
+        if (DEBUG_TASKS) {
+          console.log(`[getTaskById] Strategy 4: Trying UUID prefix match for sourceId: ${taskId}`);
+        }
+        
+        // Use LIKE with SQL for prefix matching - critical to cast to text for proper prefix matching
+        const prefixTasks = await db
+          .select()
+          .from(projectTasksTable)
+          .where(and(
+            eq(projectTasksTable.projectId, projectId),
+            sql`CAST(${projectTasksTable.sourceId} AS TEXT) LIKE ${taskId + '%'}`
+          ))
+          .limit(1);
+        
+        if (prefixTasks.length > 0) {
+          if (DEBUG_TASKS) {
+            console.log(`[getTaskById] Found task with sourceId prefix matching: ${taskId}`);
+            console.log(`[getTaskById] Matched task sourceId: ${prefixTasks[0].sourceId}`);
+          }
+          
+          return convertDbTaskToProjectTask(prefixTasks[0], prefixTasks[0].sourceId);
+        }
+      }
+      
+      // Not found by any strategy
       if (DEBUG_TASKS) {
-        console.log(`[getTaskById] Task not found: ${taskId} in project ${projectId}`);
+        console.log(`[getTaskById] Task not found with any lookup strategy: ${taskId} in project ${projectId}`);
       }
       
       return null;

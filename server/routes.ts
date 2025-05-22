@@ -955,8 +955,18 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       // Create a copy of req.body for task updates
       let updates = { ...req.body };
       
-      // Enhanced handling for Success Factor tasks with strict validation
+      // Enhanced handling for Success Factor tasks with stricter validation and metadata preservation
       if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
+        if (isDebugEnabled) {
+          console.log(`[DEBUG_TASKS] Processing Success Factor task update with metadata preservation`);
+          console.log(`[DEBUG_TASKS] Original task metadata:`, {
+            id: originalTask.id,
+            origin: originalTask.origin,
+            sourceId: originalTask.sourceId,
+            completed: originalTask.completed
+          });
+        }
+        
         // Prevent changing origin of Success Factor tasks
         if (updates.origin && updates.origin !== originalTask.origin) {
           if (isDebugEnabled) {
@@ -991,15 +1001,25 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           });
         }
         
-        // Always preserve origin for Success Factor tasks
+        // CRITICAL FIX: Always preserve origin/source metadata for Success Factor tasks
+        // This ensures metadata is never stripped during updates
         updates.origin = originalTask.origin;
         
-        // Always preserve sourceId for Success Factor tasks
+        // Always preserve sourceId for Success Factor tasks - this is critical for lookups
         if (originalTask.sourceId) {
           updates.sourceId = originalTask.sourceId;
           
           if (isDebugEnabled) {
-            console.log(`[DEBUG_TASKS] Preserved sourceId: ${originalTask.sourceId}`);
+            console.log(`[DEBUG_TASKS] Explicitly preserved sourceId: ${originalTask.sourceId}`);
+          }
+        }
+        
+        // Preserve source field as well if it exists (used for filtering)
+        if (originalTask.source) {
+          updates.source = originalTask.source;
+          
+          if (isDebugEnabled) {
+            console.log(`[DEBUG_TASKS] Explicitly preserved source: ${originalTask.source}`);
           }
         }
         
@@ -1058,21 +1078,49 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           }
         }
         
-        // Create an updated user task object that includes sync status
+        // Create an updated user task object that includes sync status with proper metadata preservation
         const updatedUserTask = {
           ...originalTask,                    // Start with the user's original task (includes correct ID)
           ...updates,                         // Apply the user's updates
           updatedAt: new Date(),              // Add updatedAt timestamp
           syncStatus: updatedState.syncStatus, // Include sync status for client
-          // Ensure we return the original task ID that the user sent,
-          // this is crucial for proper client-side caching
-          id: taskId // Use the original taskId from request params
         };
         
+        // CRITICAL FIX: For Success Factor tasks, ensure metadata is explicitly preserved in the response
+        if (originalTask.origin === 'factor' || originalTask.origin === 'success-factor') {
+          // Force origin and sourceId to match the original values for Success Factor tasks
+          updatedUserTask.origin = originalTask.origin;
+          
+          if (originalTask.sourceId) {
+            updatedUserTask.sourceId = originalTask.sourceId;
+          }
+          
+          if (originalTask.source) {
+            updatedUserTask.source = originalTask.source;
+          }
+          
+          // Ensure we return the original task ID that the client sent (for consistent caching)
+          // This is crucial for client-side state handling
+          updatedUserTask.id = taskId;
+          
+          if (isDebugEnabled) {
+            console.log(`[DEBUG_TASKS] Success Factor metadata explicitly preserved in response:`, {
+              id: updatedUserTask.id, 
+              origin: updatedUserTask.origin,
+              sourceId: updatedUserTask.sourceId,
+              completed: updatedUserTask.completed
+            });
+          }
+        } else {
+          // For non-Success Factor tasks, just ensure the ID matches the requested one
+          updatedUserTask.id = taskId;
+        }
+        
+        // CRITICAL FIX: Always return with JSON Content-Type for 100% consistency
         return res.status(200).json({
           success: true,
           message: 'Task updated successfully',
-          task: updatedUserTask,     // Return user's task with updates applied, not source task
+          task: updatedUserTask,
           sync: {
             status: updatedState.syncStatus,
             timestamp: new Date().toISOString(),
