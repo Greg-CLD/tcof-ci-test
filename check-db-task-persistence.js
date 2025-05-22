@@ -132,7 +132,6 @@ async function runDatabaseTest() {
         text: 'Test Success Factor Task',
         stage: 'Definition',
         origin: 'factor',
-        source: 'factor',
         source_id: uuidv4(),
         completed: false,
         notes: '',
@@ -145,12 +144,12 @@ async function runDatabaseTest() {
       
       await query(
         `INSERT INTO project_tasks
-         (id, project_id, text, stage, origin, source, source_id, completed, notes, 
+         (id, project_id, text, stage, origin, source_id, completed, notes, 
           priority, owner, status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           newTask.id, newTask.project_id, newTask.text, newTask.stage, 
-          newTask.origin, newTask.source, newTask.source_id, newTask.completed, 
+          newTask.origin, newTask.source_id, newTask.completed, 
           newTask.notes, newTask.priority, newTask.owner, newTask.status, 
           newTask.created_at, newTask.updated_at
         ]
