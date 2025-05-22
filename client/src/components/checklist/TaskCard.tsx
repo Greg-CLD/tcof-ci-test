@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { 
   Circle, 
@@ -11,7 +11,12 @@ import {
   GripVertical,
   User,
   AlertTriangle,
-  Mail
+  Mail,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -52,6 +57,8 @@ export interface TaskUpdates {
   stage?: 'identification' | 'definition' | 'delivery' | 'closure';
   origin?: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceId?: string;
+  syncStatus?: 'synced' | 'syncing' | 'error';
+  retryCount?: number;
 }
 
 interface TaskCardProps {
@@ -70,7 +77,10 @@ interface TaskCardProps {
   isGoodPractice?: boolean;
   origin?: 'heuristic' | 'factor' | 'policy' | 'custom' | 'framework';
   sourceId?: string;
+  syncStatus?: 'synced' | 'syncing' | 'error';
+  retryCount?: number;
   onUpdate: (id: string, updates: TaskUpdates, isGoodPractice?: boolean) => void;
+  onRetry?: (id: string) => void;
   onDelete?: (id: string) => void;
   dragHandleProps?: any;
 }
@@ -91,7 +101,10 @@ export default function TaskCard({
   isGoodPractice = false,
   origin = '',
   sourceId = '', // Default to empty string to prevent 'undefined' runtime errors
+  syncStatus = 'synced', // Default sync status
+  retryCount = 0,
   onUpdate,
+  onRetry,
   onDelete,
   dragHandleProps
 }: TaskCardProps) {
@@ -103,13 +116,16 @@ export default function TaskCard({
   - Source: ${source}
   - Stage: ${stage}
   - SourceId: ${sourceId || '<empty>'}
-  - Origin: ${origin || '<empty>'}`);
+  - Origin: ${origin || '<empty>'}
+  - Sync Status: ${syncStatus}
+  - Retry Count: ${retryCount}`);
   
   // Create safe reference values for potentially undefined properties
   // This prevents runtime errors when these values are used in the component
   const safeSourceId = sourceId || '';
   const safeOrigin = origin || '';
 
+  // State for UI elements
   const [isExpanded, setIsExpanded] = useState(false);
   const [editedTaskTitle, setEditedTaskTitle] = useState(text);
   const [editedNotes, setEditedNotes] = useState(notes);
@@ -117,6 +133,20 @@ export default function TaskCard({
   const [editedStatus, setEditedStatus] = useState<'To Do' | 'Working On It' | 'Done'>(
     completed ? 'Done' : (status || 'To Do')
   );
+  
+  // Sync status state
+  const [localSyncStatus, setLocalSyncStatus] = useState(syncStatus);
+  const [localRetryCount, setLocalRetryCount] = useState(retryCount);
+  const [isOptimistic, setIsOptimistic] = useState(false);
+  
+  // Update local sync status when prop changes
+  useEffect(() => {
+    setLocalSyncStatus(syncStatus);
+    setLocalRetryCount(retryCount);
+    if (syncStatus === 'synced') {
+      setIsOptimistic(false);
+    }
+  }, [syncStatus, retryCount]);
 
   // Extract the actual task title without auto-IDs or prefixes
   const getCleanTaskTitle = (taskText: string): string => {
@@ -158,7 +188,7 @@ export default function TaskCard({
   const lastToggleTime = useRef(0);
   const requestId = useRef(0);
   
-  // Handle task completion toggle with debounce to prevent duplicate requests
+  // Handle task completion toggle with debounce, optimistic updates, and sync status
   const handleToggleCompleted = useCallback(() => {
     // Generate unique request ID for this toggle operation
     const currentRequestId = ++requestId.current;
@@ -219,7 +249,11 @@ export default function TaskCard({
     // Type-safe status assignment
     const newStatus = !completed ? 'Done' : 'To Do' as const;
     setEditedStatus(newStatus);
-
+    
+    // Set optimistic updates locally
+    setIsOptimistic(true);
+    setLocalSyncStatus('syncing');
+    
     // FIXED: Always use the task's id for the update URL, never sourceId
     // This ensures we consistently use the correct ID in all API request paths
     
@@ -233,7 +267,9 @@ export default function TaskCard({
     - Source: ${source}
     - Is Factor Task: ${isFactorTask ? 'Yes' : 'No'}
     - New completed state: ${!completed}
-    - New status: ${newStatus}`);
+    - New status: ${newStatus}
+    - Optimistic Update: true
+    - Sync Status: syncing`);
     
     // Create update object with type-safe fields
     const updateData: TaskUpdates = {
@@ -257,6 +293,11 @@ export default function TaskCard({
       // FIXED: Always use task id (never sourceId) for the update URL path
       // sourceId is still included in the payload (updateData) as needed
       onUpdate(id, updateData, isGoodPractice);
+    } catch (error) {
+      // Handle error case
+      console.error(`[TASK_ERROR] Error updating task: ${error}`);
+      setLocalSyncStatus('error');
+      setLocalRetryCount(prev => prev + 1);
     } finally {
       // Set a timeout to reset the processing flag after a reasonable time 
       // to ensure we don't block future toggles if something goes wrong
