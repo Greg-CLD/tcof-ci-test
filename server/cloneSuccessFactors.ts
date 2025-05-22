@@ -1,142 +1,274 @@
 /**
- * Success Factor Clone Utility
+ * Success Factors Clone Utility
  * 
- * This module ensures that all canonical Success Factors are properly
- * added to the project_tasks table when a project is created.
+ * This module provides functions to:
+ * 1. Clone all canonical Success Factor tasks into a project
+ * 2. Ensure every project has all Success Factor tasks
+ * 3. Fix missing Success Factor tasks in existing projects
  */
-import { db } from './db';
-import { v4 as uuidv4 } from 'uuid';
-import { projectTasks } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
-import * as factorsDb from './factorsDb';
 
-interface FactorTask {
-  id: string;
-  title: string;
-  description: string;
-  tasks: {
-    Identification: string[];
-    Definition: string[];
-    Delivery: string[];
-    Closure: string[];
-  };
+import { db } from '../db';
+import { v4 as uuidv4 } from 'uuid';
+
+const DEBUG_CLONE = process.env.DEBUG_TASKS === 'true';
+
+// Define Success Factor stages
+const VALID_STAGES = ['identification', 'definition', 'delivery', 'closure'];
+
+// Cache for Success Factor definitions to avoid repeated DB lookups
+let cachedFactors: any[] = [];
+
+/**
+ * Get all canonical Success Factors from the database
+ * 
+ * @returns Array of Success Factors
+ */
+export async function getAllSuccessFactors() {
+  if (cachedFactors.length > 0) {
+    return cachedFactors;
+  }
+
+  try {
+    // Query all Success Factors from the database
+    const factors = await db.query.successFactors.findMany();
+    
+    if (DEBUG_CLONE) {
+      console.log(`[SUCCESS_FACTOR_CLONE] Found ${factors.length} canonical Success Factors`);
+    }
+    
+    cachedFactors = factors;
+    return factors;
+  } catch (error) {
+    console.error('[SUCCESS_FACTOR_CLONE] Error fetching Success Factors:', error);
+    return [];
+  }
 }
 
 /**
- * Ensures all success factors are properly cloned to project_tasks table
+ * Get all tasks for a specific Success Factor across all stages
  * 
- * @param projectId The project ID to clone tasks for
- * @returns Promise<number> Number of tasks created
+ * @param factorId The Success Factor ID
+ * @returns Array of tasks for the Success Factor
  */
-export async function cloneSuccessFactorsToProject(projectId: string): Promise<number> {
+export async function getSuccessFactorTasks(factorId: string) {
   try {
-    // Get all success factors
-    const successFactors = await factorsDb.getFactors();
-    if (!successFactors || successFactors.length === 0) {
-      console.error(`No success factors found to clone to project ${projectId}`);
+    // Query tasks for the Success Factor from the database
+    const tasks = await db.query.successFactorTasks.findMany({
+      where: (sfTasks, { eq }) => eq(sfTasks.factorId, factorId)
+    });
+    
+    if (DEBUG_CLONE) {
+      console.log(`[SUCCESS_FACTOR_CLONE] Found ${tasks.length} tasks for Success Factor ${factorId}`);
+    }
+    
+    return tasks;
+  } catch (error) {
+    console.error(`[SUCCESS_FACTOR_CLONE] Error fetching tasks for Success Factor ${factorId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Clone Success Factor tasks into a project
+ * 
+ * @param projectId The project ID to clone tasks into
+ * @param factorId The Success Factor ID to clone tasks from
+ * @returns Number of tasks cloned
+ */
+export async function cloneSuccessFactorTasks(projectId: string, factorId: string) {
+  try {
+    // Get tasks for the Success Factor
+    const sfTasks = await getSuccessFactorTasks(factorId);
+    
+    if (sfTasks.length === 0) {
+      if (DEBUG_CLONE) {
+        console.log(`[SUCCESS_FACTOR_CLONE] No tasks found for Success Factor ${factorId}`);
+      }
       return 0;
     }
     
-    console.log(`Cloning ${successFactors.length} success factors to project ${projectId}`);
-    let createdCount = 0;
+    // Get existing tasks for the project with this Success Factor
+    const existingTasks = await db.query.project_tasks.findMany({
+      where: (tasks, { and, eq }) => and(
+        eq(tasks.project_id, projectId),
+        eq(tasks.origin, 'factor'),
+        eq(tasks.source_id, factorId)
+      )
+    });
     
-    // For each success factor, create tasks for each stage
-    for (const factor of successFactors) {
-      // For each stage (identification, definition, delivery, closure)
-      for (const stage of Object.keys(factor.tasks)) {
-        const normalizedStage = stage.toLowerCase();
-        const tasks = factor.tasks[stage as keyof typeof factor.tasks];
-        
-        // For each task in this stage
-        for (const taskText of tasks) {
-          if (!taskText || taskText.trim() === '') continue;
-          
-          // Check if task already exists by source_id
-          const existingTasks = await db.select()
-            .from(projectTasks)
-            .where(
-              and(
-                eq(projectTasks.projectId, projectId),
-                eq(projectTasks.sourceId, factor.id),
-                eq(projectTasks.stage, normalizedStage),
-                eq(projectTasks.text, taskText)
-              )
-            )
-            .limit(1);
-          
-          // Skip if task already exists
-          if (existingTasks.length > 0) {
-            console.log(`Task already exists for project ${projectId}, factor ${factor.id}, stage ${normalizedStage}, text "${taskText.substring(0, 20)}..."`);
-            continue;
-          }
-          
-          // Create the task
-          const newTask = {
-            id: uuidv4(),
-            projectId: projectId,
-            text: taskText,
-            stage: normalizedStage,
-            origin: 'factor',
-            source: 'factor', // Duplicate of origin for consistent filtering
-            sourceId: factor.id,
-            completed: false,
-            status: 'pending',
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
-          
-          await db.insert(projectTasks).values(newTask);
-          createdCount++;
+    // Create a map of existing tasks by stage for quick lookup
+    const existingTasksByStage = existingTasks.reduce((acc, task) => {
+      const stage = task.stage || 'unknown';
+      if (!acc[stage]) {
+        acc[stage] = [];
+      }
+      acc[stage].push(task);
+      return acc;
+    }, {} as Record<string, any[]>);
+    
+    // Track how many tasks are cloned
+    let clonedCount = 0;
+    
+    // Clone each task that doesn't already exist
+    for (const sfTask of sfTasks) {
+      const stage = sfTask.stage?.toLowerCase() || 'identification';
+      
+      // Skip if stage is not valid
+      if (!VALID_STAGES.includes(stage)) {
+        if (DEBUG_CLONE) {
+          console.log(`[SUCCESS_FACTOR_CLONE] Skipping task with invalid stage: ${stage}`);
         }
+        continue;
+      }
+      
+      // Check if a task with this Success Factor ID and stage already exists
+      const existingTasksInStage = existingTasksByStage[stage] || [];
+      const taskExists = existingTasksInStage.some(task => 
+        task.source_id === factorId && task.stage === stage && task.text === sfTask.task_text
+      );
+      
+      if (taskExists) {
+        if (DEBUG_CLONE) {
+          console.log(`[SUCCESS_FACTOR_CLONE] Task already exists for Success Factor ${factorId} in stage ${stage}`);
+        }
+        continue;
+      }
+      
+      // Create the task in the project
+      await db.insert(db.project_tasks).values({
+        id: uuidv4(),
+        project_id: projectId,
+        text: sfTask.task_text,
+        completed: false,
+        origin: 'factor',
+        source_id: factorId,
+        stage: stage,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+      
+      clonedCount++;
+      
+      if (DEBUG_CLONE) {
+        console.log(`[SUCCESS_FACTOR_CLONE] Cloned task for Success Factor ${factorId} in stage ${stage}`);
       }
     }
     
-    console.log(`Successfully created ${createdCount} Success Factor tasks for project ${projectId}`);
-    return createdCount;
+    return clonedCount;
   } catch (error) {
-    console.error(`Error cloning success factors to project ${projectId}:`, error);
-    throw error;
+    console.error(`[SUCCESS_FACTOR_CLONE] Error cloning tasks for Success Factor ${factorId}:`, error);
+    return 0;
   }
 }
 
 /**
- * Back-fill script to add missing Success Factor tasks to existing projects
+ * Clone all Success Factor tasks into a project
  * 
- * @returns Promise<{projectCount: number, taskCount: number}>
+ * @param projectId The project ID to clone tasks into
+ * @returns Number of tasks cloned
  */
-export async function backfillSuccessFactorsForAllProjects(): Promise<{projectCount: number, taskCount: number}> {
+export async function cloneAllSuccessFactorTasks(projectId: string) {
+  try {
+    // Get all Success Factors
+    const factors = await getAllSuccessFactors();
+    
+    if (factors.length === 0) {
+      console.error('[SUCCESS_FACTOR_CLONE] No Success Factors found in the database');
+      return 0;
+    }
+    
+    // Track how many tasks are cloned
+    let totalCloned = 0;
+    
+    // Clone tasks for each Success Factor
+    for (const factor of factors) {
+      const clonedCount = await cloneSuccessFactorTasks(projectId, factor.id);
+      totalCloned += clonedCount;
+    }
+    
+    if (DEBUG_CLONE) {
+      console.log(`[SUCCESS_FACTOR_CLONE] Cloned ${totalCloned} Success Factor tasks into project ${projectId}`);
+    }
+    
+    return totalCloned;
+  } catch (error) {
+    console.error('[SUCCESS_FACTOR_CLONE] Error cloning Success Factor tasks:', error);
+    return 0;
+  }
+}
+
+/**
+ * Backfill Success Factor tasks for all existing projects
+ * 
+ * @returns Number of projects updated
+ */
+export async function backfillSuccessFactorTasks() {
   try {
     // Get all projects
-    const projects = await db.select({ id: projectTasks.projectId })
-      .from(projectTasks)
-      .groupBy(projectTasks.projectId);
+    const projects = await db.query.projects.findMany();
     
-    console.log(`Backfilling Success Factor tasks for ${projects.length} projects`);
+    if (projects.length === 0) {
+      console.log('[SUCCESS_FACTOR_CLONE] No projects found to backfill');
+      return 0;
+    }
     
-    let totalTaskCount = 0;
-    let updatedProjectCount = 0;
+    console.log(`[SUCCESS_FACTOR_CLONE] Backfilling Success Factor tasks for ${projects.length} projects`);
     
-    // For each project, ensure all success factors are cloned
+    // Track how many projects are updated
+    let updatedCount = 0;
+    
+    // Clone tasks for each project
     for (const project of projects) {
-      try {
-        const taskCount = await cloneSuccessFactorsToProject(project.id);
-        if (taskCount > 0) {
-          updatedProjectCount++;
-          totalTaskCount += taskCount;
-        }
-      } catch (err) {
-        console.error(`Error backfilling project ${project.id}:`, err);
-        // Continue with next project
+      const clonedCount = await cloneAllSuccessFactorTasks(project.id);
+      
+      if (clonedCount > 0) {
+        updatedCount++;
+        console.log(`[SUCCESS_FACTOR_CLONE] Backfilled ${clonedCount} Success Factor tasks for project ${project.id}`);
       }
     }
     
-    console.log(`Backfill complete: Added ${totalTaskCount} tasks to ${updatedProjectCount} projects`);
-    return {
-      projectCount: updatedProjectCount,
-      taskCount: totalTaskCount
-    };
+    console.log(`[SUCCESS_FACTOR_CLONE] Backfilled Success Factor tasks for ${updatedCount} projects`);
+    
+    return updatedCount;
   } catch (error) {
-    console.error('Error in backfill operation:', error);
-    throw error;
+    console.error('[SUCCESS_FACTOR_CLONE] Error backfilling Success Factor tasks:', error);
+    return 0;
   }
 }
+
+/**
+ * Ensure all Success Factor tasks exist for a project
+ * Called whenever a project is accessed to ensure it has all required tasks
+ * 
+ * @param projectId The project ID to ensure tasks for
+ * @returns True if all Success Factor tasks exist, false otherwise
+ */
+export async function ensureSuccessFactorTasks(projectId: string) {
+  try {
+    // Clone all Success Factor tasks into the project
+    const clonedCount = await cloneAllSuccessFactorTasks(projectId);
+    
+    if (DEBUG_CLONE) {
+      if (clonedCount > 0) {
+        console.log(`[SUCCESS_FACTOR_CLONE] Added ${clonedCount} missing Success Factor tasks to project ${projectId}`);
+      } else {
+        console.log(`[SUCCESS_FACTOR_CLONE] All Success Factor tasks already exist for project ${projectId}`);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`[SUCCESS_FACTOR_CLONE] Error ensuring Success Factor tasks for project ${projectId}:`, error);
+    return false;
+  }
+}
+
+// Export default functions
+export default {
+  getAllSuccessFactors,
+  getSuccessFactorTasks,
+  cloneSuccessFactorTasks,
+  cloneAllSuccessFactorTasks,
+  backfillSuccessFactorTasks,
+  ensureSuccessFactorTasks
+};

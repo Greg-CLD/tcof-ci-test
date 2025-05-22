@@ -1,0 +1,42 @@
+OBJECTIVE:
+Implement a robust, unified system to guarantee Success Factor task persistence, discoverability, and state transitions in all projects.
+
+CONTEXT:
+- Your most recent test failed because no Success Factor tasks were found in the project, indicating a systemic issue with task creation, ID resolution, or surfacing in the API layer.
+- This is not just an update bug—it is a full-lifecycle bug covering creation, read, update, and state verification.
+
+DELIVERABLES:
+1. Ensure Success Factor tasks are present for every project:
+   - On project creation, auto-populate all canonical Success Factor tasks with correct origin/sourceId.
+   - Implement a one-off backfill to fix existing projects missing these tasks.
+
+2. Guarantee API discoverability:
+   - Update the `/api/projects/:id/tasks` endpoint so all Success Factor tasks are always returned, with correct origin/sourceId.
+   - Add debug logging to confirm returned task set for each project and filter by task type/origin.
+
+3. Unified ID and state management:
+   - Enhance TaskIdResolver to handle all ID forms (UUID, compound, sourceId) and log all resolution paths.
+   - Enhance TaskStateManager to validate state transitions for all task types and provide canonical error responses.
+
+4. Database integrity:
+   - Add sourceId indexing for fast lookups.
+   - Add constraints to prevent duplicate Success Factor tasks per project/sourceId/stage.
+   - Add state transition tracking for auditability.
+
+5. Full lifecycle E2E test:
+   - Write an integration test (or browser script) that:
+     a) Confirms Success Factor tasks exist for a given project.
+     b) Toggles a Success Factor task.
+     c) Reloads/reads again and confirms state is persisted and metadata (origin/sourceId) unchanged.
+
+6. Error handling & validation:
+   - Return clear errors if a Success Factor task is missing, duplicated, or fails state transition validation.
+   - Ensure the system surfaces and logs all critical errors.
+
+DELIVERY FORMAT:
+- Implement the above in clear, atomic commits.
+- For code changes, provide a single diff or summary block.
+- For any data migration or backfill, provide a script or command sequence.
+
+GOAL:
+After this, *all* Success Factor tasks must be present, discoverable, persist state, and be fully testable in every project, with end-to-end lifecycle tests passing.

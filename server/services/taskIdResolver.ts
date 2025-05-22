@@ -1,486 +1,251 @@
 /**
- * Task ID Resolver Service
+ * TaskIdResolver Service
  * 
- * A unified service to handle task ID resolution, translation, and lookup
- * across different formats: UUID, compound ID, and sourceId
+ * A unified service for resolving task IDs across different formats:
+ * - Exact UUID match
+ * - Compound ID extraction (clean UUID from compound format)
+ * - Source ID lookup (for Success Factor tasks)
  * 
- * Supports:
- * - UUID extraction from compound IDs
- * - Canonical source ID mapping
- * - Bidirectional ID translation 
- * - Comprehensive ID lookup strategies
+ * This service ensures consistent task lookup regardless of ID format
+ * and provides specialized error handling for missing tasks.
  */
 
-import { validate as validateUUID } from 'uuid';
+import { db } from '../../db';
+import { eq, and } from 'drizzle-orm';
+import { projectTasks } from '../../shared/schema';
 
-// Define debug flags 
-const DEBUG_TASK_LOOKUP = process.env.DEBUG_TASKS === 'true';
-const DEBUG_TASK_MAPPING = process.env.DEBUG_TASKS === 'true';
-const DEBUG_TASK_PERSISTENCE = process.env.DEBUG_TASKS === 'true';
-const DEBUG_TASK_ID_RESOLUTION = process.env.DEBUG_TASKS === 'true';
+// Debug flag for detailed logging
+const DEBUG_RESOLVER = process.env.DEBUG_TASKS === 'true';
 
-/**
- * Interface for task lookup results with detailed resolution information
- */
-interface TaskLookupResult {
-  task: any;
-  lookupMethod: 'exact' | 'clean-uuid' | 'source-id' | 'compound-id' | 'canonical-id' | 'not-found';
-  originalId: string;
-  resolvedId?: string;
-  metadata?: {
-    isCompoundId?: boolean;
-    hasSourceId?: boolean;
-    sourceOrigin?: string;
-    resolutionPath?: string[];
-  };
-}
+// Regular expression to extract a UUID from a compound ID
+const UUID_REGEX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
 
-/**
- * Class to handle unified task ID resolution
- */
-export class TaskIdResolver {
-  // Cache for canonical Success Factor IDs for validation
-  private static canonicalFactorIds: Set<string> = new Set();
-  
-  /**
-   * Initialize the resolver with canonical Success Factor IDs for validation
-   * 
-   * @param factorIds Array of canonical Success Factor IDs
-   */
-  static initializeCanonicalIds(factorIds: string[]): void {
-    if (factorIds && Array.isArray(factorIds)) {
-      this.canonicalFactorIds = new Set(factorIds);
-      
-      if (DEBUG_TASK_ID_RESOLUTION) {
-        console.log(`[TASK_RESOLVER] Initialized with ${this.canonicalFactorIds.size} canonical Success Factor IDs`);
-      }
-    }
-  }
-  
-  /**
-   * Validate if an ID is a canonical Success Factor ID
-   * 
-   * @param id The ID to validate
-   * @returns True if the ID is a canonical Success Factor ID
-   */
-  static isCanonicalFactorId(id: string): boolean {
-    if (!id) return false;
-    
-    const cleanId = this.cleanTaskId(id);
-    const isValid = this.canonicalFactorIds.has(cleanId);
-    
-    if (DEBUG_TASK_ID_RESOLUTION && !isValid) {
-      console.log(`[TASK_RESOLVER] ID ${cleanId} is not a canonical Success Factor ID`);
-    }
-    
-    return isValid;
-  }
-  
-  /**
-   * Clean a potentially compound task ID to extract just the UUID part
-   * 
-   * @param id The task ID which might be a compound ID
-   * @returns The extracted UUID part only
-   */
-  static cleanTaskId(id: string): string {
-    if (!id) return id;
-    
-    // If the ID contains a hyphen and is longer than a standard UUID,
-    // it might be a compound ID with format uuid-suffix
-    if (id.includes('-') && id.length > 36) {
-      // Try to extract a valid UUID pattern from the beginning
-      const uuidPattern = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
-      const match = id.match(uuidPattern);
-      
-      if (match && match[1]) {
-        if (DEBUG_TASK_MAPPING) {
-          console.log(`[TASK_RESOLVER] Extracted UUID ${match[1]} from compound ID ${id}`);
-        }
-        return match[1];
-      }
-    }
-    
-    // Return original ID if no UUID pattern found
-    return id;
-  }
-  
-  /**
-   * Check if a string is a valid UUID
-   * 
-   * @param id The ID to check
-   * @returns True if the ID is a valid UUID
-   */
-  static isValidUUID(id: string): boolean {
-    if (!id) return false;
-    return validateUUID(id);
-  }
-  
-  /**
-   * Create a compound ID from a UUID and a suffix
-   * 
-   * @param uuid The base UUID
-   * @param suffix The suffix to append
-   * @returns A compound ID with format uuid-suffix
-   */
-  static createCompoundId(uuid: string, suffix: string): string {
-    if (!uuid) return uuid;
-    return `${uuid}-${suffix}`;
-  }
-  
-  /**
-   * Find a task by ID using multiple resolution strategies
-   * 
-   * @param projectId The project ID
-   * @param taskId The task ID (can be exact ID, UUID part, compound ID, or related to sourceId)
-   * @param projectsDb The projects database module
-   * @returns Promise resolving to a TaskLookupResult with detailed resolution information
-   */
-  static async findTaskById(projectId: string, taskId: string, projectsDb: any): Promise<TaskLookupResult> {
-    if (!projectId || !taskId) {
-      return { 
-        task: null,
-        lookupMethod: 'not-found',
-        originalId: taskId,
-        metadata: {
-          resolutionPath: ['invalid-input']
-        }
-      };
-    }
-    
-    if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
-      console.log(`[TASK_RESOLVER] Looking up task with ID: ${taskId} in project: ${projectId}`);
-    }
-    
-    // Track resolution path for debugging
-    const resolutionPath: string[] = ['start'];
-    
-    // Attempt to clean the task ID (extract UUID if compound)
-    const cleanId = this.cleanTaskId(taskId);
-    const isCompoundId = cleanId !== taskId;
-    
-    if (isCompoundId && DEBUG_TASK_ID_RESOLUTION) {
-      console.log(`[TASK_RESOLVER] Extracted clean UUID ${cleanId} from compound ID ${taskId}`);
-      resolutionPath.push('compound-id-detected');
-    }
-    
-    try {
-      // Get all tasks for the project
-      const allTasks = await projectsDb.getTasksForProject(projectId);
-      
-      if (!allTasks || allTasks.length === 0) {
-        if (DEBUG_TASK_LOOKUP) {
-          console.log(`[TASK_RESOLVER] No tasks found for project: ${projectId}`);
-        }
-        resolutionPath.push('no-tasks-found');
-        return {
-          task: null,
-          lookupMethod: 'not-found',
-          originalId: taskId,
-          metadata: {
-            isCompoundId,
-            resolutionPath
-          }
-        };
-      }
-      
-      resolutionPath.push(`found-${allTasks.length}-tasks`);
-      
-      // Step 1: Try to find by exact ID match
-      const exactMatch = allTasks.find((task: Record<string, any>) => task.id === taskId);
-      if (exactMatch) {
-        if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
-          console.log(`[TASK_RESOLVER] Found task by exact ID match: ${taskId}`);
-        }
-        
-        resolutionPath.push('exact-match');
-        return {
-          task: exactMatch,
-          lookupMethod: 'exact',
-          originalId: taskId,
-          resolvedId: exactMatch.id,
-          metadata: {
-            isCompoundId,
-            hasSourceId: !!exactMatch.sourceId,
-            sourceOrigin: exactMatch.origin || 'unknown',
-            resolutionPath
-          }
-        };
-      }
-      
-      resolutionPath.push('no-exact-match');
-      
-      // Step 2: If cleanId is different from taskId, try to find by clean UUID
-      if (isCompoundId) {
-        const cleanIdMatch = allTasks.find((task: Record<string, any>) => task.id === cleanId);
-        if (cleanIdMatch) {
-          if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
-            console.log(`[TASK_RESOLVER] Found task by clean UUID match: ${cleanId} (from compound ID ${taskId})`);
-          }
-          
-          resolutionPath.push('compound-id-match');
-          return {
-            task: cleanIdMatch,
-            lookupMethod: 'compound-id',
-            originalId: taskId,
-            resolvedId: cleanIdMatch.id,
-            metadata: {
-              isCompoundId: true,
-              hasSourceId: !!cleanIdMatch.sourceId,
-              sourceOrigin: cleanIdMatch.origin || 'unknown',
-              resolutionPath
-            }
-          };
-        }
-        resolutionPath.push('no-compound-id-match');
-      }
-      
-      // Step 3: For Success Factor tasks, try to find by sourceId
-      if (this.isValidUUID(cleanId)) {
-        resolutionPath.push('valid-uuid-format');
-        
-        // Find tasks with matching sourceId, prioritizing 'factor' origin
-        const sourceIdMatches = allTasks.filter((task: Record<string, any>) => task.sourceId === cleanId);
-        const factorMatch = sourceIdMatches.find((task: Record<string, any>) => task.origin === 'factor');
-        const sourceIdMatch = factorMatch || sourceIdMatches[0]; // Use factor match if available, otherwise first match
-        
-        if (sourceIdMatch) {
-          if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
-            console.log(`[TASK_RESOLVER] Found task by sourceId match: ${cleanId}`);
-            console.log(`[TASK_RESOLVER] Actual task ID: ${sourceIdMatch.id}, origin: ${sourceIdMatch.origin}`);
-          }
-          
-          resolutionPath.push('source-id-match');
-          return {
-            task: sourceIdMatch,
-            lookupMethod: 'source-id',
-            originalId: taskId,
-            resolvedId: sourceIdMatch.id,
-            metadata: {
-              isCompoundId,
-              hasSourceId: true,
-              sourceOrigin: sourceIdMatch.origin || 'unknown',
-              resolutionPath
-            }
-          };
-        }
-        resolutionPath.push('no-source-id-match');
-      }
-      
-      // Step 4: Check for canonical ID (success factor original ID)
-      // This is for newer versions where we use the UUID as sourceId directly
-      const canonicalMatches = allTasks.filter((task: Record<string, any>) => 
-        task.origin === 'factor' && 
-        (task.id === cleanId || task.sourceId === cleanId)
-      );
-      
-      if (canonicalMatches.length > 0) {
-        // Sort to prioritize exact ID matches over sourceId matches
-        canonicalMatches.sort((a: Record<string, any>, b: Record<string, any>) => {
-          if (a.id === cleanId) return -1;
-          if (b.id === cleanId) return 1;
-          return 0;
-        });
-        
-        const canonicalMatch = canonicalMatches[0];
-        
-        if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
-          console.log(`[TASK_RESOLVER] Found task by canonical ID match: ${cleanId}`);
-          console.log(`[TASK_RESOLVER] Canonical task ID: ${canonicalMatch.id}, origin: ${canonicalMatch.origin}`);
-        }
-        
-        resolutionPath.push('canonical-id-match');
-        return {
-          task: canonicalMatch,
-          lookupMethod: 'canonical-id',
-          originalId: taskId,
-          resolvedId: canonicalMatch.id,
-          metadata: {
-            isCompoundId,
-            hasSourceId: !!canonicalMatch.sourceId,
-            sourceOrigin: canonicalMatch.origin || 'unknown',
-            resolutionPath
-          }
-        };
-      }
-      
-      // Task not found through any method
-      if (DEBUG_TASK_LOOKUP || DEBUG_TASK_ID_RESOLUTION) {
-        console.log(`[TASK_RESOLVER] Task not found with ID: ${taskId}`);
-        console.log(`[TASK_RESOLVER] Resolution path: ${resolutionPath.join(' → ')}`);
-      }
-      
-      resolutionPath.push('exhausted-all-methods');
-      
-    } catch (err) {
-      console.error('[TASK_RESOLVER] Error during task lookup:', err);
-      resolutionPath.push('lookup-error');
-    }
-    
-    // Create detailed "not found" result with resolution path
-    return {
-      task: null,
-      lookupMethod: 'not-found',
-      originalId: taskId,
-      metadata: {
-        isCompoundId,
-        resolutionPath
-      }
-    };
-  }
-  
-  /**
-   * Synchronize all related Success Factor tasks with the same sourceId
-   * 
-   * @param projectId The project ID
-   * @param sourceId The source ID to match
-   * @param updates The updates to apply to all matching tasks
-   * @param projectsDb The projects database module
-   * @returns Promise resolving to number of tasks updated
-   */
-  /**
-   * Synchronize all related Success Factor tasks with the same sourceId
-   * 
-   * @param projectId The project ID
-   * @param sourceId The source ID to match
-   * @param updates The updates to apply to all matching tasks
-   * @param projectsDb The projects database module
-   * @returns Promise resolving to number of tasks updated
-   */
-  static async syncRelatedTasks(
-    projectId: string, 
-    sourceId: string, 
-    updates: Record<string, any>,
-    projectsDb: any
-  ): Promise<number> {
-    if (!projectId || !sourceId || !this.isValidUUID(sourceId)) {
-      if (DEBUG_TASK_ID_RESOLUTION) {
-        console.log(`[TASK_RESOLVER] Invalid inputs for syncRelatedTasks: projectId=${projectId}, sourceId=${sourceId}`);
-      }
-      return 0;
-    }
-    
-    try {
-      // First get all tasks for the project
-      const allTasks = await projectsDb.getTasksForProject(projectId);
-      
-      if (!allTasks || allTasks.length === 0) {
-        if (DEBUG_TASK_ID_RESOLUTION) {
-          console.log(`[TASK_RESOLVER] No tasks found for project: ${projectId}`);
-        }
-        return 0;
-      }
-      
-      // Find all related Success Factor tasks with matching sourceId
-      const relatedTasks = allTasks.filter((task: Record<string, any>) => 
-        task.sourceId === sourceId && 
-        (task.origin === 'factor' || task.origin === 'custom') &&
-        task.projectId === projectId
-      );
-      
-      if (relatedTasks.length === 0) {
-        if (DEBUG_TASK_ID_RESOLUTION) {
-          console.log(`[TASK_RESOLVER] No tasks found with sourceId: ${sourceId}`);
-        }
-        return 0;
-      }
-      
-      if (DEBUG_TASK_PERSISTENCE || DEBUG_TASK_ID_RESOLUTION) {
-        console.log(`[TASK_RESOLVER] Found ${relatedTasks.length} related tasks with sourceId: ${sourceId}`);
-        console.log(`[TASK_RESOLVER] Applying updates: ${JSON.stringify(updates)}`);
-      }
-      
-      // Update each related task
-      let updatedCount = 0;
-      for (const task of relatedTasks) {
-        try {
-          // Use the existing updateTask method from projectsDb
-          await projectsDb.updateTask(task.id, projectId, {
-            ...updates,
-            // Include original properties to prevent losing data
-            sourceId: task.sourceId,
-            origin: task.origin,
-            // Add timestamp to ensure changes are tracked
-            updatedAt: new Date()
-          });
-          updatedCount++;
-          
-          if (DEBUG_TASK_PERSISTENCE) {
-            console.log(`[TASK_RESOLVER] Updated related task ${task.id} (origin: ${task.origin})`);
-          }
-        } catch (err) {
-          console.error(`[TASK_RESOLVER] Error updating related task ${task.id}:`, err);
-        }
-      }
-      
-      if (DEBUG_TASK_PERSISTENCE || DEBUG_TASK_ID_RESOLUTION) {
-        console.log(`[TASK_RESOLVER] Successfully synchronized ${updatedCount} related tasks with sourceId: ${sourceId}`);
-      }
-      
-      return updatedCount;
-    } catch (err) {
-      console.error('[TASK_RESOLVER] Error synchronizing related tasks:', err);
-      return 0;
-    }
-  }
-  
-  /**
-   * Create a consistent task endpoint URL
-   * 
-   * @param projectId The project ID
-   * @param taskId The task ID
-   * @returns The endpoint URL for the task
-   */
-  static createTaskEndpoint(projectId: string, taskId: string): string {
-    const cleanId = this.cleanTaskId(taskId);
-    return `/api/projects/${projectId}/tasks/${cleanId}`;
-  }
-}
-
-// Create custom error classes for task-related errors
+// Specialized error classes for task resolution failures
 export class TaskNotFoundError extends Error {
   code: string;
-  statusCode: number;
+  status: number;
   
-  constructor(taskId: string) {
-    super(`Task not found: ${taskId}`);
+  constructor(taskId: string, projectId: string) {
+    super(`Task with ID ${taskId} not found in project ${projectId}`);
     this.name = 'TaskNotFoundError';
     this.code = 'TASK_NOT_FOUND';
-    this.statusCode = 404;
+    this.status = 404;
   }
 }
 
-export class InvalidTaskIdError extends Error {
+export class TaskAccessDeniedError extends Error {
   code: string;
-  statusCode: number;
+  status: number;
   
-  constructor(taskId: string) {
-    super(`Invalid task ID format: ${taskId}`);
-    this.name = 'InvalidTaskIdError';
-    this.code = 'INVALID_TASK_ID';
-    this.statusCode = 400;
+  constructor(taskId: string, projectId: string) {
+    super(`Access denied to task ${taskId} in project ${projectId}`);
+    this.name = 'TaskAccessDeniedError';
+    this.code = 'TASK_ACCESS_DENIED';
+    this.status = 403;
   }
 }
 
-export class InvalidSuccessFactorIdError extends Error {
-  code: string;
-  statusCode: number;
+export class TaskIdResolver {
+  /**
+   * Clean a potentially compound UUID to extract just the UUID portion
+   * 
+   * @param rawId The raw ID that may contain a UUID
+   * @returns The extracted UUID or the original ID if no UUID is found
+   */
+  static cleanUUID(rawId: string): string {
+    if (!rawId) return rawId;
+    
+    // Try to extract a UUID using regex
+    const match = rawId.match(UUID_REGEX);
+    if (match && match[1]) {
+      if (DEBUG_RESOLVER) {
+        console.log(`[TASK_ID_RESOLVER] Extracted UUID ${match[1]} from ${rawId}`);
+      }
+      return match[1];
+    }
+    
+    // Return the original ID if no UUID is found
+    return rawId;
+  }
   
-  constructor(sourceId: string) {
-    super(`Invalid Success Factor ID: ${sourceId}`);
-    this.name = 'InvalidSuccessFactorIdError';
-    this.code = 'INVALID_SUCCESS_FACTOR_ID';
-    this.statusCode = 400;
+  /**
+   * Find a task by its ID, with support for multiple lookup strategies
+   * 
+   * @param taskId The task ID to look up
+   * @param projectId The project ID the task belongs to
+   * @returns The task object if found
+   * @throws TaskNotFoundError if the task cannot be found
+   */
+  static async findTaskById(taskId: string, projectId: string) {
+    if (!taskId || !projectId) {
+      throw new Error('Task ID and Project ID are required');
+    }
+    
+    if (DEBUG_RESOLVER) {
+      console.log(`[TASK_ID_RESOLVER] Looking up task ${taskId} in project ${projectId}`);
+    }
+    
+    // Strategy 1: Try exact ID match
+    try {
+      const task = await db.query.projectTasks.findFirst({
+        where: and(
+          eq(projectTasks.id, taskId),
+          eq(projectTasks.projectId, projectId)
+        )
+      });
+      
+      if (task) {
+        if (DEBUG_RESOLVER) {
+          console.log(`[TASK_ID_RESOLVER] Found task by exact ID match: ${taskId}`);
+        }
+        return task;
+      }
+    } catch (error) {
+      console.error(`[TASK_ID_RESOLVER] Error looking up task by exact ID: ${error}`);
+    }
+    
+    // Strategy 2: Try clean UUID extraction
+    try {
+      const cleanId = TaskIdResolver.cleanUUID(taskId);
+      
+      // Skip if cleanId is the same as taskId (no change)
+      if (cleanId !== taskId) {
+        const task = await db.query.projectTasks.findFirst({
+          where: and(
+            eq(projectTasks.id, cleanId),
+            eq(projectTasks.projectId, projectId)
+          )
+        });
+        
+        if (task) {
+          if (DEBUG_RESOLVER) {
+            console.log(`[TASK_ID_RESOLVER] Found task by clean UUID: ${cleanId}`);
+          }
+          return task;
+        }
+      }
+    } catch (error) {
+      console.error(`[TASK_ID_RESOLVER] Error looking up task by clean UUID: ${error}`);
+    }
+    
+    // Strategy 3: Check if it's a Success Factor ID
+    try {
+      // For Success Factor tasks, check if taskId matches source_id
+      const task = await db.query.projectTasks.findFirst({
+        where: and(
+          eq(projectTasks.sourceId, taskId),
+          eq(projectTasks.projectId, projectId),
+          eq(projectTasks.origin, 'factor')
+        )
+      });
+      
+      if (task) {
+        if (DEBUG_RESOLVER) {
+          console.log(`[TASK_ID_RESOLVER] Found task by Success Factor source_id: ${taskId}`);
+        }
+        return task;
+      }
+    } catch (error) {
+      console.error(`[TASK_ID_RESOLVER] Error looking up task by source_id: ${error}`);
+    }
+    
+    // Task not found after all strategies
+    if (DEBUG_RESOLVER) {
+      console.log(`[TASK_ID_RESOLVER] Task not found with ID ${taskId} in project ${projectId}`);
+    }
+    
+    throw new TaskNotFoundError(taskId, projectId);
+  }
+  
+  /**
+   * Update a task by its ID
+   * 
+   * @param taskId The task ID to update
+   * @param projectId The project ID the task belongs to
+   * @param updates The updates to apply to the task
+   * @returns The updated task
+   * @throws TaskNotFoundError if the task cannot be found
+   */
+  static async updateTask(taskId: string, projectId: string, updates: any) {
+    // Find the task first
+    const task = await TaskIdResolver.findTaskById(taskId, projectId);
+    
+    if (!task) {
+      throw new TaskNotFoundError(taskId, projectId);
+    }
+    
+    // For Success Factor tasks, ensure we preserve critical metadata
+    if (task.origin === 'factor') {
+      if (DEBUG_RESOLVER) {
+        console.log(`[TASK_ID_RESOLVER] Preserving Success Factor metadata for task ${taskId}`);
+      }
+      
+      // Ensure these fields are not modified for Success Factor tasks
+      delete updates.origin;
+      delete updates.source_id;
+      delete updates.text;
+      delete updates.stage;
+    }
+    
+    // Apply the updates
+    try {
+      const result = await db.update(projectTasks)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(projectTasks.id, task.id),
+          eq(projectTasks.projectId, projectId)
+        ))
+        .returning();
+      
+      if (result && result.length > 0) {
+        if (DEBUG_RESOLVER) {
+          console.log(`[TASK_ID_RESOLVER] Updated task ${taskId} successfully`);
+        }
+        return result[0];
+      }
+      
+      throw new Error(`Failed to update task ${taskId}`);
+    } catch (error) {
+      console.error(`[TASK_ID_RESOLVER] Error updating task ${taskId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get all tasks for a project, with optional filtering
+   * 
+   * @param projectId The project ID to get tasks for
+   * @param options Optional filtering options
+   * @returns Array of tasks for the project
+   */
+  static async getTasksForProject(projectId: string, options: any = {}) {
+    try {
+      const tasks = await db.query.projectTasks.findMany({
+        where: eq(projectTasks.projectId, projectId)
+      });
+      
+      if (DEBUG_RESOLVER) {
+        console.log(`[TASK_ID_RESOLVER] Found ${tasks.length} tasks for project ${projectId}`);
+        
+        // Count tasks by origin
+        const originCounts = tasks.reduce((acc, task) => {
+          const origin = task.origin || 'unknown';
+          acc[origin] = (acc[origin] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        console.log(`[TASK_ID_RESOLVER] Tasks by origin:`, originCounts);
+      }
+      
+      return tasks;
+    } catch (error) {
+      console.error(`[TASK_ID_RESOLVER] Error getting tasks for project ${projectId}:`, error);
+      return [];
+    }
   }
 }
 
-export class TaskUpdateValidationError extends Error {
-  code: string;
-  statusCode: number;
-  
-  constructor(message: string) {
-    super(message);
-    this.name = 'TaskUpdateValidationError';
-    this.code = 'TASK_UPDATE_VALIDATION_ERROR';
-    this.statusCode = 400;
-  }
-}
+export default TaskIdResolver;
