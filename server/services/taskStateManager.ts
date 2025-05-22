@@ -14,7 +14,8 @@ import { validate as validateUUID } from 'uuid';
 import { TaskIdResolver } from './taskIdResolver';
 import { projectTasks } from '../../shared/schema';
 import { db } from '../../db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
+import { taskLogger, TaskErrorCodes } from './taskLogger';
 
 // Debug flags - inherit from environment
 const DEBUG_TASK_STATE = process.env.DEBUG_TASKS === 'true';

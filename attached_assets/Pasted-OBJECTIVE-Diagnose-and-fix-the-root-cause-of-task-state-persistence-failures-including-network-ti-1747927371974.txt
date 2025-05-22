@@ -1,0 +1,58 @@
+OBJECTIVE:
+Diagnose and fix the root cause of task state persistence failures (including network timeouts and field mismatches) across all task types, with deep instrumentation of the entire update lifecycle.
+
+CONTEXT:
+- Task state changes fail to persist for all types.
+- Network PUT requests are timing out; UI shows “Request timed out. Please try again later.”
+- Field mismatches detected: response data after PUT does not match sent data.
+- Possible causes: TaskStateManager queue, ID resolution, DB transaction, cache invalidation, or route-level performance.
+
+DELIVERABLES:
+
+1. Network & Timeout Instrumentation:
+   - Log all incoming PUT requests (with timestamps and payloads).
+   - Measure and log response time for each update; flag all that exceed 500ms.
+   - For every timeout, log *exact* step reached in backend (controller, queue, DB, cache, etc).
+   - Surface all server-side errors as JSON with error codes (not just HTTP 500).
+
+2. TaskStateManager & Queue Processing:
+   - Log contents of update queue before/after each process cycle.
+   - Log retries, failures, or dropped updates, with task IDs and state changes.
+   - Log cache invalidation timing.
+   - Check and log if any update is stuck in the queue for >1s.
+
+3. Task ID & Field Validation:
+   - For each PUT, log:
+      a) Raw client ID and body
+      b) Resolved canonical/DB ID
+      c) Source ID, origin, and type
+      d) Before/after state in DB
+   - After each update, compare all request/response fields. Log mismatches.
+   - For all compound/source IDs, verify proper mapping at every layer.
+
+4. Database & Transaction Logging:
+   - Log transaction start/commit/rollback for each update.
+   - Log query execution time and errors.
+   - Flag slow queries (>200ms).
+
+5. End-to-End Testing:
+   - For each task type, perform:
+     - State update (PUT), log response and DB state
+     - Page refresh, log UI state and DB state
+     - Network error/timeout simulation
+   - Provide a test log and summary of where (if anywhere) the state diverges or fails to persist.
+
+SPECIFIC FOCUS:
+- Network request/response logging, especially PUT timeouts
+- TaskStateManager.processUpdateQueue error and stuck task detection
+- Field-by-field request/response diffing
+- Compound/source ID preservation
+- Server response format for all error cases
+
+OUTPUT:
+- A debug log showing all update flows, errors, and mismatches.
+- A summary pinpointing where failures/timeouts occur.
+- Recommended next steps or code diffs to address them.
+
+GOAL:
+Ensure all task state updates are reliably persisted, response fields match requests, and no network timeouts occur for routine updates.
