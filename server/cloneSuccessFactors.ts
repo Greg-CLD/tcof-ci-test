@@ -9,6 +9,7 @@
 
 import { db } from '../db';
 import { v4 as uuidv4 } from 'uuid';
+import { projectTasks } from '../shared/schema';
 
 const DEBUG_CLONE = process.env.DEBUG_TASKS === 'true';
 
@@ -88,11 +89,11 @@ export async function cloneSuccessFactorTasks(projectId: string, factorId: strin
     }
     
     // Get existing tasks for the project with this Success Factor
-    const existingTasks = await db.query.project_tasks.findMany({
+    const existingTasks = await db.query.projectTasks.findMany({
       where: (tasks, { and, eq }) => and(
-        eq(tasks.project_id, projectId),
+        eq(tasks.projectId, projectId),
         eq(tasks.origin, 'factor'),
-        eq(tasks.source_id, factorId)
+        eq(tasks.sourceId, factorId)
       )
     });
     
@@ -124,7 +125,7 @@ export async function cloneSuccessFactorTasks(projectId: string, factorId: strin
       // Check if a task with this Success Factor ID and stage already exists
       const existingTasksInStage = existingTasksByStage[stage] || [];
       const taskExists = existingTasksInStage.some(task => 
-        task.source_id === factorId && task.stage === stage && task.text === sfTask.task_text
+        task.sourceId === factorId && task.stage === stage && task.text === sfTask.text
       );
       
       if (taskExists) {
@@ -135,16 +136,16 @@ export async function cloneSuccessFactorTasks(projectId: string, factorId: strin
       }
       
       // Create the task in the project
-      await db.insert(db.project_tasks).values({
+      await db.insert(projectTasks).values({
         id: uuidv4(),
-        project_id: projectId,
-        text: sfTask.task_text,
+        projectId: projectId,
+        text: sfTask.text,
         completed: false,
         origin: 'factor',
-        source_id: factorId,
+        sourceId: factorId,
         stage: stage,
-        created_at: new Date(),
-        updated_at: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
       
       clonedCount++;
