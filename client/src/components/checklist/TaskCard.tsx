@@ -220,17 +220,14 @@ export default function TaskCard({
     const newStatus = !completed ? 'Done' : 'To Do' as const;
     setEditedStatus(newStatus);
 
-    // Choose the most appropriate ID to use for the update
-    // For Success Factor tasks with valid sourceId, use sourceId
-    // Otherwise fall back to the task's id
-    const updateId = hasValidSourceId ? safeSourceId : id;
+    // FIXED: Always use the task's id for the update URL, never sourceId
+    // This ensures we consistently use the correct ID in all API request paths
     
     // Detailed debug logging for task update
     console.debug(`[TASK_UPDATE] Toggle task completion:
     - Request ID: ${currentRequestId}
-    - Using ID: ${updateId} (${hasValidSourceId ? 'valid sourceId' : 'fallback to id'})
-    - Original ID: ${id}
-    - Source ID: ${safeSourceId || 'N/A'}
+    - Using ID: ${id} (always using task id for URL path)
+    - Source ID: ${safeSourceId || 'N/A'} (included in payload only, not URL)
     - Source ID Valid UUID: ${hasValidSourceId ? 'Yes' : 'No'}
     - Origin: ${safeOrigin || 'N/A'}
     - Source: ${source}
@@ -257,8 +254,9 @@ export default function TaskCard({
     updateData.sourceId = safeSourceId;
     
     try {
-      // Send the update with validated ID and clean payload
-      onUpdate(updateId, updateData, isGoodPractice);
+      // FIXED: Always use task id (never sourceId) for the update URL path
+      // sourceId is still included in the payload (updateData) as needed
+      onUpdate(id, updateData, isGoodPractice);
     } finally {
       // Set a timeout to reset the processing flag after a reasonable time 
       // to ensure we don't block future toggles if something goes wrong
