@@ -43,7 +43,18 @@ export async function apiRequest<T>(method: string, url: string, body?: unknown)
     
     while (!refreshOK && retryAttempt < maxRetries) {
       try {
-        refreshOK = await tryRefreshSession();
+        // Direct approach to refresh the session
+        const refreshResponse = await fetch('/api/auth/refresh-session', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+          }
+        });
+        
+        refreshOK = refreshResponse.ok;
+        
         if (refreshOK) {
           console.log(`[API] Session refresh successful on attempt ${retryAttempt + 1}, retrying request`);
           break;
@@ -68,9 +79,17 @@ export async function apiRequest<T>(method: string, url: string, body?: unknown)
     
     if (refreshOK) {
       // Retry the original request if refresh was successful
-      res = await doFetch();
+      try {
+        console.log(`[API] Retrying original request to ${url} after session refresh`);
+        res = await doFetch();
+        console.log(`[API] Retry result status: ${res.status}`);
+      } catch (retryErr: any) {
+        console.error(`[API] Failed to retry request after refresh:`, retryErr);
+        throw new Error(`Failed to complete request after session refresh: ${retryErr?.message || 'Unknown error'}`);
+      }
     } else {
-      console.log('[API] Session refresh failed after all attempts');
+      console.error('[API] Session refresh failed after all attempts');
+      // Still allow the original error to propagate
     }
   }
 
@@ -79,17 +98,37 @@ export async function apiRequest<T>(method: string, url: string, body?: unknown)
     const text = await res.text();
     
     // Special handling for task-related endpoints
-    if (res.status === 404 && url.includes('/tasks/')) {
-      throw new Error(`Task not found - the ID may have changed or been deleted`);
-    }
-    
-    if (res.status === 400 && url.includes('/tasks/')) {
-      throw new Error(`Invalid task state change: ${text}`);
-    }
-    
-    // Add specific error handling for 409 conflict (already in requested state)
-    if (res.status === 409 && url.includes('/tasks/')) {
-      throw new Error(`Task is already in that state`);
+    if (url.includes('/tasks/')) {
+      // Customize error messages based on status codes for task operations
+      switch (res.status) {
+        case 404:
+          console.error(`[API] Task not found error for ${method} ${url}`, { response: text });
+          throw new Error(`Task not found - the ID may have changed or the task has been deleted`);
+        
+        case 400:
+          console.error(`[API] Invalid task state change for ${method} ${url}`, { response: text });
+          throw new Error(`Cannot update task: ${text}`);
+        
+        case 409:
+          console.error(`[API] Task already in requested state for ${method} ${url}`, { response: text });
+          throw new Error(`Task is already in that state`);
+        
+        case 403:
+          console.error(`[API] Permission denied for task operation ${method} ${url}`, { response: text });
+          throw new Error(`You don't have permission to perform this action on the task`);
+          
+        case 500:
+          console.error(`[API] Server error in task operation ${method} ${url}`, { response: text });
+          throw new Error(`Server error while processing task - please try again later`);
+          
+        case 422:
+          console.error(`[API] Validation error in task operation ${method} ${url}`, { response: text });
+          throw new Error(`Invalid task data: ${text}`);
+          
+        default:
+          console.error(`[API] Unexpected error ${res.status} for task operation ${method} ${url}`, { response: text });
+          throw new Error(`Error updating task (${res.status}): ${text.slice(0,100)}`);
+      }
     }
     
     // Handle other errors with detailed logs

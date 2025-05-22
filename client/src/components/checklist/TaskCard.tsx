@@ -99,7 +99,7 @@ export default function TaskCard({
   sourceName,
   frameworkCode,
   isGoodPractice = false,
-  origin = '',
+  origin = 'custom' as 'custom' | 'factor' | 'heuristic' | 'policy' | 'framework',
   sourceId = '', // Default to empty string to prevent 'undefined' runtime errors
   syncStatus = 'synced', // Default sync status
   retryCount = 0,

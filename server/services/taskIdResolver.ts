@@ -300,13 +300,25 @@ export class TaskIdResolver {
    * @param projectsDb The projects database module
    * @returns Promise resolving to number of tasks updated
    */
+  /**
+   * Synchronize all related Success Factor tasks with the same sourceId
+   * 
+   * @param projectId The project ID
+   * @param sourceId The source ID to match
+   * @param updates The updates to apply to all matching tasks
+   * @param projectsDb The projects database module
+   * @returns Promise resolving to number of tasks updated
+   */
   static async syncRelatedTasks(
     projectId: string, 
     sourceId: string, 
-    updates: any,
+    updates: Record<string, any>,
     projectsDb: any
   ): Promise<number> {
     if (!projectId || !sourceId || !this.isValidUUID(sourceId)) {
+      if (DEBUG_TASK_ID_RESOLUTION) {
+        console.log(`[TASK_RESOLVER] Invalid inputs for syncRelatedTasks: projectId=${projectId}, sourceId=${sourceId}`);
+      }
       return 0;
     }
     
@@ -315,22 +327,29 @@ export class TaskIdResolver {
       const allTasks = await projectsDb.getTasksForProject(projectId);
       
       if (!allTasks || allTasks.length === 0) {
+        if (DEBUG_TASK_ID_RESOLUTION) {
+          console.log(`[TASK_RESOLVER] No tasks found for project: ${projectId}`);
+        }
         return 0;
       }
       
       // Find all related Success Factor tasks with matching sourceId
-      const relatedTasks = allTasks.filter(task => 
+      const relatedTasks = allTasks.filter((task: Record<string, any>) => 
         task.sourceId === sourceId && 
-        task.origin === 'factor' &&
+        (task.origin === 'factor' || task.origin === 'custom') &&
         task.projectId === projectId
       );
       
       if (relatedTasks.length === 0) {
+        if (DEBUG_TASK_ID_RESOLUTION) {
+          console.log(`[TASK_RESOLVER] No tasks found with sourceId: ${sourceId}`);
+        }
         return 0;
       }
       
-      if (DEBUG_TASK_PERSISTENCE) {
+      if (DEBUG_TASK_PERSISTENCE || DEBUG_TASK_ID_RESOLUTION) {
         console.log(`[TASK_RESOLVER] Found ${relatedTasks.length} related tasks with sourceId: ${sourceId}`);
+        console.log(`[TASK_RESOLVER] Applying updates: ${JSON.stringify(updates)}`);
       }
       
       // Update each related task
@@ -342,21 +361,27 @@ export class TaskIdResolver {
             ...updates,
             // Include original properties to prevent losing data
             sourceId: task.sourceId,
-            origin: task.origin
+            origin: task.origin,
+            // Add timestamp to ensure changes are tracked
+            updatedAt: new Date()
           });
           updatedCount++;
+          
+          if (DEBUG_TASK_PERSISTENCE) {
+            console.log(`[TASK_RESOLVER] Updated related task ${task.id} (origin: ${task.origin})`);
+          }
         } catch (err) {
           console.error(`[TASK_RESOLVER] Error updating related task ${task.id}:`, err);
         }
       }
       
-      if (DEBUG_TASK_PERSISTENCE) {
+      if (DEBUG_TASK_PERSISTENCE || DEBUG_TASK_ID_RESOLUTION) {
         console.log(`[TASK_RESOLVER] Successfully synchronized ${updatedCount} related tasks with sourceId: ${sourceId}`);
       }
       
       return updatedCount;
     } catch (err) {
-      console.error('Error synchronizing related tasks:', err);
+      console.error('[TASK_RESOLVER] Error synchronizing related tasks:', err);
       return 0;
     }
   }
