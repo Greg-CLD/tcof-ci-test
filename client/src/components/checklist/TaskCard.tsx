@@ -128,9 +128,9 @@ export default function TaskCard({
 
   // Handle task completion toggle
   const handleToggleCompleted = () => {
-    // Validate required fields
-    if (!id) {
-      console.error('TaskCard: Missing required id field');
+    // Required field validation
+    if (!id && !sourceId) {
+      console.error('TaskCard: Task must have either id or sourceId');
       return;
     }
 
@@ -147,9 +147,14 @@ export default function TaskCard({
     const isFactorTask = source === 'factor' || origin === 'factor';
     const hasValidSourceId = isFactorTask && sourceId && sourceId.trim().length > 0;
 
-    // For factor tasks, try sourceId first, fallback to id
-    // For other tasks, always use id
-    const updateId = hasValidSourceId ? sourceId : id;
+    // Determine most appropriate ID to use
+    let updateId = id; // Default to main id
+    if (isFactorTask && hasValidSourceId) {
+      updateId = sourceId; // Use sourceId for factor tasks when available
+    } else if (!updateId?.trim()) {
+      console.error('TaskCard: No valid ID available for update');
+      return;
+    }
 
     // Debug log ID selection
     console.debug('[TASK_UPDATE]', {
