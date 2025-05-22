@@ -11,7 +11,7 @@
  */
 
 import { db } from '../../db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 import { projectTasks } from '../../shared/schema';
 
 // Debug flag for detailed logging
