@@ -755,142 +755,131 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     });
   });
 
-  // Update a specific task for a project - ensures JSON responses with proper headers
-  app.put("/api/projects/:projectId/tasks/:taskId", async (req, res) => {
+  // Task update endpoint with guaranteed JSON responses and proper Success Factor handling
+  app.put("/api/projects/:projectId/tasks/:taskId", async (req: Request, res: Response) => {
     // CRITICAL: Always set Content-Type header to ensure JSON responses
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
-    // Track if a response has been sent
-    let responseSent = false;
-    
-    // Helper function to safely send a JSON response just once
-    const sendJsonResponse = (status: number, data: any) => {
-      if (!responseSent) {
-        responseSent = true;
-        res.status(status).json(data);
-        return true;
-      }
-      return false;
-    };
-    
-    // Handle authentication first
+    // Authentication check
     if (req.headers['x-auth-override'] !== 'true') {
       if (!req.isAuthenticated || !req.isAuthenticated()) {
-        return sendJsonResponse(401, {
+        return res.status(401).json({
           success: false,
           message: 'Authentication required'
         });
       }
     }
     
-    try {
-      // Extract parameters once
-      const { projectId, taskId } = req.params;
-      const updateData = req.body;
+    // Extract parameters
+    const { projectId, taskId } = req.params;
+    const updateData = req.body;
+    const isDebugEnabled = process.env.DEBUG_TASKS === 'true';
+    
+    // Validate required parameters
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        error: 'INVALID_PARAMETERS',
+        message: 'Project ID is required'
+      });
+    }
+    
+    if (!taskId) {
+      return res.status(400).json({
+        success: false,
+        error: 'INVALID_PARAMETERS',
+        message: 'Task ID is required'
+      });
+    }
+    
+    // Log debug information if enabled
+    if (isDebugEnabled) {
+      console.log('[DEBUG_TASK_API] Task update request:');
+      console.log(`[DEBUG_TASK_API] - Project ID: ${projectId}`);
+      console.log(`[DEBUG_TASK_API] - Task ID: ${taskId}`);
+      console.log(`[DEBUG_TASK_API] - Update data:`, JSON.stringify(updateData, null, 2));
       
-      // Basic validation
-      if (!projectId) {
-        return sendJsonResponse(400, {
-          success: false,
-          error: 'INVALID_PARAMETERS',
-          message: 'Project ID is required'
-        });
-      }
-      
-      if (!taskId) {
-        return sendJsonResponse(400, {
-          success: false,
-          error: 'INVALID_PARAMETERS',
-          message: 'Task ID is required'
-        });
-      }
-      
-      // Enable detailed debug logging if flag is set
-      const isDebugEnabled = process.env.DEBUG_TASKS === 'true';
-      
-      if (isDebugEnabled) {
-        console.log(`[DEBUG_TASK_API] Task update request received:`);
-        console.log(`[DEBUG_TASK_API] - Project ID: ${projectId}`);
-        console.log(`[DEBUG_TASK_API] - Task ID: ${taskId}`);
-        console.log(`[DEBUG_TASK_API] - Update data:`, JSON.stringify(updateData, null, 2));
-      }
-      
-      // Detect if this is a Success Factor task
-      const isSuccessFactorTask = updateData.origin === 'success-factor' || updateData.origin === 'factor';
-      if (isSuccessFactorTask && isDebugEnabled) {
+      if (updateData.origin === 'success-factor' || updateData.origin === 'factor') {
         console.log(`[DEBUG_TASK_API] *** Success Factor task update detected ***`);
       }
-      
+    }
+    
+    try {
       // Step 1: Find the original task to ensure proper updates
       let originalTask = null;
+      let tasks = [];
+      
       try {
-        const tasks = await projectsDb.getTasksForProject(projectId);
-        
-        // First try exact ID match
-        originalTask = tasks.find(t => t.id === taskId);
-        
-        // If not found, try with UUID prefix match for compound IDs
-        if (!originalTask) {
-          const cleanId = taskId.split('-').slice(0, 5).join('-');
-          originalTask = tasks.find(t => t.id.startsWith(cleanId));
-          
-          if (isDebugEnabled && originalTask) {
-            console.log(`[DEBUG_TASK_API] Found task using UUID prefix match: ${cleanId}`);
-          }
-        }
-        
-        if (originalTask) {
-          if (isDebugEnabled) {
-            console.log(`[DEBUG_TASK_API] Original task found:`);
-            console.log(`[DEBUG_TASK_API] - ID: ${originalTask.id}`);
-            console.log(`[DEBUG_TASK_API] - Text: ${originalTask.text}`);
-            console.log(`[DEBUG_TASK_API] - Origin: ${originalTask.origin}`);
-            console.log(`[DEBUG_TASK_API] - Completed: ${originalTask.completed}`);
-          }
-          
-          // Preserve critical metadata for Success Factor tasks
-          if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
-            if (!updateData.origin) {
-              updateData.origin = originalTask.origin;
-            }
-            
-            // Ensure sourceId is preserved - critical for Success Factor tasks
-            if (originalTask.sourceId && !updateData.sourceId) {
-              updateData.sourceId = originalTask.sourceId;
-              
-              if (isDebugEnabled) {
-                console.log(`[DEBUG_TASK_API] Preserved sourceId: ${originalTask.sourceId}`);
-              }
-            }
-          }
-        } else if (isDebugEnabled) {
-          console.log(`[DEBUG_TASK_API] No existing task found with ID: ${taskId}`);
-        }
-      } catch (lookupError) {
-        console.error(`[ERROR] Failed to lookup original task:`, lookupError);
-        // Continue processing - we'll handle task not found below
+        tasks = await projectsDb.getTasksForProject(projectId);
+      } catch (dbError) {
+        console.error('[ERROR] Failed to get tasks for project:', dbError);
+        return res.status(500).json({
+          success: false, 
+          error: 'DATABASE_ERROR',
+          message: 'Failed to retrieve tasks for project'
+        });
       }
       
-      // Step 2: Perform the task update with proper error handling
-      try {
-        // If task not found, return 404 with proper JSON
-        if (!originalTask) {
-          return sendJsonResponse(404, {
-            success: false,
-            error: 'TASK_NOT_FOUND',
-            message: `Task with ID ${taskId} not found in project ${projectId}`
-          });
+      // First try exact ID match
+      originalTask = tasks.find(t => t.id === taskId);
+      
+      // If not found, try with UUID prefix match for compound IDs (Success Factor tasks)
+      if (!originalTask) {
+        const cleanId = taskId.split('-').slice(0, 5).join('-');
+        originalTask = tasks.find(t => t.id.startsWith(cleanId));
+        
+        if (isDebugEnabled && originalTask) {
+          console.log(`[DEBUG_TASK_API] Found task using UUID prefix match: ${cleanId}`);
+        }
+      }
+      
+      // Handle task not found
+      if (!originalTask) {
+        if (isDebugEnabled) {
+          console.log(`[DEBUG_TASK_API] No task found with ID: ${taskId}`);
         }
         
-        // Update the task
+        return res.status(404).json({
+          success: false,
+          error: 'TASK_NOT_FOUND',
+          message: `Task with ID ${taskId} not found in project ${projectId}`
+        });
+      }
+      
+      // Log found task details
+      if (isDebugEnabled) {
+        console.log(`[DEBUG_TASK_API] Original task found:`);
+        console.log(`[DEBUG_TASK_API] - ID: ${originalTask.id}`);
+        console.log(`[DEBUG_TASK_API] - Text: ${originalTask.text || 'N/A'}`);
+        console.log(`[DEBUG_TASK_API] - Origin: ${originalTask.origin || 'N/A'}`);
+        console.log(`[DEBUG_TASK_API] - Completed: ${originalTask.completed}`);
+      }
+      
+      // Special handling for Success Factor tasks to preserve metadata
+      if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
+        if (!updateData.origin) {
+          updateData.origin = originalTask.origin;
+        }
+        
+        // Critical: Ensure sourceId is preserved for Success Factor tasks
+        if (originalTask.sourceId && !updateData.sourceId) {
+          updateData.sourceId = originalTask.sourceId;
+          
+          if (isDebugEnabled) {
+            console.log(`[DEBUG_TASK_API] Preserved sourceId: ${originalTask.sourceId}`);
+          }
+        }
+      }
+      
+      // Step 2: Update the task
+      try {
         const updatedTask = await projectsDb.updateTask(taskId, updateData);
         
         if (isDebugEnabled) {
-          console.log(`[DEBUG_TASK_API] Task updated successfully:`, updatedTask);
+          console.log(`[DEBUG_TASK_API] Task updated successfully`);
         }
         
-        // Return success response with updated task
-        return sendJsonResponse(200, {
+        return res.status(200).json({
           success: true,
           message: 'Task updated successfully',
           task: updatedTask
@@ -898,27 +887,17 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       } catch (updateError) {
         console.error(`[TASK_UPDATE_ERROR] Failed to update task:`, updateError);
         
-        // Return error response with proper JSON
-        return sendJsonResponse(500, {
+        return res.status(500).json({
           success: false,
           error: 'UPDATE_FAILED',
           message: 'Failed to update task'
-        });
-      }
-      
-      // Fallback for unexpected execution path
-      if (!responseSent) {
-        return sendJsonResponse(500, {
-          success: false,
-          error: 'UNEXPECTED_FLOW',
-          message: 'Unexpected flow in task update endpoint'
         });
       }
     } catch (error) {
       // Catch-all error handler
       console.error(`[ERROR] Unhandled error in task update endpoint:`, error);
       
-      return sendJsonResponse(500, {
+      return res.status(500).json({
         success: false,
         error: 'INTERNAL_SERVER_ERROR',
         message: 'An unexpected error occurred'
