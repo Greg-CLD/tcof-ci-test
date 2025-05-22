@@ -840,6 +840,22 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     }
     
     try {
+      // Validate the input task ID format
+      if (taskId && !TaskIdResolver.isValidUUID(TaskIdResolver.cleanTaskId(taskId))) {
+        if (isDebugEnabled) {
+          console.log(`[DEBUG_TASKS] Invalid task ID format: ${taskId}`);
+        }
+        return res.status(400).json({
+          success: false,
+          error: 'INVALID_TASK_ID',
+          message: `Invalid task ID format: ${taskId}`,
+          details: {
+            taskId,
+            projectId
+          }
+        });
+      }
+      
       // Use the TaskIdResolver to find the task with intelligent ID resolution
       const taskLookupResult = await TaskIdResolver.findTaskById(projectId, taskId, projectsDb);
       
@@ -848,7 +864,8 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           found: !!taskLookupResult.task,
           lookupMethod: taskLookupResult.lookupMethod,
           originalId: taskLookupResult.originalId,
-          resolvedId: taskLookupResult.task?.id
+          resolvedId: taskLookupResult.task?.id,
+          metadata: taskLookupResult.metadata
         });
       }
       
@@ -857,7 +874,13 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         return res.status(404).json({
           success: false,
           error: 'TASK_NOT_FOUND',
-          message: `Task with ID ${taskId} not found in project ${projectId}`
+          message: `Task with ID ${taskId} not found in project ${projectId}`,
+          details: {
+            taskId,
+            projectId,
+            lookupMethod: taskLookupResult.lookupMethod,
+            resolutionPath: taskLookupResult.metadata?.resolutionPath
+          }
         });
       }
       
@@ -893,19 +916,69 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       // Create a copy of req.body for task updates
       let updates = { ...req.body };
       
-      // Special handling for Success Factor tasks to preserve metadata
+      // Enhanced handling for Success Factor tasks with strict validation
       if (originalTask.origin === 'success-factor' || originalTask.origin === 'factor') {
-        if (!updates.origin) {
-          updates.origin = originalTask.origin;
+        // Prevent changing origin of Success Factor tasks
+        if (updates.origin && updates.origin !== originalTask.origin) {
+          if (isDebugEnabled) {
+            console.log(`[DEBUG_TASKS] Attempted to change Success Factor origin from ${originalTask.origin} to ${updates.origin}`);
+          }
+          return res.status(400).json({
+            success: false,
+            error: 'INVALID_SUCCESS_FACTOR_UPDATE',
+            message: 'Cannot change origin of a Success Factor task',
+            details: {
+              taskId: originalTask.id,
+              currentOrigin: originalTask.origin,
+              attemptedOrigin: updates.origin
+            }
+          });
         }
         
-        // Critical: Ensure sourceId is preserved for Success Factor tasks
-        if (originalTask.sourceId && !updates.sourceId) {
+        // Prevent changing sourceId of Success Factor tasks
+        if (updates.sourceId && updates.sourceId !== originalTask.sourceId) {
+          if (isDebugEnabled) {
+            console.log(`[DEBUG_TASKS] Attempted to change Success Factor sourceId from ${originalTask.sourceId} to ${updates.sourceId}`);
+          }
+          return res.status(400).json({
+            success: false,
+            error: 'INVALID_SUCCESS_FACTOR_UPDATE',
+            message: 'Cannot change sourceId of a Success Factor task',
+            details: {
+              taskId: originalTask.id,
+              currentSourceId: originalTask.sourceId,
+              attemptedSourceId: updates.sourceId
+            }
+          });
+        }
+        
+        // Always preserve origin for Success Factor tasks
+        updates.origin = originalTask.origin;
+        
+        // Always preserve sourceId for Success Factor tasks
+        if (originalTask.sourceId) {
           updates.sourceId = originalTask.sourceId;
           
           if (isDebugEnabled) {
             console.log(`[DEBUG_TASKS] Preserved sourceId: ${originalTask.sourceId}`);
           }
+        }
+        
+        // Validate stage value if it's being updated
+        if (updates.stage && !['identification', 'definition', 'delivery', 'closure'].includes(updates.stage)) {
+          if (isDebugEnabled) {
+            console.log(`[DEBUG_TASKS] Invalid stage value for Success Factor task: ${updates.stage}`);
+          }
+          return res.status(400).json({
+            success: false,
+            error: 'INVALID_SUCCESS_FACTOR_UPDATE',
+            message: 'Invalid stage value for Success Factor task',
+            details: {
+              taskId: originalTask.id,
+              invalidStage: updates.stage,
+              validStages: ['identification', 'definition', 'delivery', 'closure']
+            }
+          });
         }
       }
       

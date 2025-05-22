@@ -39,6 +39,43 @@ interface TaskLookupResult {
  * Class to handle unified task ID resolution
  */
 export class TaskIdResolver {
+  // Cache for canonical Success Factor IDs for validation
+  private static canonicalFactorIds: Set<string> = new Set();
+  
+  /**
+   * Initialize the resolver with canonical Success Factor IDs for validation
+   * 
+   * @param factorIds Array of canonical Success Factor IDs
+   */
+  static initializeCanonicalIds(factorIds: string[]): void {
+    if (factorIds && Array.isArray(factorIds)) {
+      this.canonicalFactorIds = new Set(factorIds);
+      
+      if (DEBUG_TASK_ID_RESOLUTION) {
+        console.log(`[TASK_RESOLVER] Initialized with ${this.canonicalFactorIds.size} canonical Success Factor IDs`);
+      }
+    }
+  }
+  
+  /**
+   * Validate if an ID is a canonical Success Factor ID
+   * 
+   * @param id The ID to validate
+   * @returns True if the ID is a canonical Success Factor ID
+   */
+  static isCanonicalFactorId(id: string): boolean {
+    if (!id) return false;
+    
+    const cleanId = this.cleanTaskId(id);
+    const isValid = this.canonicalFactorIds.has(cleanId);
+    
+    if (DEBUG_TASK_ID_RESOLUTION && !isValid) {
+      console.log(`[TASK_RESOLVER] ID ${cleanId} is not a canonical Success Factor ID`);
+    }
+    
+    return isValid;
+  }
+  
   /**
    * Clean a potentially compound task ID to extract just the UUID part
    * 
@@ -399,13 +436,51 @@ export class TaskIdResolver {
   }
 }
 
-// Create custom error class for task not found
+// Create custom error classes for task-related errors
 export class TaskNotFoundError extends Error {
   code: string;
+  statusCode: number;
   
   constructor(taskId: string) {
     super(`Task not found: ${taskId}`);
     this.name = 'TaskNotFoundError';
     this.code = 'TASK_NOT_FOUND';
+    this.statusCode = 404;
+  }
+}
+
+export class InvalidTaskIdError extends Error {
+  code: string;
+  statusCode: number;
+  
+  constructor(taskId: string) {
+    super(`Invalid task ID format: ${taskId}`);
+    this.name = 'InvalidTaskIdError';
+    this.code = 'INVALID_TASK_ID';
+    this.statusCode = 400;
+  }
+}
+
+export class InvalidSuccessFactorIdError extends Error {
+  code: string;
+  statusCode: number;
+  
+  constructor(sourceId: string) {
+    super(`Invalid Success Factor ID: ${sourceId}`);
+    this.name = 'InvalidSuccessFactorIdError';
+    this.code = 'INVALID_SUCCESS_FACTOR_ID';
+    this.statusCode = 400;
+  }
+}
+
+export class TaskUpdateValidationError extends Error {
+  code: string;
+  statusCode: number;
+  
+  constructor(message: string) {
+    super(message);
+    this.name = 'TaskUpdateValidationError';
+    this.code = 'TASK_UPDATE_VALIDATION_ERROR';
+    this.statusCode = 400;
   }
 }
