@@ -5,9 +5,12 @@
  * across different formats: UUID, compound ID, and sourceId
  */
 
-import { pool } from '../db';
 import { validate as validateUUID } from 'uuid';
-import { DEBUG_TASK_LOOKUP, DEBUG_TASK_MAPPING, DEBUG_TASK_PERSISTENCE } from '../../shared/constants.debug';
+
+// Define debug flags 
+const DEBUG_TASK_LOOKUP = process.env.DEBUG_TASKS === 'true';
+const DEBUG_TASK_MAPPING = process.env.DEBUG_TASKS === 'true';
+const DEBUG_TASK_PERSISTENCE = process.env.DEBUG_TASKS === 'true';
 
 /**
  * Interface for task lookup results
@@ -78,9 +81,10 @@ export class TaskIdResolver {
    * 
    * @param projectId The project ID
    * @param taskId The task ID (can be exact ID, UUID part, or related to sourceId)
+   * @param projectsDb The projects database module
    * @returns Promise resolving to task or null
    */
-  static async findTaskById(projectId: string, taskId: string): Promise<TaskLookupResult> {
+  static async findTaskById(projectId: string, taskId: string, projectsDb: any): Promise<TaskLookupResult> {
     if (!projectId || !taskId) {
       return { 
         task: null,
@@ -96,85 +100,78 @@ export class TaskIdResolver {
     // Attempt to clean the task ID (extract UUID if compound)
     const cleanId = this.cleanTaskId(taskId);
     
-    // Step 1: Try to find by exact ID match
     try {
-      const exactMatchQuery = `
-        SELECT * FROM project_tasks 
-        WHERE id = $1 AND project_id = $2
-      `;
+      // Get all tasks for the project
+      const allTasks = await projectsDb.getTasksForProject(projectId);
       
-      const exactMatchResult = await pool.query(exactMatchQuery, [taskId, projectId]);
+      if (!allTasks || allTasks.length === 0) {
+        if (DEBUG_TASK_LOOKUP) {
+          console.log(`[TASK_RESOLVER] No tasks found for project: ${projectId}`);
+        }
+        return {
+          task: null,
+          lookupMethod: 'not-found',
+          originalId: taskId
+        };
+      }
       
-      if (exactMatchResult.rows.length > 0) {
+      // Step 1: Try to find by exact ID match
+      const exactMatch = allTasks.find(task => task.id === taskId);
+      if (exactMatch) {
         if (DEBUG_TASK_LOOKUP) {
           console.log(`[TASK_RESOLVER] Found task by exact ID match: ${taskId}`);
         }
         
         return {
-          task: exactMatchResult.rows[0],
+          task: exactMatch,
           lookupMethod: 'exact',
           originalId: taskId
         };
       }
-    } catch (err) {
-      console.error('Error during exact match task lookup:', err);
-    }
-    
-    // Step 2: If cleanId is different from taskId, try to find by clean UUID
-    if (cleanId !== taskId) {
-      try {
-        const cleanIdQuery = `
-          SELECT * FROM project_tasks 
-          WHERE id = $1 AND project_id = $2
-        `;
-        
-        const cleanIdResult = await pool.query(cleanIdQuery, [cleanId, projectId]);
-        
-        if (cleanIdResult.rows.length > 0) {
+      
+      // Step 2: If cleanId is different from taskId, try to find by clean UUID
+      if (cleanId !== taskId) {
+        const cleanIdMatch = allTasks.find(task => task.id === cleanId);
+        if (cleanIdMatch) {
           if (DEBUG_TASK_LOOKUP) {
             console.log(`[TASK_RESOLVER] Found task by clean UUID match: ${cleanId}`);
           }
           
           return {
-            task: cleanIdResult.rows[0],
+            task: cleanIdMatch,
             lookupMethod: 'clean-uuid',
             originalId: taskId
           };
         }
-      } catch (err) {
-        console.error('Error during clean UUID task lookup:', err);
       }
-    }
-    
-    // Step 3: For Success Factor tasks, try to find by sourceId
-    if (this.isValidUUID(cleanId)) {
-      try {
-        const sourceIdQuery = `
-          SELECT * FROM project_tasks 
-          WHERE source_id = $1 AND project_id = $2 AND origin = 'factor'
-        `;
+      
+      // Step 3: For Success Factor tasks, try to find by sourceId
+      if (this.isValidUUID(cleanId)) {
+        const sourceIdMatch = allTasks.find(task => 
+          task.sourceId === cleanId && task.origin === 'factor'
+        );
         
-        const sourceIdResult = await pool.query(sourceIdQuery, [cleanId, projectId]);
-        
-        if (sourceIdResult.rows.length > 0) {
+        if (sourceIdMatch) {
           if (DEBUG_TASK_LOOKUP) {
             console.log(`[TASK_RESOLVER] Found task by sourceId match: ${cleanId}`);
+            console.log(`[TASK_RESOLVER] Actual task ID: ${sourceIdMatch.id}`);
           }
           
           return {
-            task: sourceIdResult.rows[0],
+            task: sourceIdMatch,
             lookupMethod: 'source-id',
             originalId: taskId
           };
         }
-      } catch (err) {
-        console.error('Error during sourceId task lookup:', err);
       }
-    }
-    
-    // Task not found through any method
-    if (DEBUG_TASK_LOOKUP) {
-      console.log(`[TASK_RESOLVER] Task not found with ID: ${taskId} or clean ID: ${cleanId}`);
+      
+      // Task not found through any method
+      if (DEBUG_TASK_LOOKUP) {
+        console.log(`[TASK_RESOLVER] Task not found with ID: ${taskId} or clean ID: ${cleanId}`);
+      }
+      
+    } catch (err) {
+      console.error('Error during task lookup:', err);
     }
     
     return {
@@ -190,38 +187,64 @@ export class TaskIdResolver {
    * @param projectId The project ID
    * @param sourceId The source ID to match
    * @param updates The updates to apply to all matching tasks
+   * @param projectsDb The projects database module
    * @returns Promise resolving to number of tasks updated
    */
-  static async syncRelatedTasks(projectId: string, sourceId: string, updates: any): Promise<number> {
+  static async syncRelatedTasks(
+    projectId: string, 
+    sourceId: string, 
+    updates: any,
+    projectsDb: any
+  ): Promise<number> {
     if (!projectId || !sourceId || !this.isValidUUID(sourceId)) {
       return 0;
     }
     
     try {
-      // Only sync tasks that have the same sourceId in the same project
-      const updateQuery = `
-        UPDATE project_tasks
-        SET 
-          completed = $1,
-          updated_at = NOW()
-        WHERE 
-          project_id = $2 AND 
-          source_id = $3 AND
-          origin = 'factor'
-        RETURNING id
-      `;
+      // First get all tasks for the project
+      const allTasks = await projectsDb.getTasksForProject(projectId);
       
-      const result = await pool.query(updateQuery, [
-        updates.completed,
-        projectId,
-        sourceId
-      ]);
-      
-      if (DEBUG_TASK_PERSISTENCE) {
-        console.log(`[TASK_RESOLVER] Synchronized ${result.rows.length} related tasks with sourceId: ${sourceId}`);
+      if (!allTasks || allTasks.length === 0) {
+        return 0;
       }
       
-      return result.rows.length;
+      // Find all related Success Factor tasks with matching sourceId
+      const relatedTasks = allTasks.filter(task => 
+        task.sourceId === sourceId && 
+        task.origin === 'factor' &&
+        task.projectId === projectId
+      );
+      
+      if (relatedTasks.length === 0) {
+        return 0;
+      }
+      
+      if (DEBUG_TASK_PERSISTENCE) {
+        console.log(`[TASK_RESOLVER] Found ${relatedTasks.length} related tasks with sourceId: ${sourceId}`);
+      }
+      
+      // Update each related task
+      let updatedCount = 0;
+      for (const task of relatedTasks) {
+        try {
+          // Use the existing updateTask method from projectsDb
+          await projectsDb.updateTask(task.id, projectId, {
+            ...updates,
+            // Include original properties to prevent losing data
+            sourceId: task.sourceId,
+            origin: task.origin
+          });
+          updatedCount++;
+        } catch (err) {
+          console.error(`[TASK_RESOLVER] Error updating related task ${task.id}:`, err);
+        }
+      }
+      
+      if (DEBUG_TASK_PERSISTENCE) {
+        console.log(`[TASK_RESOLVER] Successfully synchronized ${updatedCount} related tasks with sourceId: ${sourceId}`);
+      }
+      
+      return updatedCount;
     } catch (err) {
       console.error('Error synchronizing related tasks:', err);
       return 0;

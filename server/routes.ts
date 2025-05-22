@@ -789,7 +789,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     
     // Extract parameters
     const { projectId, taskId } = req.params;
-    const updateData = req.body;
+    const taskUpdate = req.body;
     const isDebugEnabled = process.env.DEBUG_TASKS === 'true';
     
     // Validate the task ID using the TaskIdResolver
@@ -816,81 +816,52 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
     
     // Log debug information if enabled
     if (isDebugEnabled) {
-      console.log('[DEBUG_TASK_API] Task update request:');
-      console.log(`[DEBUG_TASK_API] - Project ID: ${projectId}`);
-      console.log(`[DEBUG_TASK_API] - Task ID: ${taskId}`);
-      console.log(`[DEBUG_TASK_API] - Update data:`, JSON.stringify(updateData, null, 2));
+      console.log('[DEBUG_TASKS] Task update request:');
+      console.log(`[DEBUG_TASKS] - Project ID: ${projectId}`);
+      console.log(`[DEBUG_TASKS] - Task ID: ${taskId}`);
+      console.log(`[DEBUG_TASKS] - Update data:`, JSON.stringify(taskUpdate, null, 2));
       
-      if (updateData.origin === 'success-factor' || updateData.origin === 'factor') {
-        console.log(`[DEBUG_TASK_API] *** Success Factor task update detected ***`);
+      if (taskUpdate.origin === 'success-factor' || taskUpdate.origin === 'factor') {
+        console.log(`[DEBUG_TASKS] *** Success Factor task update detected ***`);
       }
-    }
-    
-    // Validate taskId is a valid UUID format for proper lookup
-    if (!validateUuid(taskId)) {
-      if (isDebugEnabled) {
-        console.log(`[DEBUG_TASK_API] Invalid UUID format for taskId: ${taskId}`);
-      }
-      return res.status(400).json({
-        success: false,
-        error: 'INVALID_FORMAT',
-        message: 'Task ID must be a valid UUID format'
-      });
     }
     
     try {
-      // Step 1: Find the original task to ensure proper updates
-      let originalTask = null;
-      let tasks = [];
+      // Use the TaskIdResolver to find the task with intelligent ID resolution
+      const taskLookupResult = await TaskIdResolver.findTaskById(projectId, taskId, projectsDb);
       
-      try {
-        tasks = await projectsDb.getTasksForProject(projectId);
-      } catch (dbError) {
-        console.error('[ERROR] Failed to get tasks for project:', dbError);
-        return res.status(500).json({
-          success: false, 
-          error: 'DATABASE_ERROR',
-          message: 'Failed to retrieve tasks for project'
+      if (isDebugEnabled) {
+        console.log(`[DEBUG_TASKS] Task lookup result:`, {
+          found: !!taskLookupResult.task,
+          lookupMethod: taskLookupResult.lookupMethod,
+          originalId: taskLookupResult.originalId,
+          resolvedId: taskLookupResult.task?.id
         });
       }
       
-      // First try exact ID match
-      originalTask = tasks.find(t => t.id === taskId);
-      
-      // If not found, try with UUID prefix match for compound IDs (Success Factor tasks)
-      if (!originalTask) {
-        const cleanId = taskId.split('-').slice(0, 5).join('-');
-        originalTask = tasks.find(t => t.id.startsWith(cleanId));
-        
-        if (isDebugEnabled && originalTask) {
-          console.log(`[DEBUG_TASK_API] Found task using UUID prefix match: ${cleanId}`);
-        }
-      }
-      
-      // If still not found, try to find task by sourceId for the same project (Success Factor tasks)
-      if (!originalTask) {
-        // Look up by sourceId as a fallback (especially for Success Factor tasks)
-        const taskBySourceId = await findTaskBySourceId(projectId, taskId);
-        if (taskBySourceId) {
-          // If found by sourceId, update originalTask reference
-          originalTask = tasks.find(t => t.id === taskBySourceId.id);
-          if (isDebugEnabled && originalTask) {
-            console.log(`[DEBUG_TASK_API] Found task using sourceId match: ${taskId} -> ${taskBySourceId.id}`);
-          }
-        }
-      }
-      
       // Handle task not found
-      if (!originalTask) {
-        if (isDebugEnabled) {
-          console.log(`[DEBUG_TASK_API] No task found with ID: ${taskId}`);
-        }
-        
+      if (!taskLookupResult.task) {
         return res.status(404).json({
           success: false,
           error: 'TASK_NOT_FOUND',
           message: `Task with ID ${taskId} not found in project ${projectId}`
         });
+      }
+      
+      // We've already found the task using TaskIdResolver
+      const originalTask = taskLookupResult.task;
+      
+      // Additional handling for Success Factor tasks with sourceId
+      if (originalTask.origin === 'factor' && originalTask.sourceId) {
+        if (isDebugEnabled) {
+          console.log(`[DEBUG_TASKS] Success Factor task detected with sourceId: ${originalTask.sourceId}`);
+          
+          // If the task ID from the original request doesn't match the actual task ID in the database,
+          // log that we're using smart ID resolution
+          if (originalTask.id !== taskId) {
+            console.log(`[DEBUG_TASKS] Using smart ID resolution: Request ID ${taskId} -> Actual ID ${originalTask.id}`);
+          }
+        }
       }
       
       // Log found task details
