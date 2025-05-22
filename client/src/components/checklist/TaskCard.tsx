@@ -89,6 +89,8 @@ export default function TaskCard({
   sourceName,
   frameworkCode,
   isGoodPractice = false,
+  origin = '',
+  sourceId = '', // Default to empty string to prevent 'undefined' runtime errors
   onUpdate,
   onDelete,
   dragHandleProps
