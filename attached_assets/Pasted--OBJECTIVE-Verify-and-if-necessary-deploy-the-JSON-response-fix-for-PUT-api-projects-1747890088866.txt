@@ -1,0 +1,48 @@
+' OBJECTIVE
+'   Verify — and if necessary deploy — the JSON-response fix for
+'   PUT /api/projects/:projectId/tasks/:taskId on the LIVE Replit instance.
+
+' FILE-GROUP
+'   server/routes.ts         ' (only this layer may be changed)
+
+' STEPS
+' 1. Run **all six diagnostic commands** below **on the Replit container**   '
+'    (use curl with the SERVICE’S hostname). Capture exactly what is sent     '
+'    & returned.                                                              '
+'
+'    A. AUTHENTICATED trailing slash (should be 400 JSON)                     '
+'    B. AUTHENTICATED with taskId (should be 200/4xx JSON, never HTML)        '
+'    C. UNauthenticated trailing slash (should be 400 JSON)                  '
+'    D. UNauthenticated with taskId (should be 401 JSON)                     '
+'
+'    For each curl: paste                                                       '
+'       • full URL                                                              '
+'       • status line + Content-Type header                                     '
+'       • first 150 chars of body                                               '
+'
+' 2. Paste matching live server console lines for those four requests:         '
+'       [express] … plus any [TASK_LOOKUP] / [TASK_UPDATE_ERROR].              '
+'
+' 3. Paste:                                                                    '
+'       git rev-parse --short HEAD && git log -1 --pretty=format:"%h %s"       '
+'       (run on Replit).                                                       '
+'
+' 4. Paste **last 30 lines of the SSR boot log** after restart.                '
+'
+' 5. Paste complete smoke-test JSON output (live).                             '
+'
+' 6. If any Content-Type still equals "text/html":                             '
+'       • deploy latest commit (push / restart),                               '
+'       • show the **minimal diff** applied to server/routes.ts only, in       '
+'         ```diff``` fencing,                                                  '
+'       • show a matching unit test in ```ts``` fencing,                       '
+'       • rerun steps 1-5 and paste results.                                   '
+'
+' RULES
+'   – one objective, one file-group.                                           '
+'   – always paste smoke-test JSON after any code change.                      '
+'   – if you propose code, place the summary in a single copy-paste-able       '
+'     JS/TS block.                                                             '
+'   – do NOT include DevTools / React / UX tests (not needed).                 '
+'
+' END
