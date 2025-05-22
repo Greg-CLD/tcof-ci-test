@@ -1,0 +1,32 @@
+' GOAL REMINDER:
+' Our core goal is for TCOF Success Factor tasks to persist their completion status when toggled via the UI, with no ID/source/origin mismatch, and for this to work in real user testing—not just in theory or in local scripts.
+' Despite previous agent assertions, user testing continues to show the problem is NOT fixed. We need full, step-by-step, real-world evidence.
+
+' OBJECTIVE:
+' Prove, with a real authenticated session, that a Success Factor task can be toggled to complete, and that this persists after refresh.
+
+' FILE-GROUP: server/projectsDb.ts (server only, unless a genuine API/route mapping bug is found)
+'
+' INSTRUCTIONS:
+' - Using a real session, attempt to toggle a Success Factor task via the API or UI.
+' - For that exact task, paste the full JSON before and after the update (GET /api/projects/:projectId/tasks).
+' - Paste the server logs covering the PUT and GET (look for [TASK_LOOKUP], [TASK_UPDATE], [TASK_SOURCE_MATCH], etc).
+' - If PUT returns 404 or fails, paste a full list of task IDs, origins, and sourceIds in the project after the attempt (GET /api/projects/:projectId/tasks).
+' - If authentication is blocking, say so clearly and propose a way to pair/test manually.
+' - If you propose code, include a summary in a single copy-pasteable JS/TS code block.
+' - If app restarts, paste last 50 lines of SSR logs.
+
+' Example matching unit test:
+```js
+// test/smoke-success-factor-persistence.spec.ts
+it('should persist completion and retain correct origin/sourceId', async () => {
+  const created = await api.createTask({ origin: 'factor', ... });
+  expect(created.origin).toBe('factor');
+  expect(created.sourceId).toBeDefined();
+  const updated = await api.updateTask({ id: created.id, completed: true });
+  expect(updated.completed).toBe(true);
+  const refreshed = await api.getTask(created.id);
+  expect(refreshed.completed).toBe(true);
+  expect(refreshed.origin).toBe('factor');
+  expect(refreshed.sourceId).toBe(created.sourceId);
+});
