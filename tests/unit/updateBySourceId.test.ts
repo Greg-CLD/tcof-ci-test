@@ -139,7 +139,7 @@ describe('Task Update API Hardening Tests', () => {
     
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.error).toBe('INVALID_FORMAT');
+    expect(res.body.error).toBe('INVALID_UUID_FORMAT');
   });
 
   // Scenario 5: Regular non-factor task updates still work

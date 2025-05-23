@@ -31,7 +31,8 @@ import { projectsDb } from './projectsDb';
 // Import the task logger for detailed instrumentation
 import { taskLogger, TaskErrorCodes } from './services/taskLogger';
 import { taskStateManager } from './services/taskStateManager';
-import { getTaskIdResolver, TaskIdResolver, validateUuid } from './services/taskIdResolver';
+import { getTaskIdResolver, TaskIdResolver } from './services/taskIdResolver';
+import validateUuid from './middleware/validateUuid.ts';
 
 // Add type augmentation for projectsDb to include the missing methods
 declare module './projectsDb' {
@@ -817,7 +818,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   });
 
   // Task update endpoint with guaranteed JSON responses and proper Success Factor handling
-  app.put("/api/projects/:projectId/tasks/:taskId", async (req: Request, res: Response) => {
+  app.put(
+    "/api/projects/:projectId/tasks/:taskId",
+    validateUuid(["projectId", "taskId"]),
+    async (req: Request, res: Response) => {
     // CRITICAL: First action - Always set Content-Type header for JSON responses
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     
@@ -922,22 +926,6 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       const taskIdResolver = getTaskIdResolver(projectsDb);
       
       // Validate the input task ID format using cleanUUID method
-      if (taskId && !validateUuid(taskIdResolver.cleanUUID(taskId))) {
-        const error = new Error(`Invalid task ID format: ${taskId}`);
-        taskLogger.endOperation(operationId, false, error);
-        
-        if (isDebugEnabled) {
-          console.log(`[DEBUG_TASKS] Invalid task ID format: ${taskId}`);
-        }
-        
-        return res.status(400).json(
-          taskLogger.formatErrorResponse(
-            TaskErrorCodes.VALIDATION_ERROR,
-            `Invalid task ID format: ${taskId}`,
-            { taskId, projectId }
-          )
-        );
-      }
       
       // Use the TaskIdResolver with proper database connection to find the task
       // with intelligent ID resolution and proper parameter order (taskId, projectId)
