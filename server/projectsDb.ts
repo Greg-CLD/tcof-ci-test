@@ -1222,6 +1222,40 @@ export const projectsDb = {
         
         console.log(`Prepared update data for task ${validTaskId}:`, JSON.stringify(updateData, null, 2));
         
+        // Check if updateData is empty to prevent empty SQL updates
+        if (Object.keys(updateData).length === 0) {
+          console.error(`[TASK_UPDATE_ERROR] Cannot execute update with empty data for task ${validTaskId}`);
+          throw new Error(`Cannot update task: no valid update data provided`);
+        }
+        
+        // Validate all updateData keys exist in the schema
+        const validDbColumns = [
+          'id', 'project_id', 'title', 'description', 'factor_id', 
+          'stage', 'status', 'due_date', 'assigned_to', 'created_at', 
+          'updated_at', 'sort_order', 'completed', 'task_notes', 
+          'task_type', 'text', 'origin', 'source_id', 'notes', 
+          'priority', 'owner'
+        ];
+        
+        // Check each key in updateData is a valid database column
+        const invalidKeys = Object.keys(updateData).filter(key => !validDbColumns.includes(key));
+        if (invalidKeys.length > 0) {
+          console.error(`[TASK_UPDATE_ERROR] Invalid column names in update data: ${invalidKeys.join(', ')}`);
+          console.error(`[TASK_UPDATE_ERROR] Update data:`, JSON.stringify(updateData, null, 2));
+          
+          // Remove invalid keys from updateData
+          invalidKeys.forEach(key => delete updateData[key]);
+          console.log(`[TASK_UPDATE] Removed invalid keys. Remaining data:`, JSON.stringify(updateData, null, 2));
+          
+          // Check if we still have valid data to update
+          if (Object.keys(updateData).length === 0) {
+            console.error(`[TASK_UPDATE_ERROR] No valid update data remaining after key filtering`);
+            throw new Error(`Cannot update task: all provided update fields are invalid`);
+          }
+        }
+        
+        console.log(`[TASK_UPDATE] Final update data for task ${validTaskId}:`, JSON.stringify(updateData, null, 2));
+        
         try {
           // Generate the SQL for logging purposes (before executing)
           const updateSQL = db.update(projectTasksTable)
