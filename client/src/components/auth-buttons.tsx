@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import { LogOut, User, Settings } from "lucide-react";
+import { ADMIN_MENU_ITEMS, USER_MENU_ITEMS } from "@/constants/userMenuItems";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,9 +60,15 @@ export function AuthButtons() {
  */
 export function UserMenu() {
   const { user, logoutMutation } = useAuth();
-  
+
   if (!user) return null;
-  
+
+  const isAdminUser = user.username.toLowerCase() === 'greg@confluity.co.uk';
+  const menuItems = [
+    ...USER_MENU_ITEMS,
+    ...(isAdminUser ? ADMIN_MENU_ITEMS : [])
+  ];
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -76,21 +83,17 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <Link href="/profile">
-          <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-        </Link>
-        <Link href="/settings">
-          <DropdownMenuItem>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </DropdownMenuItem>
-        </Link>
+        {menuItems.map((item) => (
+          <Link href={item.path} key={item.path}>
+            <DropdownMenuItem>
+              <item.icon className="mr-2 h-4 w-4" />
+              <span>{item.label}</span>
+            </DropdownMenuItem>
+          </Link>
+        ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          className="text-red-500 focus:text-red-500" 
+        <DropdownMenuItem
+          className="text-red-500 focus:text-red-500"
           onClick={() => logoutMutation.mutate()}
         >
           <LogOut className="mr-2 h-4 w-4" />
