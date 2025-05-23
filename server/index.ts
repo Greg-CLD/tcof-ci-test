@@ -10,6 +10,7 @@ import { forceJsonResponses } from "./middleware/forceJsonResponses";
 import { initializeServices } from "./services";
 import { projectsDb } from "./projectsDb";
 import organisationsRouter from "./routes/organisations.js";
+import { initializeStripe } from "./utils/stripe";
 
 const app = express();
 app.use(express.json());
@@ -64,6 +65,8 @@ process.on('uncaughtException', (error) => {
 });
 
 (async () => {
+  // Initialize Stripe if available
+  initializeStripe();
   // Run the factors integrity check using improved utilities
   try {
     console.log('Starting server initialization...');
