@@ -9,6 +9,7 @@ import { registerSuccessFactorsRoutes } from "./routes.factorsDb.simple";
 import { forceJsonResponses } from "./middleware/forceJsonResponses";
 import { initializeServices } from "./services";
 import { projectsDb } from "./projectsDb";
+import organisationsRouter from "./routes/organisations.js";
 
 const app = express();
 app.use(express.json());
@@ -109,6 +110,7 @@ process.on('uncaughtException', (error) => {
   app.use('/api/projects', projectsRouter);
   app.use('/api/projects', tasksRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api/organisations', organisationsRouter);
 
   // Register main routes
   const server = await registerRoutes(app);
