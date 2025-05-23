@@ -205,28 +205,39 @@ export class TaskIdResolver {
         });
       }
       
-      // Try to find a Success Factor task with this ID as sourceId
-      const tasksWithSourceId = await this.projectsDb.findTasksBySourceId(projectId, taskId);
+      // CRITICAL FIX: Use the project boundary-enforced method to find tasks by sourceId
+      // This ensures we only find tasks in the requested project
+      const tasksWithSourceId = await this.projectsDb.findTasksBySourceIdInProject(projectId, taskId);
       
       if (tasksWithSourceId && tasksWithSourceId.length > 0) {
         // Use the first task found with this sourceId
         const sourceTask = tasksWithSourceId[0];
         
-        if (this.debugEnabled) {
-          console.log(`[TASK_LOOKUP] Found task by sourceId: ${taskId} → ${sourceTask.id}`);
-          console.log(`[TASK_LOOKUP] Found ${tasksWithSourceId.length} tasks with sourceId ${taskId}`);
-          console.log(`[TASK_LOOKUP] Using first match with details:`, {
-            id: sourceTask.id, 
-            origin: sourceTask.origin || 'standard', 
-            sourceId: sourceTask.sourceId || 'N/A',
-            text: sourceTask.text
-          });
+        // CRITICAL FIX: Double-check project ID to ensure task belongs to the correct project
+        if (sourceTask.projectId !== projectId) {
+          if (this.debugEnabled) {
+            console.log(`[TASK_LOOKUP] Project mismatch! Task ${sourceTask.id} belongs to project ${sourceTask.projectId}, not ${projectId}`);
+          }
+          // Task is from wrong project, do not use it
+          // Continue to the next strategy
+        } else {
+          if (this.debugEnabled) {
+            console.log(`[TASK_LOOKUP] Found task by sourceId: ${taskId} → ${sourceTask.id}`);
+            console.log(`[TASK_LOOKUP] Found ${tasksWithSourceId.length} tasks with sourceId ${taskId}`);
+            console.log(`[TASK_LOOKUP] Using first match with details:`, {
+              id: sourceTask.id, 
+              origin: sourceTask.origin || 'standard', 
+              sourceId: sourceTask.sourceId || 'N/A',
+              text: sourceTask.text,
+              projectId: sourceTask.projectId
+            });
+          }
+          
+          taskLogger.logTaskLookup('sourceId', taskId, projectId, true, sourceTask.id, sourceTask.sourceId);
+          taskResolutionCache[cacheKey] = sourceTask;
+          taskLogger.endOperation(operationId, true);
+          return sourceTask;
         }
-        
-        taskLogger.logTaskLookup('sourceId', taskId, projectId, true, sourceTask.id, sourceTask.sourceId);
-        taskResolutionCache[cacheKey] = sourceTask;
-        taskLogger.endOperation(operationId, true);
-        return sourceTask;
       }
       
       // Strategy 5: Fallback - Look for tasks with partial ID matches

@@ -383,6 +383,51 @@ export const projectsDb = {
   },
   
   /**
+   * Find tasks by source ID for a specific project with strict project boundaries
+   * This method is critical for the TaskIdResolver to find Success Factor tasks by their canonical ID
+   * while maintaining proper project isolation
+   * 
+   * @param projectId The project ID to strictly limit the search to
+   * @param sourceId The source ID to search for
+   * @returns Array of matching tasks only from the specified project
+   */
+  async findTasksBySourceIdInProject(projectId, sourceId) {
+    try {
+      if (DEBUG_TASKS) {
+        console.log(`[findTasksBySourceIdInProject] Searching for tasks with projectId=${projectId} and sourceId=${sourceId}`);
+      }
+      
+      // CRITICAL FIX: Explicitly include projectId in the WHERE clause for proper isolation
+      const tasks = await db.select()
+        .from(projectTasksTable)
+        .where(and(
+          eq(projectTasksTable.projectId, projectId),
+          eq(projectTasksTable.sourceId, sourceId)
+        ))
+        .orderBy(asc(projectTasksTable.createdAt));
+      
+      if (DEBUG_TASKS) {
+        console.log(`[findTasksBySourceIdInProject] Found ${tasks.length} tasks with sourceId=${sourceId} in project ${projectId}`);
+        if (tasks.length > 0) {
+          console.log(`[findTasksBySourceIdInProject] First match: id=${tasks[0].id}, text=${tasks[0].text}`);
+        }
+      }
+      
+      // Convert database rows to project tasks with consistent ID handling
+      return tasks.map(task => {
+        // For factor-origin tasks with matching sourceId, use it for ID consistency
+        if (task.origin === 'factor' && task.sourceId === sourceId) {
+          return convertDbTaskToProjectTask(task, sourceId);
+        }
+        return convertDbTaskToProjectTask(task);
+      });
+    } catch (error) {
+      console.error(`[ERROR] Error finding tasks by sourceId ${sourceId} in project ${projectId}:`, error);
+      return [];
+    }
+  },
+  
+  /**
    * Get a single task by its ID for a specific project
    * 
    * This method is required by TaskIdResolver for proper task resolution
