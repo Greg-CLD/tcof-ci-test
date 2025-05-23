@@ -203,24 +203,26 @@ export default function OrganisationListPage() {
         </Dialog>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center min-h-[300px]">
-          <Loader2 className="h-8 w-8 animate-spin text-tcof-primary" />
-        </div>
-      ) : organisations.length === 0 ? (
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <Building className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-xl font-semibold mb-2 text-tcof-dark">No Organisations Found</h2>
-          <p className="text-gray-600 mb-6">You don't have any organisations yet. Create one to get started.</p>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Your First Organisation
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {organisations.map((org: Organisation) => (
-            <Card key={org.id} className="hover:shadow-md transition-shadow">
+      <Card>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center min-h-[300px]">
+              <Loader2 className="h-8 w-8 animate-spin text-tcof-primary" />
+            </div>
+          ) : organisations.length === 0 ? (
+            <div className="bg-gray-50 rounded-lg p-8 text-center">
+              <Building className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <h2 className="text-xl font-semibold mb-2 text-tcof-dark">No Organisations Found</h2>
+              <p className="text-gray-600 mb-6">You don't have any organisations yet. Create one to get started.</p>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Your First Organisation
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {organisations.map((org: Organisation) => (
+                <Card key={org.id} className="hover:shadow-md transition-shadow bg-[#008080] text-[#fff5e7]">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle 
@@ -262,6 +264,8 @@ export default function OrganisationListPage() {
           ))}
         </div>
       )}
+        </CardContent>
+      </Card>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
