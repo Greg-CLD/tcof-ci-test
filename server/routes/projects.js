@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { projectsDb } from '../projectsDb.ts';
 import { projectTasks as projectTasksTable } from '@shared/schema';
 import { DEBUG_TASKS, DEBUG_FILES } from '@shared/constants.debug';
-import { cloneAllSuccessFactorTasks } from './cloneSuccessFactors';
+import { cloneAllSuccessFactorTasks } from '../cloneSuccessFactors.ts';
 
 /**
  * Middleware to validate a project ID
