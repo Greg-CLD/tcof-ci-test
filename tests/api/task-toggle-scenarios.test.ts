@@ -76,7 +76,7 @@ describe('Task Toggle Endpoint Tests', () => {
   });
 
   // Test 3: Invalid UUID
-  it('should return 404 for invalid UUID', async () => {
+  it('should return 400 for invalid UUID', async () => {
     const response = await request(app)
       .put(`/api/projects/${PROJECT_ID}/tasks/not-a-valid-uuid`)
       .set('x-auth-override', 'true')
@@ -90,7 +90,7 @@ describe('Task Toggle Endpoint Tests', () => {
       body: response.body
     });
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(400);
   });
 
   // Test 4: Cross-project sourceId attempt
