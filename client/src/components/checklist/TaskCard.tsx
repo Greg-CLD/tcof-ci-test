@@ -79,6 +79,7 @@ interface TaskCardProps {
   sourceId?: string;
   syncStatus?: 'synced' | 'syncing' | 'error';
   retryCount?: number;
+  projectId?: string; // The project ID this task belongs to - for cross-project validation
   onUpdate: (id: string, updates: TaskUpdates, isGoodPractice?: boolean) => void;
   onRetry?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -103,6 +104,7 @@ export default function TaskCard({
   sourceId = '', // Default to empty string to prevent 'undefined' runtime errors
   syncStatus = 'synced', // Default sync status
   retryCount = 0,
+  projectId = '', // Current project context ID where this task exists
   onUpdate,
   onRetry,
   onDelete,
@@ -118,12 +120,14 @@ export default function TaskCard({
   - SourceId: ${sourceId || '<empty>'}
   - Origin: ${origin || '<empty>'}
   - Sync Status: ${syncStatus}
-  - Retry Count: ${retryCount}`);
+  - Retry Count: ${retryCount}
+  - Project ID: ${projectId || '<not provided>'}`);
   
   // Create safe reference values for potentially undefined properties
   // This prevents runtime errors when these values are used in the component
   const safeSourceId = sourceId || '';
   const safeOrigin = origin || '';
+  const safeProjectId = projectId || '';
 
   // State for UI elements
   const [isExpanded, setIsExpanded] = useState(false);
