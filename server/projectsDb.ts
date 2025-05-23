@@ -1201,22 +1201,24 @@ export const projectsDb = {
         // Sanitize input data to ensure types match and handle empty strings properly
         const updateData: Record<string, string | boolean | null | Date> = {};
         
+        // CRITICAL FIX: Map camelCase property names to snake_case database columns
         // Only update fields that are provided, with proper empty string handling
         if (data.text !== undefined) updateData.text = String(data.text);
         if (data.stage !== undefined) updateData.stage = String(data.stage);
         if (data.origin !== undefined) updateData.origin = String(data.origin);
-        if (data.sourceId !== undefined) updateData.sourceId = String(data.sourceId);
+        if (data.sourceId !== undefined) updateData.source_id = String(data.sourceId); // Fix: sourceId → source_id
+        if (data.projectId !== undefined) updateData.project_id = String(data.projectId); // Fix: projectId → project_id
         if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
         
         // For nullable fields, convert empty strings to null
         if (data.notes !== undefined) updateData.notes = data.notes === '' ? null : String(data.notes);
         if (data.priority !== undefined) updateData.priority = data.priority === '' ? null : String(data.priority);
-        if (data.dueDate !== undefined) updateData.dueDate = data.dueDate === '' ? null : String(data.dueDate);
+        if (data.dueDate !== undefined) updateData.due_date = data.dueDate === '' ? null : String(data.dueDate); // Fix: dueDate → due_date
         if (data.owner !== undefined) updateData.owner = data.owner === '' ? null : String(data.owner);
         if (data.status !== undefined) updateData.status = String(data.status);
         
         // Always update the updatedAt timestamp
-        updateData.updatedAt = new Date();
+        updateData.updated_at = new Date(); // Fix: updatedAt → updated_at
         
         console.log(`Prepared update data for task ${validTaskId}:`, JSON.stringify(updateData, null, 2));
         
