@@ -9,7 +9,6 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { login } from './helpers/auth';
 
 test.describe('Custom Task Persistence', () => {
   test.beforeEach(async ({ page }) => {

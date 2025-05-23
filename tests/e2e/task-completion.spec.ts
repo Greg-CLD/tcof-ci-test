@@ -9,7 +9,6 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { login } from './helpers/auth';
 
 // Import debug flags - when used on client side, they would come from shared/constants.debug
 const DEBUG_TASK_VALIDATION = true; // Enable for E2E test runs
