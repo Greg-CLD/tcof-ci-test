@@ -112,29 +112,10 @@ export async function cloneSuccessFactorTasks(projectId: string, factorId: strin
       return 0;
     }
     
-    // Get existing tasks for the project with this Success Factor
-    const existingTasks = await db.query.projectTasks.findMany({
-      where: (tasks, { and, eq }) => and(
-        eq(tasks.projectId, projectId),
-        eq(tasks.origin, 'factor'),
-        eq(tasks.sourceId, factorId)
-      )
-    });
-    
-    // Create a map of existing tasks by stage for quick lookup
-    const existingTasksByStage = existingTasks.reduce((acc, task) => {
-      const stage = task.stage || 'unknown';
-      if (!acc[stage]) {
-        acc[stage] = [];
-      }
-      acc[stage].push(task);
-      return acc;
-    }, {} as Record<string, any[]>);
-    
     // Track how many tasks are cloned
     let clonedCount = 0;
     
-    // Clone each task that doesn't already exist
+    // Clone each task that doesn't already exist - process one stage at a time
     for (const sfTask of sfTasks) {
       const stage = sfTask.stage?.toLowerCase() || 'identification';
       
@@ -146,18 +127,21 @@ export async function cloneSuccessFactorTasks(projectId: string, factorId: strin
         continue;
       }
       
-      // Check if a task with this Success Factor ID and stage already exists
-      const existingTasksInStage = existingTasksByStage[stage] || [];
-      const taskExists = existingTasksInStage.some(task => {
-        // Check all fields to make sure we don't duplicate tasks
-        return task.sourceId === factorId && 
-               task.stage.toLowerCase() === stage.toLowerCase() && 
-               task.text === sfTask.text;
+      // CRITICAL FIX: Check if a task with this exact source ID and stage already exists
+      // This uses a direct database query to ensure we don't create duplicates
+      const existingTasksInStage = await db.query.projectTasks.findMany({
+        where: (tasks, { and, eq }) => and(
+          eq(tasks.projectId, projectId),
+          eq(tasks.origin, 'factor'),
+          eq(tasks.sourceId, factorId),
+          eq(tasks.stage, stage)
+        )
       });
       
-      if (taskExists) {
+      // If any task already exists in this specific stage, skip creating another one
+      if (existingTasksInStage.length > 0) {
         if (DEBUG_CLONE) {
-          console.log(`[SUCCESS_FACTOR_CLONE] Task already exists for Success Factor ${factorId} in stage ${stage}`);
+          console.log(`[SUCCESS_FACTOR_CLONE] Task already exists for Success Factor ${factorId} in stage ${stage} (count: ${existingTasksInStage.length})`);
         }
         continue;
       }

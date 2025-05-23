@@ -310,13 +310,36 @@ export const projectsDb = {
     }
   },
   
-  // Alias to match naming conventions
-  async getSourceTasks(sourceId) {
+  /**
+   * Alias to match naming conventions
+   * WARNING: This method should not be used for task lookup operations as it doesn't enforce project boundaries
+   * Use findTasksBySourceIdInProject instead for operations that need proper project isolation
+   */
+  async getSourceTasks(sourceId, projectId = null) {
     try {
-      const tasks = await db.select()
-        .from(projectTasksTable)
-        .where(eq(projectTasksTable.sourceId, sourceId))
-        .orderBy(asc(projectTasksTable.createdAt));
+      // CRITICAL FIX: If projectId is provided, enforce project boundary in the query
+      let query = db.select().from(projectTasksTable);
+      
+      if (projectId) {
+        // Apply project boundary if provided
+        query = query.where(and(
+          eq(projectTasksTable.sourceId, sourceId),
+          eq(projectTasksTable.projectId, projectId)
+        ));
+        
+        if (DEBUG_TASKS) {
+          console.log(`[getSourceTasks] Enforcing project boundary: sourceId=${sourceId}, projectId=${projectId}`);
+        }
+      } else {
+        // Otherwise, just filter by sourceId (not recommended for task editing)
+        query = query.where(eq(projectTasksTable.sourceId, sourceId));
+        
+        if (DEBUG_TASKS) {
+          console.log(`[getSourceTasks] WARNING: No project boundary provided for sourceId=${sourceId}`);
+        }
+      }
+      
+      const tasks = await query.orderBy(asc(projectTasksTable.createdAt));
       
       // Use the enhanced convertDbTaskToProjectTask function for consistent ID handling
       return tasks.map(task => {
