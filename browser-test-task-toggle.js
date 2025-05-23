@@ -12,139 +12,117 @@
  */
 
 async function testTaskTogglePersistence() {
-  console.log('=== Success Factor Task Toggle Persistence Test ===');
-  
   try {
-    // Step 1: Get the current project ID from the URL
-    const projectId = window.location.pathname.split('/').find(segment => 
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)
-    );
+    // Step 1: Get all tasks for the current project
+    console.log('Step 1: Getting all tasks for the current project...');
+    const projectId = window.location.pathname.split('/').filter(Boolean)[1];
     
     if (!projectId) {
-      console.error('❌ No project ID found in the URL. Please navigate to a project page first.');
-      return;
+      throw new Error('No project ID found in URL - please navigate to a project page');
     }
     
-    console.log(`✅ Found project ID: ${projectId}`);
+    console.log(`Using project ID: ${projectId}`);
     
-    // Step 2: Get all tasks for the current project
-    console.log('\nStep 2: Getting tasks for the current project...');
     const tasksResponse = await fetch(`/api/projects/${projectId}/tasks`);
     
     if (!tasksResponse.ok) {
-      console.error(`❌ Failed to get tasks: ${tasksResponse.status} ${tasksResponse.statusText}`);
-      return;
+      throw new Error(`Failed to get tasks: ${tasksResponse.status} ${tasksResponse.statusText}`);
     }
     
     const tasks = await tasksResponse.json();
+    console.log(`Found ${tasks.length} tasks`);
     
-    if (!tasks || !tasks.length) {
-      console.error('❌ No tasks found for this project');
-      return;
+    // Step 2: Find a Success Factor task to toggle
+    console.log('Step 2: Finding a Success Factor task to toggle...');
+    const successFactorTasks = tasks.filter(task => task.origin === 'factor');
+    
+    if (successFactorTasks.length === 0) {
+      throw new Error('No Success Factor tasks found in the project');
     }
     
-    // Filter for Success Factor tasks only
-    const successFactorTasks = tasks.filter(task => 
-      task.origin === 'factor' || task.origin === 'success-factor'
-    );
-    
-    if (!successFactorTasks.length) {
-      console.error('❌ No Success Factor tasks found for this project');
-      return;
-    }
-    
-    console.log(`✅ Found ${successFactorTasks.length} Success Factor tasks`);
-    
-    // Select the first uncompleted task for testing
-    let taskToToggle = successFactorTasks.find(task => !task.completed);
-    
-    // If all tasks are completed, use the first task
-    if (!taskToToggle) {
-      taskToToggle = successFactorTasks[0];
-    }
-    
-    console.log(`\nSelected task for testing:`);
-    console.log(`ID: ${taskToToggle.id}`);
-    console.log(`Text: ${taskToToggle.text.substring(0, 50)}...`);
-    console.log(`Completed: ${taskToToggle.completed}`);
-    console.log(`Origin: ${taskToToggle.origin}`);
-    console.log(`Source ID: ${taskToToggle.sourceId}`);
-    
-    // Save original state for comparison
-    const originalState = taskToToggle.completed;
-    const newState = !originalState;
+    const taskToToggle = successFactorTasks[0];
+    console.log(`Selected task: ${taskToToggle.id} - ${taskToToggle.text}`);
+    console.log(`Current completion state: ${taskToToggle.completed}`);
     
     // Step 3: Toggle the task's completion state
-    console.log(`\nStep 3: Toggling task completion from ${originalState} to ${newState}...`);
+    console.log('Step 3: Toggling task completion state...');
+    const newState = !taskToToggle.completed;
     
-    const toggleResponse = await fetch(`/api/projects/${projectId}/tasks/${taskToToggle.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        completed: newState
-      })
-    });
+    const updateResponse = await fetch(
+      `/api/projects/${projectId}/tasks/${taskToToggle.id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ completed: newState })
+      }
+    );
     
-    if (!toggleResponse.ok) {
-      console.error(`❌ Failed to toggle task: ${toggleResponse.status} ${toggleResponse.statusText}`);
-      const errorText = await toggleResponse.text();
-      console.error('Error details:', errorText);
-      return;
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      throw new Error(`Failed to update task: ${updateResponse.status} ${updateResponse.statusText}\n${errorText}`);
     }
     
-    const updatedTask = await toggleResponse.json();
+    const updatedTask = await updateResponse.json();
+    console.log(`Task updated. New completion state: ${updatedTask.completed}`);
     
-    console.log('Toggle response:');
-    console.log(`Status: ${toggleResponse.status} ${toggleResponse.statusText}`);
-    console.log(`Completed: ${updatedTask.completed}`);
-    
-    if (updatedTask.completed !== newState) {
-      console.error(`❌ Task completion state was not updated in the response (expected ${newState}, got ${updatedTask.completed})`);
-      return;
-    }
-    
-    console.log(`✅ Task completion toggled successfully in API response`);
-    
-    // Step 4: Get tasks again to verify the change persisted
-    console.log('\nStep 4: Getting tasks again to verify persistence...');
+    // Step 4: Verify the change was saved by getting the task again
+    console.log('Step 4: Verifying the change was saved...');
     const verifyResponse = await fetch(`/api/projects/${projectId}/tasks`);
     
     if (!verifyResponse.ok) {
-      console.error(`❌ Failed to get tasks for verification: ${verifyResponse.status} ${verifyResponse.statusText}`);
-      return;
+      throw new Error(`Failed to get tasks for verification: ${verifyResponse.status} ${verifyResponse.statusText}`);
     }
     
     const verifyTasks = await verifyResponse.json();
-    const verifiedTask = verifyTasks.find(task => task.id === taskToToggle.id);
+    const verifyTask = verifyTasks.find(task => task.id === taskToToggle.id);
     
-    if (!verifiedTask) {
-      console.error('❌ Task not found in API response after toggle');
-      return;
+    if (!verifyTask) {
+      throw new Error(`Could not find the task after update`);
     }
     
-    console.log('Task from API after toggle:');
-    console.log(`ID: ${verifiedTask.id}`);
-    console.log(`Completed: ${verifiedTask.completed}`);
+    console.log(`Verified task state: ${verifyTask.completed}`);
     
-    if (verifiedTask.completed !== newState) {
-      console.error(`❌ Task completion state was not persisted (expected ${newState}, got ${verifiedTask.completed})`);
-      return;
+    if (verifyTask.completed === newState) {
+      console.log('✅ SUCCESS: Task persistence is working correctly');
+    } else {
+      console.log('❌ FAILURE: Task state did not persist');
     }
     
-    console.log(`✅ Task completion state was correctly persisted and returned via API`);
+    // Step 5: Test metadata persistence by checking that sourceId and origin are preserved
+    console.log('Step 5: Verifying metadata persistence...');
     
-    // Step 5: Reload the page to verify persistence across page reloads
-    console.log('\nStep 5: To complete the test, please reload the page manually and check if:');
-    console.log(`1. The task "${taskToToggle.text.substring(0, 30)}..." is still ${newState ? 'completed' : 'not completed'}`);
-    console.log('2. The checkbox state matches the expected state');
-    console.log('\n✅ Test completed successfully! You should reload the page to verify persistence.');
+    if (
+      verifyTask.sourceId === taskToToggle.sourceId &&
+      verifyTask.origin === taskToToggle.origin
+    ) {
+      console.log('✅ SUCCESS: Task metadata was preserved correctly');
+    } else {
+      console.log('❌ FAILURE: Task metadata was not preserved correctly');
+      console.log('Original sourceId:', taskToToggle.sourceId);
+      console.log('Updated sourceId:', verifyTask.sourceId);
+      console.log('Original origin:', taskToToggle.origin);
+      console.log('Updated origin:', verifyTask.origin);
+    }
     
+    return {
+      success: verifyTask.completed === newState && 
+               verifyTask.sourceId === taskToToggle.sourceId &&
+               verifyTask.origin === taskToToggle.origin,
+      task: verifyTask
+    };
   } catch (error) {
-    console.error('❌ Test failed with error:', error);
+    console.error('Error during test:', error);
+    return { success: false, error: error.message };
   }
 }
 
-// Run the test
-testTaskTogglePersistence();
+// Run the test and log the results
+testTaskTogglePersistence().then(result => {
+  if (result.success) {
+    console.log('✨ TEST PASSED: Task persistence is working correctly!');
+  } else {
+    console.log('❌ TEST FAILED:', result.error || 'Unknown error');
+  }
+});

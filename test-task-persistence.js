@@ -11,7 +11,7 @@ async function testTaskPersistence() {
   try {
     // Configuration
     const projectId = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8'; // Replace with your actual project ID
-    const baseUrl = 'http://localhost:3000';
+    const baseUrl = 'https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev';
 
     // Get current session cookie from file (if available)
     console.log('Running task persistence test...');
