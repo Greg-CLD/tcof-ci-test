@@ -1,5 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import projectsRouter from "./routes/projectsRouter";
+import tasksRouter from "./routes/tasksRouter";
+import adminRouter from "./routes/adminRouter";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorLogger } from "./middlewares/errorLogger";
 import { registerSuccessFactorsRoutes } from "./routes.factorsDb.simple";
@@ -101,6 +104,11 @@ process.on('uncaughtException', (error) => {
 
   // Register our database-backed success factors routes
   await registerSuccessFactorsRoutes(app);
+
+  // Mount primary routers
+  app.use('/api/projects', projectsRouter);
+  app.use('/api/projects', tasksRouter);
+  app.use('/api/admin', adminRouter);
 
   // Register main routes
   const server = await registerRoutes(app);
