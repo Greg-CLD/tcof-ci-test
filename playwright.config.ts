@@ -1,35 +1,36 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for E2E tests
- * @see https://playwright.dev/docs/test-configuration
+ * See https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  /* Maximum time one test can run for */
   timeout: 30 * 1000,
   expect: {
+    /**
+     * Maximum time expect() should wait for the condition to be met
+     */
     timeout: 5000
   },
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  /* Run tests in files in parallel */
+  fullyParallel: false,
+  /* Reporter to use */
   reporter: 'html',
-  use: {
-    baseURL: 'http://localhost:5000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'on-first-retry',
-  },
+  /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+  /* Configure webServer */
   webServer: {
     command: 'npm run dev',
-    port: 5000,
-    reuseExistingServer: !process.env.CI,
+    url: 'http://localhost:5000',
+    reuseExistingServer: true,
+    timeout: 120 * 1000,
   },
+  /* Directory for test artifacts like screenshots */
+  outputDir: 'test-artifacts/',
 });
