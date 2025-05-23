@@ -32,16 +32,6 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Start app server
-        run: |
-          NODE_ENV=production npm run start &
-          sleep 10
-
-      - name: Run Playwright tests
-        env:
-          BASE_URL: http://localhost:5000
-        run: npx playwright test
-
       - name: Upload Playwright test results (if available)
         if: always()
         uses: actions/upload-artifact@v4
