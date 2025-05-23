@@ -12,9 +12,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Custom Task Persistence', () => {
   test.beforeEach(async ({ page }) => {
-    // Login before each test
-    await login(page);
-    
     // Navigate to the checklist page of the test project
     await page.goto('/projects/bc55c1a2-0cdf-4108-aa9e-44b44baea3b8/checklist');
     
