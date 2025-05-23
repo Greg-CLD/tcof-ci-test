@@ -21,6 +21,7 @@ export enum TaskErrorCodes {
   
   // Permission errors
   ACCESS_DENIED = 'TASK_ACCESS_DENIED',
+  PROJECT_MISMATCH = 'PROJECT_TASK_MISMATCH', // Task belongs to a different project than requested
   
   // Database errors
   DATABASE_ERROR = 'DATABASE_ERROR',

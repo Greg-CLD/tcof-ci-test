@@ -372,6 +372,41 @@ app.get('/api/debug/task-stats', async (req: Request, res: Response) => {
   }
 });
 
+// Endpoint to save the current session cookie to a file for testing
+app.post('/api/debug/save-session', async (req: Request, res: Response) => {
+  // Security check - only allow in development
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Not available in production' });
+  }
+  
+  try {
+    const { cookie } = req.body;
+    
+    if (!cookie || typeof cookie !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid cookie format' 
+      });
+    }
+    
+    // Save to file
+    const fs = require('fs');
+    fs.writeFileSync('./current-session.txt', cookie);
+    
+    return res.json({ 
+      success: true, 
+      message: 'Session cookie saved to file',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error saving session cookie:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to save session cookie'
+    });
+  }
+});
+
 // Error reporting endpoint
 app.get('/api/debug/errors', async (req: Request, res: Response) => {
   try {
