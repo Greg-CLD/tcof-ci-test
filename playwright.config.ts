@@ -29,7 +29,7 @@ export default defineConfig({
   ],
   /* Configure webServer */
   webServer: {
-    command: "npm run dev",
+    command: "NODE_ENV=production npm run start",
     url: "http://localhost:5000",
     reuseExistingServer: true,
     timeout: 120 * 1000,
