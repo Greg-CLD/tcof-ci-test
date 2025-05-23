@@ -1,0 +1,38 @@
+1. Feature Table
+Epic	Feature Title	User Story (Description)	Acceptance Criteria
+System Level: Full-Stack Backups	Application Backup	As an admin, I want full backups of the entire application (code, assets, DB, user data)	A single automated task produces a timestamped archive containing the project’s source, static assets, and a PostgreSQL dump. Archives are retained for 7 days and can be restored on demand.
+
+
+2. Options Analysis & Recommendation
+Option	A) Setup Speed	B) Meets Story & Criteria	C) Reuse Templates	D) Simplicity & Low Risk	Notes
+A. Single Shell Script + Replit Automations					
+• Script tars the project folder (excluding node_modules), runs pg_dump, and places both in /mnt/data/backups.					
+• Automations runs daily.					
+★★★★☆	★★★★★	★★★★☆ (standard tar & pg_dump)	★★★★☆ (only uses Replit features)	Simple to maintain, no external creds.	
+B. GitHub Actions + Archive Release					
+• On push to main, GH Action builds tar + db dump → uploads as a GitHub Release asset.	★★★☆☆	★★★★★	★★★☆☆	Requires GH setup and secrets; repos hosted on GitHub.	
+C. External Object Store					
+• Use AWS S3 (or similar) with CLI in script to upload the archive.	★★☆☆☆	★★★★★	★☆☆☆☆	Requires external credentials, adds complexity.	
+
+	Recommendation:
+	Option A is the fastest, lowest-risk path: a single backup script paired with Replit Automations. No external dependencies or credential management.
+
+3. High-Level Plan (Plain English)
+	1. Technology Summary
+		○ Backup Script: Bash script using tar and pg_dump.
+		○ Scheduling: Replit Automations (cron-style).
+		○ Storage: Local /mnt/data/backups directory within the Replit container.
+		○ Retention: Cleanup via find ... -mtime +7 -delete.
+	2. High-Level Steps
+		1. Write Backup Script (scripts/backup.sh):bashCopyEdit#!/usr/bin/env bashset -eTIMESTAMP=$(date +'%Y%m%d_%H%M')BACKUP_DIR=/mnt/data/backupsmkdir -p "$BACKUP_DIR"# 1) Dump databasepg_dump "$DATABASE_URL" > "$BACKUP_DIR/db_$TIMESTAMP.sql"# 2) Archive code & assets (exclude node_modules)tar --exclude='node_modules' -czf "$BACKUP_DIR/app_$TIMESTAMP.tar.gz" .# 3) Cleanup archives older than 7 daysfind "$BACKUP_DIR" -type f -mtime +7 -delete
+			§ Make it executable: chmod +x scripts/backup.sh.
+		2. Configure Replit Automation:
+			§ Create a daily Automations task:icsCopyEditBEGIN:VEVENTRRULE:FREQ=DAILY;BYHOUR=02;BYMINUTE=0;BYSECOND=0END:VEVENT
+			§ Command: bash scripts/backup.sh.
+		3. Document Restore Procedure:
+			§ Database: psql $DATABASE_URL < /mnt/data/backups/db_<timestamp>.sql
+			§ App Code/Assets: extract with tar -xzf /mnt/data/backups/app_<timestamp>.tar.gz -C /desired/location.
+		4. Verify & Monitor:
+			§ After the first run, check /mnt/data/backups for both the .sql and .tar.gz files.
+			§ Ensure old backups are pruned after 7 days.
+This solution gives you a complete snapshot of your code, assets, and user data every day, with simple restore steps and no external services to configure.
