@@ -37,3 +37,25 @@ async function testTaskPersistence() {
 }
 
 testTaskPersistence().catch(console.error);
+const { test } = require('@playwright/test');
+
+test('task completion persists after page reload', async ({ page }) => {
+  // Login and navigate to project
+  await page.goto('/projects/7277a5fe-899b-4fe6-8e35-05dd6103d054/checklist');
+  
+  // Find and toggle a task
+  const taskCard = page.locator('[data-testid="task-item"]').first();
+  const taskId = await taskCard.getAttribute('data-task-id');
+  const initialState = await taskCard.getAttribute('data-completed');
+  
+  // Toggle completion
+  await taskCard.locator('[data-testid="task-checkbox"]').click();
+  
+  // Reload page
+  await page.reload();
+  
+  // Verify persistence
+  const updatedTask = page.locator(`[data-task-id="${taskId}"]`);
+  const newState = await updatedTask.getAttribute('data-completed');
+  expect(newState).not.toBe(initialState);
+});
