@@ -37,9 +37,6 @@ jobs:
           NODE_ENV=production npm run start &
           sleep 10
 
-      - name: Wait for server to be ready
-        run: npx wait-on http://localhost:5000
-
       - name: Run Playwright tests
         env:
           BASE_URL: http://localhost:5000
