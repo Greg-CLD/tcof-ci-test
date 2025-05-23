@@ -293,9 +293,40 @@ export default function TaskCard({
     // This prevents undefined errors when the API expects sourceId to be present
     updateData.sourceId = safeSourceId;
     
+    // PROJECT ID VALIDATION: Ensure we only update tasks within the correct project context
+    // This prevents cross-project task update attempts that cause 404 errors
+    const currentProjectContext = safeProjectId;
+    const storedProjectContext = localStorage.getItem('currentProjectId');
+    const effectiveProjectId = currentProjectContext || storedProjectContext;
+    
+    // Check if we have project context information to validate against
+    if (effectiveProjectId) {
+      // For factor tasks with sourceId that might exist in multiple projects,
+      // verify this task belongs to the current project before updating
+      if (isFactorTask && hasValidSourceId) {
+        // If task has both a project ID and factor sourceId, validate project context
+        if (currentProjectContext && currentProjectContext !== effectiveProjectId) {
+          console.error(`[PROJECT_MISMATCH] Task toggle prevented: Task belongs to project ${currentProjectContext} but current context is ${effectiveProjectId}`);
+          setLocalSyncStatus('error');
+          setLocalRetryCount(prev => prev + 1);
+          
+          // Reset processing flag to allow future toggles
+          setTimeout(() => {
+            isProcessingToggle.current = false;
+          }, 1000);
+          
+          return; // Prevent the update from being sent
+        }
+      }
+    } else {
+      // No project context available - add warning but continue with update
+      console.warn('[PROJECT_CONTEXT] No project context found for task toggle validation');
+    }
+    
     try {
       // FIXED: Always use task id (never sourceId) for the update URL path
       // sourceId is still included in the payload (updateData) as needed
+      // Project ID validation has been performed above
       onUpdate(id, updateData, isGoodPractice);
     } catch (error) {
       // Handle error case

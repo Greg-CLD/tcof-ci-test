@@ -926,6 +926,35 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
       // Store the original task for comparison
       const originalTask = { ...task };
       
+      // ENHANCED PROJECT VALIDATION: Explicitly verify task belongs to the requested project
+      // This provides an additional layer of security to prevent cross-project task updates
+      if (originalTask.projectId && originalTask.projectId !== projectId) {
+        const error = new Error(`Task belongs to project ${originalTask.projectId}, not requested project ${projectId}`);
+        taskLogger.endOperation(operationId, false, error);
+        
+        if (isDebugEnabled) {
+          console.log(`[DEBUG_TASKS] [PROJECT_MISMATCH] Task project mismatch detected:
+          - Requested project ID: ${projectId}
+          - Actual task project ID: ${originalTask.projectId}
+          - Task ID: ${originalTask.id}
+          - Task source ID: ${originalTask.sourceId || 'N/A'}
+          - Request denied to prevent cross-project updates`);
+        }
+        
+        return res.status(403).json(
+          taskLogger.formatErrorResponse(
+            TaskErrorCodes.PROJECT_MISMATCH,
+            `Task belongs to project ${originalTask.projectId}, not the requested project ${projectId}`,
+            { 
+              taskId: originalTask.id, 
+              requestedProjectId: projectId,
+              actualProjectId: originalTask.projectId,
+              sourceId: originalTask.sourceId
+            }
+          )
+        );
+      }
+      
       // Additional handling for Success Factor tasks with sourceId
       if (originalTask.origin === 'factor' && originalTask.sourceId) {
         if (isDebugEnabled) {
