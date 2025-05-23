@@ -742,6 +742,7 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
   app.get('/api/projects/:projectId/tasks', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { projectId } = req.params;
+      const ensureFactors = req.query.ensure === 'true';
       
       // Basic validation
       if (!projectId) {
@@ -756,6 +757,22 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         console.log(`[DEBUG_TASK_API] GET tasks for project ${projectId}`);
       }
       
+      // Ensure all Success Factor tasks exist in the project if requested
+      if (ensureFactors) {
+        try {
+          // Import the cloneSuccessFactors function
+          const { ensureSuccessFactorTasks } = await import('./cloneSuccessFactors');
+          await ensureSuccessFactorTasks(projectId);
+          
+          if (DEBUG_TASK_API) {
+            console.log(`[DEBUG_TASK_API] Ensured all Success Factor tasks exist for project ${projectId}`);
+          }
+        } catch (ensureError) {
+          console.error(`Error ensuring Success Factor tasks for project ${projectId}:`, ensureError);
+          // Continue even if ensure fails - we'll return what tasks we have
+        }
+      }
+      
       const tasks = await projectsDb.getTasksForProject(projectId);
       
       // Enhanced debugging for task retrieval
@@ -763,7 +780,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
         console.log(`[DEBUG_TASK_API] Retrieved ${tasks?.length || 0} tasks for project ${projectId}`);
         
         // Special debug logging for SuccessFactor tasks
-        const successFactorTasks = (tasks || []).filter(task => task.origin === 'success-factor');
+        const successFactorTasks = (tasks || []).filter(task => 
+          task.origin === 'success-factor' || task.origin === 'factor'
+        );
+        
         if (successFactorTasks.length > 0) {
           console.log(`[DEBUG_TASK_API] Found ${successFactorTasks.length} SuccessFactor tasks`);
           console.log('[DEBUG_TASK_API] SuccessFactor tasks completion status:');

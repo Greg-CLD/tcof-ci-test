@@ -6,234 +6,88 @@
  * 
  * Run with: node backfill-sf-tasks.js
  */
-import pkg from 'pg';
-const { Client } = pkg;
-import { v4 as uuidv4 } from 'uuid';
+import { db } from './db/index.js';
+import { cloneAllSuccessFactorTasks } from './server/cloneSuccessFactors.js';
+import { sql } from 'drizzle-orm';
 
-// Get connection string from environment
-const connectionString = process.env.DATABASE_URL;
+const DEBUG = true;
 
 async function main() {
-  // Connect to database
-  const client = new Client({ connectionString });
-  await client.connect();
-  console.log('Connected to database');
-
   try {
-    // Get all success factors
-    console.log('Fetching success factors...');
-    const factorsResult = await client.query(`
-      SELECT id, title FROM success_factors
-    `);
+    console.log('Starting Success Factor tasks back-fill process...');
     
-    const factors = factorsResult.rows;
-    console.log(`Found ${factors.length} success factors`);
-
-    // Get all factor tasks
-    console.log('Fetching success factor tasks...');
-    const tasksResult = await client.query(`
-      SELECT factor_id, stage, text
-      FROM success_factor_tasks
-      ORDER BY factor_id, stage, "order"
-    `);
-    
-    const factorTasks = tasksResult.rows;
-    console.log(`Found ${factorTasks.length} success factor tasks`);
-
     // Get all projects
-    console.log('Fetching projects...');
-    const projectsResult = await client.query(`
-      SELECT DISTINCT project_id
-      FROM project_tasks
+    console.log('Retrieving all projects...');
+    const projects = await db.execute(sql`
+      SELECT id 
+      FROM projects 
+      ORDER BY id
     `);
     
-    const projects = projectsResult.rows;
-    console.log(`Found ${projects.length} projects to process`);
-
-    // Process each project
-    let totalTasksAdded = 0;
+    if (!projects || !projects.rows || projects.rows.length === 0) {
+      console.log('No projects found to process.');
+      return;
+    }
+    
+    console.log(`Found ${projects.rows.length} projects to process.`);
+    
     let projectsUpdated = 0;
-    let summaryData = [];
+    let totalTasksAdded = 0;
     
-    for (const project of projects) {
-      const projectId = project.project_id;
-      console.log(`\nProcessing project ${projectId}...`);
+    // Process each project
+    for (const project of projects.rows) {
+      const projectId = project.id;
+      console.log(`Processing project ${projectId}...`);
       
-      // Get initial task count
-      const initialCountResult = await client.query(`
-        SELECT COUNT(*) FROM project_tasks 
-        WHERE project_id = $1 AND origin = 'factor'
-      `, [projectId]);
-      const beforeCount = parseInt(initialCountResult.rows[0].count, 10);
-      
-      let projectTasksAdded = 0;
-      let missingUuids = [];
-      
-      // For each factor
-      for (const factor of factors) {
-        // Get tasks for this factor
-        const factorId = factor.id;
-        const factorTasksList = factorTasks.filter(t => t.factor_id === factorId);
+      try {
+        // Get current tasks count
+        const beforeCount = await db.execute(sql`
+          SELECT COUNT(*) as count
+          FROM project_tasks
+          WHERE project_id = ${projectId} AND origin = 'factor'
+        `);
         
-        // Check if factor exists in project
-        const factorExistsResult = await client.query(`
-          SELECT COUNT(*) FROM project_tasks
-          WHERE project_id = $1
-            AND source_id = $2
-        `, [projectId, factorId]);
+        const beforeTaskCount = beforeCount.rows[0]?.count || 0;
+        console.log(`Project ${projectId} has ${beforeTaskCount} Success Factor tasks before back-fill.`);
         
-        const factorExists = parseInt(factorExistsResult.rows[0].count, 10) > 0;
+        // Clone all Success Factor tasks for the project
+        const tasksAdded = await cloneAllSuccessFactorTasks(projectId);
         
-        if (!factorExists) {
-          missingUuids.push(factorId);
-          console.log(`Factor ${factorId} missing from project ${projectId}`);
-          
-          // Special handling for missing factor 2f565bf9-70c7-5c41-93e7-c6c4cde32312
-          if (factorId === '2f565bf9-70c7-5c41-93e7-c6c4cde32312') {
-            console.log(`SPECIAL CASE: Adding missing factor ${factorId} to project ${projectId}`);
-            
-            // Log explicit check for this specific factor in project bc55c1a2
-            if (projectId === 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8') {
-              const checkResult = await client.query(`
-                SELECT * FROM project_tasks
-                WHERE project_id = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8'
-                  AND source_id = '2f565bf9-70c7-5c41-93e7-c6c4cde32312'
-              `);
-              
-              if (checkResult.rows.length === 0) {
-                console.log('SPECIFIC CHECK: Factor 2f565bf9-70c7-5c41-93e7-c6c4cde32312 NOT FOUND in project bc55c1a2-0cdf-4108-aa9e-44b44baea3b8');
-              } else {
-                console.log('SPECIFIC CHECK: Factor 2f565bf9-70c7-5c41-93e7-c6c4cde32312 FOUND in project bc55c1a2-0cdf-4108-aa9e-44b44baea3b8');
-                console.log(JSON.stringify(checkResult.rows[0], null, 2));
-              }
-            }
-          }
+        // Get updated tasks count
+        const afterCount = await db.execute(sql`
+          SELECT COUNT(*) as count
+          FROM project_tasks
+          WHERE project_id = ${projectId} AND origin = 'factor'
+        `);
+        
+        const afterTaskCount = afterCount.rows[0]?.count || 0;
+        
+        if (afterTaskCount > beforeTaskCount) {
+          const actualTasksAdded = afterTaskCount - beforeTaskCount;
+          console.log(`Added ${actualTasksAdded} Success Factor tasks to project ${projectId}`);
+          totalTasksAdded += actualTasksAdded;
+          projectsUpdated++;
+        } else {
+          console.log(`Project ${projectId} already has all Success Factor tasks (${afterTaskCount} tasks).`);
         }
-        
-        // For each task
-        for (const task of factorTasksList) {
-          // Normalize stage (lowercase)
-          const stage = task.stage.toLowerCase();
-          const taskText = task.text;
-          
-          if (!taskText || taskText.trim() === '') continue;
-          
-          // Check if task already exists in this project
-          const existingResult = await client.query(`
-            SELECT id FROM project_tasks
-            WHERE project_id = $1
-              AND source_id = $2
-              AND stage = $3
-              AND text = $4
-          `, [projectId, factorId, stage, taskText]);
-          
-          // If task doesn't exist, add it
-          if (existingResult.rows.length === 0) {
-            const newTaskId = uuidv4();
-            
-            await client.query(`
-              INSERT INTO project_tasks
-              (id, project_id, text, stage, origin, source_id, completed, status, created_at, updated_at)
-              VALUES
-              ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            `, [
-              newTaskId,          // id
-              projectId,          // project_id
-              taskText,           // text
-              stage,              // stage
-              'factor',           // origin 
-              factorId,           // source_id
-              false,              // completed
-              'pending',          // status
-              new Date(),         // created_at
-              new Date()          // updated_at
-            ]);
-            
-            projectTasksAdded++;
-            totalTasksAdded++;
-          }
-        }
-      }
-      
-      // Get final task count
-      const finalCountResult = await client.query(`
-        SELECT COUNT(*) FROM project_tasks 
-        WHERE project_id = $1 AND origin = 'factor'
-      `, [projectId]);
-      const afterCount = parseInt(finalCountResult.rows[0].count, 10);
-      
-      // Add to summary
-      summaryData.push({
-        projectId,
-        beforeCount,
-        afterCount,
-        missingUuids
-      });
-      
-      if (projectTasksAdded > 0) {
-        console.log(`Added ${projectTasksAdded} missing tasks to project ${projectId}`);
-        projectsUpdated++;
-      } else {
-        console.log(`Project ${projectId} already has all success factor tasks`);
+      } catch (error) {
+        console.error(`Error processing project ${projectId}:`, error);
+        // Continue with the next project
       }
     }
     
-    // Print summary
-    console.log('\n=== BACKFILL SUMMARY ===');
-    console.log(`Total projects processed: ${projects.length}`);
-    console.log(`Projects that needed updates: ${projectsUpdated}`);
-    console.log(`Total tasks added: ${totalTasksAdded}`);
-    console.log('\n=== JSON SUMMARY ===');
-    console.log(JSON.stringify(summaryData, null, 2));
-    console.log('Backfill completed successfully');
-    
-    // Special case - force add the specific row if needed
-    const specificProject = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
-    const specificFactorId = '2f565bf9-70c7-5c41-93e7-c6c4cde32312';
-    
-    const checkSpecificResult = await client.query(`
-      SELECT * FROM project_tasks
-      WHERE project_id = $1
-        AND source_id = $2
-    `, [specificProject, specificFactorId]);
-    
-    if (checkSpecificResult.rows.length === 0) {
-      console.log('\n=== INSERTING SPECIFIC MISSING ROW ===');
-      const newTaskId = uuidv4();
-      
-      const insertResult = await client.query(`
-        INSERT INTO project_tasks
-        (id, project_id, text, stage, origin, source_id, completed, status, created_at, updated_at)
-        VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        RETURNING *
-      `, [
-        newTaskId,                    // id
-        specificProject,              // project_id
-        'Be Ready to Adapt',          // text (title of the factor)
-        'identification',             // stage
-        'factor',                     // origin 
-        specificFactorId,             // source_id
-        false,                        // completed
-        'pending',                    // status
-        new Date(),                   // created_at
-        new Date()                    // updated_at
-      ]);
-      
-      console.log('Inserted row:');
-      console.log(JSON.stringify(insertResult.rows[0], null, 2));
-    }
+    console.log('\nBack-fill summary:');
+    console.log(`- Projects processed: ${projects.rows.length}`);
+    console.log(`- Projects updated: ${projectsUpdated}`);
+    console.log(`- Total tasks added: ${totalTasksAdded}`);
     
   } catch (error) {
-    console.error('Error during backfill:', error);
+    console.error('Error running back-fill script:', error);
   } finally {
-    await client.end();
-    console.log('Disconnected from database');
+    console.log('Back-fill process complete.');
+    process.exit(0);
   }
 }
 
 // Run the script
-main().catch(err => {
-  console.error('Script failed:', err);
-  process.exit(1);
-});
+main();

@@ -273,9 +273,10 @@ export default function Checklist({ projectId: propProjectId }: ChecklistProps):
       setLoading(true);
 
       // Get existing task statuses from the server
+      // Include ensure=true parameter to ensure all Success Factor tasks exist in DB
       const response = await apiRequest(
         "GET", 
-        `/api/projects/${currentProjectId}/tasks`
+        `/api/projects/${currentProjectId}/tasks?ensure=true`
       );
 
       let data;
