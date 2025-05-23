@@ -59,6 +59,7 @@ export interface TaskUpdates {
   sourceId?: string;
   syncStatus?: 'synced' | 'syncing' | 'error';
   retryCount?: number;
+  projectId?: string; // Project ID for cross-project validation
 }
 
 interface TaskCardProps {
@@ -345,29 +346,66 @@ export default function TaskCard({
   // This ensures the dependency array never includes undefined values that cause React hooks to break
   }, [id, completed, source, origin || '', sourceId || '', stage, status, isGoodPractice, onUpdate]);
 
-  // Handle priority change
+  /**
+   * Validates that the task belongs to the current project context
+   * This prevents cross-project update attempts that cause 404 errors
+   * @returns boolean - true if the task is valid for the current project context
+   */
+  const validateProjectContext = (): boolean => {
+    const storedProjectContext = localStorage.getItem('currentProjectId');
+    const effectiveProjectId = storedProjectContext || '';
+    
+    // If the task has a project ID and it doesn't match the current context
+    if (safeProjectId && effectiveProjectId && safeProjectId !== effectiveProjectId) {
+      console.error(`[PROJECT_MISMATCH] Task update prevented: Task belongs to project ${safeProjectId} but current context is ${effectiveProjectId}`);
+      setLocalSyncStatus('error');
+      setLocalRetryCount(prev => prev + 1);
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Handle priority change with project context validation
   const handlePriorityChange = (newPriority: TaskPriority | undefined) => {
-    onUpdate(id, { priority: newPriority }, isGoodPractice);
+    // First validate project context consistency
+    if (validateProjectContext()) {
+      // Include projectId in the update payload for server-side validation
+      onUpdate(id, { 
+        priority: newPriority,
+        projectId: safeProjectId
+      }, isGoodPractice);
+    }
   };
 
   // Handle date change
   const handleDateChange = (date: Date | undefined) => {
-    // Convert Date to ISO string, or undefined if no date
-    const dateString = date ? date.toISOString() : undefined;
-    onUpdate(id, { dueDate: dateString }, isGoodPractice);
+    // First validate project context consistency
+    if (validateProjectContext()) {
+      // Convert Date to ISO string, or undefined if no date
+      const dateString = date ? date.toISOString() : undefined;
+      onUpdate(id, { 
+        dueDate: dateString,
+        projectId: safeProjectId // Include projectId for server validation 
+      }, isGoodPractice);
+    }
   };
 
   // Handle save all edited details
   const handleSaveEdits = () => {
     const isCompletedStatus = editedStatus === 'Done';
-
-    onUpdate(id, {
-      text: editedTaskTitle,
-      notes: editedNotes,
-      owner: editedOwner,
-      status: editedStatus,
-      completed: isCompletedStatus
-    }, isGoodPractice);
+    
+    // Validate project context before submitting update
+    if (validateProjectContext()) {
+      onUpdate(id, {
+        text: editedTaskTitle,
+        notes: editedNotes,
+        owner: editedOwner,
+        status: editedStatus,
+        completed: isCompletedStatus,
+        projectId: safeProjectId // Include projectId for server validation
+      }, isGoodPractice);
+    }
 
     setIsExpanded(false);
   };

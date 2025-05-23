@@ -1,224 +1,260 @@
 /**
  * Success Factor Task Persistence Test
  * 
- * This test script verifies that our fixes for Success Factor task persistence work properly.
- * It will:
- * 1. Get all tasks for a test project
- * 2. Find a Success Factor task
- * 3. Toggle its completion state
- * 4. Verify the update is properly persisted
- * 5. Verify that all critical metadata (origin, sourceId) is preserved
+ * This script:
+ * 1. Captures all tasks shown in the UI
+ * 2. Attempts to toggle a Success Factor task
+ * 3. Monitors the network requests/responses
+ * 4. Verifies the task state change is persisted
  * 
- * Run this script with: node test-success-factor-persistence.js
+ * Instructions:
+ * 1. Copy and paste the entire script into your browser console
+ * 2. Press Enter to run the test
+ * 3. Watch the console for detailed logs and results
  */
 
-import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
-
-// Configuration
-const BASE_URL = 'https://9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev';
-const PROJECT_ID = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
-const DEBUG = true;
-
-// Track test results
-const results = {
-  totalTests: 0,
-  passedTests: 0,
-  failedTests: 0,
-  errors: []
-};
-
-// Helper functions
-async function apiRequest(method, endpoint, body = null) {
-  try {
-    const url = `${BASE_URL}${endpoint}`;
-    
-    // Configure request options
-    const options = {
-      method,
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Auth-Override': 'true' // Special header for testing without session
-      }
-    };
-    
-    if (body) {
-      options.data = JSON.stringify(body);
-    }
-    
-    if (DEBUG) {
-      console.log(`[DEBUG] Sending ${method} request to ${url}`);
-      if (body) {
-        console.log(`[DEBUG] Request body:`, JSON.stringify(body, null, 2));
-      }
-    }
-    
-    const response = await axios(options);
-    
-    if (DEBUG) {
-      console.log(`[DEBUG] Response status: ${response.status}`);
-      console.log(`[DEBUG] Response headers:`, response.headers);
-      console.log(`[DEBUG] Response body:`, JSON.stringify(response.data, null, 2));
-    }
+(async function() {
+  console.log('=== SUCCESS FACTOR TASK PERSISTENCE TEST ===');
+  const testStartTime = new Date().toISOString();
+  console.log(`Test started at: ${testStartTime}`);
+  console.log('This test validates our fix for the project/task ID mismatch issue');
+  
+  // Get current project ID from localStorage
+  const currentProjectId = localStorage.getItem('currentProjectId');
+  if (!currentProjectId) {
+    console.error('❌ No project ID found in localStorage. Please navigate to a project first.');
+    return;
+  }
+  
+  console.log(`✅ Current project context: ${currentProjectId}`);
+  
+  // First, let's capture all the tasks currently visible in the UI
+  const taskElements = document.querySelectorAll('[data-task-id]');
+  console.log(`Found ${taskElements.length} task elements in the UI`);
+  
+  // Map task elements to their data
+  const uiTasks = Array.from(taskElements).map(el => {
+    const taskId = el.getAttribute('data-task-id');
+    const sourceId = el.getAttribute('data-source-id') || null;
+    const isCompleted = el.querySelector('input[type="checkbox"]')?.checked || false;
+    const taskText = el.querySelector('.task-text')?.textContent || '';
+    const origin = el.getAttribute('data-origin') || null;
     
     return {
-      status: response.status,
-      headers: response.headers,
-      data: response.data
+      id: taskId,
+      sourceId,
+      text: taskText,
+      completed: isCompleted,
+      origin
     };
-  } catch (error) {
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error(`[ERROR] API error response: ${error.response.status}`);
-      console.error(JSON.stringify(error.response.data, null, 2));
+  });
+  
+  // Log all tasks found in the UI
+  console.log('Tasks in UI:', uiTasks);
+  
+  // Find a success factor task to toggle (preferably one that's not completed)
+  const factorTasks = uiTasks.filter(task => 
+    task.origin === 'factor' || task.sourceId
+  );
+  
+  if (factorTasks.length === 0) {
+    console.error('❌ No Success Factor tasks found in the UI. Test cannot continue.');
+    return;
+  }
+  
+  console.log(`✅ Found ${factorTasks.length} Success Factor tasks in the UI`);
+  
+  // Select a task to toggle - preferably not completed
+  const taskToToggle = factorTasks.find(task => !task.completed) || factorTasks[0];
+  console.log('Selected task to toggle:', taskToToggle);
+  
+  // Get current task state from the API for comparison
+  async function getTasksFromApi() {
+    try {
+      console.log(`Fetching tasks for project ${currentProjectId} from API...`);
+      const response = await fetch(`/api/projects/${currentProjectId}/tasks`);
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      const tasks = await response.json();
+      console.log(`✅ API returned ${tasks.length} tasks`);
+      return tasks;
+    } catch (error) {
+      console.error('❌ Error fetching tasks from API:', error);
+      return [];
+    }
+  }
+  
+  // Helper function to make authenticated API requests
+  async function apiRequest(method, endpoint, body = null) {
+    try {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      };
+      
+      if (body && method !== 'GET') {
+        options.body = JSON.stringify(body);
+      }
+      
+      console.log(`Making ${method} request to ${endpoint}`);
+      if (body) console.log('Request body:', body);
+      
+      const response = await fetch(endpoint, options);
+      const contentType = response.headers.get('content-type');
+      let responseData;
+      
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        const text = await response.text();
+        responseData = { text, contentType };
+      }
       
       return {
-        status: error.response.status,
-        headers: error.response.headers,
-        data: error.response.data,
-        error: true
+        ok: response.ok,
+        status: response.status,
+        data: responseData,
+        headers: Object.fromEntries([...response.headers.entries()])
       };
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error('[ERROR] No response received:', error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.error('[ERROR] Request error:', error.message);
+    } catch (error) {
+      console.error(`API request error (${method} ${endpoint}):`, error);
+      return {
+        ok: false,
+        status: -1,
+        error: error.message
+      };
     }
-    
-    throw error;
   }
-}
-
-// Test assertion functions
-function assert(condition, message) {
-  results.totalTests++;
   
-  if (condition) {
-    results.passedTests++;
-    if (DEBUG) {
-      console.log(`[PASS] ${message}`);
+  // Get tasks from API before toggle
+  const tasksBeforeToggle = await getTasksFromApi();
+  const apiTaskBeforeToggle = tasksBeforeToggle.find(task => task.id === taskToToggle.id);
+  
+  if (!apiTaskBeforeToggle) {
+    console.error(`❌ Task with ID ${taskToToggle.id} not found in API response`);
+    return;
+  }
+  
+  console.log('Task state before toggle (from API):', apiTaskBeforeToggle);
+  
+  // Test project mismatch protection by attempting cross-project task update
+  console.log('=== CROSS-PROJECT UPDATE TEST ===');
+  console.log('Testing project mismatch protection by attempting to update task from wrong project context...');
+  
+  // Find another project ID (different from current)
+  const otherProjectId = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8'; // Using a known project ID
+  console.log(`Using alternative project context: ${otherProjectId}`);
+  
+  // Attempt to update the task from the wrong project context
+  const mismatchResponse = await apiRequest(
+    'PUT',
+    `/api/projects/${otherProjectId}/tasks/${taskToToggle.id}`,
+    {
+      completed: !apiTaskBeforeToggle.completed,
+      origin: apiTaskBeforeToggle.origin,
+      sourceId: apiTaskBeforeToggle.sourceId,
+      status: !apiTaskBeforeToggle.completed ? 'Done' : 'To Do'
     }
-    return true;
+  );
+  
+  console.log('Cross-project update response:', mismatchResponse);
+  
+  // Verify mismatch protection worked
+  if (mismatchResponse.status === 403 || mismatchResponse.status === 404) {
+    console.log('✅ Project mismatch protection worked! Update was properly blocked.');
+    
+    if (mismatchResponse.data && mismatchResponse.data.error === 'PROJECT_TASK_MISMATCH') {
+      console.log('✅ Correct error code returned: PROJECT_TASK_MISMATCH');
+    }
   } else {
-    results.failedTests++;
-    const errorMessage = `[FAIL] ${message}`;
-    console.error(errorMessage);
-    results.errors.push(errorMessage);
-    return false;
+    console.log('❌ Project mismatch protection FAILED! Update was not blocked as expected.');
   }
-}
-
-// Main test function
-async function runSuccessFactorPersistenceTest() {
-  console.log(`\n===== Success Factor Task Persistence Test =====\n`);
-  console.log(`Testing project: ${PROJECT_ID}\n`);
   
-  try {
-    // Step 1: Get all tasks for the project
-    console.log(`Step 1: Fetching all tasks for the project...`);
-    const tasksResponse = await apiRequest('GET', `/api/projects/${PROJECT_ID}/tasks`);
-    
-    assert(tasksResponse.status === 200, 'Tasks API returned 200 status code');
-    assert(Array.isArray(tasksResponse.data), 'Tasks API returned an array');
-    assert(tasksResponse.data.length > 0, 'Tasks API returned at least one task');
-    
-    const allTasks = tasksResponse.data;
-    console.log(`Found ${allTasks.length} total tasks`);
-    
-    // Step 2: Find a Success Factor task
-    console.log(`\nStep 2: Looking for a Success Factor task...`);
-    const successFactorTasks = allTasks.filter(task => 
-      task.origin === 'factor' || task.origin === 'success-factor'
-    );
-    
-    assert(successFactorTasks.length > 0, 'Found at least one Success Factor task');
-    
-    if (successFactorTasks.length === 0) {
-      console.error('No Success Factor tasks found. Test cannot continue.');
-      return;
+  // Now test legitimate update
+  console.log('\n=== LEGITIMATE UPDATE TEST ===');
+  console.log('Testing legitimate task update within correct project context...');
+  
+  // Toggle the task correctly using the proper project context
+  const updateResponse = await apiRequest(
+    'PUT',
+    `/api/projects/${currentProjectId}/tasks/${taskToToggle.id}`,
+    {
+      completed: !apiTaskBeforeToggle.completed,
+      origin: apiTaskBeforeToggle.origin,
+      sourceId: apiTaskBeforeToggle.sourceId,
+      status: !apiTaskBeforeToggle.completed ? 'Done' : 'To Do',
+      projectId: currentProjectId
     }
-    
-    // Pick the first Success Factor task for testing
-    const testTask = successFactorTasks[0];
-    console.log(`Selected Success Factor task: ${testTask.id}`);
-    console.log(`  - text: ${testTask.text?.substring(0, 40)}...`);
-    console.log(`  - origin: ${testTask.origin}`);
-    console.log(`  - sourceId: ${testTask.sourceId}`);
-    console.log(`  - current completion: ${testTask.completed}`);
-    
-    // Step 3: Toggle the task's completion state
-    console.log(`\nStep 3: Toggling task completion state...`);
-    const newCompletionState = !testTask.completed;
-    
-    const updateResponse = await apiRequest('PUT', `/api/projects/${PROJECT_ID}/tasks/${testTask.id}`, {
-      completed: newCompletionState
-    });
-    
-    assert(updateResponse.status === 200, 'Update API returned 200 status code');
-    assert(updateResponse.data.success === true, 'Update API response indicates success');
-    assert(updateResponse.data.task, 'Update API response includes task data');
-    
-    const updatedTask = updateResponse.data.task;
-    
-    // Step 4: Verify the update was applied correctly
-    console.log(`\nStep 4: Verifying task update...`);
-    
-    // Check completion state changed
-    assert(updatedTask.completed === newCompletionState, 
-      `Task completion state changed from ${testTask.completed} to ${newCompletionState}`);
-    
-    // Check metadata was preserved
-    assert(updatedTask.origin === testTask.origin, 
-      `Task origin was preserved: ${updatedTask.origin}`);
-    
-    assert(updatedTask.sourceId === testTask.sourceId, 
-      `Task sourceId was preserved: ${updatedTask.sourceId}`);
-    
-    // Step 5: Get all tasks again to verify persistence
-    console.log(`\nStep 5: Fetching tasks again to verify persistence...`);
-    const verifyResponse = await apiRequest('GET', `/api/projects/${PROJECT_ID}/tasks`);
-    
-    assert(verifyResponse.status === 200, 'Verify API returned 200 status code');
-    
-    const verifyTasks = verifyResponse.data;
-    const verifiedTask = verifyTasks.find(t => t.id === testTask.id);
-    
-    assert(verifiedTask, `Task ${testTask.id} found in tasks list after update`);
-    assert(verifiedTask.completed === newCompletionState, 
-      `Task completion state is still ${newCompletionState} after refresh`);
-    
-    // Final metadata verification
-    assert(verifiedTask.origin === testTask.origin, 
-      `Task origin is still preserved after refresh: ${verifiedTask.origin}`);
-    
-    assert(verifiedTask.sourceId === testTask.sourceId, 
-      `Task sourceId is still preserved after refresh: ${verifiedTask.sourceId}`);
-    
-    // Print test summary
-    console.log(`\n===== Test Summary =====`);
-    console.log(`Total tests: ${results.totalTests}`);
-    console.log(`Passed tests: ${results.passedTests}`);
-    console.log(`Failed tests: ${results.failedTests}`);
-    
-    if (results.failedTests > 0) {
-      console.log(`\nErrors:`);
-      results.errors.forEach((error, index) => {
-        console.log(`  ${index + 1}. ${error}`);
-      });
-      console.log(`\nTest FAILED`);
-    } else {
-      console.log(`\nAll tests PASSED`);
-      console.log(`Success Factor task persistence is working correctly!`);
-    }
-    
-  } catch (error) {
-    console.error('Unexpected error during test:', error);
-    console.log(`\nTest FAILED due to unexpected error`);
+  );
+  
+  console.log('Legitimate update response:', updateResponse);
+  
+  // Verify legitimate update worked
+  if (updateResponse.ok) {
+    console.log('✅ Legitimate update succeeded as expected!');
+  } else {
+    console.log('❌ Legitimate update failed unexpectedly.');
   }
-}
-
-// Run the test
-runSuccessFactorPersistenceTest();
+  
+  // Get tasks from API after toggle to verify persistence
+  const tasksAfterToggle = await getTasksFromApi();
+  const apiTaskAfterToggle = tasksAfterToggle.find(task => task.id === taskToToggle.id);
+  
+  if (!apiTaskAfterToggle) {
+    console.error(`❌ Task with ID ${taskToToggle.id} not found in API after toggle`);
+    return;
+  }
+  
+  console.log('Task state after toggle (from API):', apiTaskAfterToggle);
+  
+  // Verify the completion state was properly toggled and persisted
+  if (apiTaskAfterToggle.completed !== apiTaskBeforeToggle.completed) {
+    console.log('✅ Task completion state was successfully toggled and persisted!');
+  } else {
+    console.log('❌ Task completion state was NOT properly toggled or persisted.');
+  }
+  
+  // Verify sourceId preservation
+  if (apiTaskAfterToggle.sourceId === apiTaskBeforeToggle.sourceId) {
+    console.log('✅ sourceId was preserved as expected!');
+  } else {
+    console.log('❌ sourceId was NOT preserved.');
+    console.log(`  - Before: ${apiTaskBeforeToggle.sourceId}`);
+    console.log(`  - After:  ${apiTaskAfterToggle.sourceId}`);
+  }
+  
+  // Verify origin preservation
+  if (apiTaskAfterToggle.origin === apiTaskBeforeToggle.origin) {
+    console.log('✅ origin was preserved as expected!');
+  } else {
+    console.log('❌ origin was NOT preserved.');
+    console.log(`  - Before: ${apiTaskBeforeToggle.origin}`);
+    console.log(`  - After:  ${apiTaskAfterToggle.origin}`);
+  }
+  
+  console.log('\n=== TEST SUMMARY ===');
+  console.log(`Test started at: ${testStartTime}`);
+  console.log(`Test completed at: ${new Date().toISOString()}`);
+  console.log('Results:');
+  console.log(`- Project mismatch protection: ${mismatchResponse.status === 403 || mismatchResponse.status === 404 ? 'PASS ✅' : 'FAIL ❌'}`);
+  console.log(`- Legitimate update: ${updateResponse.ok ? 'PASS ✅' : 'FAIL ❌'}`);
+  console.log(`- Completion state toggled: ${apiTaskAfterToggle.completed !== apiTaskBeforeToggle.completed ? 'PASS ✅' : 'FAIL ❌'}`);
+  console.log(`- sourceId preserved: ${apiTaskAfterToggle.sourceId === apiTaskBeforeToggle.sourceId ? 'PASS ✅' : 'FAIL ❌'}`);
+  console.log(`- origin preserved: ${apiTaskAfterToggle.origin === apiTaskBeforeToggle.origin ? 'PASS ✅' : 'FAIL ❌'}`);
+  
+  const overallSuccess = 
+    (mismatchResponse.status === 403 || mismatchResponse.status === 404) &&
+    updateResponse.ok &&
+    apiTaskAfterToggle.completed !== apiTaskBeforeToggle.completed &&
+    apiTaskAfterToggle.sourceId === apiTaskBeforeToggle.sourceId &&
+    apiTaskAfterToggle.origin === apiTaskBeforeToggle.origin;
+  
+  console.log(`\nOVERALL TEST: ${overallSuccess ? 'PASS ✅' : 'FAIL ❌'}`);
+  
+})();
