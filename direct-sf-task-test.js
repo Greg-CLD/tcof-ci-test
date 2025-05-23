@@ -1,202 +1,254 @@
 /**
- * Success Factor Task Toggle Direct Test
+ * Direct Success Factor Task Toggle Test
  * 
- * This script directly tests how the application handles toggling a Success Factor task
- * and captures the evidence requested by the user.
+ * This script tests the toggle functionality for Success Factor tasks by:
+ * 1. Finding a specific project with Success Factor tasks
+ * 2. Getting all tasks for the project
+ * 3. Selecting a Success Factor task to toggle
+ * 4. Making a direct API call to toggle the task
+ * 5. Verifying the task state changed in the database
  */
 
-// Import required modules
-const https = require('https');
-const fs = require('fs');
+import { db } from './db/index.js';
+import { sql } from 'drizzle-orm';
+import fetch from 'node-fetch';
+import fs from 'fs/promises';
 
-// Project and domain configuration
-const PROJECT_ID = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8';
-const REPLIT_DOMAIN = '9b3ebbf7-9690-415a-a774-4c1b8f1719a3-00-jbynja68j24v.worf.replit.dev';
+// Test with a known project that has Success Factor tasks
+const TEST_PROJECT_ID = '29ef6e22-52fc-43e3-a05b-19c42bed7d49';
 
-// Use a predefined Success Factor task with a known sourceId
-// This matches a real success factor task in the database
-const TEST_SF_TASK_ID = '2f565bf9-70c7-5c41-93e7-c6c4cde32312';
-
-// Session cookie for authentication
-const SESSION_COOKIE = 'tcof.sid=s%3AGzFWGtM2karVuxzsRH2nGEjg_yuVt-C1.%2FXHiyUHSC0FiiFyOJiAc4fUO55WsxaMuzanEgZpGHDw';
-
-// API request helper with proper logging
-async function apiRequest(method, endpoint, body = null) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: REPLIT_DOMAIN,
-      port: 443, // HTTPS
-      path: endpoint,
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': SESSION_COOKIE,
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    };
-    
-    console.log(`\n🌐 Making API ${method} request to ${endpoint}`);
-    if (body) {
-      console.log(`📦 Request payload: ${JSON.stringify(body, null, 2)}`);
-    }
-    
-    const req = https.request(options, (res) => {
-      let data = '';
-      
-      console.log(`📡 Response status: ${res.statusCode}`);
-      console.log(`🔖 Response headers: ${JSON.stringify(res.headers, null, 2)}`);
-      
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      
-      res.on('end', () => {
-        try {
-          const responseData = data ? JSON.parse(data) : {};
-          console.log(`📄 Response body: ${JSON.stringify(responseData, null, 2)}`);
-          resolve({ status: res.statusCode, headers: res.headers, data: responseData });
-        } catch (error) {
-          console.log(`🔴 Raw response (not JSON): ${data}`);
-          console.error(`❌ Error parsing response: ${error}`);
-          resolve({ status: res.statusCode, headers: res.headers, data: null, rawData: data });
-        }
-      });
-    });
-    
-    req.on('error', (error) => {
-      console.error(`🚨 Request error: ${error.message}`);
-      reject(error);
-    });
-    
-    if (body) {
-      const jsonBody = JSON.stringify(body);
-      req.write(jsonBody);
-    }
-    
-    req.end();
-  });
-}
-
-// Get all tasks for the project
-async function getAllTasks() {
-  console.log('\n===== EVIDENCE 2: Getting all project tasks (BEFORE toggle) =====');
-  const endpoint = `/api/projects/${PROJECT_ID}/tasks`;
-  const response = await apiRequest('GET', endpoint);
+async function runDirectTest() {
+  console.log('=== DIRECT SUCCESS FACTOR TASK TOGGLE TEST ===\n');
   
-  // Filter for Success Factor tasks 
-  const sfTasks = response.data.filter(task => 
-    task.origin === 'factor' || task.source === 'factor'
-  );
-  
-  console.log(`\n📊 Task Statistics:
-- Total tasks: ${response.data.length}
-- Success Factor tasks: ${sfTasks.length}`);
-  
-  return { allTasks: response.data, sfTasks };
-}
-
-// Map all Success Factor tasks
-function mapSuccessFactorTasks(tasks) {
-  console.log('\n===== EVIDENCE 3: Success Factor Tasks Mapping =====');
-  
-  const mapping = tasks.map(task => ({
-    id: task.id,
-    sourceId: task.sourceId || '<empty>',
-    text: task.text.substring(0, 30) + (task.text.length > 30 ? '...' : ''),
-    completed: task.completed,
-    origin: task.origin || '<empty>',
-    source: task.source,
-    updateIdUsed: (task.origin === 'factor' && task.sourceId) ? 'sourceId' : 'id'
-  }));
-  
-  console.log(JSON.stringify(mapping, null, 2));
-  return mapping;
-}
-
-// Toggle a specific Success Factor task
-async function toggleSuccessFactorTask(taskId, currentState) {
-  console.log('\n===== EVIDENCE 1: Toggle Success Factor Task =====');
-  
-  // Create update payload that mimics what the TaskCard component sends
-  const updateData = {
-    completed: !currentState,
-    status: !currentState ? 'Done' : 'To Do', 
-    origin: 'factor',
-    sourceId: taskId // This is the key part - sending the sourceId in the payload
-  };
-  
-  // Send the update request using the task ID in the URL
-  const endpoint = `/api/projects/${PROJECT_ID}/tasks/${taskId}`;
-  const response = await apiRequest('PUT', endpoint, updateData);
-  
-  return response;
-}
-
-// Get tasks after toggle to verify persistence
-async function getTasksAfterToggle() {
-  console.log('\n===== EVIDENCE 2 (continued): Tasks AFTER toggle =====');
-  const endpoint = `/api/projects/${PROJECT_ID}/tasks`;
-  const response = await apiRequest('GET', endpoint);
-  return response.data;
-}
-
-// Run the complete test
-async function runCompleteTest() {
   try {
-    console.log('🔍 STARTING SUCCESS FACTOR TASK TOGGLE TEST 🔍');
-    console.log(`📌 Testing with Success Factor task ID: ${TEST_SF_TASK_ID}`);
-    
-    // 1. Get all tasks before the toggle
-    const { allTasks, sfTasks } = await getAllTasks();
-    
-    // 2. Map all Success Factor tasks for reference
-    const taskMapping = mapSuccessFactorTasks(sfTasks);
-    
-    // 3. Find the specific test task
-    const taskToToggle = sfTasks.find(t => t.id === TEST_SF_TASK_ID);
-    
-    if (!taskToToggle) {
-      console.error(`❌ Error: Test task with ID ${TEST_SF_TASK_ID} not found!`);
+    // Step 1: Load session cookie for authentication
+    const sessionCookie = await getSessionCookie();
+    if (!sessionCookie) {
+      console.error('No session cookie found. Please login to the application first.');
       return;
     }
     
-    console.log(`\n🎯 Selected test task:
-- ID: ${taskToToggle.id}
-- SourceID: ${taskToToggle.sourceId || '<empty>'}
-- Text: ${taskToToggle.text.substring(0, 50)}...
-- Current completed state: ${taskToToggle.completed}
-- Origin: ${taskToToggle.origin || '<empty>'}`);
+    console.log(`Testing project: ${TEST_PROJECT_ID}`);
     
-    // 4. Toggle the task
-    const toggleResponse = await toggleSuccessFactorTask(
-      taskToToggle.id, 
-      taskToToggle.completed
+    // Step 2: Get tasks from API with ensure=true parameter
+    console.log('\n=== TASKS BEFORE TOGGLE (API) ===');
+    const tasksResponse = await fetch(`http://localhost:3000/api/projects/${TEST_PROJECT_ID}/tasks?ensure=true`, {
+      headers: {
+        'Cookie': sessionCookie
+      }
+    });
+    
+    // Log response details
+    console.log(`API Response Status: ${tasksResponse.status}`);
+    console.log(`Response Headers:`, tasksResponse.headers.raw());
+    
+    // Parse response body
+    const tasks = await tasksResponse.json();
+    console.log(`Retrieved ${tasks.length} tasks from API`);
+    
+    // Find Success Factor tasks
+    const successFactorTasks = tasks.filter(task => 
+      task.origin === 'factor' || task.origin === 'success-factor'
     );
     
-    // 5. Get tasks after toggle
-    const updatedTasks = await getTasksAfterToggle();
-    const updatedTask = updatedTasks.find(t => t.id === taskToToggle.id);
+    console.log(`Found ${successFactorTasks.length} Success Factor tasks`);
     
-    // 6. Verify if the toggle was successful
-    if (updatedTask) {
-      console.log(`\n✅ VERIFICATION RESULTS:
-- Before toggle: completed=${taskToToggle.completed}
-- After toggle: completed=${updatedTask.completed}
-- Toggle persisted: ${updatedTask.completed !== taskToToggle.completed ? 'YES ✓' : 'NO ✗'}
-- SourceID retained: ${(updatedTask.sourceId === taskToToggle.sourceId) ? 'YES ✓' : 'NO ✗'}`);
-    } else {
-      console.log(`❌ Error: Task not found after toggle!`);
+    if (successFactorTasks.length === 0) {
+      console.error('No Success Factor tasks found. Cannot proceed with toggle test.');
+      return;
     }
     
-    console.log('\n===== EVIDENCE 4: Server-side logs =====');
-    console.log('Please see the workflow console logs in the UI for complete server-side task lookup tracing.');
+    // Step 3: Get current state from database
+    console.log('\n=== TASKS BEFORE TOGGLE (DATABASE) ===');
+    const dbTasksBefore = await getTasksFromDatabase(TEST_PROJECT_ID);
+    console.log(`Retrieved ${dbTasksBefore.length} tasks from database`);
     
-    console.log('\n🏁 TEST COMPLETED');
+    // Find matching Success Factor tasks in database
+    const dbSuccessFactorTasks = dbTasksBefore.filter(task => 
+      task.origin === 'factor' || task.origin === 'success-factor'
+    );
+    
+    console.log(`Found ${dbSuccessFactorTasks.length} Success Factor tasks in database`);
+    
+    // Step 4: Select a task to toggle
+    const taskToToggle = successFactorTasks[0];
+    console.log('\n=== TASK SELECTED FOR TOGGLE ===');
+    console.log(JSON.stringify(taskToToggle, null, 2));
+    
+    // Find the same task in database
+    const dbTaskToToggle = dbTasksBefore.find(task => task.id === taskToToggle.id);
+    
+    if (dbTaskToToggle) {
+      console.log('\n=== DATABASE STATE OF TASK BEFORE TOGGLE ===');
+      console.log(JSON.stringify(dbTaskToToggle, null, 2));
+    } else {
+      console.error(`Task with ID ${taskToToggle.id} not found in database!`);
+    }
+    
+    // Step 5: Toggle the task via API
+    console.log('\n=== TOGGLING TASK VIA API ===');
+    const newCompletionState = !taskToToggle.completed;
+    console.log(`Setting completed state from ${taskToToggle.completed} to ${newCompletionState}`);
+    
+    const togglePayload = JSON.stringify({
+      completed: newCompletionState
+    });
+    
+    console.log(`Request URL: PUT /api/projects/${TEST_PROJECT_ID}/tasks/${taskToToggle.id}`);
+    console.log(`Request Payload: ${togglePayload}`);
+    
+    const toggleResponse = await fetch(
+      `http://localhost:3000/api/projects/${TEST_PROJECT_ID}/tasks/${taskToToggle.id}`, 
+      {
+        method: 'PUT',
+        headers: {
+          'Cookie': sessionCookie,
+          'Content-Type': 'application/json'
+        },
+        body: togglePayload
+      }
+    );
+    
+    // Log toggle response details
+    console.log(`\nToggle Response Status: ${toggleResponse.status}`);
+    console.log(`Toggle Response Headers:`, toggleResponse.headers.raw());
+    
+    // Get response body
+    const toggleResponseText = await toggleResponse.text();
+    
+    try {
+      // Try to parse as JSON
+      const toggleResponseJson = JSON.parse(toggleResponseText);
+      console.log('Toggle Response Body (JSON):', JSON.stringify(toggleResponseJson, null, 2));
+    } catch (e) {
+      // If not valid JSON, show as text
+      console.log(`Toggle Response Body (Text): ${toggleResponseText}`);
+    }
+    
+    // Step 6: Get tasks after toggle from API
+    console.log('\n=== TASKS AFTER TOGGLE (API) ===');
+    const tasksAfterResponse = await fetch(`http://localhost:3000/api/projects/${TEST_PROJECT_ID}/tasks`, {
+      headers: {
+        'Cookie': sessionCookie
+      }
+    });
+    
+    const tasksAfter = await tasksAfterResponse.json();
+    console.log(`Retrieved ${tasksAfter.length} tasks from API after toggle`);
+    
+    // Find toggled task in API response
+    const toggledTaskAfter = tasksAfter.find(task => task.id === taskToToggle.id);
+    
+    if (toggledTaskAfter) {
+      console.log('\n=== TOGGLED TASK IN API AFTER TOGGLE ===');
+      console.log(JSON.stringify(toggledTaskAfter, null, 2));
+      
+      // Check if toggle was successful
+      if (toggledTaskAfter.completed === newCompletionState) {
+        console.log('✅ SUCCESS: Task toggle reflected in API response');
+      } else {
+        console.log('❌ FAILURE: Task toggle not reflected in API response');
+        console.log(`  - Expected: completed=${newCompletionState}`);
+        console.log(`  - Actual: completed=${toggledTaskAfter.completed}`);
+      }
+    } else {
+      console.error(`Task with ID ${taskToToggle.id} not found in API response after toggle!`);
+    }
+    
+    // Step 7: Get tasks after toggle from database
+    console.log('\n=== TASKS AFTER TOGGLE (DATABASE) ===');
+    const dbTasksAfter = await getTasksFromDatabase(TEST_PROJECT_ID);
+    console.log(`Retrieved ${dbTasksAfter.length} tasks from database after toggle`);
+    
+    // Find toggled task in database
+    const dbToggledTaskAfter = dbTasksAfter.find(task => task.id === taskToToggle.id);
+    
+    if (dbToggledTaskAfter) {
+      console.log('\n=== TOGGLED TASK IN DATABASE AFTER TOGGLE ===');
+      console.log(JSON.stringify(dbToggledTaskAfter, null, 2));
+      
+      // Check if toggle was successful in database
+      if (dbToggledTaskAfter.completed === newCompletionState) {
+        console.log('✅ SUCCESS: Task toggle persisted to database');
+      } else {
+        console.log('❌ FAILURE: Task toggle not persisted to database');
+        console.log(`  - Expected: completed=${newCompletionState}`);
+        console.log(`  - Actual: completed=${dbToggledTaskAfter.completed}`);
+      }
+    } else {
+      console.error(`Task with ID ${taskToToggle.id} not found in database after toggle!`);
+    }
+    
+    // Step 8: Final analysis and diagnosis
+    console.log('\n=== DIAGNOSIS SUMMARY ===');
+    
+    if (!toggledTaskAfter || !dbToggledTaskAfter) {
+      console.log('❌ CRITICAL ISSUE: Task disappeared during toggle process');
+      
+      if (!toggledTaskAfter) console.log('- Task missing from API response after toggle');
+      if (!dbToggledTaskAfter) console.log('- Task missing from database after toggle');
+      
+      console.log('\nRoot Cause Analysis:');
+      console.log('1. The task may have been deleted during the toggle operation');
+      console.log('2. The task ID may have changed during the toggle operation');
+      console.log('3. There may be a race condition in the task toggle process');
+    } else if (toggleResponse.status !== 200) {
+      console.log(`❌ API ERROR: Toggle request returned status ${toggleResponse.status}`);
+      console.log('\nRoot Cause Analysis:');
+      console.log('1. The API endpoint may be returning an error');
+      console.log('2. There may be a server-side issue with the toggle operation');
+      console.log('3. Authentication or authorization issues may be preventing the toggle');
+    } else if (toggledTaskAfter.completed !== newCompletionState) {
+      console.log('❌ TOGGLE FAILURE: API response shows incorrect completion state');
+      console.log('\nRoot Cause Analysis:');
+      console.log('1. The toggle operation may be failing silently');
+      console.log('2. The API response may not reflect the actual database state');
+      console.log('3. There may be a disconnect between the frontend and backend task models');
+    } else if (dbToggledTaskAfter.completed !== newCompletionState) {
+      console.log('❌ DATABASE PERSISTENCE FAILURE: Task toggle not saved to database');
+      console.log('\nRoot Cause Analysis:');
+      console.log('1. The database update operation may be failing');
+      console.log('2. There may be a transaction rollback happening');
+      console.log('3. The API may be returning success without actually updating the database');
+    } else {
+      console.log('✅ SUCCESS: The Success Factor task toggle works correctly!');
+      console.log('- API toggle request succeeded');
+      console.log('- Task state updated in API response');
+      console.log('- Task state persisted to database');
+    }
     
   } catch (error) {
-    console.error(`❌ Error running test: ${error.message}`);
+    console.error('Error running direct test:', error);
+  } finally {
+    process.exit(0);
   }
 }
 
-// Start the test
-runCompleteTest();
+// Helper function to get session cookie from file
+async function getSessionCookie() {
+  try {
+    return await fs.readFile('current-session.txt', 'utf8');
+  } catch (error) {
+    console.error('Failed to read session cookie:', error);
+    return null;
+  }
+}
+
+// Helper function to get tasks from database
+async function getTasksFromDatabase(projectId) {
+  try {
+    const tasks = await db.execute(sql`
+      SELECT * FROM project_tasks 
+      WHERE project_id = ${projectId}
+      ORDER BY created_at DESC
+    `);
+    
+    return tasks.rows || [];
+  } catch (error) {
+    console.error('Database query error:', error);
+    return [];
+  }
+}
+
+// Run the test
+runDirectTest();
