@@ -73,11 +73,6 @@ export function UserMenu() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.username}</p>
-            {user.email && (
-              <p className="text-xs leading-none text-muted-foreground">
-                {user.email}
-              </p>
-            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -141,27 +136,10 @@ export function UserAvatar() {
     );
   }
 
-  // Otherwise use initials or default icon
-  const initials = user.username
-    .split('@')[0] // Remove email domain if present
-    .split(/[^a-zA-Z]/) // Split by non-alphabetic chars
-    .filter(Boolean) // Remove empty parts
-    .map(part => part[0]?.toUpperCase()) // Get first letter of each part
-    .slice(0, 2) // Get up to 2 initials
-    .join('');
-
-  if (initials) {
-    return (
-      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
-        {initials}
-      </div>
-    );
-  }
-
-  // Fallback to user icon
+  // Otherwise show a default profile icon
   return (
-    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
-      <User className="h-4 w-4 text-muted-foreground" />
+    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary">
+      <User className="h-4 w-4 text-primary-foreground" />
     </div>
   );
 }
