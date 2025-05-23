@@ -8,6 +8,9 @@ import { isOrgMember } from "../middlewares/isOrgMember.js";
 import { isValidUUID, isNumericId, convertNumericIdToUuid } from "../utils/uuid-utils.js";
 import { v4 as uuidv4 } from 'uuid';
 import { projectsDb } from '../projectsDb.ts';
+import { projectTasks as projectTasksTable } from '@shared/schema';
+import { DEBUG_TASKS, DEBUG_FILES } from '@shared/constants.debug';
+import { cloneAllSuccessFactorTasks } from './cloneSuccessFactors';
 
 /**
  * Middleware to validate a project ID
@@ -411,14 +414,20 @@ router.post("/", isAuthenticated, async (req, res) => {
         lastUpdated: new Date()
       })
       .returning();
-    
+
     if (!newProject) {
       console.error(`Failed to create project for user ${userId}`);
       return res.status(500).json({ message: "Failed to create project" });
     }
-    
+
     console.log(`Successfully created project ${newProject.id} for user ${userId}`);
-    
+
+    try {
+      await cloneAllSuccessFactorTasks(newProject.id);
+    } catch (cloneErr) {
+      console.error("Error cloning Success Factor tasks:", cloneErr);
+    }
+
     // Clear the projects cache in the session if it exists
     if (req.user.projects) {
       delete req.user.projects;

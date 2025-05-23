@@ -10,6 +10,7 @@ import { db } from './db';
 import { eq, and, asc, sql } from 'drizzle-orm';
 import { projectTasks as projectTasksTable } from '@shared/schema';
 import { DEBUG_TASKS, DEBUG_FILES } from '@shared/constants.debug';
+import { cloneAllSuccessFactorTasks } from './cloneSuccessFactors';
 
 /**
  * Validates sourceId to ensure it's either a valid UUID or null
@@ -298,7 +299,13 @@ export const projectsDb = {
         completed: false,
         origin: 'custom'
       });
-      
+
+      try {
+        await cloneAllSuccessFactorTasks(projectId);
+      } catch (cloneError) {
+        console.error('Failed to clone Success Factor tasks:', cloneError);
+      }
+
       // Save project to file
       const projects = loadProjects();
       projects.push(project);
