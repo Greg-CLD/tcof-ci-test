@@ -707,7 +707,127 @@ export const projectsDb = {
             console.error(`[TASK_UPDATE_ERROR] Stack trace:`, exactIdError instanceof Error ? exactIdError.stack : 'No stack trace available');
           }
         }
-        
+
+        // STEP 3: Prefix/pattern lookup including Success Factor tasks
+        if (!validTaskId) {
+          try {
+            const isValidUuidPrefix = (id: string): boolean => {
+              return /^[0-9a-f]{8}(-[0-9a-f]{1,4}){0,4}$/i.test(id);
+            };
+
+            const uuidPart = taskId.split('-').slice(0, 5).join('-');
+            const idsToCheck = [taskId];
+            if (uuidPart !== taskId && uuidPart.length >= 36) {
+              idsToCheck.push(uuidPart);
+              console.log(`[TASK_LOOKUP] Will also check extracted UUID part: ${uuidPart}`);
+            }
+
+            for (const idToCheck of idsToCheck) {
+              if (isValidUuidPrefix(idToCheck)) {
+                const factorTasksQuery = await db.execute(sql`
+                  SELECT * FROM project_tasks
+                  WHERE (id::text LIKE ${idToCheck + '%'} OR source_id::text LIKE ${idToCheck + '%'})
+                  AND (origin = 'factor' OR origin = 'success-factor')
+                  LIMIT 1
+                `);
+
+                if (factorTasksQuery.rows && factorTasksQuery.rows.length > 0) {
+                  validTaskId = factorTasksQuery.rows[0].id;
+                  lookupMethod = 'factorMatch';
+                  console.log(`[TASK_LOOKUP] Found factor/success-factor task with ID/sourceId prefix ${idToCheck}, full ID: ${validTaskId}`);
+                  break;
+                }
+
+                const matchingTasks = await db.execute(sql`
+                  SELECT * FROM project_tasks
+                  WHERE id::text LIKE ${idToCheck + '%'}
+                  OR source_id::text LIKE ${idToCheck + '%'}
+                  LIMIT 1
+                `);
+
+                if (matchingTasks.rows && matchingTasks.rows.length > 0) {
+                  validTaskId = matchingTasks.rows[0].id;
+                  lookupMethod = 'prefixMatch';
+                  console.log(`[TASK_LOOKUP] Found task with ID/sourceId prefix ${idToCheck}, full ID: ${validTaskId}`);
+                  break;
+                } else {
+                  console.log(`[TASK_LOOKUP] No task found with ID/sourceId prefix ${idToCheck}`);
+                }
+              } else {
+                console.log(`[TASK_LOOKUP] Skipping prefix match - ID ${idToCheck} is not a valid UUID prefix format`);
+              }
+            }
+
+            if (!validTaskId) {
+              console.log(`[TASK_LOOKUP] Attempting full task list scan as final fallback`);
+              const allTasks = await db.select().from(projectTasksTable);
+              console.log(`[TASK_LOOKUP] Checking ${allTasks.length} tasks for UUID or compound ID match`);
+
+              const matchingTask = allTasks.find(task => {
+                for (const idToCheck of idsToCheck) {
+                  if (task.id === idToCheck || (task.id && task.id.startsWith(idToCheck)) ||
+                      task.sourceId === idToCheck || (task.sourceId && task.sourceId.startsWith(idToCheck))) {
+                    return true;
+                  }
+                }
+                return false;
+              });
+
+              if (matchingTask) {
+                validTaskId = matchingTask.id as string;
+                lookupMethod = 'fullScan';
+                console.log(`[TASK_LOOKUP] Found task with full scan match, ID: ${validTaskId}`);
+              } else {
+                console.log(`[TASK_LOOKUP] No task found with any matching method for ${taskId}`);
+              }
+            }
+          } catch (prefixError) {
+            console.error(`[TASK_UPDATE_ERROR] Error during prefix lookup for ${taskId}:`, prefixError);
+            console.error(`[TASK_UPDATE_ERROR] Stack trace:`, prefixError instanceof Error ? prefixError.stack : 'No stack trace available');
+          }
+        }
+
+        if (!validTaskId) {
+          if (data.origin === 'success-factor' || data.origin === 'factor') {
+            console.log('[TASK_LOOKUP] Upserting missing Success-Factor task', taskId);
+            const insertSql = `
+              INSERT INTO project_tasks
+              (id, project_id, text, stage, completed, origin, source_id)
+              VALUES
+              ($1, $2, $3, $4, $5, $6, $7)
+              RETURNING *
+            `;
+            const values = [
+              taskId,
+              data.projectId,
+              data.text || '',
+              data.stage || 'identification',
+              false,
+              data.origin,
+              taskId
+            ];
+            try {
+              const result = await db.execute(insertSql, values);
+              if (result && Array.isArray(result.rows) && result.rows.length > 0) {
+                validTaskId = result.rows[0].id;
+              } else {
+                validTaskId = taskId;
+              }
+              console.log(`[TASK_LOOKUP] Successfully upserted task: ${validTaskId}`);
+            } catch (e) {
+              console.error('[TASK_LOOKUP] Error upserting task:', e);
+              validTaskId = taskId;
+            }
+            lookupMethod = 'upsert';
+          } else {
+            const err = new Error(`Task with ID ${taskId} does not exist`);
+            // @ts-ignore - custom error property
+            (err as any).code = 'TASK_NOT_FOUND';
+            console.error('[TASK_UPDATE_ERROR]', err.message);
+            throw err;
+          }
+        }
+
       } catch (err) {
         console.error(`[TASK_UPDATE_ERROR] Error looking up task by ID ${taskId}:`, err);
         console.error(`[TASK_UPDATE_ERROR] Stack trace:`, err instanceof Error ? err.stack : 'No stack trace available');
