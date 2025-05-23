@@ -1,0 +1,154 @@
+OK next, 
+
+when I load organisation, still don't see my previous ones. 
+
+*** This is what I see in Replit Console
+
+"
+User found in cache: greg@confluity.co.uk
+Session debug: {
+  hasSession: true,
+  sessionID: 'kOxVHEKueFnDQr54A9wcQTOrO4jc82Bh',
+  isAuthenticated: true,
+  passport: { user: 3 },
+  cookie: {
+    path: '/',
+    _expires: 2025-06-22T20:53:22.362Z,
+    originalMaxAge: 2592000000,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax'
+  }
+}
+8:53:46 PM [express] POST /api/organisations 200 in 471ms
+User found in cache: greg@confluity.co.uk
+Session debug: {
+  hasSession: true,
+  sessionID: 'kOxVHEKueFnDQr54A9wcQTOrO4jc82Bh',
+  isAuthenticated: true,
+  passport: { user: 3 },
+  cookie: {
+    path: '/',
+    _expires: 2025-06-22T20:53:46.918Z,
+    originalMaxAge: 2592000000,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax'
+  }
+}
+8:53:47 PM [express] GET /api/organisations 200 in 123ms
+User found in cache: greg@confluity.co.uk
+Session debug: {
+  hasSession: true,
+  sessionID: 'kOxVHEKueFnDQr54A9wcQTOrO4jc82Bh',
+  isAuthenticated: true,
+  passport: { user: 3 },
+  cookie: {
+    path: '/',
+    _expires: 2025-06-22T20:53:47.268Z,
+    originalMaxAge: 2592000000,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax'
+  }
+}
+8:53:48 PM [express] GET /api/organisations 200 in 142ms
+
+
+*** Network
+
+This is what I see in network
+
+"
+User found in cache: greg@confluity.co.uk
+Session debug: {
+  hasSession: true,
+  sessionID: 'kOxVHEKueFnDQr54A9wcQTOrO4jc82Bh',
+  isAuthenticated: true,
+  passport: { user: 3 },
+  cookie: {
+    path: '/',
+    _expires: 2025-06-22T20:53:22.362Z,
+    originalMaxAge: 2592000000,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax'
+  }
+}
+8:53:46 PM [express] POST /api/organisations 200 in 471ms
+User found in cache: greg@confluity.co.uk
+Session debug: {
+  hasSession: true,
+  sessionID: 'kOxVHEKueFnDQr54A9wcQTOrO4jc82Bh',
+  isAuthenticated: true,
+  passport: { user: 3 },
+  cookie: {
+    path: '/',
+    _expires: 2025-06-22T20:53:46.918Z,
+    originalMaxAge: 2592000000,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax'
+  }
+}
+8:53:47 PM [express] GET /api/organisations 200 in 123ms
+User found in cache: greg@confluity.co.uk
+Session debug: {
+  hasSession: true,
+  sessionID: 'kOxVHEKueFnDQr54A9wcQTOrO4jc82Bh',
+  isAuthenticated: true,
+  passport: { user: 3 },
+  cookie: {
+    path: '/',
+    _expires: 2025-06-22T20:53:47.268Z,
+    originalMaxAge: 2592000000,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax'
+  }
+}
+8:53:48 PM [express] GET /api/organisations 200 in 142ms
+
+
+*** Console (Broswer)
+
+I see these warnings
+
+"
+hook.js:608 
+ Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. Error Component Stack
+    at _c3 (dialog.tsx:33:6)
+    at OrganisationListPage (OrganisationListPage.tsx:26:20)
+    at ProtectedRouteGuard (ProtectedRouteGuard.tsx:17:39)
+    at Router (App.tsx:220:26)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at AppLayout (AppLayout.tsx:17:48)
+    at AppInitializer (AppInitializer.tsx:15:34)
+    at ProjectProvider (ProjectContext.tsx:60:35)
+    at PlanProvider (PlanContext.tsx:74:64)
+    at ProgressProvider (ProgressContext.tsx:40:68)
+    at FeedbackProvider (feedback-context.tsx:38:36)
+    at A11yAuditProvider (A11yAuditProvider.tsx:19:3)
+    at AuthProtectionProvider (use-auth-protection.tsx:18:42)
+    at AuthProvider (auth-hook.tsx:43:32)
+    at ErrorBoundary (ErrorBoundary.tsx:17:5)
+hook.js:608 
+ Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+overrideMethod	@	hook.js:608
+(anonymous)	@	dialog.tsx:542
+commitHookEffectListMount	@	react-dom.development.js:23189
+invokePassiveEffectMountInDEV	@	react-dom.development.js:25193
+invokeEffectsInDev	@	react-dom.development.js:27390
+commitDoubleInvokeEffectsInDEV	@	react-dom.development.js:27369
+flushPassiveEffectsImpl	@	react-dom.development.js:27095
+flushPassiveEffects	@	react-dom.development.js:27023
+commitRootImpl	@	react-dom.development.js:26974
+commitRoot	@	react-dom.development.js:26721
+performSyncWorkOnRoot	@	react-dom.development.js:26156
+flushSyncCallbacks	@	react-dom.development.js:12042
+(anonymous)
+
+"
+
+ 
