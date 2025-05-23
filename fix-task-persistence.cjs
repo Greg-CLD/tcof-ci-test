@@ -1,31 +1,43 @@
 /**
- * Standalone Task Persistence Server
+ * Task Persistence Fix - CommonJS Version
  * 
- * This script runs a completely separate server that handles task updates
- * without depending on the problematic projectsDb.ts file.
+ * This script fixes the task persistence issues by:
+ * 1. Patching the task update endpoint to properly map camelCase to snake_case
+ * 2. Running a standalone Express server that handles task updates
+ * 3. Not relying on the problematic projectsDb.ts file
  * 
- * Run with: node task-persistence-server.js
+ * To use:
+ * 1. Run with: node fix-task-persistence.cjs
+ * 2. It will start a server on port 3100 that handles task updates
  */
 
-import express from 'express';
-import { createServer } from 'http';
-import pg from 'pg';
-import cors from 'cors';
+const express = require('express');
+const { Pool } = require('pg');
+const cors = require('cors');
+const dotenv = require('dotenv');
 
-const { Pool } = pg;
+// Load environment variables
+dotenv.config();
 
-// Create the app
-const app = express();
-app.use(express.json());
-app.use(cors());
-
-// Connect to database
+// PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
+// Create and configure Express app
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 /**
  * Maps camelCase property names to snake_case database columns
+ * This is the key function that fixes the persistence issue
  */
 function mapCamelToSnakeCase(data) {
   const updateData = {};
@@ -40,7 +52,7 @@ function mapCamelToSnakeCase(data) {
   if (data.status !== undefined) updateData.status = data.status;
   if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
   
-  // CamelCase to snake_case mappings
+  // CamelCase to snake_case mappings - these were missing in the original code
   if (data.sourceId !== undefined) updateData.source_id = data.sourceId;
   if (data.projectId !== undefined) updateData.project_id = data.projectId;
   if (data.dueDate !== undefined) updateData.due_date = data.dueDate === '' ? null : data.dueDate;
@@ -86,35 +98,37 @@ function dbTaskToApiResponse(dbTask) {
   };
 }
 
-// Define routes
-
-// Health check
+// Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Task persistence server is running' });
+  res.status(200).json({ status: 'ok', message: 'Task persistence fix server is running' });
 });
 
-// Task update endpoint
+// Task update endpoint - fixes the original camelCase/snake_case mismatch
 app.put('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
   try {
     const { projectId, taskId } = req.params;
     const updateData = req.body;
     
-    console.log(`[STANDALONE] Processing update for project=${projectId}, task=${taskId}`);
-    console.log(`[STANDALONE] Request body:`, JSON.stringify(updateData, null, 2));
+    console.log(`Processing update for project=${projectId}, task=${taskId}`);
+    console.log(`Request body:`, JSON.stringify(updateData, null, 2));
     
     // Try to find task by ID first
-    const findTaskQuery = `
+    let task;
+    let lookupMethod = 'id';
+    
+    const findByIdQuery = `
       SELECT * FROM project_tasks 
       WHERE project_id = $1 AND id = $2
       LIMIT 1
     `;
     
-    let task = await pool.query(findTaskQuery, [projectId, taskId]);
-    let lookupMethod = 'id';
+    const idResult = await pool.query(findByIdQuery, [projectId, taskId]);
     
-    // If not found by ID, try by sourceId
-    if (task.rows.length === 0) {
-      console.log(`[STANDALONE] Task not found by ID, trying sourceId lookup`);
+    if (idResult.rows.length > 0) {
+      task = idResult.rows[0];
+    } else {
+      // If not found by ID, try by sourceId
+      console.log(`Task not found by ID, trying sourceId lookup`);
       
       const findBySourceIdQuery = `
         SELECT * FROM project_tasks 
@@ -122,28 +136,30 @@ app.put('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
         LIMIT 1
       `;
       
-      task = await pool.query(findBySourceIdQuery, [projectId, taskId]);
-      lookupMethod = 'sourceId';
+      const sourceIdResult = await pool.query(findBySourceIdQuery, [projectId, taskId]);
       
-      if (task.rows.length === 0) {
-        console.log(`[STANDALONE] Task not found with ID or sourceId: ${taskId}`);
-        return res.status(404).json({ error: 'Task not found' });
+      if (sourceIdResult.rows.length > 0) {
+        task = sourceIdResult.rows[0];
+        lookupMethod = 'sourceId';
       }
     }
     
-    const foundTask = task.rows[0];
-    const actualTaskId = foundTask.id;
+    if (!task) {
+      console.log(`Task not found with ID or sourceId: ${taskId}`);
+      return res.status(404).json({ error: 'Task not found' });
+    }
     
-    console.log(`[STANDALONE] Found task via ${lookupMethod}, actual ID: ${actualTaskId}`);
+    const actualTaskId = task.id;
+    console.log(`Found task via ${lookupMethod}, actual ID: ${actualTaskId}`);
     
     // Map camelCase properties to snake_case
     const mappedData = mapCamelToSnakeCase(updateData);
-    console.log(`[STANDALONE] Mapped data:`, JSON.stringify(mappedData, null, 2));
+    console.log(`Mapped data:`, JSON.stringify(mappedData, null, 2));
     
     // Build the update SQL
     const setClauses = [];
-    const values = [projectId, actualTaskId];
-    let paramIndex = 3;
+    const values = [actualTaskId];
+    let paramIndex = 2;
     
     for (const [column, value] of Object.entries(mappedData)) {
       setClauses.push(`${column} = $${paramIndex}`);
@@ -156,23 +172,19 @@ app.put('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
     const updateQuery = `
       UPDATE project_tasks
       SET ${setClause}
-      WHERE project_id = $1 AND id = $2
+      WHERE id = $1
       RETURNING *
     `;
-    
-    console.log(`[STANDALONE] SQL query: ${updateQuery}`);
-    console.log(`[STANDALONE] SQL parameters:`, JSON.stringify(values, null, 2));
     
     // Execute the update
     const result = await pool.query(updateQuery, values);
     
     if (result.rows.length === 0) {
-      console.error(`[STANDALONE] Update failed for task ${actualTaskId}`);
+      console.error(`Update failed for task ${actualTaskId}`);
       return res.status(500).json({ error: 'Update failed' });
     }
     
     const updatedTask = result.rows[0];
-    console.log(`[STANDALONE] Raw database response:`, JSON.stringify(updatedTask, null, 2));
     
     // Determine what ID to return in the response
     let responseId = updatedTask.id;
@@ -181,7 +193,7 @@ app.put('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
     if (updatedTask.source_id && 
         (updatedTask.origin === 'success-factor' || updatedTask.origin === 'factor') && 
         !updatedTask.id.startsWith('custom-')) {
-      console.log(`[STANDALONE] Using sourceId for canonical task: ${updatedTask.source_id}`);
+      console.log(`Using sourceId for canonical task: ${updatedTask.source_id}`);
       responseId = updatedTask.source_id;
     } else if (lookupMethod === 'sourceId') {
       // If we found the task by sourceId, return that as the ID for consistency
@@ -193,22 +205,27 @@ app.put('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
     // Ensure the ID in the response matches what the client expects
     apiResponse.id = responseId;
     
-    console.log(`[STANDALONE] Task updated successfully: ${actualTaskId}, response ID: ${responseId}`);
-    console.log(`[STANDALONE] API response:`, JSON.stringify(apiResponse, null, 2));
+    console.log(`Task updated successfully: ${actualTaskId}, response ID: ${responseId}`);
     
     return res.status(200).json(apiResponse);
   } catch (error) {
-    console.error(`[STANDALONE] Error:`, error);
+    console.error(`Error:`, error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// Start server
-const PORT = process.env.STANDALONE_PORT || 3100;
-const server = createServer(app);
+// Proxy endpoint to handle direct API calls from the browser if needed
+app.get('/proxy-api-url', (req, res) => {
+  res.status(200).json({
+    apiUrl: `http://localhost:3100`
+  });
+});
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[STANDALONE] Task persistence server running on port ${PORT}`);
-  console.log(`[STANDALONE] Use curl for testing:`);
-  console.log(`curl -X PUT -H "Content-Type: application/json" -d '{"completed":true}' http://localhost:${PORT}/api/projects/YOUR_PROJECT_ID/tasks/YOUR_TASK_ID`);
+// Start server
+const PORT = process.env.FIX_PORT || 3100;
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Task persistence fix server running on port ${PORT}`);
+  console.log(`Handling task update requests at: http://localhost:${PORT}/api/projects/:projectId/tasks/:taskId`);
+  console.log(`Instructions: Use the server to update tasks by making PUT requests to the endpoint above`);
 });

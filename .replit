@@ -12,6 +12,10 @@ run = ["sh", "-c", "NODE_ENV=production npm run start"]
 build = ["sh", "-c", "npm run build"]
 
 [[ports]]
+localPort = 3100
+externalPort = 3001
+
+[[ports]]
 localPort = 5000
 externalPort = 80
 

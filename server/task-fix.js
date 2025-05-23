@@ -1,58 +1,62 @@
 /**
  * Task Persistence Fix
  * 
- * This module provides a direct route that handles task updates
- * with proper property mapping between camelCase and snake_case.
+ * This module provides a corrected implementation of the task update route
+ * that properly maps between camelCase properties and snake_case database columns.
+ * 
+ * It's designed to be a drop-in replacement for the problematic code in projectsDb.ts
  */
 
-// Import required dependencies
-const { projectTasks } = require('../shared/schema');
-const { eq, and } = require('drizzle-orm');
-const { db } = require('./db');
+import express from 'express';
+import { db } from './db.js';
+import { projectTasks } from './schema.js';
+import { eq } from 'drizzle-orm';
 
 /**
- * Convert data from camelCase to snake_case for database operations
+ * Maps camelCase property names to snake_case database columns
  */
-function mapToSnakeCase(data) {
-  const result = {};
+function mapCamelToSnakeCase(data) {
+  const updateData = {};
   
-  // Direct mappings (no conversion needed)
-  if (data.text !== undefined) result.text = data.text;
-  if (data.stage !== undefined) result.stage = data.stage;
-  if (data.origin !== undefined) result.origin = data.origin;
-  if (data.notes !== undefined) result.notes = data.notes === '' ? null : data.notes;
-  if (data.priority !== undefined) result.priority = data.priority === '' ? null : data.priority;
-  if (data.owner !== undefined) result.owner = data.owner === '' ? null : data.owner;
-  if (data.status !== undefined) result.status = data.status;
-  if (data.completed !== undefined) result.completed = Boolean(data.completed);
+  // Direct field mappings
+  if (data.text !== undefined) updateData.text = data.text;
+  if (data.stage !== undefined) updateData.stage = data.stage;
+  if (data.origin !== undefined) updateData.origin = data.origin;
+  if (data.notes !== undefined) updateData.notes = data.notes === '' ? null : data.notes;
+  if (data.priority !== undefined) updateData.priority = data.priority === '' ? null : data.priority;
+  if (data.owner !== undefined) updateData.owner = data.owner === '' ? null : data.owner;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
   
-  // CamelCase to snake_case conversions
-  if (data.sourceId !== undefined) result.source_id = data.sourceId;
-  if (data.projectId !== undefined) result.project_id = data.projectId;
-  if (data.dueDate !== undefined) result.due_date = data.dueDate === '' ? null : data.dueDate;
-  if (data.taskType !== undefined) result.task_type = data.taskType === '' ? null : data.taskType;
-  if (data.factorId !== undefined) result.factor_id = data.factorId === '' ? null : data.factorId;
-  if (data.sortOrder !== undefined) result.sort_order = data.sortOrder;
-  if (data.assignedTo !== undefined) result.assigned_to = data.assignedTo === '' ? null : data.assignedTo;
-  if (data.taskNotes !== undefined) result.task_notes = data.taskNotes === '' ? null : data.taskNotes;
+  // CamelCase to snake_case mappings
+  if (data.sourceId !== undefined) updateData.source_id = data.sourceId;
+  if (data.projectId !== undefined) updateData.project_id = data.projectId;
+  if (data.dueDate !== undefined) updateData.due_date = data.dueDate === '' ? null : data.dueDate;
   
-  // Always update timestamp
-  result.updated_at = new Date();
+  // Additional fields
+  if (data.taskType !== undefined) updateData.task_type = data.taskType === '' ? null : data.taskType;
+  if (data.factorId !== undefined) updateData.factor_id = data.factorId === '' ? null : data.factorId;
+  if (data.sortOrder !== undefined) updateData.sort_order = data.sortOrder;
+  if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo === '' ? null : data.assignedTo;
+  if (data.taskNotes !== undefined) updateData.task_notes = data.taskNotes === '' ? null : data.taskNotes;
   
-  return result;
+  // Always update the updatedAt timestamp
+  updateData.updated_at = new Date();
+  
+  return updateData;
 }
 
 /**
- * Convert database record with snake_case to camelCase for API response
+ * Convert database task object with snake_case columns to camelCase API response
  */
-function mapToCamelCase(dbTask) {
+function dbTaskToApiResponse(dbTask) {
   return {
     id: dbTask.id,
     projectId: dbTask.project_id || '',
     text: dbTask.text || '',
     stage: dbTask.stage || 'identification',
     origin: dbTask.origin || 'custom',
-    source: dbTask.origin || 'custom', // For compatibility
+    source: dbTask.origin || 'custom',
     sourceId: dbTask.source_id || '',
     completed: Boolean(dbTask.completed),
     notes: dbTask.notes || '',
@@ -71,84 +75,95 @@ function mapToCamelCase(dbTask) {
 }
 
 /**
- * Add task endpoints to Express app
+ * Setup the task routes on the provided Express app
  */
-function addTaskEndpoints(app) {
-  // Add the fixed task update endpoint
+export function setupTaskRoute(app) {
+  // Task update endpoint
   app.put('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
     try {
-      const projectId = req.params.projectId;
-      let taskId = req.params.taskId;
+      const { projectId, taskId } = req.params;
+      const updateData = req.body;
       
-      console.log(`[TASK_FIX] Processing task update for project=${projectId}, task=${taskId}`);
+      console.log(`[TASK-FIX] Processing update for project=${projectId}, task=${taskId}`);
       
-      // Find task by ID first
-      let tasks = await db.select()
-        .from(projectTasks)
-        .where(
-          and(
-            eq(projectTasks.projectId, projectId),
-            eq(projectTasks.id, taskId)
-          )
+      // Try to find task by ID first
+      const taskById = await db.query.projectTasks.findFirst({
+        where: (tasks, { eq, and }) => and(
+          eq(tasks.project_id, projectId),
+          eq(tasks.id, taskId)
         )
-        .limit(1);
+      });
       
-      // If not found by ID, try source_id lookup
-      if (tasks.length === 0) {
-        console.log(`[TASK_FIX] Task not found by ID, trying sourceId lookup`);
+      // If not found by ID, try by sourceId
+      let task = taskById;
+      let lookupMethod = 'id';
+      
+      if (!task) {
+        console.log(`[TASK-FIX] Task not found by ID, trying sourceId lookup`);
         
-        tasks = await db.select()
-          .from(projectTasks)
-          .where(
-            and(
-              eq(projectTasks.projectId, projectId),
-              eq(projectTasks.sourceId, taskId)
-            )
+        const taskBySourceId = await db.query.projectTasks.findFirst({
+          where: (tasks, { eq, and }) => and(
+            eq(tasks.project_id, projectId),
+            eq(tasks.source_id, taskId)
           )
-          .limit(1);
+        });
         
-        if (tasks.length === 0) {
-          console.log(`[TASK_FIX] Task not found: ${taskId}`);
-          return res.status(404).json({ error: 'Task not found' });
+        if (taskBySourceId) {
+          task = taskBySourceId;
+          lookupMethod = 'sourceId';
         }
-        
-        // Use the actual database ID
-        taskId = tasks[0].id;
-        console.log(`[TASK_FIX] Found task via sourceId, using ID: ${taskId}`);
       }
       
-      // Map camelCase to snake_case for database
-      const mappedData = mapToSnakeCase(req.body);
-      console.log(`[TASK_FIX] Mapped update data:`, mappedData);
+      if (!task) {
+        console.log(`[TASK-FIX] Task not found with ID or sourceId: ${taskId}`);
+        return res.status(404).json({ error: 'Task not found' });
+      }
       
-      // Execute the update
-      const [updatedTask] = await db.update(projectTasks)
+      const actualTaskId = task.id;
+      console.log(`[TASK-FIX] Found task via ${lookupMethod}, actual ID: ${actualTaskId}`);
+      
+      // Map camelCase properties to snake_case
+      const mappedData = mapCamelToSnakeCase(updateData);
+      
+      // Execute the update using Drizzle ORM
+      const [updatedTask] = await db
+        .update(projectTasks)
         .set(mappedData)
-        .where(
-          and(
-            eq(projectTasks.projectId, projectId),
-            eq(projectTasks.id, taskId)
-          )
-        )
+        .where(eq(projectTasks.id, actualTaskId))
         .returning();
       
       if (!updatedTask) {
-        console.error(`[TASK_FIX] Update failed`);
+        console.error(`[TASK-FIX] Update failed for task ${actualTaskId}`);
         return res.status(500).json({ error: 'Update failed' });
       }
       
-      // Map database record to API response format
-      const response = mapToCamelCase(updatedTask);
+      // Determine what ID to return in the response
+      let responseId = updatedTask.id;
       
-      console.log(`[TASK_FIX] Task updated successfully`);
-      return res.status(200).json(response);
+      // For canonical success factor tasks, use sourceId as the returned ID
+      if (updatedTask.source_id && 
+          (updatedTask.origin === 'success-factor' || updatedTask.origin === 'factor') && 
+          !updatedTask.id.startsWith('custom-')) {
+        console.log(`[TASK-FIX] Using sourceId for canonical task: ${updatedTask.source_id}`);
+        responseId = updatedTask.source_id;
+      } else if (lookupMethod === 'sourceId') {
+        // If we found the task by sourceId, return that as the ID for consistency
+        responseId = taskId;
+      }
+      
+      const apiResponse = dbTaskToApiResponse(updatedTask);
+      
+      // Ensure the ID in the response matches what the client expects
+      apiResponse.id = responseId;
+      
+      console.log(`[TASK-FIX] Task updated successfully: ${actualTaskId}, response ID: ${responseId}`);
+      
+      return res.status(200).json(apiResponse);
     } catch (error) {
-      console.error('[TASK_FIX] Error updating task:', error);
+      console.error(`[TASK-FIX] Error:`, error);
       return res.status(500).json({ error: error.message || 'Internal server error' });
     }
   });
-
-  console.log('[TASK_FIX] Task persistence fix routes added successfully');
+  
+  console.log('[TASK-FIX] Task persistence fix routes initialized');
 }
-
-module.exports = { addTaskEndpoints };
