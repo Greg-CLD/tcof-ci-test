@@ -20,7 +20,6 @@ localPort = 24678
 externalPort = 3000
 
 [workflows]
-runButton = "Debug Task Updates"
 
 [[workflows.workflow]]
 name = "Project"
