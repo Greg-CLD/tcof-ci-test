@@ -6,7 +6,7 @@
  * 2. Toggles a task's completion state
  * 3. Verifies the change is persisted in the database
  * 
- * Run with: node fix-project-tasks-schema.cjs
+ * Run with: node fix-project-tasks-schema.js
  */
 
 const { Client } = require('pg');

@@ -1205,10 +1205,16 @@ export const projectsDb = {
       
       try {
         // Sanitize input data to ensure types match and handle empty strings properly
-        const updateData: Record<string, string | boolean | null | Date> = {};
+        const updateData: Record<string, string | boolean | null | Date | number> = {};
         
-        // COMPREHENSIVE FIX: Systematically map ALL camelCase property names to snake_case database columns
-        // Only update fields that are provided, with proper empty string handling
+        // Define valid column names from database schema for validation
+        const validDbColumns = [
+          'id', 'project_id', 'title', 'description', 'factor_id', 
+          'stage', 'status', 'due_date', 'assigned_to', 'created_at', 
+          'updated_at', 'sort_order', 'completed', 'task_notes', 
+          'task_type', 'text', 'origin', 'source_id', 'notes', 
+          'priority', 'owner'
+        ];
         
         // Direct field mappings (no conversion needed)
         if (data.text !== undefined) updateData.text = String(data.text);
@@ -1220,16 +1226,31 @@ export const projectsDb = {
         if (data.status !== undefined) updateData.status = String(data.status);
         if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
         
-        // CamelCase to snake_case mappings
-        if (data.sourceId !== undefined) updateData.source_id = validateSourceId(data.sourceId) || null; // sourceId → source_id with validation
+        // These fields are in the database schema but not in our interface
+        if ('title' in data) updateData.title = String(data.title);
+        if ('description' in data) updateData.description = data.description === '' ? null : String(data.description);
+        
+        // CamelCase to snake_case mappings (verified against database schema)
+        if (data.sourceId !== undefined) updateData.source_id = validateSourceId(data.sourceId); // sourceId → source_id with validation
         if (data.projectId !== undefined) updateData.project_id = String(data.projectId); // projectId → project_id
         if (data.dueDate !== undefined) updateData.due_date = data.dueDate === '' ? null : String(data.dueDate); // dueDate → due_date
-        if (data.taskType !== undefined) updateData.task_type = data.taskType === '' ? null : String(data.taskType); // taskType → task_type
-        if (data.factorId !== undefined) updateData.factor_id = data.factorId === '' ? null : String(data.factorId); // factorId → factor_id
-        if (data.sortOrder !== undefined) updateData.sort_order = typeof data.sortOrder === 'number' ? data.sortOrder : parseInt(String(data.sortOrder), 10); // sortOrder → sort_order
-        if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo === '' ? null : String(data.assignedTo); // assignedTo → assigned_to
-        if (data.taskNotes !== undefined) updateData.task_notes = data.taskNotes === '' ? null : String(data.taskNotes); // taskNotes → task_notes
-        if (data.createdAt !== undefined) updateData.created_at = data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt); // createdAt → created_at
+        
+        // Handle additional fields from expanded ProjectTask interface
+        if ('taskType' in data) updateData.task_type = data.taskType === '' ? null : String(data.taskType); // taskType → task_type
+        if ('factorId' in data) updateData.factor_id = data.factorId === '' ? null : String(data.factorId); // factorId → factor_id
+        if ('sortOrder' in data) updateData.sort_order = typeof data.sortOrder === 'number' ? data.sortOrder : parseInt(String(data.sortOrder), 10); // sortOrder → sort_order
+        if ('assignedTo' in data) updateData.assigned_to = data.assignedTo === '' ? null : String(data.assignedTo); // assignedTo → assigned_to
+        if ('taskNotes' in data) updateData.task_notes = data.taskNotes === '' ? null : String(data.taskNotes); // taskNotes → task_notes
+        
+        // Date handling
+        if (data.createdAt !== undefined) {
+          try {
+            updateData.created_at = typeof data.createdAt === 'string' ? new Date(data.createdAt) : data.createdAt;
+          } catch (e) {
+            console.warn('Invalid date format for createdAt:', data.createdAt);
+            // Don't update if invalid date
+          }
+        }
         
         // Always update the updatedAt timestamp
         updateData.updated_at = new Date(); // updatedAt → updated_at
@@ -1242,24 +1263,13 @@ export const projectsDb = {
           throw new Error(`Cannot update task: no valid update data provided`);
         }
         
-        // Validate all updateData keys exist in the schema
-        const validDbColumns = [
-          'id', 'project_id', 'title', 'description', 'factor_id', 
-          'stage', 'status', 'due_date', 'assigned_to', 'created_at', 
-          'updated_at', 'sort_order', 'completed', 'task_notes', 
-          'task_type', 'text', 'origin', 'source_id', 'notes', 
-          'priority', 'owner'
-        ];
-        
-        // Check each key in updateData is a valid database column
-        const invalidKeys = Object.keys(updateData).filter(key => !validDbColumns.includes(key));
-        if (invalidKeys.length > 0) {
-          console.error(`[TASK_UPDATE_ERROR] Invalid column names in update data: ${invalidKeys.join(', ')}`);
-          console.error(`[TASK_UPDATE_ERROR] Update data:`, JSON.stringify(updateData, null, 2));
-          
-          // Remove invalid keys from updateData
-          invalidKeys.forEach(key => delete updateData[key]);
-          console.log(`[TASK_UPDATE] Removed invalid keys. Remaining data:`, JSON.stringify(updateData, null, 2));
+        // Validate that all keys in updateData are valid database columns
+        const invalidColumns = Object.keys(updateData).filter(key => !validDbColumns.includes(key));
+        if (invalidColumns.length > 0) {
+          console.error(`[TASK_UPDATE_ERROR] Invalid column names in update data: ${invalidColumns.join(', ')}`);
+          console.error(`Valid columns are: ${validDbColumns.join(', ')}`);
+          throw new Error(`Cannot update task: invalid column names: ${invalidColumns.join(', ')}`);
+        }
           
           // Check if we still have valid data to update
           if (Object.keys(updateData).length === 0) {

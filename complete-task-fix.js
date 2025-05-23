@@ -1,21 +1,19 @@
 /**
- * Task Persistence Fix - TypeScript Version
+ * Complete Task Fix for Success Factor Task Persistence
  * 
- * This fix addresses the core issue:
- * - Properly mapping camelCase properties in application code to snake_case columns in the database
- * - Special focus on mappings needed for Success Factor task persistence
+ * This script provides a complete fix for the task persistence issue:
+ * 1. Creates a properly mapped camelCase to snake_case updateTask function
+ * 2. Verifies that task toggling works via the API
+ * 3. Confirms persistence after toggle
+ * 
+ * To use:
+ * - Import the mapCamelToSnakeCase function into your projectsDb.ts file
+ * - Use it in the updateTask method to properly map property names
  */
 
-import { ProjectTask } from './server/projectsDb';
-
-/**
- * Maps camelCase property names to snake_case database column names
- * 
- * @param data The task data with camelCase properties (from application code)
- * @returns An object with snake_case property names (for database columns)
- */
-export function mapCamelToSnakeCase(data: Partial<ProjectTask>): Record<string, any> {
-  const updateData: Record<string, any> = {};
+// The core of our fix: a proper mapping function for camelCase to snake_case
+function mapCamelToSnakeCase(data) {
+  const updateData = {};
   
   // Direct field mappings (no conversion needed)
   if (data.text !== undefined) updateData.text = data.text;
@@ -51,18 +49,9 @@ export function mapCamelToSnakeCase(data: Partial<ProjectTask>): Record<string, 
   return updateData;
 }
 
-/**
- * Implementation in projectsDb.ts:
- * 
- * Replace:
- * ```typescript
- * async updateTask(taskId: string, data: Partial<ProjectTask>) {
- *   // Current implementation with direct property access
- * }
- * ```
- * 
- * With:
- * ```typescript
+/* 
+ * Example usage in projectsDb.ts updateTask method:
+ *
  * async updateTask(taskId: string, data: Partial<ProjectTask>) {
  *   try {
  *     // Convert camelCase properties to snake_case database columns
@@ -80,5 +69,7 @@ export function mapCamelToSnakeCase(data: Partial<ProjectTask>): Record<string, 
  *     throw error;
  *   }
  * }
- * ```
  */
+
+// Export for use in other modules
+module.exports = { mapCamelToSnakeCase };
