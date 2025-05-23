@@ -120,3 +120,16 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "DEBUG=true DEBUG_TASK_API=true DEBUG_TASK_COMPLETION=true npm run test:smoke"
+
+[[workflows.workflow]]
+name = "Full Task Test Suite"
+author = 42110622
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "DEBUG=true DEBUG_TASK_API=true DEBUG_TASK_COMPLETION=true npm run test:e2e"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run test:smoke"
