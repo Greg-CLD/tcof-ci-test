@@ -1,77 +1,82 @@
 /**
- * Task Persistence Fix Script
+ * Standalone Task Persistence Fix
  * 
- * This script directly patches the database to fix the camelCase to snake_case mapping issue
- * that was preventing task updates from persisting.
+ * This standalone script runs outside the main application to directly fix
+ * the task persistence issue by implementing a completely separate route
+ * handler that doesn't depend on the broken projectsDb.ts file.
  * 
- * 1. Gets a project with existing Success Factor tasks
- * 2. Toggles a task's completion state
- * 3. Verifies the update was saved to the database
- * 4. Shows detailed logging of the camelCase to snake_case mapping
+ * Run with: node task-persistence-fix.js
  */
 
-const { Client } = require('pg');
-const fetch = require('node-fetch');
-require('dotenv').config();
+const express = require('express');
+const { createServer } = require('http');
+const { pg } = require('drizzle-orm/pg-core');
+const { drizzle } = require('drizzle-orm/node-postgres');
+const { Pool } = require('pg');
+const cors = require('cors');
 
-// Connect to the database
-async function connectToDatabase() {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL
-  });
-  await client.connect();
-  return client;
-}
+// Create the app
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-// Get all columns in the project_tasks table to verify mappings
-async function getTableSchema(client) {
-  const query = `
-    SELECT column_name, data_type 
-    FROM information_schema.columns 
-    WHERE table_name = 'project_tasks' 
-    ORDER BY ordinal_position
-  `;
-  const result = await client.query(query);
-  return result.rows;
-}
+// Connect to database
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
 
-// Find Success Factor tasks for a project
-async function findSuccessFactorTasks(client, projectId) {
-  const query = `
-    SELECT * FROM project_tasks 
-    WHERE project_id = $1 AND origin = 'factor'
-    LIMIT 5
-  `;
-  const result = await client.query(query, [projectId]);
-  return result.rows;
-}
+const db = drizzle(pool);
 
-// Map camelCase properties to snake_case database columns
-function mapCamelToSnakeCase(taskData) {
+// Define simple schema for project tasks
+const projectTasks = {
+  id: 'id',
+  projectId: 'project_id',
+  text: 'text',
+  stage: 'stage',
+  origin: 'origin',
+  sourceId: 'source_id',
+  completed: 'completed',
+  notes: 'notes',
+  priority: 'priority',
+  dueDate: 'due_date',
+  owner: 'owner',
+  status: 'status',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  taskType: 'task_type',
+  factorId: 'factor_id',
+  sortOrder: 'sort_order',
+  assignedTo: 'assigned_to',
+  taskNotes: 'task_notes'
+};
+
+/**
+ * Maps camelCase property names to snake_case database columns
+ */
+function mapCamelToSnakeCase(data) {
   const updateData = {};
   
-  // Direct field mappings (no conversion needed)
-  if (taskData.text !== undefined) updateData.text = taskData.text;
-  if (taskData.stage !== undefined) updateData.stage = taskData.stage;
-  if (taskData.origin !== undefined) updateData.origin = taskData.origin;
-  if (taskData.notes !== undefined) updateData.notes = taskData.notes === '' ? null : taskData.notes;
-  if (taskData.priority !== undefined) updateData.priority = taskData.priority === '' ? null : taskData.priority;
-  if (taskData.owner !== undefined) updateData.owner = taskData.owner === '' ? null : taskData.owner;
-  if (taskData.status !== undefined) updateData.status = taskData.status;
-  if (taskData.completed !== undefined) updateData.completed = Boolean(taskData.completed);
+  // Direct field mappings
+  if (data.text !== undefined) updateData.text = data.text;
+  if (data.stage !== undefined) updateData.stage = data.stage;
+  if (data.origin !== undefined) updateData.origin = data.origin;
+  if (data.notes !== undefined) updateData.notes = data.notes === '' ? null : data.notes;
+  if (data.priority !== undefined) updateData.priority = data.priority === '' ? null : data.priority;
+  if (data.owner !== undefined) updateData.owner = data.owner === '' ? null : data.owner;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
   
   // CamelCase to snake_case mappings
-  if (taskData.sourceId !== undefined) updateData.source_id = taskData.sourceId;
-  if (taskData.projectId !== undefined) updateData.project_id = taskData.projectId;
-  if (taskData.dueDate !== undefined) updateData.due_date = taskData.dueDate === '' ? null : taskData.dueDate;
-  if (taskData.taskType !== undefined) updateData.task_type = taskData.taskType === '' ? null : taskData.taskType;
-  if (taskData.factorId !== undefined) updateData.factor_id = taskData.factorId === '' ? null : taskData.factorId;
-  if (taskData.sortOrder !== undefined) updateData.sort_order = taskData.sortOrder;
-  if (taskData.assignedTo !== undefined) updateData.assigned_to = taskData.assignedTo === '' ? null : taskData.assignedTo;
-  if (taskData.taskNotes !== undefined) updateData.task_notes = taskData.taskNotes === '' ? null : taskData.taskNotes;
+  if (data.sourceId !== undefined) updateData.source_id = data.sourceId;
+  if (data.projectId !== undefined) updateData.project_id = data.projectId;
+  if (data.dueDate !== undefined) updateData.due_date = data.dueDate === '' ? null : data.dueDate;
   
-  // Handle dates
-  if (taskData.createdAt !== undefined) updateData.created_at = taskData.createdAt;
+  // Additional fields
+  if (data.taskType !== undefined) updateData.task_type = data.taskType === '' ? null : data.taskType;
+  if (data.factorId !== undefined) updateData.factor_id = data.factorId === '' ? null : data.factorId;
+  if (data.sortOrder !== undefined) updateData.sort_order = data.sortOrder;
+  if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo === '' ? null : data.assignedTo;
+  if (data.taskNotes !== undefined) updateData.task_notes = data.taskNotes === '' ? null : data.taskNotes;
   
   // Always update the updatedAt timestamp
   updateData.updated_at = new Date();
@@ -79,182 +84,121 @@ function mapCamelToSnakeCase(taskData) {
   return updateData;
 }
 
-// Toggle a task's completion state directly in the database
-async function toggleTaskCompletion(client, taskId, newState) {
-  // Create update object with proper snake_case mapping
-  const updateData = {
-    completed: newState,
-    updated_at: new Date()
+/**
+ * Convert database task object with snake_case columns to camelCase API response
+ */
+function dbTaskToApiResponse(dbTask) {
+  return {
+    id: dbTask.id,
+    projectId: dbTask.project_id || '',
+    text: dbTask.text || '',
+    stage: dbTask.stage || 'identification',
+    origin: dbTask.origin || 'custom',
+    source: dbTask.origin || 'custom',
+    sourceId: dbTask.source_id || '',
+    completed: Boolean(dbTask.completed),
+    notes: dbTask.notes || '',
+    priority: dbTask.priority || '',
+    dueDate: dbTask.due_date || '',
+    owner: dbTask.owner || '',
+    status: dbTask.status || 'To Do',
+    createdAt: dbTask.created_at ? new Date(dbTask.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: dbTask.updated_at ? new Date(dbTask.updated_at).toISOString() : new Date().toISOString(),
+    taskType: dbTask.task_type || '',
+    factorId: dbTask.factor_id || '',
+    sortOrder: dbTask.sort_order !== undefined ? dbTask.sort_order : 0,
+    assignedTo: dbTask.assigned_to || '',
+    taskNotes: dbTask.task_notes || ''
   };
-  
-  console.log(`Updating task ${taskId} with data:`, updateData);
-  
-  const query = `
-    UPDATE project_tasks 
-    SET completed = $1, updated_at = $2
-    WHERE id = $3
-    RETURNING *
-  `;
-  const result = await client.query(query, [updateData.completed, updateData.updated_at, taskId]);
-  
-  if (result.rows.length === 0) {
-    throw new Error(`Task ${taskId} not found in database`);
-  }
-  
-  return result.rows[0];
 }
 
-// Get a task by ID
-async function getTaskById(client, taskId) {
-  const query = `
-    SELECT * FROM project_tasks 
-    WHERE id = $1
-  `;
-  const result = await client.query(query, [taskId]);
-  
-  if (result.rows.length === 0) {
-    throw new Error(`Task ${taskId} not found in database`);
-  }
-  
-  return result.rows[0];
-}
+// Define routes
 
-// Toggle a task via the API to test if the fix works
-async function toggleTaskViaApi(projectId, taskId, newState) {
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Task persistence fix server is running' });
+});
+
+// Task update endpoint
+app.put('/api/projects/:projectId/tasks/:taskId', async (req, res) => {
   try {
-    const response = await fetch(`http://localhost:5000/api/projects/${projectId}/tasks/${taskId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ completed: newState })
-    });
+    const { projectId, taskId } = req.params;
+    const updateData = req.body;
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API error: ${response.status} ${response.statusText}\n${errorText}`);
-    }
+    console.log(`[TASK_FIX] Processing update for project=${projectId}, task=${taskId}`);
     
-    return await response.json();
-  } catch (error) {
-    console.error('Error toggling task via API:', error);
-    throw error;
-  }
-}
-
-// Run the test
-async function runTest() {
-  console.log('=== Task Persistence Fix Test ===\n');
-  const client = await connectToDatabase();
-  
-  try {
-    // Step 1: Get database schema to verify column names
-    console.log('Step 1: Checking database schema...');
-    const schema = await getTableSchema(client);
-    console.log('Project_tasks table columns:');
-    schema.forEach(column => {
-      console.log(`- ${column.column_name} (${column.data_type})`);
-    });
+    // Try to find task by ID first
+    const findTaskQuery = `
+      SELECT * FROM project_tasks 
+      WHERE project_id = $1 AND id = $2
+      LIMIT 1
+    `;
     
-    // Step 2: Find a project to test with
-    console.log('\nStep 2: Finding a project with Success Factor tasks...');
-    const projectsQuery = 'SELECT id, name FROM projects LIMIT 5';
-    const projectsResult = await client.query(projectsQuery);
+    let task = await pool.query(findTaskQuery, [projectId, taskId]);
     
-    if (projectsResult.rows.length === 0) {
-      throw new Error('No projects found');
-    }
-    
-    const projectId = projectsResult.rows[0].id;
-    console.log(`Using project: ${projectsResult.rows[0].name} (${projectId})`);
-    
-    // Step 3: Find Success Factor tasks in this project
-    console.log('\nStep 3: Finding Success Factor tasks...');
-    const tasks = await findSuccessFactorTasks(client, projectId);
-    
-    if (tasks.length === 0) {
-      throw new Error('No Success Factor tasks found');
-    }
-    
-    console.log(`Found ${tasks.length} Success Factor tasks`);
-    console.table(tasks.map(task => ({
-      id: task.id,
-      text: task.text,
-      completed: task.completed,
-      source_id: task.source_id,
-      updated_at: task.updated_at
-    })));
-    
-    // Step 4: Toggle a task's completion state
-    const taskToToggle = tasks[0];
-    const newState = !taskToToggle.completed;
-    
-    console.log(`\nStep 4: Toggling task ${taskToToggle.id} from ${taskToToggle.completed} to ${newState}...`);
-    
-    // First test direct database update (should always work)
-    console.log('\nTesting direct database update:');
-    const updatedTask = await toggleTaskCompletion(client, taskToToggle.id, newState);
-    console.log('Database update result:', updatedTask);
-    
-    // Step 5: Verify the update persisted in the database
-    console.log('\nStep 5: Verifying database state after update...');
-    const dbTaskAfterUpdate = await getTaskById(client, taskToToggle.id);
-    
-    if (dbTaskAfterUpdate.completed === newState) {
-      console.log('✅ SUCCESS: Task toggle persisted in database!');
-    } else {
-      console.log('❌ FAILURE: Task toggle did not persist in database');
-      console.log('Expected:', newState);
-      console.log('Actual:', dbTaskAfterUpdate.completed);
-    }
-    
-    // Step 6: Toggle back via API to test the fix
-    console.log('\nStep 6: Testing API update (toggle back)...');
-    try {
-      const apiResult = await toggleTaskViaApi(projectId, taskToToggle.id, !newState);
-      console.log('API update result:', apiResult);
+    // If not found by ID, try by sourceId
+    if (task.rows.length === 0) {
+      console.log(`[TASK_FIX] Task not found by ID, trying sourceId lookup`);
       
-      // Verify API update persisted
-      const dbTaskAfterApiUpdate = await getTaskById(client, taskToToggle.id);
+      const findBySourceIdQuery = `
+        SELECT * FROM project_tasks 
+        WHERE project_id = $1 AND source_id = $2
+        LIMIT 1
+      `;
       
-      if (dbTaskAfterApiUpdate.completed === !newState) {
-        console.log('✅ SUCCESS: API update persisted in database!');
-      } else {
-        console.log('❌ FAILURE: API update did not persist in database');
-        console.log('Expected:', !newState);
-        console.log('Actual:', dbTaskAfterApiUpdate.completed);
+      task = await pool.query(findBySourceIdQuery, [projectId, taskId]);
+      
+      if (task.rows.length === 0) {
+        console.log(`[TASK_FIX] Task not found with ID or sourceId: ${taskId}`);
+        return res.status(404).json({ error: 'Task not found' });
       }
-    } catch (apiError) {
-      console.error('Error testing via API:', apiError);
     }
     
-    // Step 7: Show camelCase to snake_case mapping examples
-    console.log('\nStep 7: CamelCase to snake_case mapping examples:');
+    const foundTask = task.rows[0];
+    const actualTaskId = foundTask.id;
     
-    const exampleTask = {
-      id: 'example-id',
-      projectId: 'project-id',
-      text: 'Example task',
-      sourceId: 'source-id',
-      dueDate: '2025-06-30',
-      completed: true,
-      assignedTo: 'john.doe',
-      taskNotes: 'Sample notes'
-    };
+    // Map camelCase properties to snake_case
+    const mappedData = mapCamelToSnakeCase(updateData);
+    console.log(`[TASK_FIX] Mapped data:`, mappedData);
     
-    const mappedData = mapCamelToSnakeCase(exampleTask);
+    // Build the update SQL
+    const setClause = Object.entries(mappedData)
+      .map(([column, _], index) => `${column} = $${index + 3}`)
+      .join(', ');
     
-    console.log('Input (camelCase):', exampleTask);
-    console.log('Output (snake_case):', mappedData);
+    const updateValues = Object.values(mappedData);
     
-    console.log('\n=== Test Complete ===');
+    const updateQuery = `
+      UPDATE project_tasks
+      SET ${setClause}
+      WHERE project_id = $1 AND id = $2
+      RETURNING *
+    `;
     
+    // Execute the update
+    const result = await pool.query(updateQuery, [projectId, actualTaskId, ...updateValues]);
+    
+    if (result.rows.length === 0) {
+      console.error(`[TASK_FIX] Update failed for task ${actualTaskId}`);
+      return res.status(500).json({ error: 'Update failed' });
+    }
+    
+    const updatedTask = result.rows[0];
+    const apiResponse = dbTaskToApiResponse(updatedTask);
+    
+    console.log(`[TASK_FIX] Task updated successfully: ${actualTaskId}`);
+    return res.status(200).json(apiResponse);
   } catch (error) {
-    console.error('Test error:', error);
-  } finally {
-    await client.end();
+    console.error(`[TASK_FIX] Error:`, error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
-}
+});
 
-// Run the test
-runTest();
+// Start server
+const PORT = process.env.TASK_FIX_PORT || 5001;
+const server = createServer(app);
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[TASK_FIX] Server running on port ${PORT}`);
+  console.log(`[TASK_FIX] Use a reverse proxy to forward requests from /api/projects/:projectId/tasks/:taskId to this server`);
+});

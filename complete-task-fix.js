@@ -1,17 +1,95 @@
 /**
- * Complete Task Fix for Success Factor Task Persistence
+ * Complete Task Persistence Fix
  * 
- * This script provides a complete fix for the task persistence issue:
- * 1. Creates a properly mapped camelCase to snake_case updateTask function
- * 2. Verifies that task toggling works via the API
- * 3. Confirms persistence after toggle
- * 
- * To use:
- * - Import the mapCamelToSnakeCase function into your projectsDb.ts file
- * - Use it in the updateTask method to properly map property names
+ * This script patches the API endpoint for task completion to ensure proper mapping 
+ * between camelCase properties and snake_case database columns.
  */
 
-// The core of our fix: a proper mapping function for camelCase to snake_case
+const express = require('express');
+const { projectTasksTable } = require('./shared/schema');
+const { eq } = require('drizzle-orm');
+const { db } = require('./server/db');
+
+// Apply the task persistence patch to the Express app
+module.exports = function applyTaskPersistencePatch(app) {
+  // Intercept the PUT request to /api/projects/:projectId/tasks/:taskId
+  app.put('/api/projects/:projectId/tasks/:taskId', async (req, res, next) => {
+    try {
+      console.log(`[TASK_PERSISTENCE_FIX] Handling task update for project=${req.params.projectId}, task=${req.params.taskId}`);
+      console.log(`[TASK_PERSISTENCE_FIX] Task update data:`, req.body);
+      
+      // Lookup task to ensure it exists before trying to update
+      const taskId = req.params.taskId;
+      const tasks = await db.select()
+        .from(projectTasksTable)
+        .where(eq(projectTasksTable.id, taskId))
+        .limit(1);
+      
+      if (tasks.length === 0) {
+        // Try sourceId lookup if direct ID lookup failed
+        const sourceIdTasks = await db.select()
+          .from(projectTasksTable)
+          .where(eq(projectTasksTable.sourceId, taskId))
+          .limit(1);
+        
+        if (sourceIdTasks.length === 0) {
+          console.error(`[TASK_PERSISTENCE_FIX] Task not found: id=${taskId}`);
+          return res.status(404).json({ 
+            error: 'Task not found',
+            taskId: taskId,
+            message: 'No task found with the specified ID'
+          });
+        }
+        
+        // Use the actual database ID for the update
+        taskId = sourceIdTasks[0].id;
+        console.log(`[TASK_PERSISTENCE_FIX] Found task via sourceId lookup, actual ID: ${taskId}`);
+      }
+      
+      // Prepare data for update with proper snake_case mapping
+      const updateData = mapCamelToSnakeCase(req.body);
+      
+      // Log the exact data being sent to the database
+      console.log(`[TASK_PERSISTENCE_FIX] Mapped data for database update:`, updateData);
+      
+      // Execute the update with proper data mapping
+      const [updatedTask] = await db.update(projectTasksTable)
+        .set(updateData)
+        .where(eq(projectTasksTable.id, taskId))
+        .returning();
+      
+      if (!updatedTask) {
+        console.error(`[TASK_PERSISTENCE_FIX] Update operation returned no results for task ${taskId}`);
+        return res.status(500).json({ 
+          error: 'Update failed',
+          message: 'The database update operation did not return any results'
+        });
+      }
+      
+      // Convert snake_case database fields back to camelCase for API response
+      const apiResponse = convertDbTaskToApiResponse(updatedTask);
+      console.log(`[TASK_PERSISTENCE_FIX] Task updated successfully:`, apiResponse);
+      
+      // Return the updated task to the client
+      return res.status(200).json(apiResponse);
+    } catch (error) {
+      console.error(`[TASK_PERSISTENCE_FIX] Error updating task:`, error);
+      return res.status(500).json({ 
+        error: 'Internal server error', 
+        message: error.message || 'An unexpected error occurred' 
+      });
+    }
+  });
+  
+  console.log('[TASK_PERSISTENCE_FIX] Task persistence patch applied successfully');
+};
+
+/**
+ * Maps camelCase property names to snake_case database column names
+ * 
+ * @param {Object} data The task data with camelCase properties (from application code)
+ * @returns {Object} An object with snake_case property names (for database columns)
+ */
 function mapCamelToSnakeCase(data) {
   const updateData = {};
   
@@ -26,7 +104,7 @@ function mapCamelToSnakeCase(data) {
   if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
   
   // CamelCase to snake_case mappings
-  if (data.sourceId !== undefined) updateData.source_id = data.sourceId; 
+  if (data.sourceId !== undefined) updateData.source_id = data.sourceId;
   if (data.projectId !== undefined) updateData.project_id = data.projectId;
   if (data.dueDate !== undefined) updateData.due_date = data.dueDate === '' ? null : data.dueDate;
   
@@ -37,39 +115,40 @@ function mapCamelToSnakeCase(data) {
   if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo === '' ? null : data.assignedTo;
   if (data.taskNotes !== undefined) updateData.task_notes = data.taskNotes === '' ? null : data.taskNotes;
   
-  // Handle dates
-  if (data.createdAt !== undefined) {
-    updateData.created_at = typeof data.createdAt === 'string' ? 
-      new Date(data.createdAt) : data.createdAt;
-  }
-  
   // Always update the updatedAt timestamp
   updateData.updated_at = new Date();
   
   return updateData;
 }
 
-/* 
- * Example usage in projectsDb.ts updateTask method:
- *
- * async updateTask(taskId: string, data: Partial<ProjectTask>) {
- *   try {
- *     // Convert camelCase properties to snake_case database columns
- *     const mappedData = mapCamelToSnakeCase(data);
- *     
- *     // Update the task in the database
- *     const [updatedTask] = await db.update(projectTasksTable)
- *       .set(mappedData)
- *       .where(eq(projectTasksTable.id, taskId))
- *       .returning();
- *       
- *     return updatedTask;
- *   } catch (error) {
- *     console.error(`Error updating task ${taskId}:`, error);
- *     throw error;
- *   }
- * }
+/**
+ * Converts a database task object with snake_case columns to a camelCase API response
+ * 
+ * @param {Object} dbTask Task object from database with snake_case columns
+ * @returns {Object} API response object with camelCase properties
  */
-
-// Export for use in other modules
-module.exports = { mapCamelToSnakeCase };
+function convertDbTaskToApiResponse(dbTask) {
+  return {
+    id: dbTask.id,
+    projectId: dbTask.project_id || '',
+    text: dbTask.text || '',
+    stage: dbTask.stage || 'identification',
+    origin: dbTask.origin || 'custom',
+    source: dbTask.origin || 'custom', // Normalized duplicate of origin
+    sourceId: dbTask.source_id || '',
+    completed: Boolean(dbTask.completed),
+    notes: dbTask.notes || '',
+    priority: dbTask.priority || '',
+    dueDate: dbTask.due_date || '',
+    owner: dbTask.owner || '',
+    status: dbTask.status || 'To Do',
+    createdAt: dbTask.created_at ? new Date(dbTask.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: dbTask.updated_at ? new Date(dbTask.updated_at).toISOString() : new Date().toISOString(),
+    // Additional fields
+    taskType: dbTask.task_type || '',
+    factorId: dbTask.factor_id || '',
+    sortOrder: dbTask.sort_order !== undefined ? dbTask.sort_order : 0,
+    assignedTo: dbTask.assigned_to || '',
+    taskNotes: dbTask.task_notes || ''
+  };
+}
