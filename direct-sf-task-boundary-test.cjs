@@ -5,25 +5,25 @@
  * and if our task lookup function properly enforces project boundaries when finding tasks.
  * This is the suspected root cause of the Success Factor task toggle persistence bug.
  * 
- * Run with: node direct-sf-task-boundary-test.js
+ * Run with: node direct-sf-task-boundary-test.cjs
  */
 
-import { createClient } from '@neondatabase/serverless';
-import { config } from 'dotenv';
-
-config();
+const pg = require('pg');
 
 // Connect to database
-const db = createClient(process.env.DATABASE_URL);
-db.connect();
+const DB_URL = process.env.DATABASE_URL;
 
 async function query(sql, params = []) {
+  const client = new pg.Client(DB_URL);
+  await client.connect();
   try {
-    const result = await db.query(sql, params);
+    const result = await client.query(sql, params);
     return result.rows;
   } catch (error) {
     console.error('Database error:', error);
     throw error;
+  } finally {
+    await client.end();
   }
 }
 
@@ -167,7 +167,7 @@ async function runTest() {
     console.log(`- Task B (${updatedTaskB[0].id}): completed=${updatedTaskB[0].completed}`);
     
     const hasCorrectBoundaries = updatedTaskA[0].completed === newStateA && 
-                                 updatedTaskB[0].completed === taskB.completed;
+                               updatedTaskB[0].completed === taskB.completed;
     
     if (hasCorrectBoundaries) {
       console.log('\n✅ Project boundary enforcement WORKS CORRECTLY');
@@ -255,8 +255,6 @@ async function runTest() {
     
   } catch (error) {
     console.error('Test error:', error);
-  } finally {
-    await db.end();
   }
 }
 
