@@ -1,47 +1,66 @@
 /**
- * Extract Current Browser Session
+ * Extract Current Session Cookie
  * 
- * This script extracts the current browser session cookie and saves it to a file
- * for use with our test scripts.
- * 
- * Copy and paste this entire script into your browser console while logged in.
+ * This script captures the current active session cookie from 
+ * a browser session and saves it to a file for use in testing.
  */
 
-(function() {
-  // Get all cookies
-  const cookies = document.cookie.split(';');
-  
-  // Find the session cookie (connect.sid)
-  const sessionCookie = cookies.find(cookie => cookie.trim().startsWith('connect.sid='));
-  
-  if (!sessionCookie) {
-    console.error('No session cookie found. Please ensure you are logged in.');
-    return;
+import fetch from 'node-fetch';
+import fs from 'fs/promises';
+
+const LOGIN_URL = 'http://localhost:5000/api/auth/login';
+
+async function extractSession() {
+  try {
+    console.log('Authenticating to get session cookie...');
+    
+    // First, attempt to login
+    const loginResponse = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'greg@confluity.co.uk',
+        password: 'tcof123'
+      })
+    });
+    
+    if (!loginResponse.ok) {
+      console.error(`Login failed: ${loginResponse.status} ${loginResponse.statusText}`);
+      return null;
+    }
+    
+    // Extract the set-cookie header
+    const cookies = loginResponse.headers.raw()['set-cookie'];
+    
+    if (!cookies || cookies.length === 0) {
+      console.error('No cookies returned from login');
+      return null;
+    }
+    
+    // Find the session cookie
+    const sessionCookie = cookies.find(cookie => cookie.includes('connect.sid'));
+    
+    if (!sessionCookie) {
+      console.error('Session cookie not found in response');
+      return null;
+    }
+    
+    // Extract just the name=value part of the cookie
+    const sessionValue = sessionCookie.split(';')[0];
+    
+    console.log(`Extracted session cookie: ${sessionValue}`);
+    
+    // Save to file
+    await fs.writeFile('current-session.txt', sessionValue);
+    
+    console.log('Session cookie saved to current-session.txt');
+    
+    return sessionValue;
+  } catch (error) {
+    console.error('Error extracting session:', error);
+    return null;
   }
-  
-  // Format the cookie for fetch requests
-  const formattedCookie = sessionCookie.trim();
-  
-  // Display the cookie
-  console.log('Session cookie extracted:');
-  console.log(formattedCookie);
-  
-  // Save to server via API
-  fetch('/api/debug/save-session', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      cookie: formattedCookie
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log('Session saved to file:', data);
-    console.log('You can now run test scripts that require authentication!');
-  })
-  .catch(error => {
-    console.error('Error saving session:', error);
-  });
-})();
+}
+
+// Run the extraction
+extractSession();

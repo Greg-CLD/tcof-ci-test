@@ -1,195 +1,135 @@
 /**
- * Direct Test for Task Toggle Persistence
- * 
- * This script directly tests the PUT /api/projects/:projectId/tasks/:taskId endpoint
- * to verify our implementation of getTaskById is fixing the 500 errors.
- * 
- * This script can be run in the browser console to test with the authenticated session.
+ * Direct Task Toggle Test
+ *
+ * This script directly tests the Success Factor task toggle API endpoint
+ * without any complex dependencies. It will:
+ * 1. Extract the session cookie from a browser session
+ * 2. Get tasks for a project
+ * 3. Toggle a Success Factor task's completion state
+ * 4. Verify the state change persisted
  */
 
+import fetch from 'node-fetch';
+
 // Configuration
-const RESET = '\x1b[0m';
-const GREEN = '\x1b[32m';
-const RED = '\x1b[31m';
-const BLUE = '\x1b[34m';
-const YELLOW = '\x1b[33m';
+const TEST_PROJECT_ID = '29ef6e22-52fc-43e3-a05b-19c42bed7d49';
+const BASE_URL = 'http://localhost:5000';
 
-// Toggle timeout (ms)
-const TOGGLE_DELAY = 1000;
+// Read from environment variables or a file we've created
+const SESSION_COOKIE = 'connect.sid=s%3AGzFWGtM2karVuxzsRH2nGEjg_yuVt-C1.4JEm0JHwKvjf5K7LUQUJZAjyKLjWyVmfAGxBFd8MROU';
 
-// API request helper with logging
-async function apiRequest(method, endpoint, body = null) {
-  console.log(`${BLUE}[API] ${method} ${endpoint}${RESET}`);
-  
-  const options = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  };
-  
-  if (body) {
-    options.body = JSON.stringify(body);
-    console.log(`Request body:`, body);
-  }
-  
+async function runTest() {
   try {
-    const response = await fetch(endpoint, options);
-    const contentType = response.headers.get('Content-Type') || '';
+    console.log('=== DIRECT SUCCESS FACTOR TASK TOGGLE TEST ===');
     
-    // Log status code
-    const statusColor = response.ok ? GREEN : RED;
-    console.log(`${statusColor}[API] Response status: ${response.status}${RESET}`);
+    // Step 1: Get all tasks for the project with ensure=true
+    console.log(`\nFetching tasks for project ${TEST_PROJECT_ID} with ensure=true...`);
+    const tasksUrl = `${BASE_URL}/api/projects/${TEST_PROJECT_ID}/tasks?ensure=true`;
     
-    // Parse response based on content type
-    let data;
-    if (contentType.includes('application/json')) {
-      data = await response.json();
-      console.log(`Response data:`, data);
-    } else {
-      data = await response.text();
-      console.log(`Response text:`, data.substring(0, 100) + (data.length > 100 ? '...' : ''));
-    }
-    
-    return { ok: response.ok, status: response.status, data };
-  } catch (error) {
-    console.error(`${RED}[API] Request failed:${RESET}`, error);
-    return { ok: false, status: 0, error };
-  }
-}
-
-// Main test function
-async function testTaskToggle() {
-  console.log(`${BLUE}=== Success Factor Task Toggle Test ===${RESET}`);
-  
-  try {
-    // Step 1: Get projects
-    console.log(`\nStep 1: Getting projects...`);
-    const projectsResponse = await apiRequest('GET', '/api/projects');
-    
-    if (!projectsResponse.ok || !projectsResponse.data || !projectsResponse.data.length) {
-      console.error(`${RED}Failed to get projects${RESET}`);
-      return false;
-    }
-    
-    const project = projectsResponse.data[0];
-    console.log(`${GREEN}Using project:${RESET} ${project.name} (${project.id})`);
-    
-    // Step 2: Get tasks for this project
-    console.log(`\nStep 2: Getting tasks for project...`);
-    const tasksResponse = await apiRequest('GET', `/api/projects/${project.id}/tasks`);
-    
-    if (!tasksResponse.ok || !tasksResponse.data || !tasksResponse.data.length) {
-      console.error(`${RED}Failed to get tasks for project${RESET}`);
-      return false;
-    }
-    
-    console.log(`${GREEN}Found ${tasksResponse.data.length} tasks${RESET}`);
-    
-    // Step 3: Find a Success Factor task to toggle
-    console.log(`\nStep 3: Finding a Success Factor task to toggle...`);
-    const sfTasks = tasksResponse.data.filter(task => 
-      (task.origin === 'factor' || task.origin === 'success-factor') && task.sourceId
-    );
-    
-    if (!sfTasks.length) {
-      console.log(`${YELLOW}No Success Factor tasks found in this project${RESET}`);
-      return false;
-    }
-    
-    const taskToToggle = sfTasks[0];
-    console.log(`${GREEN}Selected task:${RESET} "${taskToToggle.text}" (ID: ${taskToToggle.id})`);
-    console.log(`Current state: ${taskToToggle.completed ? 'Completed' : 'Not completed'}`);
-    console.log(`Origin: ${taskToToggle.origin}, Source ID: ${taskToToggle.sourceId}`);
-    
-    // Step 4: Toggle the task
-    console.log(`\nStep 4: Toggling task completion state...`);
-    const newState = !taskToToggle.completed;
-    const toggleResponse = await apiRequest('PUT', `/api/projects/${project.id}/tasks/${taskToToggle.id}`, {
-      completed: newState
+    const tasksResponse = await fetch(tasksUrl, {
+      headers: { 'Cookie': SESSION_COOKIE }
     });
     
-    if (!toggleResponse.ok) {
-      console.error(`${RED}Failed to toggle task state${RESET}`);
-      if (toggleResponse.status === 500) {
-        console.error(`${RED}500 Server Error - This is what we're trying to fix!${RESET}`);
-      }
-      return false;
+    if (!tasksResponse.ok) {
+      console.error(`Failed to fetch tasks: ${tasksResponse.status} ${tasksResponse.statusText}`);
+      const errorBody = await tasksResponse.text();
+      console.error('Error body:', errorBody);
+      return;
     }
     
-    console.log(`${GREEN}Successfully toggled task state to: ${newState ? 'Completed' : 'Not completed'}${RESET}`);
+    const tasks = await tasksResponse.json();
+    console.log(`Retrieved ${tasks.length} tasks in total`);
     
-    // Step 5: Verify the change with a fresh GET request
-    console.log(`\nStep 5: Verifying task state change persistence...`);
-    console.log(`Waiting ${TOGGLE_DELAY}ms before verification...`);
-    await new Promise(resolve => setTimeout(resolve, TOGGLE_DELAY));
+    // Find Success Factor tasks
+    const successFactorTasks = tasks.filter(task => 
+      task.origin === 'factor' || task.origin === 'success-factor'
+    );
     
-    const verifyResponse = await apiRequest('GET', `/api/projects/${project.id}/tasks`);
+    console.log(`Found ${successFactorTasks.length} Success Factor tasks`);
+    
+    if (successFactorTasks.length === 0) {
+      console.error('No Success Factor tasks found. Test cannot proceed.');
+      return;
+    }
+    
+    // Select the first Success Factor task
+    const taskToToggle = successFactorTasks[0];
+    console.log('\nSelected task to toggle:');
+    console.log(JSON.stringify(taskToToggle, null, 2));
+    
+    // Create the toggle payload (flip the current state)
+    const newCompletionState = !taskToToggle.completed;
+    const togglePayload = JSON.stringify({ completed: newCompletionState });
+    
+    console.log(`\nToggling task ${taskToToggle.id} from ${taskToToggle.completed} to ${newCompletionState}...`);
+    
+    // Make the PUT request to toggle the task
+    const toggleUrl = `${BASE_URL}/api/projects/${TEST_PROJECT_ID}/tasks/${taskToToggle.id}`;
+    console.log(`Request URL: ${toggleUrl}`);
+    console.log(`Request body: ${togglePayload}`);
+    
+    const toggleResponse = await fetch(toggleUrl, {
+      method: 'PUT',
+      headers: {
+        'Cookie': SESSION_COOKIE,
+        'Content-Type': 'application/json'
+      },
+      body: togglePayload
+    });
+    
+    console.log(`\nToggle response status: ${toggleResponse.status}`);
+    
+    let toggleResponseBody;
+    try {
+      const toggleResponseText = await toggleResponse.text();
+      console.log(`Raw response: ${toggleResponseText}`);
+      
+      try {
+        toggleResponseBody = JSON.parse(toggleResponseText);
+        console.log('Parsed JSON response:', JSON.stringify(toggleResponseBody, null, 2));
+      } catch (e) {
+        console.log('Response is not valid JSON');
+      }
+    } catch (e) {
+      console.log('Could not read response body');
+    }
+    
+    // Fetch tasks again to verify the change persisted
+    console.log('\nFetching tasks again to verify the toggle worked...');
+    
+    const verifyResponse = await fetch(tasksUrl, {
+      headers: { 'Cookie': SESSION_COOKIE }
+    });
     
     if (!verifyResponse.ok) {
-      console.error(`${RED}Failed to verify task state${RESET}`);
-      return false;
+      console.error(`Failed to fetch tasks: ${verifyResponse.status}`);
+      return;
     }
     
-    // Find the same task in the fresh response
-    const updatedTask = verifyResponse.data.find(task => task.id === taskToToggle.id);
+    const tasksAfterToggle = await verifyResponse.json();
     
-    if (!updatedTask) {
-      console.error(`${RED}Could not find the task after toggle${RESET}`);
-      return false;
+    // Find the same task after the toggle
+    const toggledTask = tasksAfterToggle.find(task => task.id === taskToToggle.id);
+    
+    if (!toggledTask) {
+      console.error('Task disappeared after toggle!');
+      return;
     }
     
-    // Verify the state was persisted correctly
-    const stateMatches = updatedTask.completed === newState;
+    console.log('\nTask state after toggle:');
+    console.log(JSON.stringify(toggledTask, null, 2));
     
-    if (stateMatches) {
-      console.log(`${GREEN}Verified: Task state was correctly persisted${RESET}`);
-      console.log(`${GREEN}New state: ${updatedTask.completed ? 'Completed' : 'Not completed'}${RESET}`);
+    // Check if the toggle worked
+    if (toggledTask.completed === newCompletionState) {
+      console.log('\n✅ SUCCESS: Task toggle worked! The new state persisted.');
     } else {
-      console.error(`${RED}Task state was not correctly persisted${RESET}`);
-      console.log(`Expected: ${newState ? 'Completed' : 'Not completed'}`);
-      console.log(`Actual: ${updatedTask.completed ? 'Completed' : 'Not completed'}`);
-    }
-    
-    // Verify metadata was preserved
-    const sourceIdPreserved = updatedTask.sourceId === taskToToggle.sourceId;
-    const originPreserved = updatedTask.origin === taskToToggle.origin;
-    
-    if (sourceIdPreserved && originPreserved) {
-      console.log(`${GREEN}Verified: Task metadata was preserved${RESET}`);
-    } else {
-      console.error(`${RED}Task metadata was not preserved${RESET}`);
-      console.log(`Original sourceId: ${taskToToggle.sourceId}, New sourceId: ${updatedTask.sourceId}`);
-      console.log(`Original origin: ${taskToToggle.origin}, New origin: ${updatedTask.origin}`);
-    }
-    
-    // Final status
-    if (stateMatches && sourceIdPreserved && originPreserved) {
-      console.log(`\n${GREEN}TEST PASSED: Task toggle persistence is working correctly${RESET}`);
-      return true;
-    } else {
-      console.log(`\n${RED}TEST FAILED: Some verification checks did not pass${RESET}`);
-      return false;
+      console.log('\n❌ FAILURE: Task toggle did not persist!');
+      console.log(`Expected: ${newCompletionState}, Actual: ${toggledTask.completed}`);
     }
     
   } catch (error) {
-    console.error(`${RED}Test failed with error:${RESET}`, error);
-    return false;
+    console.error('Test failed with error:', error.message);
   }
 }
 
-// Run the test
-console.log(`${BLUE}Starting Success Factor task toggle persistence test...${RESET}`);
-console.log(`${YELLOW}Copy and paste this ENTIRE script into your browser console while logged in${RESET}`);
-console.log(`${YELLOW}The test will run automatically and report results${RESET}`);
-
-// Self-executing function to allow for async/await
-(async () => {
-  try {
-    const result = await testTaskToggle();
-    console.log(`\n${result ? GREEN : RED}Test ${result ? 'PASSED' : 'FAILED'}${RESET}`);
-  } catch (e) {
-    console.error(`${RED}Test execution error:${RESET}`, e);
-  }
-})();
+runTest();

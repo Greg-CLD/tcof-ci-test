@@ -177,7 +177,7 @@ async function runTest() {
 async function createSessionCookie() {
   try {
     // Simpler approach - just make a request to a protected endpoint and extract the cookie
-    const response = await fetch(`${BASE_URL}/api/auth/session`, {
+    const response = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -197,7 +197,7 @@ async function createSessionCookie() {
       if (sessionCookie) {
         // Save just the name=value part, not the full cookie with attributes
         const sessionValue = sessionCookie.split(';')[0];
-        fs.writeFileSync('current-session.txt', sessionValue);
+        await fs.writeFile('current-session.txt', sessionValue);
         console.log('Created and saved new session cookie');
       }
     }
