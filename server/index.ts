@@ -6,8 +6,6 @@ import { registerSuccessFactorsRoutes } from "./routes.factorsDb.simple";
 import { forceJsonResponses } from "./middleware/forceJsonResponses";
 import { initializeServices } from "./services";
 import { projectsDb } from "./projectsDb";
-// Import the alternative task route implementation
-const { setupTaskRoute } = require('./alternative-task-route');
 
 const app = express();
 app.use(express.json());
@@ -15,9 +13,6 @@ app.use(express.urlencoded({ extended: false }));
 
 // Apply JSON response middleware to ensure proper content type headers
 app.use(forceJsonResponses);
-
-// Apply our alternative task route to properly handle task updates with camelCase/snake_case mapping
-setupTaskRoute(app);
 
 // Move health check to /health endpoint
 app.get('/health', (_req, res) => {
