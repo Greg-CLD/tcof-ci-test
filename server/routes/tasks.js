@@ -1,5 +1,5 @@
 import express from "express";
-import { projectsDb } from "../projectsDb.js";
+import { projectsDb } from "../projectsDb.ts";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 // Use CommonJS require for uuid-utils
 const { isValidUUID, isNumericId, convertNumericIdToUuid } = require("../utils/uuid-utils.cjs");

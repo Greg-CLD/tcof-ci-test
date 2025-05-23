@@ -115,7 +115,7 @@ For test scripts to work, you need:
 If tasks are created but cannot be found when using clean UUIDs, check:
 
 1. The task ID format in the database
-2. The UUID lookup logic implementation in `projectsDb.js`
+2. The UUID lookup logic implementation in `projectsDb.ts`
 3. Network requests to ensure clean UUIDs are being sent correctly
 
 ### Task Updates Not Persisting

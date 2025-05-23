@@ -7,7 +7,7 @@ import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { isOrgMember } from "../middlewares/isOrgMember.js";
 import { isValidUUID, isNumericId, convertNumericIdToUuid } from "../utils/uuid-utils.js";
 import { v4 as uuidv4 } from 'uuid';
-import { projectsDb } from '../projectsDb.js';
+import { projectsDb } from '../projectsDb.ts';
 
 /**
  * Middleware to validate a project ID

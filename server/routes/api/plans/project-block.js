@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
-// Correct path to projectsDb.js (using .ts instead of .js)
+// Correct path to projectsDb.ts
 import { projectsDb } from '../../../projectsDb.ts';
 
 // Path to plans data file - need to redefine since we can't import the functions directly

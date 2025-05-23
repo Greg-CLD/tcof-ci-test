@@ -5,7 +5,7 @@
  * to verify that the UUID matching fix is working correctly.
  */
 
-import { updateTask, deleteTask } from './server/projectsDb.js';
+import { updateTask, deleteTask } from './server/projectsDb.ts';
 
 // Mock tasks for testing
 const mockTasks = [
@@ -24,8 +24,8 @@ const mockTasks = [
 ];
 
 // Mock function for loading project data
-jest.mock('./server/projectsDb.js', () => {
-  const original = jest.requireActual('./server/projectsDb.js');
+jest.mock('./server/projectsDb.ts', () => {
+  const original = jest.requireActual('./server/projectsDb.ts');
   
   return {
     ...original,
