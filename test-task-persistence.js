@@ -1,156 +1,102 @@
 /**
- * Task Persistence Test Script
+ * Success Factor Task Toggle Persistence Test
  * 
- * This script directly tests task persistence through our standalone server.
- * It demonstrates how to toggle a task's completion status and verify
- * that the changes are properly persisted in the database.
+ * This script tests if toggling a Success Factor task persists properly
+ * by making a direct API request and then verifying the change was saved.
  */
 
-const { Pool } = require('pg');
-require('dotenv').config(); // Load environment variables from .env file if present
+import fetch from 'node-fetch';
 
-// Connect to the database
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
-
-/**
- * Fetch a project's tasks directly from the database
- */
-async function getTasksFromDb(projectId) {
+async function testTaskPersistence() {
   try {
-    const result = await pool.query(
-      'SELECT * FROM project_tasks WHERE project_id = $1',
-      [projectId]
-    );
-    return result.rows;
-  } catch (error) {
-    console.error('Failed to fetch tasks from database:', error);
-    throw error;
-  }
-}
+    // Configuration
+    const projectId = 'bc55c1a2-0cdf-4108-aa9e-44b44baea3b8'; // Replace with your actual project ID
+    const baseUrl = 'http://localhost:3000';
 
-/**
- * Update a task's completion status via direct API call
- */
-async function toggleTaskCompletion(projectId, taskId, completed) {
-  try {
-    // The port where the standalone server is running
-    const PORT = process.env.STANDALONE_PORT || 3100;
+    // Get current session cookie from file (if available)
+    console.log('Running task persistence test...');
     
-    // Make a direct PUT request to our standalone server
-    const response = await fetch(
-      `http://localhost:${PORT}/api/projects/${projectId}/tasks/${taskId}`,
+    // Step 1: Get all tasks for the project
+    console.log('Step 1: Getting all tasks for the project...');
+    const tasksResponse = await fetch(`${baseUrl}/api/projects/${projectId}/tasks`);
+    
+    if (!tasksResponse.ok) {
+      throw new Error(`Failed to get tasks: ${tasksResponse.status} ${tasksResponse.statusText}`);
+    }
+    
+    const tasks = await tasksResponse.json();
+    console.log(`Found ${tasks.length} tasks`);
+    
+    // Step 2: Find a Success Factor task to toggle
+    console.log('Step 2: Finding a Success Factor task to toggle...');
+    const successFactorTasks = tasks.filter(task => task.origin === 'factor');
+    
+    if (successFactorTasks.length === 0) {
+      throw new Error('No Success Factor tasks found in the project');
+    }
+    
+    const taskToToggle = successFactorTasks[0];
+    console.log(`Selected task: ${taskToToggle.id} - ${taskToToggle.text}`);
+    console.log(`Current completion state: ${taskToToggle.completed}`);
+    
+    // Step 3: Toggle the task's completion state
+    console.log('Step 3: Toggling task completion state...');
+    const newState = !taskToToggle.completed;
+    
+    const updateResponse = await fetch(
+      `${baseUrl}/api/projects/${projectId}/tasks/${taskToToggle.id}`,
       {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ completed }),
+        body: JSON.stringify({ completed: newState })
       }
     );
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to update task: ${response.status} ${response.statusText}\n${errorText}`);
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      throw new Error(`Failed to update task: ${updateResponse.status} ${updateResponse.statusText}\n${errorText}`);
     }
     
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to toggle task completion:', error);
-    throw error;
-  }
-}
-
-/**
- * Verify that a task's completion status was properly persisted
- */
-async function verifyTaskPersistence(projectId, taskId, expectedCompletionStatus) {
-  try {
-    // Fetch the task directly from the database
-    const tasks = await getTasksFromDb(projectId);
-    const task = tasks.find(t => t.id === taskId || t.source_id === taskId);
+    const updatedTask = await updateResponse.json();
+    console.log(`Task updated. New completion state: ${updatedTask.completed}`);
     
-    if (!task) {
-      throw new Error(`Task not found in database: ${taskId}`);
+    // Step 4: Verify the change was saved by getting the task again
+    console.log('Step 4: Verifying the change was saved...');
+    const verifyResponse = await fetch(`${baseUrl}/api/projects/${projectId}/tasks`);
+    
+    if (!verifyResponse.ok) {
+      throw new Error(`Failed to get tasks for verification: ${verifyResponse.status} ${verifyResponse.statusText}`);
     }
     
-    console.log(`Task state from database:`, task);
-    console.log(`Completion status: ${Boolean(task.completed)}`);
+    const verifyTasks = await verifyResponse.json();
+    const verifyTask = verifyTasks.find(task => task.id === taskToToggle.id);
     
-    // Verify that the completion status matches what we expect
-    const actualStatus = Boolean(task.completed);
-    if (actualStatus !== expectedCompletionStatus) {
-      throw new Error(
-        `Persistence verification failed! Expected: ${expectedCompletionStatus}, Actual: ${actualStatus}`
-      );
+    if (!verifyTask) {
+      throw new Error(`Could not find the task after update`);
     }
     
-    console.log(`✅ Persistence verification passed! Task completion status was successfully persisted.`);
-    return { success: true, task };
-  } catch (error) {
-    console.error('Persistence verification failed:', error);
-    return { success: false, error };
-  }
-}
-
-/**
- * Run the full test
- */
-async function runTaskPersistenceTest() {
-  try {
-    // You'll need to provide a valid project and task ID
-    const projectId = process.argv[2];
-    const taskId = process.argv[3];
+    console.log(`Verified task state: ${verifyTask.completed}`);
     
-    if (!projectId || !taskId) {
-      console.error('Please provide project ID and task ID arguments:');
-      console.error('node test-task-persistence.js <projectId> <taskId>');
-      process.exit(1);
-    }
-    
-    console.log(`Running task persistence test with project=${projectId}, task=${taskId}`);
-    
-    // 1. Get the task's current state
-    const tasks = await getTasksFromDb(projectId);
-    const task = tasks.find(t => t.id === taskId || t.source_id === taskId);
-    
-    if (!task) {
-      console.error(`Task not found: ${taskId}`);
-      process.exit(1);
-    }
-    
-    console.log(`Found task:`, task);
-    const currentStatus = Boolean(task.completed);
-    console.log(`Current completion status: ${currentStatus}`);
-    
-    // 2. Toggle the task to the opposite status
-    const newStatus = !currentStatus;
-    console.log(`Toggling task to ${newStatus ? 'completed' : 'not completed'}...`);
-    const updateResult = await toggleTaskCompletion(projectId, taskId, newStatus);
-    console.log(`Update API response:`, updateResult);
-    
-    // 3. Verify the change was persisted
-    console.log(`Verifying persistence...`);
-    const verificationResult = await verifyTaskPersistence(projectId, taskId, newStatus);
-    
-    if (verificationResult.success) {
-      console.log(`\n✅ TEST PASSED: Task persistence is working correctly!`);
-      
-      // 4. Toggle back to original state for cleanup
-      console.log(`\nResetting task to original state (${currentStatus ? 'completed' : 'not completed'})...`);
-      await toggleTaskCompletion(projectId, taskId, currentStatus);
-      console.log(`Task has been reset to its original state.`);
+    if (verifyTask.completed === newState) {
+      console.log('✅ SUCCESS: Task persistence is working correctly');
     } else {
-      console.error(`\n❌ TEST FAILED: Task persistence is not working correctly!`);
+      console.log('❌ FAILURE: Task state did not persist');
     }
+    
+    return { success: verifyTask.completed === newState, task: verifyTask };
   } catch (error) {
-    console.error('Error running test:', error);
-  } finally {
-    // Close the database connection
-    await pool.end();
+    console.error('Error during test:', error);
+    return { success: false, error: error.message };
   }
 }
 
 // Run the test
-runTaskPersistenceTest();
+testTaskPersistence().then(result => {
+  if (result.success) {
+    console.log('Test completed successfully');
+  } else {
+    console.log('Test failed:', result.error);
+  }
+});
