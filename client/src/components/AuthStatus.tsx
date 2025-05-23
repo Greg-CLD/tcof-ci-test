@@ -55,7 +55,7 @@ export function AuthStatus() {
     return (
       <div className="flex items-center text-sm text-green-600 space-x-1">
         <CheckCircle className="h-3 w-3" />
-        <span>{user.username || 'User'}</span>
+        <span>Logged in</span>
       </div>
     );
   }
