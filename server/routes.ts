@@ -1051,6 +1051,10 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
           });
         }
         
+        // CRITICAL FIX: Always preserve origin/source metadata for Success Factor tasks
+        // This ensures metadata is never stripped during updates
+        updates.origin = originalTask.origin;
+        
         // Prevent changing origin of Success Factor tasks
         if (updates.origin && updates.origin !== originalTask.origin) {
           if (isDebugEnabled) {
@@ -1084,10 +1088,6 @@ app.get('/api/debug/errors', async (req: Request, res: Response) => {
             }
           });
         }
-        
-        // CRITICAL FIX: Always preserve origin/source metadata for Success Factor tasks
-        // This ensures metadata is never stripped during updates
-        updates.origin = originalTask.origin;
         
         // Always preserve sourceId for Success Factor tasks - this is critical for lookups
         if (originalTask.sourceId) {
