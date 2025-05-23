@@ -1381,21 +1381,25 @@ export const projectsDb = {
       }
     } catch (error) {
       // Capture and log the complete error context
-      console.error(`[TASK_UPDATE_ERROR] Failed to update task ${taskId}:`, error);
-      console.error(`[TASK_UPDATE_ERROR] Error type:`, error?.constructor?.name || typeof error);
-      console.error(`[TASK_UPDATE_ERROR] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available'); 
-      console.error(`[TASK_UPDATE_ERROR] Input data:`, JSON.stringify(data, null, 2));
-      
-      // Map custom TASK_NOT_FOUND error to 404 HTTP error
-      if (error && error.code === 'TASK_NOT_FOUND') {
-        throw Object.assign(error, { status: 404 });
+      try {
+        console.error(`[TASK_UPDATE_ERROR] Failed to update task ${taskId}:`, error);
+        console.error(`[TASK_UPDATE_ERROR] Error type:`, error?.constructor?.name || typeof error);
+        console.error(`[TASK_UPDATE_ERROR] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available'); 
+        console.error(`[TASK_UPDATE_ERROR] Input data:`, JSON.stringify(data, null, 2));
+        
+        // Map custom TASK_NOT_FOUND error to 404 HTTP error
+        if (error && error.code === 'TASK_NOT_FOUND') {
+          throw Object.assign(error, { status: 404 });
+        }
+        
+        // Re-throw with enhanced information for API error handling
+        if (error instanceof Error) {
+          error.message = `Task update failed: ${error.message}`;
+        }
+        throw error;
+      } finally {
+        // Ensure any cleanup is performed
       }
-      
-      // Re-throw with enhanced information for API error handling
-      if (error instanceof Error) {
-        error.message = `Task update failed: ${error.message}`;
-      }
-      throw error;
     }
   },
   
