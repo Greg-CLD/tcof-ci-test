@@ -28,13 +28,13 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Build app (optional)
-        run: npm run build || true
+      - name: Build app
+        run: npm run build
 
       - name: Start app server
         run: |
-          npm run start &
-          sleep 5
+          NODE_ENV=production npm run start &
+          sleep 10
 
       - name: Wait for server to be ready
         run: npx wait-on http://localhost:5000
