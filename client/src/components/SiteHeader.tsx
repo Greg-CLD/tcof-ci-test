@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   BarChart as BarChartIcon,
+  Settings,
   CheckSquare,
   Compass,
   Bug,
@@ -28,6 +29,7 @@ import {
   Filter,
   Briefcase
 } from "lucide-react";
+import { USER_MENU_ITEMS, ADMIN_MENU_ITEMS } from "@/constants/userMenuItems";
 import { useAuthProtection } from "@/hooks/use-auth-protection";
 import { useAuth } from "@/hooks/useAuth";
 import { UserMenu, LoginButton } from "@/components/auth-buttons";
@@ -58,6 +60,11 @@ export default function SiteHeader() {
   // Check if user is authenticated using either method
   const isLoggedInWithPassword = isAuthenticated('starter-access') || isAuthenticated('pro-tools');
   const isLoggedIn = isAuthenticatedWithReplit || isLoggedInWithPassword;
+  const isAdminUser = user && user.username.toLowerCase() === 'greg@confluity.co.uk';
+  const menuItems = [
+    ...USER_MENU_ITEMS,
+    ...(isAdminUser ? ADMIN_MENU_ITEMS : [])
+  ];
   
   // Handle sign out for password-based auth
   const handlePasswordSignOut = () => {
@@ -246,58 +253,17 @@ export default function SiteHeader() {
                     <div className="px-3 py-2 text-xs">
                       <AuthStatus />
                     </div>
-                    <Link 
-                      href="/dashboard"
-                      onClick={handleNavigation}
-                      className={`flex items-center py-2 px-3 rounded-md ${location === '/dashboard' ? 'bg-tcof-light' : ''} text-tcof-teal`}
-                    >
-                      <BarChartIcon className="h-5 w-5 mr-2" /> Dashboard
-                    </Link>
-                    
-                    <Link 
-                      href="/profile"
-                      onClick={handleNavigation}
-                      className={`flex items-center py-2 px-3 rounded-md ${location === '/profile' ? 'bg-tcof-light' : ''} text-tcof-teal`}
-                    >
-                      <User className="h-5 w-5 mr-2" /> My Profile
-                    </Link>
-                    
-                    <Link 
-                      href="/history"
-                      onClick={handleNavigation}
-                      className={`flex items-center py-2 px-3 rounded-md ${location === '/history' ? 'bg-tcof-light' : ''} text-tcof-teal`}
-                    >
-                      <History className="h-5 w-5 mr-2" /> View History
-                    </Link>
-                    
-                    {user && user.username.toLowerCase() === 'greg@confluity.co.uk' && (
-                      <>
-                        <Link 
-                          href="/make-a-plan/admin/factors"
-                          onClick={handleNavigation}
-                          className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin/factors' ? 'bg-tcof-light' : ''} text-tcof-teal`}
-                        >
-                          <Filter className="h-5 w-5 mr-2" /> Admin - Factors
-                        </Link>
-                        
-                        <Link 
-                          href="/make-a-plan/admin/diagnostics"
-                          onClick={handleNavigation}
-                          className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin/diagnostics' ? 'bg-tcof-light' : ''} text-tcof-teal`}
-                        >
-                          <BarChartIcon className="h-5 w-5 mr-2" /> Task Diagnostics
-                        </Link>
-                        <Link 
-                          href="/make-a-plan/admin"
-                          onClick={handleNavigation}
-                          className={`flex items-center py-2 px-3 rounded-md ${location === '/make-a-plan/admin' ? 'bg-tcof-light' : ''} text-tcof-teal`}
-                        >
-                          <Filter className="h-5 w-5 mr-2" /> Admin - Presets
-                        </Link>
-                      </>
-                    )}
-                    
-                    <button 
+                    {menuItems.map((item) => (
+                      <Link
+                        key={item.path}
+                        href={item.path}
+                        onClick={handleNavigation}
+                        className={`flex items-center py-2 px-3 rounded-md ${location === item.path ? 'bg-tcof-light' : ''} text-tcof-teal`}
+                      >
+                        <item.icon className="h-5 w-5 mr-2" /> {item.label}
+                      </Link>
+                    ))}
+                    <button
                       onClick={handleSignOut}
                       className="flex items-center py-2 px-3 rounded-md text-red-500 w-full text-left"
                     >
