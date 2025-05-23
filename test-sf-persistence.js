@@ -1,260 +1,350 @@
 /**
  * Success Factor Task Toggle Persistence Test
  * 
- * This comprehensive test verifies that Success Factor task completion states
- * properly persist after being toggled, by:
- * 1. Finding a project
- * 2. Getting a list of Success Factor tasks
- * 3. Toggling one task's completion state
- * 4. Verifying the API response shows the change
- * 5. Getting the tasks again to verify persistence
+ * This script directly tests the task toggle persistence bug:
+ * 1. Creates a new project (or uses an existing one)
+ * 2. Gets all success factor tasks for the project (with ensure=true)
+ * 3. Toggles a task's completion state
+ * 4. Verifies the update was successful
+ * 5. Gets all tasks again to check if the change persisted
  * 
  * Run with: node test-sf-persistence.js
  */
 
-const fetch = require('node-fetch');
-const { Client } = require('pg');
-require('dotenv').config();
+import fetch from 'node-fetch';
+import { v4 as uuidv4 } from 'uuid';
+import pg from 'pg';
+import dotenv from 'dotenv';
 
-// Get the session cookie from the current-session.txt file or create one
-async function getSessionCookie() {
-  const fs = require('fs');
-  try {
-    // Try to read from existing file
-    if (fs.existsSync('./current-session.txt')) {
-      const cookie = fs.readFileSync('./current-session.txt', 'utf8').trim();
-      if (cookie) {
-        console.log('Using existing session cookie from file');
-        return cookie;
-      }
-    }
-    
-    // No cookie found or file doesn't exist, need to login
-    console.log('No session cookie found, please log in first and save the cookie to current-session.txt');
-    process.exit(1);
-  } catch (error) {
-    console.error('Error reading session cookie:', error);
-    process.exit(1);
-  }
-}
+const { Client } = pg;
+dotenv.config();
 
-// Make an authenticated API request
-async function apiRequest(method, endpoint, body = null) {
-  const sessionCookie = await getSessionCookie();
-  
-  const options = {
-    method: method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': sessionCookie
-    }
-  };
-  
-  if (body) {
-    options.body = JSON.stringify(body);
-  }
-  
-  console.log(`${method} ${endpoint}`);
-  const response = await fetch(`http://localhost:3000${endpoint}`, options);
-  
-  // Check if response is JSON
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    const data = await response.json();
-    return {
-      status: response.status,
-      data: data
-    };
-  } else {
-    const text = await response.text();
-    return {
-      status: response.status,
-      text: text
-    };
-  }
-}
+// Set to true to create a new test project, false to use existing project
+const CREATE_NEW_PROJECT = false;
 
-// Get a list of projects
-async function getProjects() {
-  return await apiRequest('GET', '/api/projects');
-}
-
-// Get tasks for a project
-async function getTasks(projectId) {
-  return await apiRequest('GET', `/api/projects/${projectId}/tasks`);
-}
-
-// Toggle a task's completion state
-async function toggleTask(projectId, taskId, completed) {
-  return await apiRequest('PUT', `/api/projects/${projectId}/tasks/${taskId}`, {
-    completed: completed
-  });
-}
-
-// Database query helper
-async function queryDb(sql, params = []) {
+/**
+ * Initialize database connection
+ */
+async function initDb() {
   const client = new Client({
     connectionString: process.env.DATABASE_URL
   });
-  
+  await client.connect();
+  return client;
+}
+
+/**
+ * Get session cookie for authenticated requests
+ */
+async function login() {
   try {
-    await client.connect();
-    const result = await client.query(sql, params);
-    return result.rows;
+    // Use the existing session cookie from file if available
+    const response = await fetch('http://localhost:5000/api/auth/user');
+    if (response.ok) {
+      const userData = await response.json();
+      console.log('Logged in as:', userData.username);
+      return '';
+    } else {
+      console.error('Not logged in or session expired');
+      throw new Error('Login required');
+    }
   } catch (error) {
-    console.error('Database query error:', error);
+    console.error('Login error:', error.message);
     throw error;
+  }
+}
+
+/**
+ * Create a new test project
+ */
+async function createProject() {
+  try {
+    const projectName = 'Persistence Test Project ' + Date.now();
+    
+    const response = await fetch('http://localhost:5000/api/projects', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name: projectName })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error creating project: ${response.status} ${response.statusText}`);
+    }
+    
+    const project = await response.json();
+    console.log(`Created project: ${project.name} (${project.id})`);
+    return project;
+  } catch (error) {
+    console.error('Error creating project:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get an existing project from the user's projects
+ */
+async function getExistingProject() {
+  try {
+    const response = await fetch('http://localhost:5000/api/projects');
+    
+    if (!response.ok) {
+      throw new Error(`Error getting projects: ${response.status} ${response.statusText}`);
+    }
+    
+    const projects = await response.json();
+    
+    if (projects.length === 0) {
+      throw new Error('No projects found');
+    }
+    
+    // Use the first project
+    console.log(`Using existing project: ${projects[0].name} (${projects[0].id})`);
+    return projects[0];
+  } catch (error) {
+    console.error('Error getting existing project:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all tasks for a project with the ensure=true parameter
+ * to make sure Success Factor tasks are created
+ */
+async function getTasks(projectId, ensure = false) {
+  try {
+    const ensureParam = ensure ? '?ensure=true' : '';
+    const response = await fetch(`http://localhost:5000/api/projects/${projectId}/tasks${ensureParam}`);
+    
+    if (!response.ok) {
+      throw new Error(`Error getting tasks: ${response.status} ${response.statusText}`);
+    }
+    
+    const tasks = await response.json();
+    console.log(`Retrieved ${tasks.length} tasks for project ${projectId}`);
+    
+    // Filter out just the success factor tasks
+    const successFactorTasks = tasks.filter(task => 
+      task.origin === 'factor' || task.origin === 'success-factor'
+    );
+    
+    console.log(`Found ${successFactorTasks.length} Success Factor tasks`);
+    
+    // Log a few examples
+    successFactorTasks.slice(0, 5).forEach(task => {
+      console.log(`- Task ${task.id}: completed=${task.completed}, sourceId=${task.sourceId}`);
+    });
+    
+    return successFactorTasks;
+  } catch (error) {
+    console.error('Error getting tasks:', error);
+    throw error;
+  }
+}
+
+/**
+ * Toggle a task's completed state
+ */
+async function toggleTask(projectId, taskId, completed) {
+  try {
+    console.log(`Toggling task ${taskId} to completed=${completed}`);
+    
+    const response = await fetch(`http://localhost:5000/api/projects/${projectId}/tasks/${taskId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ completed })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      throw new Error(`Error toggling task: ${response.status} ${response.statusText}`);
+    }
+    
+    const updatedTask = await response.json();
+    console.log(`Task toggle response:`, updatedTask);
+    
+    if (updatedTask.completed === completed) {
+      console.log(`✅ Task ${taskId} updated successfully: completed=${updatedTask.completed}`);
+      return updatedTask;
+    } else {
+      console.error(`❌ Task ${taskId} update failed: expected completed=${completed}, got completed=${updatedTask.completed}`);
+      throw new Error('Task update failed: values do not match');
+    }
+  } catch (error) {
+    console.error('Error toggling task:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get a task directly from the database
+ */
+async function getTaskFromDb(projectId, taskId) {
+  const client = await initDb();
+  try {
+    const query = `
+      SELECT * FROM project_tasks 
+      WHERE project_id = $1 AND id = $2
+    `;
+    const result = await client.query(query, [projectId, taskId]);
+    
+    if (result.rows.length === 0) {
+      throw new Error(`Task ${taskId} not found in database`);
+    }
+    
+    return result.rows[0];
   } finally {
     await client.end();
   }
 }
 
-// Main test function
-async function runTest() {
-  console.log('=== Success Factor Task Toggle Persistence Test ===');
-  
+/**
+ * Find tasks with the same source_id across projects
+ */
+async function findTasksBySourceIdAcrossProjects(sourceId) {
+  const client = await initDb();
   try {
-    // Step 1: Get a list of projects
-    console.log('\nStep 1: Getting projects...');
-    const projectsResponse = await getProjects();
-    
-    if (projectsResponse.status !== 200 || !projectsResponse.data || !projectsResponse.data.length) {
-      console.error('❌ Failed to get projects or no projects found');
-      return;
-    }
-    
-    const project = projectsResponse.data[0];
-    console.log(`✅ Found project: ${project.name} (${project.id})`);
-    
-    // Step 2: Get tasks for the project
-    console.log('\nStep 2: Getting tasks for project...');
-    const tasksResponse = await getTasks(project.id);
-    
-    if (tasksResponse.status !== 200 || !tasksResponse.data || !tasksResponse.data.length) {
-      console.error('❌ Failed to get tasks or no tasks found');
-      return;
-    }
-    
-    // Filter for Success Factor tasks only
-    const successFactorTasks = tasksResponse.data.filter(task => 
-      task.origin === 'factor' || task.origin === 'success-factor'
-    );
-    
-    if (!successFactorTasks.length) {
-      console.error('❌ No Success Factor tasks found for this project');
-      return;
-    }
-    
-    console.log(`✅ Found ${successFactorTasks.length} Success Factor tasks`);
-    
-    // Select the first task for testing
-    const taskToToggle = successFactorTasks[0];
-    console.log(`\nSelected task for testing: ${taskToToggle.id}`);
-    console.log(`Initial state: ${taskToToggle.text.substring(0, 50)}...`);
-    console.log(`Completed: ${taskToToggle.completed}`);
-    console.log(`Origin: ${taskToToggle.origin}`);
-    console.log(`Source ID: ${taskToToggle.sourceId}`);
-    
-    // Step 3: Check the task in the database directly
-    console.log('\nStep 3: Checking task in database directly...');
-    const dbTasks = await queryDb(
-      'SELECT id, text, completed, origin, source_id FROM project_tasks WHERE id = $1',
-      [taskToToggle.id]
-    );
-    
-    if (!dbTasks.length) {
-      console.error('❌ Task not found in database');
-      return;
-    }
-    
-    console.log('Database record:');
-    console.log(`ID: ${dbTasks[0].id}`);
-    console.log(`Completed: ${dbTasks[0].completed}`);
-    console.log(`Origin: ${dbTasks[0].origin}`);
-    console.log(`Source ID: ${dbTasks[0].source_id}`);
-    
-    // Step 4: Toggle the task's completion state
-    const newCompletionState = !taskToToggle.completed;
-    console.log(`\nStep 4: Toggling task completion to: ${newCompletionState}`);
-    
-    const toggleResponse = await toggleTask(project.id, taskToToggle.id, newCompletionState);
-    
-    if (toggleResponse.status !== 200 || !toggleResponse.data) {
-      console.error(`❌ Failed to toggle task: ${JSON.stringify(toggleResponse)}`);
-      return;
-    }
-    
-    console.log('Toggle response:');
-    console.log(`Status: ${toggleResponse.status}`);
-    console.log(`ID: ${toggleResponse.data.id}`);
-    console.log(`Completed: ${toggleResponse.data.completed}`);
-    
-    if (toggleResponse.data.completed !== newCompletionState) {
-      console.error('❌ Task completion state was not updated in the response');
-      return;
-    }
-    
-    console.log(`✅ Task completion toggled successfully in API response`);
-    
-    // Step 5: Verify the change in the database directly
-    console.log('\nStep 5: Verifying change in database directly...');
-    const updatedDbTasks = await queryDb(
-      'SELECT id, text, completed, origin, source_id, updated_at FROM project_tasks WHERE id = $1',
-      [taskToToggle.id]
-    );
-    
-    if (!updatedDbTasks.length) {
-      console.error('❌ Task not found in database after update');
-      return;
-    }
-    
-    console.log('Updated database record:');
-    console.log(`ID: ${updatedDbTasks[0].id}`);
-    console.log(`Completed: ${updatedDbTasks[0].completed}`);
-    console.log(`Origin: ${updatedDbTasks[0].origin}`);
-    console.log(`Source ID: ${updatedDbTasks[0].source_id}`);
-    console.log(`Updated At: ${updatedDbTasks[0].updated_at}`);
-    
-    if (updatedDbTasks[0].completed !== newCompletionState) {
-      console.error('❌ Task completion state was not persisted in the database');
-      return;
-    }
-    
-    console.log(`✅ Task completion state was correctly persisted in database`);
-    
-    // Step 6: Get tasks again to verify the change through the API
-    console.log('\nStep 6: Getting tasks again to verify persistence through API...');
-    const verifyTasksResponse = await getTasks(project.id);
-    
-    if (verifyTasksResponse.status !== 200 || !verifyTasksResponse.data) {
-      console.error('❌ Failed to get tasks for verification');
-      return;
-    }
-    
-    const verifiedTask = verifyTasksResponse.data.find(task => task.id === taskToToggle.id);
-    
-    if (!verifiedTask) {
-      console.error('❌ Task not found in API response after update');
-      return;
-    }
-    
-    console.log('Task from API after update:');
-    console.log(`ID: ${verifiedTask.id}`);
-    console.log(`Completed: ${verifiedTask.completed}`);
-    console.log(`Origin: ${verifiedTask.origin}`);
-    
-    if (verifiedTask.completed !== newCompletionState) {
-      console.error('❌ Task completion state was not persisted in the API response');
-      return;
-    }
-    
-    console.log(`✅ Task completion state was correctly persisted and returned via API`);
-    console.log('\n✅ SUCCESS: Task toggle and persistence test passed!');
-    
-  } catch (error) {
-    console.error('❌ Test failed with error:', error);
+    const query = `
+      SELECT id, project_id, text, origin, source_id, completed, stage
+      FROM project_tasks 
+      WHERE source_id = $1
+      ORDER BY project_id, stage
+    `;
+    const result = await client.query(query, [sourceId]);
+    return result.rows;
+  } finally {
+    await client.end();
   }
 }
 
-// Run the test
+/**
+ * Find duplicate tasks in a project (same source_id and stage)
+ */
+async function findDuplicateTasksInProject(projectId) {
+  const client = await initDb();
+  try {
+    const query = `
+      SELECT source_id, stage, COUNT(*) as count
+      FROM project_tasks
+      WHERE project_id = $1 AND source_id IS NOT NULL
+      GROUP BY source_id, stage
+      HAVING COUNT(*) > 1
+      ORDER BY count DESC;
+    `;
+    const result = await client.query(query, [projectId]);
+    return result.rows;
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Run the test to verify task toggle persistence
+ */
+async function runTest() {
+  console.log('=== Success Factor Task Persistence Test ===\n');
+  
+  try {
+    // Get session cookie
+    await login();
+    
+    // Get or create a project
+    const project = CREATE_NEW_PROJECT 
+      ? await createProject()
+      : await getExistingProject();
+    
+    // Get all tasks with ensure=true to make sure Success Factor tasks exist
+    console.log('\nStep 1: Getting all tasks and ensuring Success Factor tasks exist...');
+    const tasks = await getTasks(project.id, true);
+    
+    if (tasks.length === 0) {
+      console.error('❌ No Success Factor tasks found. Test cannot continue.');
+      return;
+    }
+    
+    // Check for duplicate tasks (by source_id and stage)
+    console.log('\nStep 2: Checking for duplicate tasks...');
+    const duplicates = await findDuplicateTasksInProject(project.id);
+    
+    if (duplicates.length > 0) {
+      console.warn(`⚠️ Found ${duplicates.length} sets of duplicate tasks:`);
+      duplicates.forEach(dup => {
+        console.warn(`- sourceId=${dup.source_id}, stage=${dup.stage}: ${dup.count} duplicates`);
+      });
+    } else {
+      console.log('✅ No duplicate tasks found');
+    }
+    
+    // Select a task to toggle (use the first one)
+    const taskToToggle = tasks[0];
+    console.log(`\nStep 3: Selected task to toggle: ${taskToToggle.id}`);
+    console.log(`- Text: ${taskToToggle.text}`);
+    console.log(`- Current state: completed=${taskToToggle.completed}`);
+    console.log(`- Origin: ${taskToToggle.origin}`);
+    console.log(`- Source ID: ${taskToToggle.sourceId}`);
+    
+    // Get the task from the database to verify its initial state
+    console.log('\nStep 4: Checking initial task state in database...');
+    const initialDbTask = await getTaskFromDb(project.id, taskToToggle.id);
+    console.log('Database task state:');
+    console.log(`- ID: ${initialDbTask.id}`);
+    console.log(`- Completed: ${initialDbTask.completed}`);
+    console.log(`- Origin: ${initialDbTask.origin}`);
+    console.log(`- Source ID: ${initialDbTask.source_id}`);
+    
+    // Toggle the task (invert its current completion state)
+    const newState = !taskToToggle.completed;
+    console.log(`\nStep 5: Toggling task completion from ${taskToToggle.completed} to ${newState}...`);
+    const toggledTask = await toggleTask(project.id, taskToToggle.id, newState);
+    
+    // Verify the task state in the database after the toggle
+    console.log('\nStep 6: Verifying task state in database after toggle...');
+    const updatedDbTask = await getTaskFromDb(project.id, taskToToggle.id);
+    console.log('Database task state after toggle:');
+    console.log(`- ID: ${updatedDbTask.id}`);
+    console.log(`- Completed: ${updatedDbTask.completed}`);
+    console.log(`- Updated at: ${updatedDbTask.updated_at}`);
+    
+    if (updatedDbTask.completed === newState) {
+      console.log('✅ Database state matches the requested state');
+    } else {
+      console.error(`❌ Database state (${updatedDbTask.completed}) does not match requested state (${newState})`);
+    }
+    
+    // Get tasks again to verify persistence through the API
+    console.log('\nStep 7: Getting tasks again to verify persistence via API...');
+    const tasksAfterToggle = await getTasks(project.id);
+    
+    // Find the same task in the new results
+    const persistedTask = tasksAfterToggle.find(task => task.id === taskToToggle.id);
+    
+    if (!persistedTask) {
+      console.error(`❌ Task ${taskToToggle.id} not found in tasks after toggle`);
+    } else {
+      console.log(`API task state after toggle: completed=${persistedTask.completed}`);
+      
+      if (persistedTask.completed === newState) {
+        console.log('✅ Task persistence SUCCESSFUL: API response shows correct state');
+      } else {
+        console.error(`❌ Task persistence FAILED: API response shows completed=${persistedTask.completed}, expected ${newState}`);
+      }
+    }
+    
+    console.log('\n=== Test Complete ===');
+    
+    if (updatedDbTask.completed === newState && persistedTask && persistedTask.completed === newState) {
+      console.log('🎉 SUCCESS: Task toggle persistence is working correctly! The fix is effective.');
+    } else {
+      console.error('❌ FAILURE: Task toggle persistence is still not working correctly.');
+    }
+    
+  } catch (error) {
+    console.error('Test error:', error);
+  }
+}
+
 runTest();

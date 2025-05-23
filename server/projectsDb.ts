@@ -80,6 +80,12 @@ export interface ProjectTask {
   status: string;
   createdAt: string;
   updatedAt: string;
+  // Additional fields for complete mapping
+  taskType?: string;
+  factorId?: string;
+  sortOrder?: number;
+  assignedTo?: string;
+  taskNotes?: string;
 }
 
 // Project policy data type
@@ -1201,24 +1207,32 @@ export const projectsDb = {
         // Sanitize input data to ensure types match and handle empty strings properly
         const updateData: Record<string, string | boolean | null | Date> = {};
         
-        // CRITICAL FIX: Map camelCase property names to snake_case database columns
+        // COMPREHENSIVE FIX: Systematically map ALL camelCase property names to snake_case database columns
         // Only update fields that are provided, with proper empty string handling
+        
+        // Direct field mappings (no conversion needed)
         if (data.text !== undefined) updateData.text = String(data.text);
         if (data.stage !== undefined) updateData.stage = String(data.stage);
         if (data.origin !== undefined) updateData.origin = String(data.origin);
-        if (data.sourceId !== undefined) updateData.source_id = String(data.sourceId); // Fix: sourceId → source_id
-        if (data.projectId !== undefined) updateData.project_id = String(data.projectId); // Fix: projectId → project_id
-        if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
-        
-        // For nullable fields, convert empty strings to null
         if (data.notes !== undefined) updateData.notes = data.notes === '' ? null : String(data.notes);
         if (data.priority !== undefined) updateData.priority = data.priority === '' ? null : String(data.priority);
-        if (data.dueDate !== undefined) updateData.due_date = data.dueDate === '' ? null : String(data.dueDate); // Fix: dueDate → due_date
         if (data.owner !== undefined) updateData.owner = data.owner === '' ? null : String(data.owner);
         if (data.status !== undefined) updateData.status = String(data.status);
+        if (data.completed !== undefined) updateData.completed = Boolean(data.completed);
+        
+        // CamelCase to snake_case mappings
+        if (data.sourceId !== undefined) updateData.source_id = validateSourceId(data.sourceId) || null; // sourceId → source_id with validation
+        if (data.projectId !== undefined) updateData.project_id = String(data.projectId); // projectId → project_id
+        if (data.dueDate !== undefined) updateData.due_date = data.dueDate === '' ? null : String(data.dueDate); // dueDate → due_date
+        if (data.taskType !== undefined) updateData.task_type = data.taskType === '' ? null : String(data.taskType); // taskType → task_type
+        if (data.factorId !== undefined) updateData.factor_id = data.factorId === '' ? null : String(data.factorId); // factorId → factor_id
+        if (data.sortOrder !== undefined) updateData.sort_order = typeof data.sortOrder === 'number' ? data.sortOrder : parseInt(String(data.sortOrder), 10); // sortOrder → sort_order
+        if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo === '' ? null : String(data.assignedTo); // assignedTo → assigned_to
+        if (data.taskNotes !== undefined) updateData.task_notes = data.taskNotes === '' ? null : String(data.taskNotes); // taskNotes → task_notes
+        if (data.createdAt !== undefined) updateData.created_at = data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt); // createdAt → created_at
         
         // Always update the updatedAt timestamp
-        updateData.updated_at = new Date(); // Fix: updatedAt → updated_at
+        updateData.updated_at = new Date(); // updatedAt → updated_at
         
         console.log(`Prepared update data for task ${validTaskId}:`, JSON.stringify(updateData, null, 2));
         
