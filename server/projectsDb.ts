@@ -713,9 +713,24 @@ export const projectsDb = {
         console.error(`[TASK_UPDATE_ERROR] Stack trace:`, err instanceof Error ? err.stack : 'No stack trace available');
         throw new Error(`Failed to process task ID ${taskId}: ${err instanceof Error ? err.message : String(err)}`);
       }
-      
+
+      // Fetch the existing task to preserve critical fields for factor tasks
+      const existingRows = await db.select()
+        .from(projectTasksTable)
+        .where(eq(projectTasksTable.id, validTaskId))
+        .limit(1);
+
+      const existingTask = existingRows.length > 0 ? convertDbTaskToProjectTask(existingRows[0]) : null;
+
+      const mergedData = { ...data };
+
+      if (existingTask && (existingTask.origin === 'factor' || existingTask.origin === 'success-factor')) {
+        if (mergedData.origin === undefined) mergedData.origin = existingTask.origin;
+        if (mergedData.sourceId === undefined) mergedData.sourceId = existingTask.sourceId;
+      }
+
       // Convert camelCase properties to snake_case for database columns
-      const mappedData = mapCamelToSnakeCase(data);
+      const mappedData = mapCamelToSnakeCase(mergedData);
       
       // Check that we have data to update
       if (Object.keys(mappedData).length === 0) {
