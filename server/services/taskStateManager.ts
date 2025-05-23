@@ -270,7 +270,7 @@ export class TaskStateManager {
           const dbStartTime = Date.now();
           
           // Update the task in the database using the resolved ID
-          const updatedTask = await this.projectsDb.updateTask(task.id, item.projectId, updateData);
+          const updatedTask = await this.projectsDb.updateTask(task.id, updateData);
           
           // Log database operation
           const dbDuration = Date.now() - dbStartTime;
@@ -412,7 +412,7 @@ export class TaskStateManager {
           }
           
           // Update task in database
-          await this.projectsDb.updateTask(task.id, projectId, updates);
+          await this.projectsDb.updateTask(task.id, updates);
           
           // Update task in cache
           const cacheKey = `${projectId}:${task.id}`;
