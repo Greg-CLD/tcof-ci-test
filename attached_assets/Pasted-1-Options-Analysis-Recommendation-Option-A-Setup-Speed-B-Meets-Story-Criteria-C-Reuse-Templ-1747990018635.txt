@@ -1,0 +1,122 @@
+1. Options Analysis & Recommendation
+
+Option	A) Setup Speed	B) Meets Story & Criteria	C) Reuse Templates	D) Simplicity & Low Risk	Notes
+A. Shell Script + Replit Automations	★★★★☆	★★★★★	★★★★☆	★★★★★	Single system-backup.sh plus Automations task. No external creds; reuses your backup folder.
+B. GitHub Actions “Release” Archive	★★★☆☆	★★★★★	★★★☆☆	★★★☆☆	GH Actions YAML + secrets; archives to Releases.
+C. External Object Store (S3)	★★☆☆☆	★★★★★	★★☆☆☆	★★☆☆☆	Requires AWS credentials & complexity.
+
+Recommendation:
+Option A is the fastest, lowest-risk solution: a single shell script to tar your app and dump the database, scheduled via Replit Automations.
+
+2. Epic & Feature Summary
+
+Epic: System Level: Full-Stack Backups
+
+Feature Title: Application Backup
+
+User Story: As an admin, I want full backups of the entire application (code, assets, DB, user data)
+
+Acceptance Criteria: A daily automated task produces a timestamped archive containing the source code (excluding node_modules/.git), static assets, and a PostgreSQL dump. Archives are retained for 7 days and restorable on demand.
+
+3. Agent Prompt (VB.NET container)
+
+vbnet
+Copy
+Edit
+' Prompt for Replit Agent: Application Backup Epic
+
+Module AgentPrompt
+    Sub Main()
+        Dim prompt As String = "
+Objective: Implement the Application Backup feature. User testing confirms no reliable backups exist—treat as unresolved.
+
+Rules (internal):
+1) One clear objective: add a shell backup script and schedule it with Replit Automations.  
+2) Always run & paste smoke-test JSON output for any file system operations.  
+3) If the app server restarts, include full SSR logs verbatim.
+
+Deliverables:
+1. **Code diff** (```diff``` fencing) for the **scripts/system-backup.sh** file and Automations config:
+
+```diff
+--- a/scripts/system-backup.sh
++++ b/scripts/system-backup.sh
+@@ -0,0 +1, thirty -*-
++#!/usr/bin/env bash
++set -e
++# Configuration
++TIMESTAMP=$(date +'%Y%m%d_%H%M%S')
++BACKUP_DIR="/mnt/data/backups"
++RETENTION_DAYS=7
++
++# Ensure backup directory exists
++mkdir -p "$BACKUP_DIR"
++
++# 1) Database dump
++echo "Backing up database..."
++if ! pg_dump "$DATABASE_URL" > "$BACKUP_DIR/db_$TIMESTAMP.sql"; then
++  echo "Database backup failed" >&2
++  exit 1
++fi
++
++# 2) Code & assets archive (exclude large folders)
++echo "Archiving application..."
++tar --exclude='node_modules' \
++    --exclude='.git' \
++    --exclude='backups' \
++    -czf "$BACKUP_DIR/app_$TIMESTAMP.tar.gz" .
++
++# 3) Cleanup old backups
++echo "Cleaning up backups older than $RETENTION_DAYS days..."
++find "$BACKUP_DIR" -type f -mtime +$RETENTION_DAYS -delete
++
++echo "Backup completed at $TIMESTAMP"
+diff
+Copy
+Edit
+--- a/.replit/automations.yml
++++ b/.replit/automations.yml
+@@ -1,3 +1,9 @@
+ # other automations...
++# Daily system backup at 2 AM
++- title: "Daily Application Backup"
++  schedule: |
++    BEGIN:VEVENT
++    RRULE:FREQ=DAILY;BYHOUR=2;BYMINUTE=0;BYSECOND=0
++    END:VEVENT
++  command: bash scripts/system-backup.sh
+Unit test outline (ts fencing):
+
+ts
+Copy
+Edit
+// scripts/__tests__/system-backup.test.ts
+import { exec } from 'child_process';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+test('backup script produces timestamped files', done => {
+  const backupDir = '/mnt/data/backups';
+  exec('bash scripts/system-backup.sh', async (error, stdout, stderr) => {
+    expect(error).toBeNull();
+    // smoke-test JSON output
+    console.log(JSON.stringify({ stdout, stderr }));
+    // verify latest files exist
+    const files = await fs.readdir(backupDir);
+    expect(files.some(f => f.startsWith('db_') && f.endsWith('.sql'))).toBe(true);
+    expect(files.some(f => f.startsWith('app_') && f.endsWith('.tar.gz'))).toBe(true);
+    done();
+  });
+});
+Please provide the diffs and the matching unit test code in the specified fences."
+Console.WriteLine(prompt)
+End Sub
+End Module
+
+Copy
+Edit
+
+
+
+
+
