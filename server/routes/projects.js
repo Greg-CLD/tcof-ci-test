@@ -8,7 +8,9 @@ import { isOrgMember } from "../middlewares/isOrgMember.js";
 import { isValidUUID, isNumericId, convertNumericIdToUuid } from "../utils/uuid-utils.js";
 import { v4 as uuidv4 } from 'uuid';
 import { projectsDb } from '../projectsDb.ts';
-import { cloneAllSuccessFactorTasks } from '../cloneSuccessFactors.ts';
+import { projectTasks as projectTasksTable } from '@shared/schema';
+import { DEBUG_TASKS, DEBUG_FILES } from '@shared/constants.debug';
+import { cloneAllSuccessFactorTasks } from './cloneSuccessFactors';
 
 /**
  * Middleware to validate a project ID

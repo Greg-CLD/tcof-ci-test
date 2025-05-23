@@ -1,7 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { projectsDb } from '../projectsDb.js';
+import { projectsDb } from '../projectsDb.ts';
 import { isAuthenticated } from '../auth.js';
 
 const router = express.Router();

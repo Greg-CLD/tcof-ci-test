@@ -1,7 +1,7 @@
 /**
  * Direct test for the UUID prefix matching without requiring authentication
  * 
- * This script directly imports and tests the task matching logic from projectsDb.js
+ * This script directly imports and tests the task matching logic from projectsDb.ts
  * to verify our UUID handling improvements.
  */
 
