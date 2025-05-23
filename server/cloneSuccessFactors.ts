@@ -7,7 +7,7 @@
  * 3. Fix missing Success Factor tasks in existing projects
  */
 
-import { db } from '../db';
+import { db, sql } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 import { projectTasks } from '../shared/schema';
 
@@ -254,6 +254,41 @@ export async function backfillSuccessFactorTasks() {
 }
 
 /**
+ * Remove duplicate Success Factor tasks in a project
+ * Keeps the most recently created task for each sourceId/stage pair
+ */
+export async function deduplicateSuccessFactorTasks(projectId: string) {
+  try {
+    const { rows } = await db.execute(sql`
+      DELETE FROM project_tasks
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY project_id, source_id, stage
+                   ORDER BY created_at DESC
+                 ) as rn
+          FROM project_tasks
+          WHERE project_id = ${projectId} AND origin = 'factor'
+        ) t WHERE t.rn > 1
+      )
+      RETURNING id
+    `);
+
+    if (DEBUG_CLONE && rows?.length) {
+      console.log(
+        `[SUCCESS_FACTOR_CLONE] Removed ${rows.length} duplicate Success Factor tasks in project ${projectId}`
+      );
+    }
+
+    return rows?.length ?? 0;
+  } catch (error) {
+    console.error('[SUCCESS_FACTOR_CLONE] Error deduplicating Success Factor tasks:', error);
+    return 0;
+  }
+}
+
+/**
  * Ensure all Success Factor tasks exist for a project
  * Called whenever a project is accessed to ensure it has all required tasks
  * 
@@ -264,12 +299,18 @@ export async function ensureSuccessFactorTasks(projectId: string) {
   try {
     // Clone all Success Factor tasks into the project
     const clonedCount = await cloneAllSuccessFactorTasks(projectId);
-    
+
+    // Clean up any duplicate Success Factor tasks that may already exist
+    const removed = await deduplicateSuccessFactorTasks(projectId);
+
     if (DEBUG_CLONE) {
       if (clonedCount > 0) {
         console.log(`[SUCCESS_FACTOR_CLONE] Added ${clonedCount} missing Success Factor tasks to project ${projectId}`);
       } else {
         console.log(`[SUCCESS_FACTOR_CLONE] All Success Factor tasks already exist for project ${projectId}`);
+      }
+      if (removed > 0) {
+        console.log(`[SUCCESS_FACTOR_CLONE] Removed ${removed} duplicate Success Factor tasks from project ${projectId}`);
       }
     }
     
@@ -287,5 +328,6 @@ export default {
   cloneSuccessFactorTasks,
   cloneAllSuccessFactorTasks,
   backfillSuccessFactorTasks,
+  deduplicateSuccessFactorTasks,
   ensureSuccessFactorTasks
 };
