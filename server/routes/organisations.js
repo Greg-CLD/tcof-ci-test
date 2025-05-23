@@ -38,7 +38,11 @@ router.get('/', async (req, res) => {
 
     // Map to return only the organization details with role
     const result = userOrganisations.map(membership => ({
-      ...membership.organisation,
+      id: membership.organisation.id,
+      name: membership.organisation.name,
+      description: membership.organisation.description,
+      createdAt: membership.organisation.createdAt,
+      updatedAt: membership.organisation.updatedAt,
       role: membership.role
     }));
 
