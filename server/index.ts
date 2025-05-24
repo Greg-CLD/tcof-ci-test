@@ -134,7 +134,7 @@ process.on('uncaughtException', (error) => {
   }
 
   const port = process.env.PORT || 5000;
-  server.listen(port, "0.0.0.0", () => {
+  server.listen({ port: Number(port), host: "0.0.0.0" }, () => {
     log(`Server started successfully on port ${port}`);
   });
 })();

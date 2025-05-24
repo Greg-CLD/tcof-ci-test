@@ -89,12 +89,6 @@ export const DEBUG_TASK_STATE = isDev && (
   getEnvVar('DEBUG_TASK_STATE', 'false') === 'true'
 );
 
-// Never enable debug flags in production
-if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
-  Object.keys(exports).forEach(key => {
-    if (key.startsWith('DEBUG')) {
-      // @ts-ignore - Dynamically setting exports in module
-      exports[key] = false;
-    }
-  });
-}
+// In production all flags evaluate to false via the `isDev` check above,
+// so additional mutation of the module exports is unnecessary and breaks
+// when using ESM.  The previous CommonJS logic has been removed.
