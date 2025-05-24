@@ -20,13 +20,13 @@ const router = express.Router();
  * Get all organizations where the current user is a member
  */
 router.get('/', async (req, res) => {
-  if (!req.isAuthenticated()) {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
   try {
     const userId = req.user.id;
-    
+
     // Get all organizations where user is a member
     const userOrganisations = await db.query.organisationMemberships.findMany({
       where: eq(organisationMemberships.userId, userId),
@@ -58,19 +58,19 @@ router.get('/', async (req, res) => {
  * Create a new organization and add the current user as an owner
  */
 router.post('/', async (req, res) => {
-  if (!req.isAuthenticated()) {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
   try {
     const userId = req.user.id;
-    
+
     // Validate input
     const orgSchema = organisationInsertSchema.pick({
       name: true,
       description: true
     });
-    
+
     let validatedData;
     try {
       validatedData = orgSchema.parse(req.body);
@@ -80,7 +80,7 @@ router.post('/', async (req, res) => {
         errors: validationError.errors 
       });
     }
-    
+
     // Create the organization
     const [newOrganisation] = await db.insert(organisations)
       .values({
@@ -89,7 +89,7 @@ router.post('/', async (req, res) => {
         updatedAt: new Date()
       })
       .returning();
-    
+
     // Add the current user as an owner
     await db.insert(organisationMemberships)
       .values({
@@ -99,7 +99,7 @@ router.post('/', async (req, res) => {
         createdAt: new Date(),
         updatedAt: new Date()
       });
-    
+
     return res.status(201).json(newOrganisation);
   } catch (error) {
     console.error('Error creating organization:', error);
@@ -114,15 +114,15 @@ router.post('/', async (req, res) => {
 router.get('/:id', isOrgMember, async (req, res) => {
   try {
     const organisationId = req.params.id;
-    
+
     const organisation = await db.query.organisations.findFirst({
       where: eq(organisations.id, organisationId)
     });
-    
+
     if (!organisation) {
       return res.status(404).json({ message: 'Organization not found' });
     }
-    
+
     return res.status(200).json({
       ...organisation,
       role: req.organisationMembership.role
@@ -140,7 +140,7 @@ router.get('/:id', isOrgMember, async (req, res) => {
 router.get('/:id/projects', isOrgMember, async (req, res) => {
   try {
     const organisationId = req.params.id;
-    
+
     // Only select fields that we know exist in the projects table
     console.log(`Fetching projects for organisation ${organisationId}`);
     const organisationProjects = await db.query.projects.findMany({
@@ -154,9 +154,9 @@ router.get('/:id/projects', isOrgMember, async (req, res) => {
         organisationId: true // Make sure this field is included
       }
     });
-    
+
     console.log(`Found ${organisationProjects.length} projects:`, JSON.stringify(organisationProjects));
-    
+
     return res.status(200).json(organisationProjects);
   } catch (error) {
     console.error('Error fetching organization projects:', error);
@@ -173,19 +173,19 @@ router.post('/:id/projects', isOrgMember, async (req, res) => {
     const userId = req.user.id;
     const organisationId = req.params.id;
     const { name, description } = req.body;
-    
+
     if (!name?.trim()) {
       return res.status(400).json({ message: "Project name is required" });
     }
-    
+
     // Import the v4 UUID generator
     const { v4: uuidv4 } = await import('uuid');
-    
+
     // Generate a UUID for the project ID
     const projectId = uuidv4();
-    
+
     console.log(`Generating UUID for new project: ${projectId}`);
-    
+
     // Create the project with organization ID - using ONLY fields that actually exist in the database
     const [newProject] = await db.insert(projects)
       .values({
@@ -198,9 +198,9 @@ router.post('/:id/projects', isOrgMember, async (req, res) => {
         lastUpdated: new Date() // This maps to last_updated
       })
       .returning();
-    
+
     console.log(`Created new project in organisation ${organisationId}:`, JSON.stringify(newProject));
-    
+
     return res.status(201).json(newProject);
   } catch (error) {
     console.error('Error creating project in organization:', error);
@@ -215,12 +215,12 @@ router.post('/:id/projects', isOrgMember, async (req, res) => {
 router.get('/:id/heuristics', isOrgMember, async (req, res) => {
   try {
     const organisationId = req.params.id;
-    
+
     const heuristics = await db.query.organisationHeuristics.findMany({
       where: eq(organisationHeuristics.organisationId, organisationId),
       orderBy: desc(organisationHeuristics.updatedAt)
     });
-    
+
     return res.status(200).json(heuristics);
   } catch (error) {
     console.error('Error fetching organization heuristics:', error);
@@ -245,7 +245,7 @@ router.put('/:id/heuristics', isOrgAdminOrOwner, async (req, res) => {
         updatedAt: true
       })
     );
-    
+
     let validatedData;
     try {
       validatedData = heuristicsArraySchema.parse(req.body);
@@ -261,7 +261,7 @@ router.put('/:id/heuristics', isOrgAdminOrOwner, async (req, res) => {
       // Delete existing heuristics
       await tx.delete(organisationHeuristics)
         .where(eq(organisationHeuristics.organisationId, organisationId));
-      
+
       // Insert new heuristics if there are any
       if (validatedData.length > 0) {
         const heuristicsToInsert = validatedData.map(heuristic => ({
@@ -270,17 +270,17 @@ router.put('/:id/heuristics', isOrgAdminOrOwner, async (req, res) => {
           createdAt: new Date(),
           updatedAt: new Date()
         }));
-        
+
         await tx.insert(organisationHeuristics).values(heuristicsToInsert);
       }
     });
-    
+
     // Fetch the updated heuristics
     const updatedHeuristics = await db.query.organisationHeuristics.findMany({
       where: eq(organisationHeuristics.organisationId, organisationId),
       orderBy: desc(organisationHeuristics.updatedAt)
     });
-    
+
     return res.status(200).json(updatedHeuristics);
   } catch (error) {
     console.error('Error updating organization heuristics:', error);
@@ -295,13 +295,13 @@ router.put('/:id/heuristics', isOrgAdminOrOwner, async (req, res) => {
 router.post('/:id/members', isOrgAdminOrOwner, async (req, res) => {
   try {
     const organisationId = req.params.id;
-    
+
     // Validate input
     const memberSchema = z.object({
       userId: z.number().int().positive(),
       role: z.enum(['member', 'admin']), // Owner role can only be set at organization creation
     });
-    
+
     let validatedData;
     try {
       validatedData = memberSchema.parse(req.body);
@@ -311,7 +311,7 @@ router.post('/:id/members', isOrgAdminOrOwner, async (req, res) => {
         errors: validationError.errors 
       });
     }
-    
+
     // Check if user already has a membership
     const existingMembership = await db.query.organisationMemberships.findFirst({
       where: and(
@@ -319,11 +319,11 @@ router.post('/:id/members', isOrgAdminOrOwner, async (req, res) => {
         eq(organisationMemberships.organisationId, organisationId)
       )
     });
-    
+
     if (existingMembership) {
       return res.status(409).json({ message: 'User is already a member of this organization' });
     }
-    
+
     // Add the new member
     const [newMembership] = await db.insert(organisationMemberships)
       .values({
@@ -334,7 +334,7 @@ router.post('/:id/members', isOrgAdminOrOwner, async (req, res) => {
         updatedAt: new Date()
       })
       .returning();
-    
+
     return res.status(201).json(newMembership);
   } catch (error) {
     console.error('Error adding organization member:', error);
@@ -348,14 +348,14 @@ router.post('/:id/members', isOrgAdminOrOwner, async (req, res) => {
  * Only organization owners can delete organizations
  */
 router.delete('/:id', async (req, res) => {
-  if (!req.isAuthenticated()) {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
   try {
     const organisationId = req.params.id;
     const userId = req.user.id;
-    
+
     // Check if user is an owner of this organization
     const membership = await db.query.organisationMemberships.findFirst({
       where: and(
@@ -364,36 +364,36 @@ router.delete('/:id', async (req, res) => {
         eq(organisationMemberships.role, 'owner')
       )
     });
-    
+
     if (!membership) {
       return res.status(403).json({ 
         message: 'Only organization owners can delete organizations' 
       });
     }
-    
+
     // Begin transaction to delete all related data
     await db.transaction(async (tx) => {
       // Delete all projects in the organization
       console.log(`Deleting all projects for organisation ${organisationId}`);
       await tx.delete(projects)
         .where(eq(projects.organisationId, organisationId));
-      
+
       // Delete all heuristics
       console.log(`Deleting all heuristics for organisation ${organisationId}`);
       await tx.delete(organisationHeuristics)
         .where(eq(organisationHeuristics.organisationId, organisationId));
-      
+
       // Delete all memberships
       console.log(`Deleting all memberships for organisation ${organisationId}`);
       await tx.delete(organisationMemberships)
         .where(eq(organisationMemberships.organisationId, organisationId));
-      
+
       // Finally delete the organization itself
       console.log(`Deleting organisation ${organisationId}`);
       await tx.delete(organisations)
         .where(eq(organisations.id, organisationId));
     });
-    
+
     return res.status(200).json({ 
       message: 'Organization deleted successfully',
       id: organisationId

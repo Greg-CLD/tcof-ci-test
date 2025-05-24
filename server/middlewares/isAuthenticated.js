@@ -1,11 +1,9 @@
-/**
- * Middleware to check if a user is authenticated
- * Use this to protect routes that require authentication
- */
+
+import passport from 'passport';
+
 export function isAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    return res.status(401).json({ message: 'Authentication required' });
   }
-  
-  return res.status(401).json({ message: "Authentication required" });
+  return next();
 }
